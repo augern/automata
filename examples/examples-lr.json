@@ -1,0 +1,164 @@
+{
+  "groups": [
+    {
+      "label": "Expressions",
+      "examples": [
+        {
+          "label": "Arithmetic",
+          "text": [
+            "// Classic arithmetic — LR(0) parseable",
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> id"
+          ]
+        },
+        {
+          "label": "Arithmetic + parens",
+          "text": [
+            "// Arithmetic with parentheses",
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> ( E ) | id"
+          ]
+        },
+        {
+          "label": "Balanced parentheses",
+          "text": [
+            "// Balanced parentheses",
+            "S -> ( S ) S | eps"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Structures",
+      "examples": [
+        {
+          "label": "Lecture grammar",
+          "text": [
+            "// Suitable for lecturing",
+            "S -> a B C d",
+            "B -> p q",
+            "C -> r s"
+          ]
+        },
+        {
+          "label": "Comma-separated lists",
+          "text": [
+            "// Comma-separated lists",
+            "List -> List , Elem | Elem",
+            "Elem -> a | b"
+          ]
+        },
+        {
+          "label": "Simple declarations",
+          "text": [
+            "// Simple declarations",
+            "D -> T id ;",
+            "D -> T id [ num ] ;",
+            "T -> int | float | bool"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Conflicts",
+      "examples": [
+        {
+          "label": "Shift-reduce",
+          "text": [
+            "// Suitable for lecturing",
+            "// Shift-Reduce conflict",
+            "S -> L",
+            "L -> L - E",
+            "L -> E",
+            "E -> a | b"
+          ]
+        },
+        {
+          "label": "Reduce-reduce",
+          "text": [
+            "// Suitable for lecturing",
+            "// Reduce-Reduce conflict",
+            "S -> ( A ) | ( B )",
+            "A -> char | integer | id",
+            "B -> float | double | id"
+          ]
+        },
+        {
+          "label": "Dangling else",
+          "text": [
+            "// Dangling-else — classic shift/reduce conflict",
+            "S -> if E S",
+            "S -> if E S else S",
+            "S -> other",
+            "E -> cond"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Parser classes",
+      "examples": [
+        {
+          "label": "LR(1) but not LALR(1)",
+          "text": [
+            "// LR(1) but not LALR(1) — Aho, Sethi & Ullman",
+            "S -> a A d | b A e | a B e | b B d",
+            "A -> c",
+            "B -> c"
+          ]
+        },
+        {
+          "label": "LALR(1) but not SLR(1)",
+          "text": [
+            "// LALR(1) but not SLR(1) — Dragon Book classic",
+            "// SLR(1) conflict: = ∈ FOLLOW(R), so state with R→L•",
+            "// can't decide shift = vs reduce. LALR(1) resolves it",
+            "// because the lookahead for R→L• there is only $.",
+            "S -> L = R | R",
+            "L -> * R | id",
+            "R -> L"
+          ]
+        },
+        {
+          "label": "SLR(1) but not LR(0)",
+          "text": [
+            "// SLR(1) but not LR(0)",
+            "S -> A d | B e",
+            "A -> a",
+            "B -> a"
+          ]
+        },
+        {
+          "label": "LR(0) with extra LR(1) state",
+          "text": [
+            "// LR(0), but LR(1) has one extra state",
+            "S -> a A p | b A q",
+            "A -> x"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Larger",
+      "examples": [
+        {
+          "label": "Mini-Pascal",
+          "text": [
+            "// Mini-Pascal subset — LALR(1)",
+            "// assignments · if-then-else · while · arithmetic",
+            "Program -> StmtList",
+            "StmtList -> StmtList ; Stmt | Stmt",
+            "Stmt -> id := Expr",
+            "Stmt -> if Expr then Stmt else Stmt",
+            "Stmt -> while Expr do Stmt",
+            "Expr -> Expr + Term | Expr - Term | Term",
+            "Term -> Term * Factor | Factor",
+            "Factor -> ( Expr ) | id | num"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+pages:
+  stage: deploy
+  script:
+    - mkdir -p public/tools public/shared public/examples
+    - cp index.html public/
+    - cp tools/*.html public/tools/
+    - cp shared/shared.css shared/shared.js public/shared/
+    - cp examples/*.json public/examples/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"

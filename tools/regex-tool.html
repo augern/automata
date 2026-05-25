@@ -1,0 +1,2335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Regular Expression Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="../shared/shared.css" />
+    <style>
+      #p-regex {
+        width: 220px;
+      }
+      #p-nfa {
+        width: 320px;
+      }
+      #p-dfa {
+        width: 280px;
+      }
+      #p-sim {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      /* Regex text input */
+      #regex-input-wrap {
+        padding: 10px 12px 6px;
+        flex-shrink: 0;
+      }
+      .input-sublabel {
+        font-family: var(--font-serif);
+        font-size: 0.68rem;
+        font-style: italic;
+        color: var(--text-dim);
+        margin-bottom: 4px;
+      }
+      #regex-input {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.84rem;
+        padding: 4px 8px;
+        outline: none;
+        letter-spacing: 0.04em;
+      }
+      #regex-input:focus {
+        border-color: var(--accent);
+        outline: 1px solid var(--accent);
+      }
+
+      #regex-footer {
+        padding: 6px 8px 8px;
+        border-top: 1px solid var(--border-lo);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        flex-shrink: 0;
+      }
+      .syntax-hint {
+        font-family: var(--font-serif);
+        font-size: 0.65rem;
+        color: var(--text-lo);
+        line-height: 1.75;
+        padding-top: 1px;
+      }
+      .syntax-hint code {
+        font-family: var(--font-mono);
+        font-size: 0.78em;
+        color: var(--text-dim);
+      }
+
+      /* NFA panel */
+      #nfa-empty {
+        color: var(--text-lo);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        padding: 16px;
+      }
+      .nfa-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        padding: 7px 12px;
+        border-bottom: 1px solid var(--border-lo);
+        flex-shrink: 0;
+        background: var(--bg-panel);
+      }
+      .nfa-summary-item {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .nfa-summary-key {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.63rem;
+        color: var(--text-dim);
+      }
+      .nfa-summary-val {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        color: var(--text);
+      }
+
+      #nfa-table-wrap {
+        flex: 1;
+        overflow: auto;
+        padding: 10px 12px;
+      }
+
+      /* State column markers */
+      .parse-table td.state-start {
+        color: var(--accent);
+        background: var(--bg-cell);
+        font-style: italic;
+      }
+      .parse-table td.state-accept {
+        color: var(--green);
+        background: var(--bg-cell);
+        font-style: italic;
+        font-weight: bold;
+      }
+      .parse-table td.state-both {
+        color: var(--amber);
+        background: var(--bg-cell);
+        font-style: italic;
+        font-weight: bold;
+      }
+      .parse-table td.state-plain {
+        color: var(--text-lo);
+        background: var(--bg-cell);
+        font-style: italic;
+      }
+      /* Transition cells */
+      .parse-table td.nfa-eps {
+        color: var(--text-lo);
+      }
+      .parse-table td.nfa-sym {
+        color: var(--text);
+      }
+
+      /* ── Shared log-bar span colours (used in both #tc-log-bar and #sc-log-bar) ── */
+      .sc-op {
+        color: var(--accent);
+      }
+      .sc-state {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .sc-nfa {
+        color: var(--text-dim);
+      }
+      .sc-sym {
+        color: var(--amber);
+        font-weight: 600;
+      }
+      .sc-new {
+        color: var(--green);
+      }
+      .sc-seen {
+        color: var(--text-lo);
+        font-style: italic;
+      }
+
+      /* ── Shared control-strip pattern (NFA + DFA panels) ── */
+      #tc-header,
+      #sc-header {
+        flex-shrink: 0;
+        border-bottom: 1.5px solid var(--border-hi);
+        background: var(--bg-panel);
+      }
+      #tc-controls-row,
+      #sc-controls-row {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+      }
+      #tc-log-bar,
+      #sc-log-bar {
+        font-size: 0.62rem;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+        padding: 3px 10px 4px;
+        border-top: 1px solid var(--border-lo);
+        min-height: 1.8em;
+        line-height: 1.5;
+      }
+
+      /* ── Thompson stepping table classes ── */
+      /* Current-fragment endpoints */
+      .parse-table td.tc-frag-start {
+        color: var(--accent);
+        background: var(--accent-bg);
+        font-style: italic;
+        font-weight: bold;
+      }
+      .parse-table td.tc-frag-accept {
+        color: var(--green);
+        background: var(--green-bg);
+        font-style: italic;
+        font-weight: bold;
+      }
+      .parse-table td.tc-frag-both {
+        color: var(--amber);
+        background: var(--amber-bg);
+        font-style: italic;
+        font-weight: bold;
+      }
+      /* Newly created state this step */
+      .parse-table td.tc-new-state {
+        color: var(--amber);
+        background: var(--bg-cell);
+        font-style: italic;
+      }
+      /* Newly added transition this step */
+      .parse-table td.tc-new-trans {
+        color: var(--amber) !important;
+        outline: 1.5px solid var(--amber);
+        outline-offset: -1px;
+        background: var(--amber-bg) !important;
+        animation: cell-pop 0.2s ease-out;
+      }
+
+      #dfa-table-wrap {
+        flex: 1;
+        overflow: auto;
+        padding: 10px 12px;
+      }
+      #dfa-empty {
+        color: var(--text-lo);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        padding: 16px;
+      }
+
+      /* DFA table stepping — same dimming pattern as LR table construction */
+      .parse-table.sc-stepping td {
+        opacity: 0.18;
+        transition: opacity 0.12s;
+      }
+      .parse-table.sc-stepping th {
+        opacity: 0.4;
+      }
+      .parse-table.sc-stepping td.sc-filled {
+        opacity: 0.7;
+      }
+      .parse-table.sc-stepping td.sc-row-hi {
+        opacity: 1 !important;
+      }
+      .parse-table.sc-stepping th.sc-col-hi {
+        opacity: 1 !important;
+        color: var(--amber);
+      }
+      .parse-table.sc-stepping td.sc-active {
+        opacity: 1 !important;
+        outline: 2px solid var(--amber);
+        outline-offset: -1px;
+        background: var(--amber-bg) !important;
+        color: var(--amber) !important;
+        animation: cell-pop 0.2s ease-out;
+      }
+      /* DFA state cell markers (same pattern as NFA state cells) */
+      .parse-table td.dfa-start {
+        color: var(--accent);
+        background: var(--bg-cell);
+        font-style: italic;
+      }
+      .parse-table td.dfa-accept {
+        color: var(--green);
+        background: var(--bg-cell);
+        font-style: italic;
+        font-weight: bold;
+      }
+      .parse-table td.dfa-both {
+        color: var(--amber);
+        background: var(--bg-cell);
+        font-style: italic;
+        font-weight: bold;
+      }
+      .parse-table td.dfa-plain {
+        color: var(--text-lo);
+        background: var(--bg-cell);
+        font-style: italic;
+      }
+      /* NFA-set column in DFA table */
+      .parse-table th.dfa-set-hdr {
+        font-weight: normal;
+        font-size: 0.6rem;
+        color: var(--text-lo);
+        font-style: italic;
+      }
+      .parse-table td.dfa-set-cell {
+        color: var(--text-lo);
+        font-size: 0.64rem;
+      }
+
+      /* ── Simulation panel ── */
+      #sim-header {
+        flex-shrink: 0;
+        border-bottom: 1.5px solid var(--border-hi);
+        background: var(--bg-panel);
+      }
+      #sim-log-bar {
+        font-size: 0.62rem;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+        padding: 3px 10px 4px;
+        min-height: 1.8em;
+        line-height: 1.5;
+      }
+      /* Example chips */
+      #examples-chips {
+        flex-shrink: 0;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--border-lo);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+      }
+      .examples-label {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.65rem;
+        color: var(--text-dim);
+        margin-right: 2px;
+      }
+      .example-chip {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        border: 1px solid var(--border);
+        background: var(--bg-cell);
+        color: var(--text);
+        padding: 1px 7px;
+        cursor: pointer;
+        transition:
+          border-color 0.12s,
+          background 0.12s,
+          color 0.12s;
+      }
+      .example-chip:hover {
+        border-color: var(--accent);
+        background: var(--accent-bg);
+        color: var(--accent);
+      }
+      .example-chip.eps-chip {
+        font-style: italic;
+        color: var(--text-dim);
+      }
+      /* String input row */
+      #sim-input-row {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        flex-wrap: wrap;
+      }
+      #sim-input-row .input-group {
+        flex: 1;
+        min-width: 120px;
+      }
+      #sim-string-input {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.84rem;
+        padding: 3px 7px;
+        height: 22px;
+        box-sizing: border-box;
+        outline: none;
+      }
+      #sim-string-input:focus {
+        border-color: var(--accent);
+        outline: 1px solid var(--accent);
+      }
+      /* Tape */
+      #sim-tape-wrap {
+        flex-shrink: 0;
+        padding: 12px 12px 10px;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        border-bottom: 1px solid var(--border-lo);
+      }
+      .tape {
+        display: flex;
+        gap: 2px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .tape-cell {
+        width: 26px;
+        height: 26px;
+        border: 1.5px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          border-color 0.12s,
+          background 0.12s,
+          color 0.12s,
+          opacity 0.12s;
+      }
+      .tape-cell.tc-consumed {
+        opacity: 0.28;
+        border-color: var(--border-lo);
+      }
+      .tape-cell.tc-current {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+        color: var(--amber);
+        font-weight: bold;
+      }
+      .sim-state-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+      }
+      .sim-state-label {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.6rem;
+        color: var(--text-dim);
+      }
+      .sim-state-badge {
+        font-family: var(--font-mono);
+        font-size: 0.88rem;
+        font-weight: bold;
+        border: 1.5px solid var(--accent);
+        background: var(--accent-bg);
+        color: var(--accent);
+        padding: 3px 10px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .sim-state-badge.accepting {
+        border-color: var(--green);
+        background: var(--green-bg);
+        color: var(--green);
+      }
+      .sim-state-badge.rejecting {
+        border-color: var(--red);
+        background: var(--red-bg);
+        color: var(--red);
+      }
+      /* Result banner */
+      #sim-result {
+        flex-shrink: 0;
+        padding: 5px 12px;
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+      }
+      #sim-result.accept {
+        color: var(--green);
+        background: var(--green-bg);
+        border-bottom: 1px solid var(--green);
+      }
+      #sim-result.reject {
+        color: var(--red);
+        background: var(--red-bg);
+        border-bottom: 1px solid var(--red);
+      }
+      #sim-empty {
+        color: var(--text-lo);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        padding: 16px;
+      }
+
+      /* ── DFA graph (inside sim panel) ── */
+      .dfa-graph-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid var(--border-lo);
+        min-height: 100px;
+      }
+      #dfa-svg {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #dfa-graph-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--text-lo);
+        pointer-events: none;
+      }
+      /* Nodes */
+      .dfa-node rect {
+        fill: var(--bg);
+        stroke: var(--text);
+        stroke-width: 1.2;
+        transition:
+          fill 0.2s,
+          stroke 0.2s,
+          stroke-width 0.2s;
+      }
+      .dfa-node .accept-border {
+        fill: none;
+        stroke-width: 1 !important;
+      }
+      .dfa-node .state-label {
+        font-size: 11px;
+        font-weight: bold;
+        fill: var(--text);
+        font-family: var(--font-mono);
+      }
+      .dfa-node.accepting .state-label {
+        fill: var(--green);
+      }
+      .dfa-node.accepting rect {
+        stroke: var(--green);
+      }
+      /* Edges */
+      .dfa-edge path {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 0.9;
+        transition:
+          stroke 0.2s,
+          stroke-width 0.2s;
+      }
+      .dfa-edge line {
+        stroke: none;
+      }
+      .dfa-edge text {
+        font-size: 10px;
+        fill: var(--text-dim);
+        font-family: var(--font-mono);
+        font-style: italic;
+      }
+      .dfa-arrowhead {
+        fill: var(--text);
+        transition: fill 0.2s;
+      }
+      .start-arrow {
+        stroke: var(--text-dim);
+        stroke-width: 1;
+      }
+      /* Active state highlight (simulation) */
+      .dfa-node.sim-active rect {
+        fill: var(--accent-bg) !important;
+        stroke: var(--accent) !important;
+        stroke-width: 2 !important;
+      }
+      .dfa-node.sim-active .state-label {
+        fill: var(--accent) !important;
+      }
+      .dfa-node.accepting.sim-active rect {
+        fill: var(--green-bg) !important;
+        stroke: var(--green) !important;
+      }
+      .dfa-node.accepting.sim-active .state-label {
+        fill: var(--green) !important;
+      }
+      .dfa-node.sim-reject rect {
+        fill: var(--red-bg) !important;
+        stroke: var(--red) !important;
+        stroke-width: 2 !important;
+      }
+      .dfa-node.sim-reject .state-label {
+        fill: var(--red) !important;
+      }
+      /* Active edge highlight (simulation) */
+      .dfa-edge.sim-active path {
+        stroke: var(--accent) !important;
+        stroke-width: 1.8 !important;
+      }
+      .dfa-edge.sim-active text {
+        fill: var(--accent) !important;
+      }
+      .dfa-edge.sim-active .dfa-arrowhead {
+        fill: var(--accent) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../index.html">Regular Expression Tool</a></h1>
+      <span class="tag">NFA · DFA</span>
+    </div>
+
+    <div id="panels">
+      <!-- 1. Regex input -->
+      <div class="panel" id="p-regex">
+        <div class="panel-header" onclick="toggleCollapse('p-regex')">
+          <span class="panel-title">Expression</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-regex');"> &#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="examples-bar">
+            <select id="examples-select" onchange="loadExample(this.value)">
+              <option value="">Example</option>
+            </select>
+          </div>
+          <div id="regex-input-wrap">
+            <div class="input-sublabel">Regular expression</div>
+            <input id="regex-input" type="text" spellcheck="false" placeholder="e.g. (a|b)*abb" />
+          </div>
+          <div id="regex-footer">
+            <div id="error-msg"></div>
+            <div class="syntax-hint">
+              <code>|</code> union &nbsp; <code>*</code> Kleene star<br />
+              <code>+</code> one or more &nbsp; <code>?</code> optional<br />
+              <code>( )</code> grouping &nbsp; <code>.</code> any symbol
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. NFA — Thompson's construction -->
+      <div class="panel" id="p-nfa">
+        <div class="panel-header">
+          <span class="panel-title">NFA — Thompson's Construction</span>
+          <button class="algo-btn" onclick="openAlgoModal('thompson')" title="Thompson's construction algorithm">Algorithm</button>
+        </div>
+        <div class="panel-body">
+          <div id="tc-header">
+            <div id="tc-controls-row">
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-tc-reset" onclick="nfaReset()" title="Restart" disabled></button>
+                <button class="btn" id="btn-tc-back" onclick="nfaBack()" disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-tc-step" onclick="nfaStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-tc-all" onclick="nfaRunAll()" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="tc-log-bar"></div>
+          </div>
+          <div id="nfa-empty">Enter a regular expression and press Build.</div>
+          <div id="nfa-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
+            <div class="nfa-summary" id="nfa-summary"></div>
+            <div id="nfa-table-wrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. DFA via subset construction -->
+      <div class="panel" id="p-dfa">
+        <div class="panel-header" onclick="toggleCollapse('p-dfa')">
+          <span class="panel-title">DFA — Subset Construction</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('subset');" title="Subset construction algorithm"> Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-dfa');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="sc-header">
+            <div id="sc-controls-row">
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sc-reset" onclick="scReset()" title="Restart" disabled></button>
+                <button class="btn" id="btn-sc-back" onclick="scBack()" disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-sc-step" onclick="scStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sc-all" onclick="scRunAll()" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="sc-log-bar"></div>
+          </div>
+          <div id="dfa-empty">Build an NFA first.</div>
+          <div id="dfa-table-wrap" style="display: none"></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-3"></div>
+
+      <!-- 4. DFA Simulation -->
+      <div class="panel" id="p-sim">
+        <div class="panel-header" onclick="toggleCollapse('p-sim')">
+          <span class="panel-title">Simulation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('sim')" title="DFA simulation algorithm">Algorithm</button>
+          <button
+            class="collapse-btn"
+            onclick="
+              event.stopPropagation();
+              toggleCollapse('p-sim');
+            "
+          >
+            &#8250;
+          </button>
+        </div>
+        <div class="panel-body">
+          <div id="sim-empty">Build an NFA first.</div>
+          <div id="sim-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
+            <!-- DFA graph -->
+            <div class="dfa-graph-wrap">
+              <svg id="dfa-svg">
+                <defs>
+                  <marker id="dfa-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" class="dfa-arrowhead" />
+                  </marker>
+                </defs>
+                <g id="dfa-graph-root"></g>
+              </svg>
+              <div id="dfa-graph-empty">Build an NFA to see the DFA graph.</div>
+            </div>
+            <!-- Generated example strings -->
+            <div id="examples-chips">
+              <span class="examples-label">Examples:</span>
+              <span id="chips-container"></span>
+            </div>
+            <!-- String input + step controls -->
+            <div id="sim-header">
+              <div id="sim-input-row">
+                <div class="input-group">
+                  <input id="sim-string-input" type="text" spellcheck="false" placeholder="enter string&#x2026;" />
+                </div>
+                <div class="step-group">
+                  <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()" title="Restart" disabled></button>
+                  <button class="btn" id="btn-sim-back" onclick="simBack()" disabled>&#8249; Back</button>
+                  <button class="btn primary" id="btn-sim-step" onclick="simStepFwd()" disabled>Step &#8250;</button>
+                  <button class="btn icon-run-all" id="btn-sim-all" onclick="simRunAll()" title="Run all" disabled></button>
+                </div>
+              </div>
+              <div id="sim-log-bar"></div>
+            </div>
+            <!-- Tape + current state -->
+            <div id="sim-tape-wrap" style="display: none">
+              <div class="sim-state-col">
+                <span class="sim-state-label">state</span>
+                <div class="sim-state-badge" id="sim-state-badge">D0</div>
+              </div>
+              <div class="tape" id="sim-tape"></div>
+            </div>
+            <!-- Accept / Reject banner -->
+            <div id="sim-result"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- #panels -->
+
+    <!-- Algorithm modal -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1" onclick="if (event.target === this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      // shared.js's initResize calls renderTree() after each drag; stub it out
+      function renderTree() {}
+
+      initResize("rh-1", "p-regex", +1);  // p-regex left of handle — drag right widens it
+      initResize("rh-2", "p-nfa",   +1);  // p-nfa   left of handle — drag right widens it
+      initResize("rh-3", "p-dfa",   +1);  // p-dfa   left of handle — drag right widens it
+      // p-sim is flex-fill: it absorbs whatever space the three rigid panels leave over.
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      const EXAMPLES = {};
+
+      function loadExample(k) {
+        if (!k) return;
+        document.getElementById("examples-select").value = "";
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        document.getElementById("regex-input").value = ex.text;
+        setError("");
+        build();
+      }
+
+      function setError(msg) {
+        document.getElementById("error-msg").textContent = msg || "";
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // THOMPSON'S CONSTRUCTION
+      // Each NFA fragment: { start:int, accept:int, trans:[{from,sym,to}] }
+      // Exactly one start and one accept per fragment (Thompson invariant).
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const EPS = "ε";
+      let _nextState = 0;
+      function freshState() {
+        return _nextState++;
+      }
+
+      // Base: single symbol (or '.' for any)
+      function nfaSymbol(ch) {
+        const s = freshState(),
+          t = freshState();
+        return { start: s, accept: t, trans: [{ from: s, sym: ch, to: t }] };
+      }
+
+      // Base: empty string (ε as a regex operand)
+      function nfaEps() {
+        const s = freshState(),
+          t = freshState();
+        return { start: s, accept: t, trans: [{ from: s, sym: EPS, to: t }] };
+      }
+
+      // r1 | r2
+      function nfaUnion(a, b) {
+        const s = freshState(),
+          t = freshState();
+        return {
+          start: s,
+          accept: t,
+          trans: [...a.trans, ...b.trans, { from: s, sym: EPS, to: a.start }, { from: s, sym: EPS, to: b.start }, { from: a.accept, sym: EPS, to: t }, { from: b.accept, sym: EPS, to: t }],
+        };
+      }
+
+      // r1 r2  (concatenation)
+      function nfaConcat(a, b) {
+        return {
+          start: a.start,
+          accept: b.accept,
+          trans: [...a.trans, ...b.trans, { from: a.accept, sym: EPS, to: b.start }],
+        };
+      }
+
+      // r*  (Kleene star)
+      function nfaStar(a) {
+        const s = freshState(),
+          t = freshState();
+        return {
+          start: s,
+          accept: t,
+          trans: [
+            ...a.trans,
+            { from: s, sym: EPS, to: a.start }, // enter loop
+            { from: s, sym: EPS, to: t }, // skip (zero repetitions)
+            { from: a.accept, sym: EPS, to: a.start }, // repeat
+            { from: a.accept, sym: EPS, to: t }, // exit loop
+          ],
+        };
+      }
+
+      // r+  (one or more)
+      function nfaPlus(a) {
+        const s = freshState(),
+          t = freshState();
+        return {
+          start: s,
+          accept: t,
+          trans: [
+            ...a.trans,
+            { from: s, sym: EPS, to: a.start }, // enter (must pass through at least once)
+            { from: a.accept, sym: EPS, to: a.start }, // repeat
+            { from: a.accept, sym: EPS, to: t }, // exit
+          ],
+        };
+      }
+
+      // r?  (zero or one)
+      function nfaOpt(a) {
+        const s = freshState(),
+          t = freshState();
+        return {
+          start: s,
+          accept: t,
+          trans: [
+            ...a.trans,
+            { from: s, sym: EPS, to: a.start }, // take r
+            { from: s, sym: EPS, to: t }, // skip r
+            { from: a.accept, sym: EPS, to: t },
+          ],
+        };
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // REGEX PARSER  — recursive descent
+      // Grammar (highest precedence first):
+      //   atom   ::= literal | '.' | 'ε' | '(' expr ')'
+      //   unary  ::= atom ( '*' | '+' | '?' )*
+      //   concat ::= unary unary*
+      //   expr   ::= concat ( '|' concat )*
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function buildNFA(str) {
+        _nextState = 0;
+        let pos = 0;
+
+        const peek = () => (pos < str.length ? str[pos] : null);
+
+        function parseExpr() {
+          let node = parseConcat();
+          while (peek() === "|") {
+            pos++;
+            node = nfaUnion(node, parseConcat());
+          }
+          return node;
+        }
+
+        function parseConcat() {
+          let node = parseUnary();
+          while (peek() !== null && peek() !== ")" && peek() !== "|") {
+            node = nfaConcat(node, parseUnary());
+          }
+          return node;
+        }
+
+        function parseUnary() {
+          let node = parseAtom();
+          while (peek() === "*" || peek() === "+" || peek() === "?") {
+            const op = str[pos++];
+            if (op === "*") node = nfaStar(node);
+            else if (op === "+") node = nfaPlus(node);
+            else node = nfaOpt(node);
+          }
+          return node;
+        }
+
+        function parseAtom() {
+          const ch = peek();
+          if (ch === null) throw new Error("Unexpected end of expression");
+          if (ch === "(") {
+            pos++;
+            const inner = parseExpr();
+            if (peek() !== ")") throw new Error("Unmatched ( — missing )");
+            pos++;
+            return inner;
+          }
+          if (ch === ")") throw new Error("Unmatched )");
+          if (ch === "|" || ch === "*" || ch === "+" || ch === "?") throw new Error("Unexpected operator '" + ch + "' at position " + pos);
+          if (ch === "\\") {
+            // Escape: treat next character as a literal symbol
+            pos++;
+            if (peek() === null) throw new Error("Trailing \\");
+            return nfaSymbol(str[pos++]);
+          }
+          if (ch === "ε") {
+            pos++;
+            return nfaEps();
+          }
+          pos++;
+          return nfaSymbol(ch);
+        }
+
+        if (!str.trim()) throw new Error("Empty expression");
+        const nfa = parseExpr();
+        if (pos < str.length) throw new Error("Unexpected character '" + str[pos] + "' at position " + pos);
+        return nfa;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DISPLAY
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderNFA(nfa) {
+        const { start, accept, trans } = nfa;
+        const numStates = _nextState;
+
+        // Collect input alphabet (symbols other than ε)
+        const alphabet = new Set();
+        for (const t of trans) if (t.sym !== EPS) alphabet.add(t.sym);
+        const alphaSorted = [...alphabet].sort();
+        const cols = [EPS, ...alphaSorted];
+
+        // Build transition map: state → symbol → [target states]
+        const tmap = {};
+        for (let i = 0; i < numStates; i++) tmap[i] = {};
+        for (const t of trans) {
+          if (!tmap[t.from][t.sym]) tmap[t.from][t.sym] = [];
+          tmap[t.from][t.sym].push(t.to);
+        }
+
+        // Summary bar
+        document.getElementById("nfa-summary").innerHTML = sumItem("states", numStates) + sumItem("start", "q" + start) + sumItem("accept", "q" + accept) + sumItem("alphabet", alphaSorted.length ? "{ " + alphaSorted.join(", ") + " }" : "—") + sumItem("transitions", trans.length);
+
+        // Transition table
+        const wrap = document.getElementById("nfa-table-wrap");
+        wrap.innerHTML = "";
+
+        const tbl = document.createElement("table");
+        tbl.className = "parse-table";
+
+        let hdr = '<thead><tr><th class="state-col">State</th>';
+        for (const c of cols) hdr += "<th>" + c + "</th>";
+        tbl.innerHTML = hdr + "</tr></thead>";
+
+        const tb = document.createElement("tbody");
+        for (let i = 0; i < numStates; i++) {
+          const isStart = i === start;
+          const isAccept = i === accept;
+          const tr = document.createElement("tr");
+
+          // State cell
+          const sc = document.createElement("td");
+          if (isStart && isAccept) {
+            sc.className = "state-both";
+            sc.textContent = "→* q" + i;
+          } else if (isStart) {
+            sc.className = "state-start";
+            sc.textContent = "→  q" + i;
+          } else if (isAccept) {
+            sc.className = "state-accept";
+            sc.textContent = "*  q" + i;
+          } else {
+            sc.className = "state-plain";
+            sc.textContent = "   q" + i;
+          }
+          tr.appendChild(sc);
+
+          // Transition cells
+          for (const c of cols) {
+            const td = document.createElement("td");
+            const targets = tmap[i][c] || [];
+            if (targets.length) {
+              td.className = c === EPS ? "nfa-eps" : "nfa-sym";
+              td.textContent = targets.length === 1 ? "q" + targets[0] : "{ " + targets.map((x) => "q" + x).join(", ") + " }";
+            }
+            tr.appendChild(td);
+          }
+          tb.appendChild(tr);
+        }
+        tbl.appendChild(tb);
+        wrap.appendChild(tbl);
+      }
+
+      function sumItem(key, val) {
+        return '<div class="nfa-summary-item">' + '<span class="nfa-summary-key">' + key + "</span>" + '<span class="nfa-summary-val">' + val + "</span>" + "</div>";
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // THOMPSON'S CONSTRUCTION — step recorder
+      // Re-parses the regex with instrumented Thompson operations that
+      // emit one step per rule application.  Returns { nfa, steps }.
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function buildNFAWithSteps(str) {
+        _nextState = 0;
+        const steps = [];
+        const allTrans = []; // growing accumulation of ALL transitions
+
+        // Record one Thompson step and return the fragment.
+        function rec(opLabel, logHtml, frag, newStateIds, newTransArr) {
+          allTrans.push(...newTransArr);
+          steps.push({
+            logHtml,
+            fragStart: frag.start,
+            fragAccept: frag.accept,
+            newStates: [...newStateIds],
+            newTrans: newTransArr.map((t) => ({ ...t })),
+            snapshot: allTrans.map((t) => ({ ...t })),
+          });
+          return frag;
+        }
+
+        // ── Instrumented Thompson operations ──────────────────────────
+
+        function tSymbol(ch) {
+          const s = freshState(),
+            t = freshState();
+          const newT = [{ from: s, sym: ch, to: t }];
+          return rec("symbol", '<span class="sc-op">Base</span> literal <span class="sc-sym">' + ch + "</span>" + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "</span>", { start: s, accept: t, trans: newT }, [s, t], newT);
+        }
+
+        function tEpsOp() {
+          const s = freshState(),
+            t = freshState();
+          const newT = [{ from: s, sym: EPS, to: t }];
+          return rec("eps", '<span class="sc-op">Base</span> ε' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "</span>", { start: s, accept: t, trans: newT }, [s, t], newT);
+        }
+
+        function tUnion(a, b) {
+          const s = freshState(),
+            t = freshState();
+          const newT = [
+            { from: s, sym: EPS, to: a.start },
+            { from: s, sym: EPS, to: b.start },
+            { from: a.accept, sym: EPS, to: t },
+            { from: b.accept, sym: EPS, to: t },
+          ];
+          const frag = { start: s, accept: t, trans: [...a.trans, ...b.trans, ...newT] };
+          return rec("union", '<span class="sc-op">Union</span> r₁ | r₂' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +4 ε</span>", frag, [s, t], newT);
+        }
+
+        function tConcat(a, b) {
+          const newT = [{ from: a.accept, sym: EPS, to: b.start }];
+          const frag = { start: a.start, accept: b.accept, trans: [...a.trans, ...b.trans, ...newT] };
+          return rec("concat", '<span class="sc-op">Concat</span> r₁ r₂' + '  → <span class="sc-state">⟨q' + a.start + ", q" + b.accept + "⟩</span>" + '  <span class="sc-new">ε-link q' + a.accept + " → q" + b.start + "</span>", frag, [], newT);
+        }
+
+        function tStar(a) {
+          const s = freshState(),
+            t = freshState();
+          const newT = [
+            { from: s, sym: EPS, to: a.start },
+            { from: s, sym: EPS, to: t },
+            { from: a.accept, sym: EPS, to: a.start },
+            { from: a.accept, sym: EPS, to: t },
+          ];
+          const frag = { start: s, accept: t, trans: [...a.trans, ...newT] };
+          return rec("star", '<span class="sc-op">Star</span> r₁*' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +4 ε</span>", frag, [s, t], newT);
+        }
+
+        function tPlus(a) {
+          const s = freshState(),
+            t = freshState();
+          const newT = [
+            { from: s, sym: EPS, to: a.start },
+            { from: a.accept, sym: EPS, to: a.start },
+            { from: a.accept, sym: EPS, to: t },
+          ];
+          const frag = { start: s, accept: t, trans: [...a.trans, ...newT] };
+          return rec("plus", '<span class="sc-op">Plus</span> r₁+' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +3 ε</span>", frag, [s, t], newT);
+        }
+
+        function tOpt(a) {
+          const s = freshState(),
+            t = freshState();
+          const newT = [
+            { from: s, sym: EPS, to: a.start },
+            { from: s, sym: EPS, to: t },
+            { from: a.accept, sym: EPS, to: t },
+          ];
+          const frag = { start: s, accept: t, trans: [...a.trans, ...newT] };
+          return rec("opt", '<span class="sc-op">Optional</span> r₁?' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +3 ε</span>", frag, [s, t], newT);
+        }
+
+        // ── Parser (same grammar as buildNFA, using t* operations) ────
+        let pos = 0;
+        const peek = () => (pos < str.length ? str[pos] : null);
+
+        function parseExpr() {
+          let n = parseConcat();
+          while (peek() === "|") {
+            pos++;
+            n = tUnion(n, parseConcat());
+          }
+          return n;
+        }
+        function parseConcat() {
+          let n = parseUnary();
+          while (peek() !== null && peek() !== ")" && peek() !== "|") n = tConcat(n, parseUnary());
+          return n;
+        }
+        function parseUnary() {
+          let n = parseAtom();
+          while (peek() === "*" || peek() === "+" || peek() === "?") {
+            const op = str[pos++];
+            if (op === "*") n = tStar(n);
+            else if (op === "+") n = tPlus(n);
+            else n = tOpt(n);
+          }
+          return n;
+        }
+        function parseAtom() {
+          const ch = peek();
+          if (ch === null) throw new Error("Unexpected end of expression");
+          if (ch === "(") {
+            pos++;
+            const inner = parseExpr();
+            if (peek() !== ")") throw new Error("Unmatched (");
+            pos++;
+            return inner;
+          }
+          if (ch === ")") throw new Error("Unmatched )");
+          if ("|*+?".includes(ch)) throw new Error("Unexpected operator '" + ch + "'");
+          if (ch === "\\") {
+            pos++;
+            if (!peek()) throw new Error("Trailing \\");
+            return tSymbol(str[pos++]);
+          }
+          if (ch === "ε") {
+            pos++;
+            return tEpsOp();
+          }
+          pos++;
+          return tSymbol(ch);
+        }
+
+        if (!str.trim()) throw new Error("Empty expression");
+        const nfa = parseExpr();
+        if (pos < str.length) throw new Error("Unexpected character '" + str[pos] + "'");
+        return { nfa, steps };
+      }
+
+      // ── NFA (Thompson) stepper state ───────────────────────────────
+      let _nfaSteps = null;
+      let _nfaPos = -1;
+      let _nfaFinal = null; // { start, accept, numStates } for "done" rendering
+
+      function nfaSetBtns() {
+        const has = _nfaSteps !== null;
+        const atEnd = has && _nfaPos >= _nfaSteps.length - 1;
+        document.getElementById("btn-tc-reset").disabled = !has || _nfaPos < 0;
+        document.getElementById("btn-tc-back").disabled  = !has || _nfaPos < 0;
+        document.getElementById("btn-tc-step").disabled  = !has || atEnd;
+        document.getElementById("btn-tc-all").disabled   = !has || atEnd;
+      }
+
+      function nfaRenderStep() {
+        const logEl = document.getElementById("tc-log-bar");
+        const wrap = document.getElementById("nfa-table-wrap");
+        const sumEl = document.getElementById("nfa-summary");
+
+        if (_nfaPos < 0) {
+          logEl.innerHTML = "";
+          document.getElementById("nfa-content").style.display = "none";
+          document.getElementById("nfa-empty").style.display = "";
+          nfaSetBtns();
+          return;
+        }
+
+        document.getElementById("nfa-empty").style.display = "none";
+        document.getElementById("nfa-content").style.display = "flex";
+
+        const step = _nfaSteps[_nfaPos];
+        const isDone = _nfaPos === _nfaSteps.length - 1;
+        logEl.innerHTML = step.logHtml;
+
+        if (isDone) {
+          // Show the full final NFA (reuse renderNFA which fills sumEl + wrap)
+          renderNFA(_nfaFinal);
+          nfaSetBtns();
+          return;
+        }
+
+        // ── Partial-construction display ──────────────────────────────
+        const { fragStart, fragAccept, snapshot, newStates, newTrans } = step;
+        const newStateSet = new Set(newStates);
+        const newTransKey = new Set(newTrans.map((t) => t.from + "\0" + t.sym + "\0" + t.to));
+
+        // Collect visible states from snapshot + new states
+        const visSet = new Set(newStates);
+        for (const t of snapshot) {
+          visSet.add(t.from);
+          visSet.add(t.to);
+        }
+        const visSorted = [...visSet].sort((a, b) => a - b);
+
+        // Collect alphabet symbols so far
+        const alphabet = new Set();
+        for (const t of snapshot) if (t.sym !== EPS) alphabet.add(t.sym);
+        const cols = [EPS, ...[...alphabet].sort()];
+
+        // Build transition map
+        const tmap = {};
+        for (const s of visSet) tmap[s] = {};
+        for (const t of snapshot) {
+          if (!tmap[t.from][t.sym]) tmap[t.from][t.sym] = [];
+          tmap[t.from][t.sym].push(t.to);
+        }
+
+        // Summary: current fragment info
+        sumEl.innerHTML = sumItem("states", visSet.size + " / " + _nextState) + sumItem("start (i)", "q" + fragStart) + sumItem("accept (f)", "q" + fragAccept) + sumItem("transitions", snapshot.length);
+
+        // Transition table
+        wrap.innerHTML = "";
+        const tbl = document.createElement("table");
+        tbl.className = "parse-table";
+        let hdr = '<thead><tr><th class="state-col">State</th>';
+        for (const c of cols) hdr += "<th>" + c + "</th>";
+        tbl.innerHTML = hdr + "</tr></thead>";
+
+        const tb = document.createElement("tbody");
+        for (const i of visSorted) {
+          const tr = document.createElement("tr");
+          const isFS = i === fragStart,
+            isFA = i === fragAccept,
+            isN = newStateSet.has(i);
+
+          const sc = document.createElement("td");
+          if (isFS && isFA) {
+            sc.className = "tc-frag-both";
+            sc.textContent = "if q" + i;
+          } else if (isFS) {
+            sc.className = "tc-frag-start";
+            sc.textContent = "i  q" + i;
+          } else if (isFA) {
+            sc.className = "tc-frag-accept";
+            sc.textContent = "f  q" + i;
+          } else if (isN) {
+            sc.className = "tc-new-state";
+            sc.textContent = "   q" + i;
+          } else {
+            sc.className = "state-plain";
+            sc.textContent = "   q" + i;
+          }
+          tr.appendChild(sc);
+
+          for (const c of cols) {
+            const td = document.createElement("td");
+            const targets = (tmap[i] && tmap[i][c]) || [];
+            if (targets.length) {
+              td.textContent = targets.length === 1 ? "q" + targets[0] : "{ " + targets.map((x) => "q" + x).join(", ") + " }";
+              const isNew = targets.some((to) => newTransKey.has(i + "\0" + c + "\0" + to));
+              td.className = isNew ? "tc-new-trans" : c === EPS ? "nfa-eps" : "nfa-sym";
+            }
+            tr.appendChild(td);
+          }
+          tb.appendChild(tr);
+        }
+        tbl.appendChild(tb);
+        wrap.appendChild(tbl);
+        nfaSetBtns();
+      }
+
+      function nfaReset() {
+        if (!_nfaSteps) return;
+        _nfaPos = -1;
+        nfaRenderStep();
+      }
+
+      function nfaStepFwd() {
+        if (!_nfaSteps || _nfaPos >= _nfaSteps.length - 1) return;
+        _nfaPos++;
+        nfaRenderStep();
+      }
+
+      function nfaBack() {
+        if (!_nfaSteps || _nfaPos < 0) return;
+        _nfaPos--;
+        nfaRenderStep();
+      }
+
+      function nfaRunAll() {
+        if (!_nfaSteps) return;
+        _nfaPos = _nfaSteps.length - 1;
+        nfaRenderStep();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SUBSET CONSTRUCTION  (NFA → DFA)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // Returns a pre-computed { dfaStates, dfaAccepts, dfaTrans, alphabet, steps }
+      // where steps[] drives the step-by-step display.
+
+      function subsetConstruct(nfa) {
+        const { start, accept, trans } = nfa;
+
+        // ε-closure: all states reachable from `seeds` via ε-transitions only
+        function epsClosure(seeds) {
+          const C = new Set(seeds);
+          const stk = [...seeds];
+          while (stk.length) {
+            const s = stk.pop();
+            for (const t of trans)
+              if (t.from === s && t.sym === EPS && !C.has(t.to)) {
+                C.add(t.to);
+                stk.push(t.to);
+              }
+          }
+          return C;
+        }
+
+        // move: NFA states reachable from `states` on symbol `sym` (no ε)
+        function move(states, sym) {
+          const R = new Set();
+          for (const s of states) for (const t of trans) if (t.from === s && t.sym === sym) R.add(t.to);
+          return R;
+        }
+
+        // Canonical string key for a set of NFA states
+        const key = (S) => [...S].sort((a, b) => a - b).join(",");
+
+        // Collect input alphabet
+        const alphabet = new Set();
+        for (const t of trans) if (t.sym !== EPS) alphabet.add(t.sym);
+        const alpha = [...alphabet].sort();
+
+        const dfaStates = []; // array of Set<nfaStateIdx>
+        const dfaMap = {}; // key → dfaIdx
+        const dfaTrans = []; // { from:dfaIdx, sym, to:dfaIdx }
+        const steps = []; // animation steps
+
+        // Helper: label a DFA state
+        const dLabel = (i) => "D" + i;
+        const nLabel = (S) =>
+          "{" +
+          [...S]
+            .sort((a, b) => a - b)
+            .map((s) => "q" + s)
+            .join(", ") +
+          "}";
+
+        // Step 0: initialise with ε-closure of NFA start state
+        const S0 = epsClosure([start]);
+        dfaStates.push(S0);
+        dfaMap[key(S0)] = 0;
+        steps.push({
+          type: "init",
+          dfaIdx: 0,
+          html: '<span class="sc-op">ε-closure</span>({q' + start + "}) = " + '<span class="sc-nfa">' + nLabel(S0) + "</span>" + ' → <span class="sc-state">D0</span>  <span class="sc-new">(start state)</span>',
+        });
+
+        let wi = 0;
+        while (wi < dfaStates.length) {
+          const S = dfaStates[wi];
+          steps.push({
+            type: "process",
+            dfaIdx: wi,
+            html: 'Processing <span class="sc-state">' + dLabel(wi) + "</span>" + ' = <span class="sc-nfa">' + nLabel(S) + "</span>",
+          });
+
+          for (const sym of alpha) {
+            const mv = move(S, sym);
+            if (!mv.size) {
+              steps.push({
+                type: "empty",
+                dfaIdx: wi,
+                sym,
+                html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + sym + "</span>) = ∅" + " — no transition",
+              });
+              continue;
+            }
+            const T = epsClosure([...mv]);
+            const k = key(T);
+            const isNew = dfaMap[k] === undefined;
+            let toIdx;
+            if (isNew) {
+              toIdx = dfaStates.length;
+              dfaStates.push(T);
+              dfaMap[k] = toIdx;
+            } else toIdx = dfaMap[k];
+            dfaTrans.push({ from: wi, sym, to: toIdx });
+
+            steps.push({
+              type: "trans",
+              dfaIdx: wi,
+              sym,
+              toIdx,
+              isNew,
+              html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + sym + "</span>) = " + '<span class="sc-nfa">' + nLabel(mv) + "</span>" + ' → <span class="sc-op">ε-closure</span> → ' + '<span class="sc-nfa">' + nLabel(T) + "</span>" + ' = <span class="sc-state">' + dLabel(toIdx) + "</span>  " + (isNew ? '<span class="sc-new">(new)</span>' : '<span class="sc-seen">(seen)</span>'),
+            });
+          }
+          wi++;
+        }
+
+        // DFA accept states: any DFA state containing NFA accept
+        const dfaAccepts = new Set();
+        dfaStates.forEach((S, i) => {
+          if (S.has(accept)) dfaAccepts.add(i);
+        });
+
+        steps.push({
+          type: "done",
+          html: '<span class="sc-new">✓</span>  Construction complete — ' + dfaStates.length + " DFA states, " + dfaAccepts.size + " accepting",
+        });
+
+        return { dfaStates, dfaAccepts, dfaTrans, alpha, steps };
+      }
+
+      // ── Subset construction stepper state ──────────────────────────
+      let _scData = null; // result of subsetConstruct()
+      let _scPos = -1; // current step index  (-1 = not started)
+
+      function scSetBtns() {
+        const hasDfa = _scData !== null;
+        const atEnd = _scData && _scPos >= _scData.steps.length - 1;
+        document.getElementById("btn-sc-reset").disabled = !hasDfa || _scPos < 0;
+        document.getElementById("btn-sc-back").disabled  = !hasDfa || _scPos < 0;
+        document.getElementById("btn-sc-step").disabled  = !hasDfa || atEnd;
+        document.getElementById("btn-sc-all").disabled   = !hasDfa || atEnd;
+      }
+
+      function scRenderStep() {
+        if (!_scData) return;
+        const { dfaStates, dfaAccepts, dfaTrans, alpha, steps } = _scData;
+        const pos = _scPos;
+        const step = pos >= 0 ? steps[pos] : null;
+        const isDone = step && step.type === "done";
+
+        // Log bar
+        document.getElementById("sc-log-bar").innerHTML = step ? step.html : "";
+
+        // Reconstruct what has been revealed by replaying 0..pos
+        const revStates = new Set(); // dfaIdx introduced so far
+        const revTrans = {}; // dfaIdx → sym → toIdx
+        let activeCell = null; // { dfaIdx, sym }
+        let activeRow = -1;
+
+        for (let i = 0; i <= pos; i++) {
+          const s = steps[i];
+          if (s.type === "init") {
+            revStates.add(s.dfaIdx);
+            activeRow = s.dfaIdx;
+          }
+          if (s.type === "process") {
+            activeRow = s.dfaIdx;
+            activeCell = null;
+          }
+          if (s.type === "trans") {
+            revStates.add(s.dfaIdx);
+            revStates.add(s.toIdx);
+            if (!revTrans[s.dfaIdx]) revTrans[s.dfaIdx] = {};
+            revTrans[s.dfaIdx][s.sym] = s.toIdx;
+            activeRow = s.dfaIdx;
+            activeCell = { dfaIdx: s.dfaIdx, sym: s.sym };
+          }
+          if (s.type === "empty") {
+            activeRow = s.dfaIdx;
+            activeCell = { dfaIdx: s.dfaIdx, sym: s.sym };
+          }
+          if (s.type === "done") {
+            activeRow = -1;
+            activeCell = null;
+          }
+        }
+
+        // Render DFA table
+        const wrap = document.getElementById("dfa-table-wrap");
+        wrap.innerHTML = "";
+        const tbl = document.createElement("table");
+        tbl.className = "parse-table" + (isDone ? "" : " sc-stepping");
+
+        let hdr = '<thead><tr><th class="state-col">State</th><th class="dfa-set-hdr">NFA states</th>';
+        for (const sym of alpha) hdr += "<th>" + sym + "</th>";
+        tbl.innerHTML = hdr + "</tr></thead>";
+
+        const tb = document.createElement("tbody");
+        for (let i = 0; i < dfaStates.length; i++) {
+          if (!isDone && !revStates.has(i)) continue; // hide undiscovered states
+          const isStart = i === 0;
+          const isAccept = dfaAccepts.has(i);
+          const isActive = i === activeRow;
+
+          const tr = document.createElement("tr");
+
+          // State cell
+          const sc = document.createElement("td");
+          if (isStart && isAccept) {
+            sc.className = "dfa-both";
+            sc.textContent = "→* D" + i;
+          } else if (isStart) {
+            sc.className = "dfa-start";
+            sc.textContent = "→  D" + i;
+          } else if (isAccept) {
+            sc.className = "dfa-accept";
+            sc.textContent = "*  D" + i;
+          } else {
+            sc.className = "dfa-plain";
+            sc.textContent = "   D" + i;
+          }
+          if (isActive) sc.classList.add("sc-row-hi");
+          if (!isDone) sc.classList.add("sc-filled");
+          tr.appendChild(sc);
+
+          // NFA states cell
+          const nc = document.createElement("td");
+          nc.className = "dfa-set-cell" + (isActive ? " sc-row-hi" : "") + (!isDone ? " sc-filled" : "");
+          nc.textContent = [...dfaStates[i]]
+            .sort((a, b) => a - b)
+            .map((s) => "q" + s)
+            .join(", ");
+          tr.appendChild(nc);
+
+          // Transition cells
+          for (const sym of alpha) {
+            const td = document.createElement("td");
+            const toIdx = revTrans[i] && revTrans[i][sym] !== undefined ? revTrans[i][sym] : undefined;
+            const isAct = activeCell && activeCell.dfaIdx === i && activeCell.sym === sym;
+
+            if (isDone) {
+              // Full table: look up from dfaTrans
+              const tx = dfaTrans.find((t) => t.from === i && t.sym === sym);
+              if (tx !== undefined) td.textContent = "D" + tx.to;
+            } else if (toIdx !== undefined) {
+              td.textContent = "D" + toIdx;
+              td.classList.add("sc-filled");
+            }
+            if (isAct) td.classList.add("sc-active");
+            tr.appendChild(td);
+          }
+          tb.appendChild(tr);
+        }
+        tbl.appendChild(tb);
+        wrap.appendChild(tbl);
+        wrap.style.display = "";
+        document.getElementById("dfa-empty").style.display = "none";
+      }
+
+      function scReset() {
+        if (!_scData) return;
+        _scPos = 0;
+        scBack(); // decrements to -1, reuses that branch to clear the panel
+      }
+
+      function scStepFwd() {
+        if (!_scData || _scPos >= _scData.steps.length - 1) return;
+        _scPos++;
+        scRenderStep();
+        scSetBtns();
+      }
+
+      function scBack() {
+        if (!_scData || _scPos < 0) return;
+        _scPos--;
+        if (_scPos < 0) {
+          // Back to "not started" — show empty DFA panel
+          document.getElementById("sc-log-bar").innerHTML = "";
+          document.getElementById("dfa-table-wrap").innerHTML = "";
+          document.getElementById("dfa-table-wrap").style.display = "none";
+          document.getElementById("dfa-empty").style.display = "";
+        } else {
+          scRenderStep();
+        }
+        scSetBtns();
+      }
+
+      function scRunAll() {
+        if (!_scData) return;
+        _scPos = _scData.steps.length - 1;
+        scRenderStep();
+        scSetBtns();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CONTROLLER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function build() {
+        setError("");
+        const raw = document.getElementById("regex-input").value;
+        let nfa, steps;
+        try {
+          ({ nfa, steps } = buildNFAWithSteps(raw));
+        } catch (e) {
+          setError(e.message);
+          document.getElementById("nfa-empty").style.display = "";
+          document.getElementById("nfa-content").style.display = "none";
+          return;
+        }
+
+        // Reset NFA stepper — user navigates forward from pos = -1
+        _nfaFinal = nfa;
+        _nfaSteps = steps;
+        _nfaPos = -1;
+        document.getElementById("tc-log-bar").innerHTML = "";
+        document.getElementById("nfa-empty").style.display = "";
+        document.getElementById("nfa-content").style.display = "none";
+        nfaSetBtns();
+
+        // Pre-compute DFA steps and reset the DFA stepper
+        _scData = subsetConstruct(nfa);
+        _scPos = -1;
+        document.getElementById("sc-log-bar").innerHTML = "";
+        document.getElementById("dfa-table-wrap").innerHTML = "";
+        document.getElementById("dfa-table-wrap").style.display = "none";
+        document.getElementById("dfa-empty").style.display = "";
+        scSetBtns();
+
+        // Render DFA graph and generate example strings
+        renderDFA(_scData);
+        const examples = generateExamples(_scData);
+        renderExampleChips(examples);
+        _simSteps = null;
+        _simPos = -1;
+        document.getElementById("sim-empty").style.display = "none";
+        document.getElementById("sim-content").style.display = "flex";
+        document.getElementById("sim-tape-wrap").style.display = "none";
+        document.getElementById("sim-result").style.display = "none";
+        document.getElementById("sim-log-bar").innerHTML = "";
+        simSetBtns();
+        simRun(); // auto-initialise with current input string
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DFA GRAPH RENDERER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const DFA_W = 52,
+        DFA_H = 30; // node dimensions
+
+      const _dfaZoom = d3
+        .zoom()
+        .scaleExtent([0.1, 8])
+        .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", (e) => d3.select("#dfa-graph-root").attr("transform", e.transform));
+      d3.select("#dfa-svg").call(_dfaZoom).on("dblclick.zoom", null);
+      document.getElementById("dfa-svg").addEventListener("dblclick", () => fitDFA());
+
+      function fitDFA() {
+        try {
+          const rootEl = document.getElementById("dfa-graph-root");
+          if (!rootEl) return;
+          const bb = rootEl.getBBox();
+          const svgEl = document.getElementById("dfa-svg");
+          const vw = svgEl.clientWidth || svgEl.parentElement.clientWidth || 400;
+          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 200;
+          if (!bb || bb.width < 1 || bb.height < 1) return;
+          const sc = Math.min(0.95, Math.min(vw / (bb.width + 60), vh / (bb.height + 40)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
+          d3.select("#dfa-svg").call(_dfaZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch (e) {
+          /* ignore during layout */
+        }
+      }
+
+      // Refit on panel resize
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => {
+          if (_scData) fitDFA();
+        }).observe(document.getElementById("dfa-svg").parentElement);
+      }
+
+      function renderDFA(scData) {
+        const { dfaStates, dfaAccepts, dfaTrans, alpha } = scData;
+        const n = dfaStates.length;
+        const root = d3.select("#dfa-graph-root");
+        root.selectAll("*").remove();
+
+        document.getElementById("dfa-graph-empty").style.display = n === 0 ? "" : "none";
+        if (n === 0) return;
+
+        // Group non-self transitions by (from, to); collect self-loops separately
+        const edgeMap = new Map(); // "f-t" → { from, to, syms[] }
+        const selfLoops = new Map(); // stateIdx → syms[]
+        for (const t of dfaTrans) {
+          if (t.from === t.to) {
+            if (!selfLoops.has(t.from)) selfLoops.set(t.from, []);
+            selfLoops.get(t.from).push(t.sym);
+          } else {
+            const k = t.from + "-" + t.to;
+            if (!edgeMap.has(k)) edgeMap.set(k, { from: t.from, to: t.to, syms: [] });
+            edgeMap.get(k).syms.push(t.sym);
+          }
+        }
+
+        // Dagre layout (non-self edges only)
+        const dg = new dagre.graphlib.Graph();
+        dg.setGraph({ rankdir: "LR", nodesep: 30, ranksep: 54, marginx: 40, marginy: 30 });
+        dg.setDefaultEdgeLabel(() => ({}));
+        for (let i = 0; i < n; i++) dg.setNode(i, { width: DFA_W, height: DFA_H });
+        for (const [k, e] of edgeMap) dg.setEdge(e.from, e.to, {});
+        dagre.layout(dg);
+
+        const pathLine = d3
+          .line()
+          .x((p) => p.x)
+          .y((p) => p.y)
+          .curve(d3.curveCatmullRom);
+
+        // Draw non-self edges
+        for (const [k, e] of edgeMap) {
+          const ed = dg.edge(e.from, e.to);
+          if (!ed) continue;
+          const pts = ed.points;
+          const mid = pts[Math.floor(pts.length / 2)];
+          const eg = root.append("g").attr("class", "dfa-edge").attr("data-edge", k);
+          eg.append("path").attr("d", pathLine(pts));
+          if (pts.length >= 2) {
+            const p0 = pts[pts.length - 2],
+              p1 = pts[pts.length - 1];
+            eg.append("line").attr("x1", p0.x).attr("y1", p0.y).attr("x2", p1.x).attr("y2", p1.y).attr("stroke", "none").attr("marker-end", "url(#dfa-arrow)");
+          }
+          eg.append("text")
+            .attr("x", mid.x)
+            .attr("y", mid.y - 5)
+            .attr("text-anchor", "middle")
+            .text(e.syms.join(", "));
+        }
+
+        // Draw self-loops as arcs above each node
+        for (const [si, syms] of selfLoops) {
+          const dn = dg.node(si);
+          if (!dn) continue;
+          const cx = dn.x,
+            top = dn.y - DFA_H / 2;
+          const eg = root.append("g").attr("class", "dfa-edge").attr("data-self", si);
+          // Cubic bezier that loops above the node
+          eg.append("path")
+            .attr("d", `M${cx - 9},${top} C${cx - 26},${top - 34} ${cx + 26},${top - 34} ${cx + 9},${top}`)
+            .attr("marker-end", "url(#dfa-arrow)");
+          eg.append("text")
+            .attr("x", cx)
+            .attr("y", top - 36)
+            .attr("text-anchor", "middle")
+            .text(syms.join(", "));
+        }
+
+        // Draw nodes (on top of edges)
+        for (let i = 0; i < n; i++) {
+          const dn = dg.node(i);
+          if (!dn) continue;
+          const tx = dn.x - DFA_W / 2,
+            ty = dn.y - DFA_H / 2;
+          const isAccept = dfaAccepts.has(i);
+          const ng = root
+            .append("g")
+            .attr("class", "dfa-node" + (isAccept ? " accepting" : ""))
+            .attr("id", "dfa-state-" + i)
+            .attr("transform", `translate(${tx},${ty})`);
+          ng.append("rect").attr("width", DFA_W).attr("height", DFA_H).attr("rx", 4);
+          if (isAccept) {
+            ng.append("rect")
+              .attr("class", "accept-border")
+              .attr("x", 3)
+              .attr("y", 3)
+              .attr("width", DFA_W - 6)
+              .attr("height", DFA_H - 6)
+              .attr("rx", 2);
+          }
+          // State label "D0"
+          ng.append("text")
+            .attr("class", "state-label")
+            .attr("x", DFA_W / 2)
+            .attr("y", DFA_H / 2)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text("D" + i);
+          // Entry arrow for start state
+          if (i === 0) {
+            root
+              .append("line")
+              .attr("class", "start-arrow")
+              .attr("x1", tx - 16)
+              .attr("y1", dn.y)
+              .attr("x2", tx - 1)
+              .attr("y2", dn.y)
+              .attr("marker-end", "url(#dfa-arrow)");
+          }
+        }
+
+        fitDFA();
+      }
+
+      function dfaHighlight(step) {
+        d3.selectAll(".dfa-node").classed("sim-active sim-reject", false);
+        d3.selectAll(".dfa-edge").classed("sim-active", false);
+
+        if (!step || step.state === undefined) return;
+
+        if (step.state === -1) {
+          // Dead — highlight last real state as rejected if we have it
+          // (prevState was the last real state before dead)
+          if (step.prevState !== null && step.prevState !== undefined) {
+            d3.select("#dfa-state-" + step.prevState).classed("sim-reject", true);
+          }
+        } else {
+          const isFinal = step.final === true;
+          const isReject = isFinal && !step.accepted;
+          d3.select("#dfa-state-" + step.state)
+            .classed("sim-active", !isReject)
+            .classed("sim-reject", isReject);
+        }
+
+        // Highlight the edge just taken
+        if (step.sym !== null && step.prevState !== null && step.prevState !== undefined && step.prevState !== -1) {
+          const from = step.prevState,
+            to = step.state;
+          if (from === to) {
+            d3.select('[data-self="' + from + '"]').classed("sim-active", true);
+          } else {
+            d3.select('[data-edge="' + from + "-" + to + '"]').classed("sim-active", true);
+          }
+        }
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // STRING GENERATION
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // BFS over the DFA to find the shortest accepted strings.
+      // Keyed by (state, length) so cycles are handled: a* yields ε, a, aa, aaa…
+      function generateExamples(scData, maxLen = 7, maxCount = 12) {
+        const { dfaAccepts, dfaTrans, alpha } = scData;
+        const results = [];
+        const seen = new Set();
+        const queue = [[0, ""]];
+        seen.add("0|0");
+
+        while (queue.length && results.length < maxCount) {
+          const [state, str] = queue.shift();
+
+          if (dfaAccepts.has(state)) {
+            results.push(str);
+            if (results.length >= maxCount) break;
+          }
+
+          if (str.length >= maxLen) continue;
+
+          for (const a of alpha) {
+            const tx = dfaTrans.find((t) => t.from === state && t.sym === a);
+            if (tx !== undefined) {
+              const key = tx.to + "|" + (str.length + 1);
+              if (!seen.has(key)) {
+                seen.add(key);
+                queue.push([tx.to, str + a]);
+              }
+            }
+          }
+        }
+
+        return results;
+      }
+
+      function renderExampleChips(examples) {
+        const container = document.getElementById("chips-container");
+        container.innerHTML = "";
+        if (examples.length === 0) {
+          const note = document.createElement("span");
+          note.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:.65rem;color:var(--text-lo)";
+          note.textContent = "none found up to length 7";
+          container.appendChild(note);
+          return;
+        }
+        for (const s of examples) {
+          const btn = document.createElement("button");
+          btn.className = "example-chip" + (s === "" ? " eps-chip" : "");
+          btn.textContent = s === "" ? "ε" : s;
+          btn.title = s === "" ? "empty string" : s;
+          btn.onclick = () => {
+            document.getElementById("sim-string-input").value = s;
+            simRun();
+          };
+          container.appendChild(btn);
+        }
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DFA SIMULATION
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simSteps = null; // { steps, chars }
+      let _simPos = -1;
+
+      function escHtml(s) {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+
+      function buildSimSteps(scData, input) {
+        const { dfaAccepts, dfaTrans } = scData;
+        const chars = [...input]; // handles multi-byte / emoji
+        const steps = [];
+
+        // Step 0: initial configuration
+        steps.push({
+          state: 0,
+          pos: 0,
+          sym: null,
+          prevState: null,
+          logHtml: '<span class="sc-op">Start</span>  state <span class="sc-state">D0</span>' + '  input <span class="sc-sym">' + (chars.length === 0 ? "ε" : escHtml(input)) + "</span>",
+        });
+
+        let state = 0;
+        for (let i = 0; i < chars.length; i++) {
+          const a = chars[i];
+          const tx = dfaTrans.find((t) => t.from === state && t.sym === a);
+          const prev = state;
+          if (tx === undefined) {
+            steps.push({
+              state: -1,
+              pos: i + 1,
+              sym: a,
+              prevState: prev,
+              logHtml: '<span class="sc-op">Read</span>  <span class="sc-sym">' + escHtml(a) + "</span>" + "  D" + prev + ' &#8594; <span style="color:var(--red)">dead</span>' + '  <span class="sc-nfa">(no transition on ' + escHtml(a) + ")</span>",
+            });
+            state = -1;
+            break;
+          }
+          state = tx.to;
+          steps.push({
+            state,
+            pos: i + 1,
+            sym: a,
+            prevState: prev,
+            logHtml: '<span class="sc-op">Read</span>  <span class="sc-sym">' + escHtml(a) + "</span>" + "  D" + prev + ' &#8594; <span class="sc-state">D' + state + "</span>",
+          });
+        }
+
+        // Final verdict (no edge taken at this step, just evaluate accept/reject)
+        const accepted = state !== -1 && dfaAccepts.has(state);
+        steps.push({
+          state,
+          pos: chars.length,
+          sym: null,
+          prevState: null,
+          final: true,
+          accepted,
+          logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>' + "  &#8212; D" + state + " is an accepting state" : '<span style="color:var(--red);font-weight:bold">REJECT</span>' + "  &#8212; " + (state === -1 ? "no transition (dead)" : "D" + state + " is not an accepting state"),
+        });
+
+        return { steps, chars };
+      }
+
+      function simSetBtns() {
+        const n = _simSteps ? _simSteps.steps.length : 0;
+        document.getElementById("btn-sim-reset").disabled = !_simSteps || _simPos <= 0;
+        document.getElementById("btn-sim-back").disabled  = !_simSteps || _simPos <= 0;
+        document.getElementById("btn-sim-step").disabled  = !_simSteps || _simPos >= n - 1;
+        document.getElementById("btn-sim-all").disabled   = !_simSteps || _simPos >= n - 1;
+      }
+
+      function simRenderStep() {
+        if (!_simSteps || _simPos < 0) {
+          document.getElementById("sim-tape-wrap").style.display = "none";
+          document.getElementById("sim-result").style.display = "none";
+          document.getElementById("sim-log-bar").innerHTML = "";
+          dfaHighlight(null);
+          simSetBtns();
+          return;
+        }
+
+        const { steps, chars } = _simSteps;
+        const step = steps[_simPos];
+
+        // Log bar
+        document.getElementById("sim-log-bar").innerHTML = step.logHtml;
+
+        // State badge
+        const badge = document.getElementById("sim-state-badge");
+        badge.className = "sim-state-badge" + (step.final ? (step.accepted ? " accepting" : " rejecting") : "");
+        badge.textContent = step.state === -1 ? "∅" : "D" + step.state;
+
+        // Tape
+        const tape = document.getElementById("sim-tape");
+        tape.innerHTML = "";
+        if (chars.length === 0) {
+          const eps = document.createElement("span");
+          eps.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:.82rem;color:var(--text-lo);padding:2px 4px";
+          eps.textContent = "ε";
+          tape.appendChild(eps);
+        } else {
+          for (let i = 0; i < chars.length; i++) {
+            const cell = document.createElement("div");
+            cell.className = "tape-cell";
+            cell.textContent = chars[i];
+            if (step.sym !== null) {
+              const cur = step.pos - 1; // index of the character just read
+              if (i < cur) cell.classList.add("tc-consumed");
+              else if (i === cur) cell.classList.add("tc-current");
+              // i > cur: remaining (no class)
+            } else {
+              if (i < step.pos) cell.classList.add("tc-consumed");
+              // i >= step.pos: remaining
+            }
+            tape.appendChild(cell);
+          }
+        }
+        document.getElementById("sim-tape-wrap").style.display = "flex";
+
+        // Graph highlight
+        dfaHighlight(step);
+
+        // Result banner
+        const resultEl = document.getElementById("sim-result");
+        if (step.final) {
+          resultEl.style.display = "";
+          resultEl.className = step.accepted ? "accept" : "reject";
+          resultEl.textContent = step.accepted ? "✓ ACCEPTED" : "✗ REJECTED";
+        } else {
+          resultEl.style.display = "none";
+        }
+
+        simSetBtns();
+      }
+
+      function simRun() {
+        if (!_scData) return;
+        const input = document.getElementById("sim-string-input").value;
+        _simSteps = buildSimSteps(_scData, input);
+        _simPos = 0;
+        simRenderStep();
+      }
+
+      function simReset() {
+        if (!_simSteps) return;
+        _simPos = 0;
+        simRenderStep();
+      }
+
+      function simStepFwd() {
+        if (!_simSteps || _simPos >= _simSteps.steps.length - 1) return;
+        _simPos++;
+        simRenderStep();
+      }
+
+      function simBack() {
+        if (!_simSteps) return;
+        _simPos--;
+        simRenderStep();
+      }
+
+      function simRunAll() {
+        if (!_simSteps) return;
+        _simPos = _simSteps.steps.length - 1;
+        simRenderStep();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PSEUDOCODE MODAL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // kw, sym, it, cm, hi, _la/_ra/_eps/…, pcBlock — all from shared.js SHARED:PSEUDOCODE
+      // NFA fragment notation: ⟨s, t⟩
+      const _frag = (a, b) => sym("⟨") + it(a) + sym(", ") + it(b) + sym("⟩");
+      // ε-arrow between two state names: s —ε→ t
+      const _earr = (a, b) => it(a) + sym(" —ε→ ") + it(b);
+      // symbol-arrow between two state names: s —a→ t
+      const _sarr = (a, x, b) => it(a) + sym(" —") + it(x) + sym("→ ") + it(b);
+
+      const PC_THOMPSON = pcBlock(
+        "Thompson",
+        [
+          {
+            label: "Input",
+            sym: it("r"),
+            desc: "a regular expression over alphabet Σ, built from literals, " + sym("|") + ", concatenation, and " + sym("*"),
+          },
+          {
+            label: "Output",
+            sym: _frag("s", "t") + ", δ",
+            desc: "an NFA fragment with unique start state " + it("s") + ", unique accept state " + it("t") + ", and transition relation δ. The fragment recognises exactly L(" + it("r") + ").",
+          },
+        ],
+        `${cm("Base cases")}
+${kw("if")} ${it("r")} = ${it("a")}  ${cm("single symbol; also . for any")}
+  create states ${it("s")}, ${it("t")}
+  δ ${_la} { ${_sarr("s", "a", "t")} }
+  ${kw("return")} ${_frag("s", "t")}
+
+${kw("if")} ${it("r")} = ${_eps}  ${cm("empty string")}
+  create states ${it("s")}, ${it("t")}
+  δ ${_la} { ${_earr("s", "t")} }
+  ${kw("return")} ${_frag("s", "t")}
+
+${cm("Union")}
+${kw("if")} ${it("r")} = r₁ | r₂
+  ${_frag("i₁", "f₁")}, δ₁ ${_la} Thompson(r₁)
+  ${_frag("i₂", "f₂")}, δ₂ ${_la} Thompson(r₂)
+  create new states ${it("s")}, ${it("t")}
+  δ ${_la} δ₁ ${_cup} δ₂ ${_cup} { ${_earr("s", "i₁")},  ${_earr("s", "i₂")},  ${_earr("f₁", "t")},  ${_earr("f₂", "t")} }
+  ${kw("return")} ${_frag("s", "t")}
+
+${cm("Concatenation")}
+${kw("if")} ${it("r")} = r₁ r₂
+  ${_frag("i₁", "f₁")}, δ₁ ${_la} Thompson(r₁)
+  ${_frag("i₂", "f₂")}, δ₂ ${_la} Thompson(r₂)
+  δ ${_la} δ₁ ${_cup} δ₂ ${_cup} { ${_earr("f₁", "i₂")} }${cm("link the two fragments")}
+  ${kw("return")} ${_frag("i₁", "f₂")}
+
+${cm("Kleene star")}
+${kw("if")} ${it("r")} = r₁*
+  ${_frag("i₁", "f₁")}, δ₁ ${_la} Thompson(r₁)
+  create new states ${it("s")}, ${it("t")}
+  δ ${_la} δ₁ ${_cup} { ${_earr("s", "i₁")},  ${_earr("s", "t")}${cm("enter or skip")}
+               ${_earr("f₁", "i₁")},  ${_earr("f₁", "t")} }${cm("repeat or exit")}
+  ${kw("return")} ${_frag("s", "t")}`,
+      );
+
+      const PC_THOMPSON_DERIVED = pcBlock(
+        "Derived operators",
+        [
+          {
+            label: "Note",
+            sym: "",
+            desc: hi("r+") + " and " + hi("r?") + " are defined in terms of Thompson's base cases above.",
+          },
+        ],
+        `${cm("Plus  (one or more)")}
+${kw("if")} ${it("r")} = r₁+
+  ${_frag("i₁", "f₁")}, δ₁ ${_la} Thompson(r₁)
+  create new states ${it("s")}, ${it("t")}
+  δ ${_la} δ₁ ${_cup} { ${_earr("s", "i₁")}${cm("must enter r₁ at least once; no skip edge")}
+               ${_earr("f₁", "i₁")},  ${_earr("f₁", "t")} }${cm("repeat or exit")}
+  ${kw("return")} ${_frag("s", "t")}
+
+${cm("Optional  (zero or one)")}
+${kw("if")} ${it("r")} = r₁?
+  ${_frag("i₁", "f₁")}, δ₁ ${_la} Thompson(r₁)
+  create new states ${it("s")}, ${it("t")}
+  δ ${_la} δ₁ ${_cup} { ${_earr("s", "i₁")},  ${_earr("s", "t")}${cm("enter r₁ or skip entirely")}
+               ${_earr("f₁", "t")} }
+  ${kw("return")} ${_frag("s", "t")}`,
+      );
+
+      // ── Subset construction pseudocode ────────────────────────────
+      // (_neq, _emp, _nin from shared.js)
+
+      const PC_EPS_CLOSURE = pcBlock(
+        "ε-Closure",
+        [
+          { label: "Input", sym: it("T"), desc: "a set of NFA states" },
+          { label: "", sym: it("δ"), desc: "the NFA transition relation" },
+          {
+            label: "Output",
+            sym: "ε-closure(" + it("T") + ")",
+            desc: "all NFA states reachable from " + it("T") + " via zero or more ε-transitions",
+          },
+        ],
+        `C ${_la} T
+stack ${_la} [...T]
+${kw("while")} stack not empty
+  s ${_la} pop(stack)
+  ${kw("for each")} transition s ${sym("—ε→")} t ${sym("∈")} δ
+    ${kw("if")} t ${_nin} C
+      add t to C
+      push t onto stack
+${kw("return")} C`,
+      );
+
+      const PC_MOVE = pcBlock(
+        "move",
+        [
+          { label: "Input", sym: it("S"), desc: "a set of NFA states" },
+          { label: "", sym: it("a"), desc: "an input symbol from Σ" },
+          { label: "", sym: it("δ"), desc: "the NFA transition relation" },
+          {
+            label: "Output",
+            sym: "move(" + it("S") + ", " + it("a") + ")",
+            desc: "all NFA states directly reachable from any state in " + it("S") + " on " + it("a") + " (no ε)",
+          },
+        ],
+        `${kw("return")} { t ${sym("|")} ${sym("∃")}s ${sym("∈")} S : s ${sym("—")}${it("a")}${sym("→")} t ${sym("∈")} δ }`,
+      );
+
+      const PC_SUBSET = pcBlock(
+        "Subset-Construct",
+        [
+          {
+            label: "Input",
+            sym: it("N"),
+            desc: "NFA with start state q₀, accept state f, transition relation δ, alphabet Σ",
+          },
+          {
+            label: "Output",
+            sym: it("D"),
+            desc: "an equivalent DFA; each DFA state is a set of NFA states (an element of 2^Q)",
+          },
+        ],
+        `D₀ ${_la} ε-closure({q₀})${cm("initial DFA state")}
+worklist ${_la} [D₀]
+
+${kw("while")} worklist not empty
+  S ${_la} remove first state from worklist
+  ${kw("for each")} symbol ${it("a")} ${sym("∈")} Σ
+    T ${_la} ε-closure(move(S, ${it("a")}))
+    ${kw("if")} T ${_neq} ${_emp}
+      ${kw("if")} T is a new DFA state
+        add T to worklist
+      add transition S ${sym("—")}${it("a")}${sym("→")} T
+
+F<sub>D</sub> ${_la} { S ${sym("∈")} D | S ${sym("∩")} {f} ${_neq} ${_emp} }${cm("S is accepting iff it contains the NFA accept state")}
+${kw("return")} D`,
+      );
+
+      const PC_SIM = pcBlock(
+        "DFA-Simulate",
+        [
+          { label: "Input",  sym: it("D"), desc: "DFA with start state q₀, accept states F<sub>D</sub>, transition function δ" },
+          { label: "",       sym: it("w"), desc: "input string a₁ a₂ … aₙ (may be empty)" },
+          { label: "Output", sym: "",      desc: "accept or reject" },
+        ],
+        `${it("s")} ${_la} q₀${cm("start in the initial state")}
+${kw("for each")} symbol ${it("aᵢ")} in ${it("w")}
+  ${it("s")} ${_la} δ(${it("s")}, ${it("aᵢ")})${cm("follow the transition")}
+  ${kw("if")} δ(${it("s")}, ${it("aᵢ")}) undefined  ${kw("return")} reject${cm("no transition — dead")}
+${kw("if")} ${it("s")} ${sym("∈")} F<sub>D</sub>  ${kw("return")} accept
+${kw("else")}              ${kw("return")} reject`,
+      );
+
+      function openAlgoModal(type) {
+        const overlay = document.getElementById("algo-overlay");
+        const titleEl = document.getElementById("algo-title");
+        const subtitleEl = document.getElementById("algo-subtitle");
+        const bodyEl = document.getElementById("algo-body");
+
+        if (type === "thompson") {
+          titleEl.textContent = "Thompson's Construction";
+          subtitleEl.textContent = "RE → NFA";
+          bodyEl.innerHTML = PC_THOMPSON + PC_THOMPSON_DERIVED + '<div class="pc-note">' + "Each application of Thompson's construction produces a fragment with exactly one start " + "and one accept state. The total number of states is at most 2|r| where |r| is the number " + "of symbols and operators in the regex. The resulting NFA is converted to a DFA via " + "the subset construction (ε-closure + move)." + "</div>";
+        } else if (type === "subset") {
+          titleEl.textContent = "Subset Construction";
+          subtitleEl.textContent = "NFA → DFA";
+          bodyEl.innerHTML = PC_EPS_CLOSURE + PC_MOVE + PC_SUBSET + '<div class="pc-note">' + "The DFA may have up to 2ⁿ states for an n-state NFA, but in practice far fewer are reachable." + "</div>";
+        } else if (type === "sim") {
+          titleEl.textContent = "DFA Simulation";
+          subtitleEl.textContent = "string acceptance";
+          bodyEl.innerHTML = PC_SIM;
+        }
+        overlay.classList.remove("hidden");
+        overlay.focus();
+      }
+
+      function closeAlgoModal() {
+        document.getElementById("algo-overlay").classList.add("hidden");
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeAlgoModal();
+      });
+
+      window.onerror = function (msg, src, line, col, err) {
+        if (line === 0 && !src) return false;
+        const el = document.getElementById("error-msg");
+        let detail = err ? err.message : msg;
+        if (src) detail += " — " + src.split("/").pop() + ":" + line;
+        if (el) el.textContent = detail;
+        return false;
+      };
+
+      window.addEventListener("load", () => {
+        loadPanelState();
+        loadExamplesInto("../examples/examples-regex.json", "examples-select", EXAMPLES);
+        document.getElementById("regex-input").value = "(a|b)*abb";
+        build();
+        // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
+        let _rebuildTimer = null;
+        document.getElementById("regex-input").addEventListener("input", () => {
+          clearTimeout(_rebuildTimer);
+          _rebuildTimer = setTimeout(build, 400);
+        });
+        // Auto-run simulation when the input string changes
+        let _simTimer = null;
+        document.getElementById("sim-string-input").addEventListener("input", () => {
+          clearTimeout(_simTimer);
+          _simTimer = setTimeout(simRun, 300);
+        });
+      });
+    </script>
+  </body>
+</html>

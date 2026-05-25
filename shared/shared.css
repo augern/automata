@@ -1,0 +1,976 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   shared.css
+   Common visual language.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── Design tokens ─────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg: #ffffff;
+  --bg-panel: #f7f7f5; /* very slight warm off-white, like paper */
+  --bg-cell: #f0f0ee;
+  --bg-input: #ffffff;
+  --bg-hover: #efefec;
+  --bg-code: #f5f5f2;
+
+  /* Borders — think thin LaTeX rules */
+  --border: darkgray;
+  --border-lo: darkgray;
+  --border-hi: #888884;
+
+  /* Text */
+  --text: #111110;
+  --text-dim: #555552;
+  --text-lo: black;
+  --text-placeholder: #aaa;
+
+  /* Functional colours — used only where meaning matters */
+  --accent: #1a4fa8; /* deep PDF-hyperlink blue: active state, current node */
+  --accent-bg: #eef3fc;
+  --accent-bd: #1a4fa8;
+  --green: #1a6e3c; /* accept / match */
+  --green-bg: #edf7f1;
+  --amber: #8a5c00; /* highlighted table cell */
+  --amber-bg: #fdf6e3;
+  --red: #8a1a1a; /* error / conflict */
+  --red-bg: #fdf0f0;
+  --purple: #5a2d8a; /* reduce actions */
+
+  /* Semantic aliases used in tool CSS */
+  --shift-col: var(--accent);
+  --reduce-col: var(--purple);
+  --goto-col: var(--text-dim);
+
+  /* Typography */
+  --font-serif: "Georgia", "Times New Roman", serif;
+  --font-mono: ui-monospace, "Menlo", "Consolas", "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
+  --font-sans: system-ui, -apple-system, sans-serif;
+}
+
+/* ── Reset ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text);
+  user-select: none;
+}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+#topbar {
+  background: var(--bg-panel);
+  border-bottom: 1.5px solid var(--border-hi);
+  padding: 0 16px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+#topbar h1 {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  font-weight: normal;
+  font-style: italic;
+  color: var(--text);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+#topbar h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+#topbar h1 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tag {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Mode buttons (LR(0) / LALR(1) / LR(1)) ────────────── */
+.mode-btn {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.mode-btn.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.mode-btn:hover:not(.active) {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+/* ── General buttons ────────────────────────────────────── */
+.btn {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0 9px;
+  height: 22px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hi);
+}
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.btn.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.btn.primary:hover:not(:disabled) {
+  background: #333;
+}
+
+/* ── Icon buttons (restart / run-all) ──────────────────── */
+/* SVG rendered via CSS mask so it inherits currentColor,   */
+/* including disabled opacity and hover changes.            */
+.btn.icon-restart::before,
+.btn.icon-run-all::before {
+  content: '';
+  display: block;
+  width: 13px;
+  height: 10px;
+  background-color: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+/* |◀  skip to start */
+.btn.icon-restart::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 10'%3E%3Crect x='0' y='0' width='2' height='10' fill='black'/%3E%3Cpolygon points='13,0 13,10 4,5' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 10'%3E%3Crect x='0' y='0' width='2' height='10' fill='black'/%3E%3Cpolygon points='13,0 13,10 4,5' fill='black'/%3E%3C/svg%3E");
+}
+/* ▶|  skip to end */
+.btn.icon-run-all::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 10'%3E%3Cpolygon points='0,0 0,10 9,5' fill='black'/%3E%3Crect x='11' y='0' width='2' height='10' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 10'%3E%3Cpolygon points='0,0 0,10 9,5' fill='black'/%3E%3Crect x='11' y='0' width='2' height='10' fill='black'/%3E%3C/svg%3E");
+}
+
+/* ── Step control group ────────────────────────────────── */
+/* Buttons sit flush with collapsed borders; wraps as one   */
+/* unit inside a flex-wrap container.                       */
+.step-group {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.step-group .btn + .btn {
+  margin-left: -1px;
+}
+.step-group .btn:hover:not(:disabled) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Input + action button unit ─────────────────────────── */
+/* Merges a text input and its adjacent button into one     */
+/* visually-connected element.                              */
+.input-group {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.input-group input {
+  border-right: none;
+}
+
+/* ── Four-panel layout ──────────────────────────────────── */
+#panels {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--bg);
+  transition: width 0.18s ease;
+}
+.panel.resizing,
+.preload * {
+  transition: none !important;
+}
+.panel.collapsed {
+  width: 22px !important;
+  min-width: 22px !important;
+}
+.panel#p-automaton,
+.panel#p-main {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Panel header — thin ruled, label in small-caps serif */
+.panel-header {
+  background: var(--bg-cell);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 6px 0 10px;
+  height: 26px;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.panel-title {
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+.collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-lo);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 1px 3px;
+  line-height: 1;
+  transition: color 0.12s;
+  flex-shrink: 0;
+}
+.collapse-btn:hover {
+  color: var(--text);
+}
+
+/* Collapsed panel: rotated label */
+.panel.collapsed .panel-header {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  height: 100%;
+  width: 22px;
+  justify-content: flex-end;
+  padding: 10px 0;
+  cursor: pointer;
+  border-bottom: none;
+  border-right: 1px solid var(--border);
+}
+.panel.collapsed .panel-title {
+  font-size: 0.58rem;
+  transform: rotate(180deg);
+  text-align: right;
+}
+.panel.collapsed .collapse-btn,
+.panel.collapsed .algo-btn,
+.panel.collapsed .panel-body {
+  display: none;
+}
+
+.panel-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Resize handle */
+.resize-handle {
+  width: 3px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  z-index: 5;
+  position: relative;
+  transition: background 0.12s;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: var(--accent);
+}
+
+/* ── Grammar panel ──────────────────────────────────────── */
+#p-grammar {
+  width: 210px;
+}
+
+#examples-bar {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-lo);
+  flex-shrink: 0;
+}
+#examples-select {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 3px 5px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888884'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+#examples-select:hover {
+  border-color: var(--border-hi);
+}
+#examples-select option {
+  background: var(--bg-input);
+}
+
+#grammar-input {
+  flex: 1;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.75;
+  padding: 10px 12px;
+  resize: none;
+}
+#grammar-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+#grammar-footer {
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+#error-msg {
+  font-size: 0.64rem;
+  color: var(--red);
+  min-height: 1em;
+  line-height: 1.4;
+}
+
+/* ── Tables panel ───────────────────────────────────────── */
+#p-tables {
+  width: 340px;
+}
+#tables-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Section labels — like LaTeX \paragraph headings */
+.tbl-section-label {
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-lo);
+  padding-bottom: 2px;
+}
+
+/* Parse tables — Graphviz/LaTeX table aesthetic */
+.parse-table {
+  border-collapse: collapse;
+  font-size: 0.67rem;
+  width: 100%;
+  font-family: var(--font-mono);
+}
+.parse-table th {
+  background: var(--bg-cell);
+  color: var(--text-dim);
+  font-weight: normal;
+  font-style: italic;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+.parse-table th.state-col {
+  color: var(--text-lo);
+  background: var(--bg-panel);
+}
+.parse-table td {
+  padding: 2px 5px;
+  border: 1px solid var(--border-lo);
+  text-align: center;
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 26px;
+}
+.parse-table tr:hover td {
+  background: var(--bg-hover);
+}
+.parse-table td.state-cell {
+  color: var(--text-lo);
+  background: var(--bg-cell);
+  font-style: italic;
+}
+.parse-table td.shift {
+  color: var(--accent);
+  font-weight: bold;
+}
+.parse-table td.reduce {
+  color: var(--purple);
+  font-weight: bold;
+}
+.parse-table td.accept {
+  color: var(--green);
+  font-weight: bold;
+}
+.parse-table td.goto-cell {
+  color: var(--text);
+  font-weight: bold;
+}
+.parse-table td.rule-cell {
+  color: var(--purple);
+}
+.parse-table td.conflict {
+  background: var(--red-bg) !important;
+  color: var(--red) !important;
+  outline: 1px solid var(--red);
+  font-weight: bold;
+}
+
+/* Table cell highlight during simulation */
+.parse-table td.highlighted {
+  outline: 2px solid var(--amber);
+  outline-offset: -1px;
+  background: var(--amber-bg) !important;
+  color: var(--amber) !important;
+  animation: cell-pop 0.2s ease-out;
+}
+.parse-table td.highlighted-goto {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--accent-bg) !important;
+  color: var(--accent) !important;
+  animation: cell-pop 0.2s ease-out;
+}
+.parse-table tr.highlighted-row > td.state-cell {
+  background: var(--bg-hover) !important;
+  color: var(--text-dim) !important;
+}
+@keyframes cell-pop {
+  0% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Productions list */
+#rules-list {
+  font-size: 0.7rem;
+  line-height: 1.9;
+  color: var(--text);
+}
+#rules-list span.ri {
+  color: var(--text-lo);
+  margin-right: 6px;
+  font-style: italic;
+}
+#rules-list span.rule {
+  font-family: var(--font-mono);
+}
+
+/* FIRST/FOLLOW table value cells */
+.parse-table td[style*="goto-cell"] {
+  color: var(--green);
+}
+
+/* ── Simulation strip ───────────────────────────────────── */
+#sim-panel {
+  flex-shrink: 0;
+  border-top: 1.5px solid var(--border-hi);
+  background: var(--bg-panel);
+}
+#sim-header {
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sim-label {
+  font-family: var(--font-serif);
+  font-size: 0.62rem;
+  font-style: italic;
+  color: var(--text-lo);
+  white-space: nowrap;
+  width: 40px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+#sim-input-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+#sim-input {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  padding: 0 7px;
+  height: 22px;
+  box-sizing: border-box;
+  outline: none;
+  width: 200px;
+}
+#sim-input:focus {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+
+#sim-body {
+  display: flex;
+  flex-direction: column;
+}
+.sim-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 12px;
+  border-bottom: 1px solid var(--border-lo);
+  min-height: 24px;
+}
+
+/* Input token strip */
+#sim-tokens,
+#sim-stack {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  padding-top: 1px;
+}
+
+.tok {
+  font-size: 0.7rem;
+  padding: 0px 5px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  transition: all 0.15s;
+}
+.tok.current {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-bg);
+  font-weight: bold;
+}
+.tok.consumed {
+  color: var(--text-lo);
+  border-color: var(--border-lo);
+  text-decoration: line-through;
+}
+.tok.eof {
+  color: var(--text-lo);
+  font-style: italic;
+}
+
+/* LR stack: state number badges */
+.stk-state {
+  font-size: 0.7rem;
+  padding: 0px 7px;
+  background: var(--bg-cell);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.stk-state.top {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+  font-weight: bold;
+}
+.stk-sym {
+  font-size: 0.68rem;
+  color: var(--text-lo);
+  padding: 0 3px;
+}
+.stk-arrow {
+  font-size: 0.62rem;
+  color: var(--border-hi);
+  padding: 0 1px;
+}
+
+/* LL stack: symbol items */
+.stk-sym-item {
+  font-size: 0.7rem;
+  padding: 0px 7px;
+  background: var(--bg-cell);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.stk-sym-item.top {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+  font-weight: bold;
+}
+.stk-sym-item.terminal {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-bg);
+}
+.stk-sym-item.dollar {
+  color: var(--text-lo);
+  font-style: italic;
+  border-style: dashed;
+}
+
+/* Simulation action log */
+#sim-log {
+  font-size: 0.7rem;
+  padding-top: 2px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+#sim-log.shift {
+  color: var(--accent);
+}
+#sim-log.expand {
+  color: var(--accent);
+}
+#sim-log.reduce {
+  color: var(--purple);
+}
+#sim-log.goto {
+  color: var(--purple);
+  font-style: italic;
+}
+#sim-log.match {
+  color: var(--green);
+}
+#sim-log.accept {
+  color: var(--green);
+  font-weight: bold;
+}
+#sim-log.error {
+  color: var(--red);
+}
+
+.stk-sym.pending {
+  color: var(--purple);
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* ── Parse tree panel ───────────────────────────────────── */
+#p-tree {
+  width: 320px;
+}
+.tree-panel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.tree-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+/* touch-action:none lets D3 capture trackpad pinch/pan gestures */
+#tree-svg {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+#cy {
+  touch-action: none;
+}
+#tree-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-lo);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+/* Pseudocode modal */
+.algo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(17, 17, 16, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.algo-overlay.hidden {
+  display: none;
+}
+.algo-modal {
+  background: var(--bg);
+  border: 1.5px solid var(--border-hi);
+  width: min(640px, 92vw);
+  max-height: 84vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+.algo-modal-head {
+  background: var(--bg-panel);
+  border-bottom: 1.5px solid var(--border-hi);
+  padding: 7px 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.algo-modal-head h2 {
+  font-family: var(--font-serif);
+  font-size: 0.92rem;
+  font-weight: normal;
+  font-style: italic;
+  color: var(--text);
+  flex: 1;
+  margin: 0;
+}
+.algo-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+}
+.algo-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-lo);
+  padding: 0 3px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.algo-close:hover {
+  color: var(--text);
+}
+.algo-modal-body {
+  padding: 14px 20px 20px;
+  overflow-y: auto;
+}
+/* Pseudocode blocks — paper / textbook style */
+.pc-block {
+  margin-bottom: 24px;
+  border-top: 1.5px solid var(--text);
+  border-bottom: 1.5px solid var(--text);
+}
+.pc-block:last-child {
+  margin-bottom: 0;
+}
+.pc-name {
+  font-family: var(--font-serif);
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--text);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+/* Input / output signature */
+.pc-io {
+  display: grid;
+  grid-template-columns: 3.6rem max-content 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 7px 0 6px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-serif);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+.pc-io-label {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 0.71rem;
+  align-self: start;
+  padding-top: 1px;
+}
+.pc-io-sym {
+  font-style: italic;
+  color: var(--text);
+  align-self: start;
+}
+.pc-io-desc {
+  color: var(--text-dim);
+}
+/* Algorithm body */
+.pc-body {
+  padding: 9px 0 7px;
+  font-family: var(--font-serif);
+  font-size: 0.77rem;
+  line-height: 1.92;
+  white-space: pre;
+  color: var(--text);
+}
+.pc-body .kw {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+}
+.pc-body .sym {
+  color: var(--accent);
+}
+.pc-body .it {
+  font-style: italic;
+}
+.pc-body .cm {
+  color: var(--text-lo);
+  font-style: italic;
+  font-size: 0.88em;
+}
+.pc-body .hi {
+  color: var(--amber);
+  font-weight: 600;
+}
+.pc-note {
+  font-family: var(--font-serif);
+  font-size: 0.73rem;
+  color: var(--text-dim);
+  border-left: 2px solid var(--border);
+  padding-left: 9px;
+  margin-top: 12px;
+  line-height: 1.65;
+}
+/* Trigger button */
+.algo-btn {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+.algo-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BEGIN SHARED:PARSE-TREE-STYLE
+   Tree SVG node/edge styles — identical in LR and LL tools.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Internal nodes: white fill, thin black border (Graphviz rectangle) */
+.tree-node circle {
+  fill: var(--bg);
+  stroke: var(--text);
+  stroke-width: 1.2;
+  transition:
+    fill 0.2s,
+    stroke 0.2s,
+    stroke-width 0.2s;
+}
+/* Terminals: light grey fill to distinguish from nonterminals */
+.tree-node.terminal circle {
+  fill: var(--bg-cell);
+  stroke: var(--border-hi);
+}
+/* New node (just created this step): accent border */
+.tree-node.new-node circle {
+  fill: var(--accent-bg);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+/* Node labels: monospace, black */
+.tree-node text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.tree-node.terminal text {
+  fill: var(--text-dim);
+}
+.tree-node.new-node text {
+  fill: var(--accent);
+}
+.tree-node .rule-label {
+  font-size: 8px;
+  fill: var(--text-lo);
+  font-style: italic;
+}
+
+/* Edges: hairline black arrows, like dot graph */
+.tree-edge {
+  fill: none;
+  stroke: var(--border-hi);
+  stroke-width: 1;
+  transition: stroke 0.2s;
+}
+.tree-edge.new-edge {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+/* END SHARED:PARSE-TREE-STYLE */

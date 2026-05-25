@@ -1,0 +1,174 @@
+{
+  "groups": [
+    {
+      "label": "Cleanup",
+      "examples": [
+        {
+          "label": "Unreachable rules",
+          "text": [
+            "// Unreachable rules",
+            "S -> A B",
+            "A -> a",
+            "B -> b",
+            "C -> c",
+            "D -> C"
+          ]
+        },
+        {
+          "label": "Unproductive nonterminals",
+          "text": [
+            "// Unproductive nonterminals",
+            "S -> A | B",
+            "A -> a",
+            "B -> C",
+            "C -> B"
+          ]
+        },
+        {
+          "label": "Both issues",
+          "text": [
+            "// Both issues",
+            "S -> A | B",
+            "A -> a",
+            "B -> b | D",
+            "C -> A",
+            "D -> E",
+            "E -> D"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ε-Elimination",
+      "examples": [
+        {
+          "label": "Single nullable",
+          "text": [
+            "// Single nullable symbol",
+            "S -> A B",
+            "A -> a | eps",
+            "B -> b"
+          ]
+        },
+        {
+          "label": "Multiple nullable",
+          "text": [
+            "// Multiple nullable symbols",
+            "S -> A B C",
+            "A -> a | eps",
+            "B -> b | eps",
+            "C -> c | eps"
+          ]
+        },
+        {
+          "label": "Start nullable",
+          "text": [
+            "// Start symbol is nullable",
+            "S -> A S | eps",
+            "A -> a | b"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Unit Elim",
+      "examples": [
+        {
+          "label": "Simple unit",
+          "text": [
+            "// Simple unit productions",
+            "S -> A | a b",
+            "A -> B | c",
+            "B -> d"
+          ]
+        },
+        {
+          "label": "Unit chain",
+          "text": [
+            "// Unit chain",
+            "A -> B",
+            "B -> C",
+            "C -> a | b | c"
+          ]
+        },
+        {
+          "label": "Arithmetic (units)",
+          "text": [
+            "// Arithmetic grammar (unit prods in disguise)",
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> ( E ) | id"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "CNF",
+      "examples": [
+        {
+          "label": "Long rules",
+          "text": [
+            "// Long rules — needs binarisation",
+            "S -> A B C D",
+            "A -> a",
+            "B -> b",
+            "C -> c",
+            "D -> d"
+          ]
+        },
+        {
+          "label": "Mixed — all issues",
+          "text": [
+            "// Mixed: ε, unit, long rules",
+            "S -> A B | C",
+            "A -> a | eps",
+            "B -> b B | eps",
+            "C -> c D e",
+            "D -> d | eps"
+          ]
+        },
+        {
+          "label": "Expression grammar",
+          "text": [
+            "// Expression grammar — full CNF conversion",
+            "E -> T E'",
+            "E' -> + T E' | eps",
+            "T -> F T'",
+            "T' -> * F T' | eps",
+            "F -> ( E ) | id"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Left Recursion",
+      "examples": [
+        {
+          "label": "Direct recursion",
+          "text": [
+            "// Direct left recursion",
+            "E -> E + T | T",
+            "T -> id"
+          ]
+        },
+        {
+          "label": "Indirect recursion",
+          "text": [
+            "// Indirect left recursion",
+            "S -> A a | b",
+            "A -> S c | d"
+          ]
+        },
+        {
+          "label": "Multiple NTs",
+          "text": [
+            "// Multiple nonterminals — direct and indirect",
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> id | ( E )"
+          ]
+        }
+      ]
+    }
+  ]
+}

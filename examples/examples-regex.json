@@ -1,0 +1,23 @@
+{
+  "groups": [
+    {
+      "label": "Operators",
+      "examples": [
+        { "label": "ab",   "text": "ab" },
+        { "label": "a|b",  "text": "a|b" },
+        { "label": "a*",   "text": "a*" },
+        { "label": "a+",   "text": "a+" },
+        { "label": "a?b",  "text": "a?b" }
+      ]
+    },
+    {
+      "label": "Expressions",
+      "examples": [
+        { "label": "(a|b)*abb",          "text": "(a|b)*abb" },
+        { "label": "(ab)+",              "text": "(ab)+" },
+        { "label": "a(b|c)*d",           "text": "a(b|c)*d" },
+        { "label": "(0|1|...|9)+",       "text": "(0|1|2|3|4|5|6|7|8|9)+" }
+      ]
+    }
+  ]
+}

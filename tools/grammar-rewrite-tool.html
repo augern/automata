@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Interactive grammar transformation tool — ε-elimination, unit production elimination, Chomsky Normal Form, and left-recursion elimination with step-by-step visualisation.">
+<title>Grammar Transformations | Parser Tools</title>
+<link rel="stylesheet" href="../shared/shared.css">
+<style>
+/* Override p-tables width for result panel */
+#p-result { width: 300px; }
+
+/* Step log */
+#step-area {
+  flex: 1; overflow-y: auto;
+  padding: 12px 16px;
+  background: var(--bg);
+}
+#step-empty {
+  color: var(--text-lo);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: .8rem;
+  padding-top: 4px;
+}
+
+.step-entry {
+  padding: 5px 0 5px 0;
+  border-bottom: 1px solid var(--border-lo);
+  font-size: .71rem;
+  line-height: 1.65;
+  font-family: var(--font-mono);
+}
+.step-entry .step-num {
+  color: var(--text-lo); font-style: italic;
+  min-width: 24px; display: inline-block;
+  font-size: .64rem;
+}
+.step-entry .step-phase {
+  font-family: var(--font-serif); font-style: italic;
+  color: var(--text-dim); font-size: .67rem;
+  display: block; margin-bottom: 1px;
+}
+.step-entry.phase-hdr { background: var(--bg-panel); }
+.step-entry.phase-hdr .step-detail { color: var(--text-dim); font-style: italic; }
+.step-entry.current {
+  background: var(--accent-bg);
+  border-left: 2px solid var(--accent);
+  padding-left: 8px; margin-left: -10px;
+}
+.step-entry .hl  { color: var(--accent); font-weight: bold; }
+.step-entry .add { color: var(--green); }
+.step-entry .del { color: var(--red); text-decoration: line-through; }
+.step-entry .dim { color: var(--text-lo); }
+
+/* Symbol badges */
+.nb { /* nullable */
+  display: inline-block;
+  border: 1px solid var(--green); color: var(--green); background: var(--green-bg);
+  font-family: var(--font-mono); font-size: .63rem; padding: 0 4px; margin: 0 1px;
+}
+.ub { /* unit pair */
+  display: inline-block;
+  border: 1px solid var(--accent); color: var(--accent); background: var(--accent-bg);
+  font-family: var(--font-mono); font-size: .63rem; padding: 0 4px; margin: 0 1px;
+}
+
+/* Step controls */
+#step-controls {
+  flex-shrink: 0;
+  border-top: 1.5px solid var(--border-hi);
+  background: var(--bg-panel);
+  padding: 6px 12px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+
+/* Grammar result panel */
+#grammar-display {
+  flex: 1; overflow-y: auto;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: .73rem;
+}
+.gr-section {
+  font-family: var(--font-serif); font-style: italic;
+  color: var(--text-dim); font-size: .67rem;
+  border-bottom: 1px solid var(--border-lo);
+  padding-bottom: 2px; margin-bottom: 5px; margin-top: 10px;
+}
+.gr-section:first-child { margin-top: 0; }
+.gr-rule {
+  display: flex; gap: 6px; align-items: baseline;
+  line-height: 1.9; padding: 0 1px;
+  border-left: 2px solid transparent;
+  padding-left: 3px;
+}
+.gr-rule .r-lhs  { color: var(--text);     min-width: 50px; flex-shrink: 0; }
+.gr-rule .r-arr  { color: var(--text-lo); flex-shrink: 0; }
+.gr-rule .r-rhs  { color: var(--text-dim); }
+.gr-rule.r-new   { background: var(--green-bg);  border-left-color: var(--green);  }
+.gr-rule.r-new .r-lhs, .gr-rule.r-new .r-rhs  { color: var(--green); }
+.gr-rule.r-active{ background: var(--accent-bg); border-left-color: var(--accent); }
+.gr-rule.r-active .r-lhs, .gr-rule.r-active .r-rhs { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1><a href="../index.html">Grammar Rewriting</a></h1>
+  <span class="tag">Grammar Transformations</span>
+  <div style="width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0"></div>
+  <button class="mode-btn active" id="btn-mode-clean" onclick="setMode('clean')">Cleanup</button>
+  <button class="mode-btn"        id="btn-mode-eps"   onclick="setMode('eps')">ε-Elimination</button>
+  <button class="mode-btn"        id="btn-mode-unit"  onclick="setMode('unit')">Unit Elim</button>
+  <button class="mode-btn"        id="btn-mode-cnf"   onclick="setMode('cnf')">CNF</button>
+  <button class="mode-btn"        id="btn-mode-lre"   onclick="setMode('lre')">Left Recursion</button>
+</div>
+
+<div id="panels">
+
+  <!-- 1. Grammar input -->
+  <div class="panel" id="p-grammar" data-collapse="left">
+    <div class="panel-header" onclick="toggleCollapse('p-grammar')">
+      <span class="panel-title">Grammar</span>
+      <button class="collapse-btn" onclick="event.stopPropagation();toggleCollapse('p-grammar')">&#8249;</button>
+    </div>
+    <div class="panel-body">
+      <div id="examples-bar">
+        <select id="examples-select" onchange="loadExample(this.value)">
+          <option value="">Example Grammar</option>
+        </select>
+      </div>
+      <textarea id="grammar-input" spellcheck="false" placeholder="S -> A B&#10;A -> a | eps&#10;B -> b"></textarea>
+      <div id="grammar-footer">
+        <div id="error-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="rh-1"></div>
+
+  <!-- 2. Step log -->
+  <div class="panel" id="p-main">
+    <div class="panel-header">
+      <span class="panel-title" id="main-title">ε-Production Elimination</span>
+      <button class="algo-btn" id="btn-algo" onclick="openAlgoModal()" title="Algorithm for the current sub-tool">Algorithm</button>
+    </div>
+    <div class="panel-body" style="display:flex;flex-direction:column;overflow:hidden;">
+      <div id="step-area">
+        <div id="step-empty">Build a grammar, then step through the algorithm.</div>
+        <div id="step-log"></div>
+      </div>
+      <div id="step-controls">
+        <div class="step-group">
+          <button class="btn icon-restart" id="btn-reset" onclick="resetSim()" title="Restart" disabled></button>
+          <button class="btn" id="btn-back"  onclick="stepBack()"  disabled>&#8249; Back</button>
+          <button class="btn primary" id="btn-step"  onclick="stepFwd()"   disabled>Step &#8250;</button>
+          <button class="btn icon-run-all" id="btn-run" onclick="runAll()" title="Run all" disabled></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="rh-2"></div>
+
+  <!-- 3. Result grammar -->
+  <div class="panel" id="p-result">
+    <div class="panel-header" onclick="toggleCollapse('p-result')">
+      <span class="panel-title">Current Grammar</span>
+      <button class="collapse-btn" onclick="event.stopPropagation();toggleCollapse('p-result')">&#8250;</button>
+    </div>
+    <div class="panel-body">
+      <div id="grammar-display">
+        <span style="color:var(--text-lo);font-family:var(--font-serif);font-style:italic;font-size:.8rem">
+          Build a grammar to see it here.
+        </span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #panels -->
+
+<div class="algo-overlay hidden" id="algo-overlay" tabindex="-1" onclick="if (event.target === this) closeAlgoModal();">
+  <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+    <div class="algo-modal-head">
+      <h2 id="algo-title"></h2>
+      <span class="algo-subtitle" id="algo-subtitle"></span>
+      <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+    </div>
+    <div class="algo-modal-body" id="algo-body"></div>
+  </div>
+</div>
+
+<script src="../shared/shared.js"></script>
+<script>
+'use strict';
+
+// ── Panel init ────────────────────────────────────────────────
+// shared.js's initResize calls renderTree() after drag — stub it out
+function renderTree() {}
+
+initResize('rh-1', 'p-grammar', +1);
+initResize('rh-2', 'p-result',  -1);
+
+// Override savePanelState / loadPanelState for this tool's panels and mode
+function savePanelState() {
+  try {
+    const s = { mode: currentMode };
+    ['p-grammar','p-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) s[id] = { width: el.style.width, collapsed: el.classList.contains('collapsed') };
+    });
+    localStorage.setItem('grammar-rewrite-v1', JSON.stringify(s));
+  } catch(e) {}
+}
+function loadPanelState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('grammar-rewrite-v1') || '{}');
+    // Restore panel sizes first so that setMode → savePanelState captures them correctly
+    ['p-grammar','p-result'].forEach(id => {
+      if (!s[id]) return;
+      const el = document.getElementById(id); if (!el) return;
+      if (s[id].width) el.style.width = s[id].width;
+      if (s[id].collapsed) { el.classList.add('collapsed'); updateCollapseBtn(id, true); }
+    });
+    if (s.mode) setMode(s.mode);
+  } catch(e) {}
+}
+
+// ── Grammar parser (no augmentation) ─────────────────────────
+const EPS = 'ε';
+
+function parseGrammarRaw(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+  if (!lines.length) throw new Error('Empty grammar');
+  const rules = [];
+  for (const line of lines) {
+    const arrow = line.indexOf('->') >= 0 ? '->' : line.indexOf('→') >= 0 ? '→' : null;
+    if (!arrow) throw new Error("Missing '->' in: " + line);
+    const parts = line.split(arrow);
+    const lhs = parts[0].trim();
+    const rhsStr = parts.slice(1).join(arrow).trim();
+    if (!lhs) throw new Error('Missing LHS in: ' + line);
+    for (const alt of rhsStr.split('|')) {
+      const toks = alt.trim().split(/\s+/).filter(Boolean);
+      const isEps = toks.length === 1 && ['eps','epsilon',EPS,"''","\"\""].includes(toks[0]);
+      rules.push({ lhs, rhs: isEps ? [] : toks });
+    }
+  }
+  if (!rules.length) throw new Error('No rules found');
+  const start = rules[0].lhs;
+  const nts = new Set(rules.map(r => r.lhs));
+  return { rules, start, nts };
+}
+
+function ruleStr(r) { return r.lhs + ' → ' + (r.rhs.length ? r.rhs.join(' ') : EPS); }
+function cloneRules(rules) { return rules.map(r => ({ lhs: r.lhs, rhs: [...r.rhs] })); }
+
+// ── Example grammars ──────────────────────────────────────────
+const EXAMPLES = {};
+
+function loadExample(k) {
+  if (!k) return;
+  document.getElementById('grammar-input').value = (EXAMPLES[k] && EXAMPLES[k].text) || '';
+  document.getElementById('examples-select').value = '';
+  setError('');
+  build();
+}
+
+// ── Global state ──────────────────────────────────────────────
+let currentMode    = 'clean';
+let inputGrammar   = null;   // original parsed grammar, never mutated
+let simSteps       = [];     // pre-computed step objects
+let simPos         = 0;      // next step to show (0 = none shown yet)
+let stepHistory    = [];     // stack of simPos values for Back
+
+// Step object:
+// { phase, html, isPhase, grammarAfter, newRules, activeRules }
+//   phase: string shown as italic header above detail text (or '')
+//   html: inner HTML for .step-detail
+//   isPhase: true → lighter background (section header)
+//   grammarAfter: cloned rules array after this step
+//   newRules: indices into grammarAfter of newly added rules (shown green)
+//   activeRules: indices into grammarAfter of focussed rules (shown blue)
+
+// ── Mode switching ────────────────────────────────────────────
+const MODE_TITLES = {
+  clean: 'Grammar Cleanup',
+  eps:   'ε-Production Elimination',
+  unit:  'Unit Production Elimination',
+  cnf:   'Chomsky Normal Form',
+  lre:   'Left-Recursion Elimination',
+};
+
+function setMode(m) {
+  currentMode = m;
+  ['clean','eps','unit','cnf','lre'].forEach(mm => {
+    document.getElementById('btn-mode-' + mm).classList.toggle('active', mm === m);
+  });
+  document.getElementById('main-title').textContent = MODE_TITLES[m];
+  if (inputGrammar) resetSim();
+  savePanelState();
+}
+
+function setError(msg) { document.getElementById('error-msg').textContent = msg || ''; }
+
+// ── Build ─────────────────────────────────────────────────────
+function build() {
+  setError('');
+  const text = document.getElementById('grammar-input').value.trim();
+  try { inputGrammar = parseGrammarRaw(text); }
+  catch(e) { setError(e.message); inputGrammar = null; updateBtns(); return; }
+  resetSim();
+}
+
+function resetSim() {
+  stepHistory = []; simPos = 0;
+  document.getElementById('step-log').innerHTML = '';
+  document.getElementById('step-empty').style.display = '';
+  if (!inputGrammar) { updateBtns(); return; }
+
+  if (currentMode === 'clean') simSteps = computeCleanupSteps(inputGrammar);
+  if (currentMode === 'eps')   simSteps = computeEpsSteps(inputGrammar);
+  if (currentMode === 'unit')  simSteps = computeUnitSteps(inputGrammar);
+  if (currentMode === 'cnf')   simSteps = computeCNFSteps(inputGrammar);
+  if (currentMode === 'lre')   simSteps = computeLRESteps(inputGrammar);
+
+  renderGrammarDisplay(inputGrammar.rules, [], []);
+  updateBtns();
+}
+
+function updateBtns() {
+  const ok = !!inputGrammar && simSteps.length > 0;
+  document.getElementById('btn-step') .disabled = !ok || simPos >= simSteps.length;
+  document.getElementById('btn-back') .disabled = stepHistory.length === 0;
+  document.getElementById('btn-run')  .disabled = !ok || simPos >= simSteps.length;
+  document.getElementById('btn-reset').disabled = !inputGrammar;
+}
+
+// ── Rendering ─────────────────────────────────────────────────
+function renderGrammarDisplay(rules, newIndices, activeIndices) {
+  const el = document.getElementById('grammar-display');
+  el.innerHTML = '';
+  if (!rules.length) {
+    el.innerHTML = '<span style="color:var(--text-lo);font-style:italic">Empty grammar</span>';
+    return;
+  }
+
+  const ns = new Set(newIndices    || []);
+  const as = new Set(activeIndices || []);
+
+  el.appendChild(Object.assign(document.createElement('div'), {
+    className: 'gr-section', textContent: 'Productions'
+  }));
+
+  // Group by LHS for display (still track flat index)
+  const lhsSeen = new Set();
+  const lhsOrder = [];
+  for (const r of rules) { if (!lhsSeen.has(r.lhs)) { lhsSeen.add(r.lhs); lhsOrder.push(r.lhs); } }
+
+  rules.forEach((r, idx) => {
+    const lhsRules = rules.filter(x => x.lhs === r.lhs);
+    const posInGroup = lhsRules.indexOf(r);
+
+    const div = document.createElement('div');
+    div.className = 'gr-rule' + (ns.has(idx) ? ' r-new' : as.has(idx) ? ' r-active' : '');
+
+    const lhsSpan = document.createElement('span');
+    lhsSpan.className = 'r-lhs';
+    lhsSpan.textContent = posInGroup === 0 ? r.lhs : '';
+    div.appendChild(lhsSpan);
+
+    const arrSpan = document.createElement('span');
+    arrSpan.className = 'r-arr';
+    arrSpan.textContent = posInGroup === 0 ? '→' : '|';
+    div.appendChild(arrSpan);
+
+    const rhsSpan = document.createElement('span');
+    rhsSpan.className = 'r-rhs';
+    rhsSpan.textContent = r.rhs.length ? r.rhs.join(' ') : EPS;
+    div.appendChild(rhsSpan);
+
+    el.appendChild(div);
+  });
+}
+
+function appendStepEntry(idx) {
+  const step = simSteps[idx];
+  const log = document.getElementById('step-log');
+  document.getElementById('step-empty').style.display = 'none';
+  log.querySelectorAll('.step-entry.current').forEach(e => e.classList.remove('current'));
+
+  const div = document.createElement('div');
+  div.className = 'step-entry current' + (step.isPhase ? ' phase-hdr' : '');
+
+  let inner = '<span class="step-num">' + (idx + 1) + '</span>';
+  if (step.phase) inner += '<span class="step-phase">' + step.phase + '</span>';
+  inner += '<span class="step-detail">' + step.html + '</span>';
+  div.innerHTML = inner;
+  log.appendChild(div);
+  div.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ── Step engine ───────────────────────────────────────────────
+function stepFwd() {
+  if (simPos >= simSteps.length) return;
+  stepHistory.push(simPos);
+  appendStepEntry(simPos);
+  const step = simSteps[simPos];
+  renderGrammarDisplay(step.grammarAfter, step.newRules || [], step.activeRules || []);
+  simPos++;
+  updateBtns();
+}
+
+function stepBack() {
+  if (!stepHistory.length) return;
+  simPos = stepHistory.pop();
+
+  // Rebuild log up to simPos
+  const log = document.getElementById('step-log');
+  log.innerHTML = '';
+  if (simPos === 0) {
+    document.getElementById('step-empty').style.display = '';
+    renderGrammarDisplay(inputGrammar.rules, [], []);
+  } else {
+    document.getElementById('step-empty').style.display = 'none';
+    for (let i = 0; i < simPos; i++) appendStepEntry(i);
+    const prev = simSteps[simPos - 1];
+    renderGrammarDisplay(prev.grammarAfter, prev.newRules || [], prev.activeRules || []);
+  }
+  updateBtns();
+}
+
+function runAll() {
+  while (simPos < simSteps.length) stepFwd();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GRAMMAR CLEANUP
+// Phase 1: remove rules containing unproductive nonterminals
+//          (bottom-up fixpoint — no outer loop needed)
+// Phase 2: remove rules whose LHS is unreachable from start
+//          (BFS — single pass after Phase 1)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function computeCleanupSteps(g) {
+  const steps = [];
+  let rules = cloneRules(g.rules);
+  const start = g.start;
+
+  steps.push({
+    phase: 'Overview',
+    html:  'Two phases: (1) remove rules referencing <em>unproductive</em> nonterminals'
+         + ' (those that can never derive a string of terminals),'
+         + ' then (2) remove rules whose LHS is <em>unreachable</em> from the start symbol.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  // ── Phase 1: productive symbols ────────────────────────────
+  steps.push({
+    phase: 'Phase 1 — Productive symbols',
+    html:  'A symbol is <em>productive</em> if it can derive a string of terminals.'
+         + ' All terminals are productive. A nonterminal is productive if it has a rule'
+         + ' where every RHS symbol is productive (ε-productions count immediately).',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const allNTs = new Set(rules.map(r => r.lhs));
+  const prod   = new Set();
+
+  // Seed with all terminals that appear in any RHS
+  for (const r of rules) for (const s of r.rhs) if (!allNTs.has(s)) prod.add(s);
+
+  steps.push({
+    phase: '',
+    html:  'Terminals (productive by definition): '
+         + (prod.size ? [...prod].map(s => '<span class="hl">' + s + '</span>').join(' ')
+                      : '<span class="dim">none</span>'),
+    isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  // Fixpoint: each iteration may add multiple NTs, show each one
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const r of rules) {
+      if (!prod.has(r.lhs) && r.rhs.every(s => prod.has(s))) {
+        prod.add(r.lhs);
+        changed = true;
+        const rhsDesc = r.rhs.length === 0
+          ? 'ε-production'
+          : 'all RHS symbols productive';
+        steps.push({
+          phase: '',
+          html:  '<span class="hl">' + ruleStr(r) + '</span> — '
+               + rhsDesc + ' → <span class="add">' + r.lhs + '</span> is productive',
+          isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+        });
+      }
+    }
+  }
+
+  const unprod = new Set([...allNTs].filter(nt => !prod.has(nt)));
+
+  if (unprod.size === 0) {
+    steps.push({
+      phase: '',
+      html:  'All nonterminals are productive — nothing to remove in this phase.',
+      isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+  } else {
+    steps.push({
+      phase: '',
+      html:  'Unproductive nonterminals: '
+           + [...unprod].map(s => '<span class="del">' + s + '</span>').join(' '),
+      isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+
+    // Remove every rule that has an unproductive NT in LHS or RHS
+    const rmIdx = [];
+    for (let i = 0; i < rules.length; i++) {
+      const r = rules[i];
+      if (unprod.has(r.lhs) || r.rhs.some(s => unprod.has(s))) rmIdx.push(i);
+    }
+    if (rmIdx.length) {
+      const rmSet = new Set(rmIdx);
+      const removedHtml = rmIdx.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+      rules = rules.filter((_, i) => !rmSet.has(i));
+      steps.push({
+        phase: '',
+        html:  'Removing rules that reference unproductive symbols: ' + removedHtml,
+        isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+      });
+    }
+  }
+
+  // ── Phase 2: reachable symbols ─────────────────────────────
+  steps.push({
+    phase: 'Phase 2 — Reachable symbols',
+    html:  'A nonterminal is <em>reachable</em> if it can appear in a sentential form'
+         + ' derived from the start symbol <span class="hl">' + start + '</span>.'
+         + ' We find all reachable nonterminals with a BFS.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const remainingNTs = new Set(rules.map(r => r.lhs));
+  const reachable    = new Set();
+  const queue        = [];
+
+  if (remainingNTs.has(start)) {
+    reachable.add(start);
+    queue.push(start);
+    steps.push({
+      phase: '',
+      html:  '<span class="add">' + start + '</span> is reachable (start symbol).',
+      isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+  }
+
+  while (queue.length) {
+    const A = queue.shift();
+    for (const r of rules) {
+      if (r.lhs !== A) continue;
+      for (const s of r.rhs) {
+        if (remainingNTs.has(s) && !reachable.has(s)) {
+          reachable.add(s);
+          queue.push(s);
+          steps.push({
+            phase: '',
+            html:  'Via <span class="hl">' + ruleStr(r) + '</span>'
+                 + ' → <span class="add">' + s + '</span> is reachable.',
+            isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+          });
+        }
+      }
+    }
+  }
+
+  const unreachable = new Set([...remainingNTs].filter(nt => !reachable.has(nt)));
+
+  if (unreachable.size === 0) {
+    steps.push({
+      phase: '',
+      html:  'All nonterminals are reachable — nothing to remove in this phase.',
+      isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+  } else {
+    steps.push({
+      phase: '',
+      html:  'Unreachable nonterminals: '
+           + [...unreachable].map(s => '<span class="del">' + s + '</span>').join(' '),
+      isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+
+    const rmIdx2 = [];
+    for (let i = 0; i < rules.length; i++) {
+      if (unreachable.has(rules[i].lhs)) rmIdx2.push(i);
+    }
+    if (rmIdx2.length) {
+      const rmSet2 = new Set(rmIdx2);
+      const removedHtml2 = rmIdx2.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+      rules = rules.filter((_, i) => !rmSet2.has(i));
+      steps.push({
+        phase: '',
+        html:  'Removing unreachable rules: ' + removedHtml2,
+        isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+      });
+    }
+  }
+
+  // ── Done ──────────────────────────────────────────────────
+  steps.push({
+    phase: 'Done',
+    html:  (unprod.size === 0 && unreachable.size === 0)
+      ? 'Grammar is already clean — no unproductive or unreachable rules found.'
+      : 'Grammar cleanup complete. The result contains only productive and reachable rules.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  return steps;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ε-PRODUCTION ELIMINATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function computeEpsSteps(g) {
+  const steps = [];
+  let rules = cloneRules(g.rules);
+  const nts = g.nts;
+
+  // ── Phase 1: compute nullable set ────────────────────────
+  const nullable = new Set();
+  for (const r of rules) if (r.rhs.length === 0) nullable.add(r.lhs);
+  let ch = true;
+  while (ch) {
+    ch = false;
+    for (const r of rules) {
+      if (!nullable.has(r.lhs) && r.rhs.length > 0 && r.rhs.every(s => nullable.has(s))) {
+        nullable.add(r.lhs); ch = true;
+      }
+    }
+  }
+
+  const nbHtml = [...nullable].map(n => '<span class="nb">' + n + '</span>').join(' ');
+  steps.push({
+    phase: 'Phase 1 — Nullable set',
+    html:  nullable.size
+      ? 'Nullable symbols: ' + nbHtml
+      : 'No nullable symbols. Grammar has no ε-productions.',
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  if (nullable.size === 0) {
+    steps.push({ phase: '', html: 'Nothing to do — grammar unchanged.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+    return steps;
+  }
+
+  // ── Phase 2: add ε-closure productions ───────────────────
+  steps.push({
+    phase: 'Phase 2 — Add ε-closure productions',
+    html:  'For every rule with nullable symbols in the RHS, add all non-empty subsets (omitting nullable symbols in every combination).',
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const seen = new Set(rules.map(r => r.lhs + '\0' + r.rhs.join(' ')));
+
+  for (let ri = 0; ri < rules.length; ri++) {
+    const r = rules[ri];
+    if (r.rhs.length === 0) continue;
+
+    const nullPos = r.rhs.map((s, i) => nullable.has(s) ? i : -1).filter(i => i >= 0);
+    if (!nullPos.length) continue;
+
+    const added = [];
+    const total = 1 << nullPos.length;
+    for (let mask = 0; mask < total - 1; mask++) { // exclude all-bits-set = original
+      const newRhs = r.rhs.filter((s, i) => {
+        const pi = nullPos.indexOf(i);
+        return pi === -1 || !!((mask >> pi) & 1);
+      });
+      if (newRhs.length === 0) continue; // don't add ε here; Phase 3 may keep one
+      const key = r.lhs + '\0' + newRhs.join(' ');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      added.push({ lhs: r.lhs, rhs: newRhs });
+    }
+
+    if (added.length) {
+      rules = [...rules.slice(0, ri + 1), ...added, ...rules.slice(ri + 1)];
+      const newIs = added.map((_, k) => ri + 1 + k);
+      const nullSyms = nullPos.map(i => '<span class="nb">' + r.rhs[i] + '</span>').join('');
+      steps.push({
+        phase: '',
+        html: '<span class="hl">' + ruleStr(r) + '</span> contains nullable ' + nullSyms
+          + ' → adding: ' + added.map(a => '<span class="add">' + ruleStr(a) + '</span>').join(', '),
+        grammarAfter: cloneRules(rules),
+        newRules: newIs, activeRules: [ri],
+      });
+    }
+  }
+
+  // ── Phase 3: remove ε-productions ────────────────────────
+  const startNullable = nullable.has(g.start);
+  steps.push({
+    phase: 'Phase 3 — Remove ε-productions',
+    html:  'Remove all A → ε'
+      + (startNullable
+        ? ', but keep <span class="hl">' + g.start + ' → ε</span> (start symbol is nullable — language contains ε).'
+        : '.'),
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const toRemove = [];
+  let startKept = false;
+  for (let i = 0; i < rules.length; i++) {
+    if (rules[i].rhs.length === 0) {
+      if (rules[i].lhs === g.start && startNullable && !startKept) { startKept = true; }
+      else toRemove.push(i);
+    }
+  }
+
+  if (toRemove.length) {
+    const rmSet = new Set(toRemove);
+    const removedHtml = toRemove.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+    rules = rules.filter((_, i) => !rmSet.has(i));
+    steps.push({
+      phase: '', html: 'Removing: ' + removedHtml,
+      grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+  } else {
+    steps.push({ phase: '', html: 'No ε-productions to remove.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  }
+
+  // Done
+  steps.push({
+    phase: 'Done',
+    html:  'ε-elimination complete.'
+      + (startNullable ? ' <span class="dim">(' + g.start + ' → ε retained.)</span>' : ''),
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  return steps;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UNIT PRODUCTION ELIMINATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function computeUnitSteps(g) {
+  const steps = [];
+  let rules = cloneRules(g.rules);
+  const nts = g.nts;
+
+  function isUnit(r) { return r.rhs.length === 1 && nts.has(r.rhs[0]); }
+
+  if (!rules.some(isUnit)) {
+    steps.push({ phase: '', html: 'No unit productions found. Grammar unchanged.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+    return steps;
+  }
+
+  // ── Phase 1: unit pairs ───────────────────────────────────
+  steps.push({
+    phase: 'Phase 1 — Compute unit pairs',
+    html:  'A <em>unit pair</em> (A, B) means A ⇒* B using only unit productions. Start with each (A, A).',
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const unitPairs = new Map();
+  for (const nt of nts) unitPairs.set(nt, new Set([nt]));
+
+  let ch = true;
+  while (ch) {
+    ch = false;
+    for (const r of rules) {
+      if (!isUnit(r)) continue;
+      const A = r.lhs, B = r.rhs[0];
+      const aSet = unitPairs.get(A);
+      for (const C of unitPairs.get(B)) {
+        if (!aSet.has(C)) { aSet.add(C); ch = true; }
+      }
+    }
+  }
+
+  const pairLines = [];
+  for (const [A, bs] of unitPairs) {
+    const others = [...bs].filter(b => b !== A);
+    if (others.length)
+      pairLines.push('<span class="ub">' + A + '</span> ⇒ ' + others.map(b => '<span class="ub">' + b + '</span>').join(', '));
+  }
+  steps.push({
+    phase: '',
+    html: pairLines.length ? 'Pairs (beyond identity): ' + pairLines.join(' &ensp; ') : 'No non-trivial unit pairs.',
+    isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  // ── Phase 2: add productions via pairs ────────────────────
+  steps.push({
+    phase: 'Phase 2 — Copy productions through pairs',
+    html:  'For each pair (A, B) with A ≠ B and each non-unit production B → α, add A → α.',
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const seen = new Set(rules.map(r => r.lhs + '\0' + r.rhs.join(' ')));
+
+  for (const [A, bs] of unitPairs) {
+    for (const B of bs) {
+      if (B === A) continue;
+      const bProds = rules.filter(r => r.lhs === B && !isUnit(r));
+      for (const bp of bProds) {
+        const key = A + '\0' + bp.rhs.join(' ');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const nr = { lhs: A, rhs: [...bp.rhs] };
+        // Find source rule index (may have shifted, so search)
+        const srcIdx = rules.findIndex(r => r.lhs === B && r.rhs.join(' ') === bp.rhs.join(' '));
+        // Insert after the last existing rule for A, keeping rules grouped by LHS
+        let insertAfter = rules.reduce((last, r, i) => r.lhs === A ? i : last, -1);
+        if (insertAfter === -1) insertAfter = rules.length - 1;
+        rules = [...rules.slice(0, insertAfter + 1), nr, ...rules.slice(insertAfter + 1)];
+        const ni = insertAfter + 1;
+        steps.push({
+          phase: '',
+          html: 'Pair (<span class="ub">' + A + '</span>, <span class="ub">' + B + '</span>)'
+            + ': copying <span class="dim">' + ruleStr(bp) + '</span>'
+            + ' → add <span class="add">' + ruleStr(nr) + '</span>',
+          grammarAfter: cloneRules(rules),
+          newRules: [ni],
+          activeRules: srcIdx >= 0 ? [srcIdx] : [],
+        });
+      }
+    }
+  }
+
+  // ── Phase 3: remove unit productions ─────────────────────
+  steps.push({
+    phase: 'Phase 3 — Remove unit productions',
+    html:  'Delete all rules of the form A → B.',
+    isPhase: true,
+    grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const toRemove = rules.map((r, i) => isUnit(r) ? i : -1).filter(i => i >= 0);
+  if (toRemove.length) {
+    const rmSet = new Set(toRemove);
+    const removedHtml = toRemove.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+    rules = rules.filter((_, i) => !rmSet.has(i));
+    steps.push({ phase: '', html: 'Removing: ' + removedHtml, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  } else {
+    steps.push({ phase: '', html: 'No unit productions remain.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  }
+
+  steps.push({
+    phase: 'Done',
+    html: 'Unit production elimination complete.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  return steps;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CNF CONVERSION
+// Performs: (1) cleanup, (2) ε-elim, (3) unit elim,
+//           (4) terminal isolation, (5) binarisation
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function computeCNFSteps(g) {
+  const steps = [];
+  let rules   = cloneRules(g.rules);
+  let nts     = new Set(g.nts);
+  const start = g.start;
+
+  steps.push({
+    phase: 'Overview',
+    html:  'Five phases: (1) clean up unproductive/unreachable rules, (2) eliminate ε-productions, (3) eliminate unit productions, (4) isolate terminals, (5) binarise long rules.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  // ──────────────────────────────────────────────────────────
+  // Phase 1: cleanup
+  // ──────────────────────────────────────────────────────────
+  steps.push({
+    phase: 'Phase 1 — Cleanup',
+    html:  'Remove rules that reference <em>unproductive</em> nonterminals (those that can never derive terminals), then remove <em>unreachable</em> rules.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  {
+    // Productive symbols — bottom-up fixpoint
+    const allNTs1 = new Set(rules.map(r => r.lhs));
+    const prod1   = new Set();
+    for (const r of rules) for (const s of r.rhs) if (!allNTs1.has(s)) prod1.add(s);
+    let ch1 = true;
+    while (ch1) {
+      ch1 = false;
+      for (const r of rules) {
+        if (!prod1.has(r.lhs) && r.rhs.every(s => prod1.has(s))) {
+          prod1.add(r.lhs); ch1 = true;
+          steps.push({
+            phase: '', isPhase: false,
+            html: '<span class="hl">' + ruleStr(r) + '</span> — '
+                + (r.rhs.length === 0 ? 'ε-production' : 'all RHS symbols productive')
+                + ' → <span class="add">' + r.lhs + '</span> is productive',
+            grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+          });
+        }
+      }
+    }
+    const unprod1 = new Set([...allNTs1].filter(nt => !prod1.has(nt)));
+    if (unprod1.size === 0) {
+      steps.push({ phase: '', html: 'All nonterminals are productive — nothing to remove.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+    } else {
+      const rmUI = rules.map((r, i) => (unprod1.has(r.lhs) || r.rhs.some(s => unprod1.has(s))) ? i : -1).filter(i => i >= 0);
+      const rmHtmlU = rmUI.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+      rules = rules.filter((_, i) => !new Set(rmUI).has(i));
+      nts = new Set(rules.map(r => r.lhs));
+      steps.push({
+        phase: '', isPhase: false,
+        html: 'Unproductive: ' + [...unprod1].map(s => '<span class="del">' + s + '</span>').join(' ')
+            + ' — removing: ' + rmHtmlU,
+        grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+      });
+    }
+
+    // Reachable symbols — BFS from start
+    const remNTs1 = new Set(rules.map(r => r.lhs));
+    const reach1  = new Set();
+    const q1      = [];
+    if (remNTs1.has(start)) { reach1.add(start); q1.push(start); }
+    while (q1.length) {
+      const A = q1.shift();
+      for (const r of rules) {
+        if (r.lhs !== A) continue;
+        for (const s of r.rhs) if (remNTs1.has(s) && !reach1.has(s)) { reach1.add(s); q1.push(s); }
+      }
+    }
+    const unreach1 = new Set([...remNTs1].filter(nt => !reach1.has(nt)));
+    if (unreach1.size === 0) {
+      steps.push({ phase: '', html: 'All nonterminals are reachable — nothing to remove.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+    } else {
+      const rmRI = rules.map((r, i) => unreach1.has(r.lhs) ? i : -1).filter(i => i >= 0);
+      const rmHtmlR = rmRI.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+      rules = rules.filter((_, i) => !new Set(rmRI).has(i));
+      nts = new Set(rules.map(r => r.lhs));
+      steps.push({
+        phase: '', isPhase: false,
+        html: 'Unreachable: ' + [...unreach1].map(s => '<span class="del">' + s + '</span>').join(' ')
+            + ' — removing: ' + rmHtmlR,
+        grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+      });
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Phase 2: ε-elimination
+  // ──────────────────────────────────────────────────────────
+  steps.push({
+    phase: 'Phase 2 — ε-Elimination',
+    html:  'Remove ε-productions (retaining S → ε if the start symbol is nullable).',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const nullable = new Set();
+  for (const r of rules) if (r.rhs.length === 0) nullable.add(r.lhs);
+  { let ch = true; while (ch) { ch = false; for (const r of rules) if (!nullable.has(r.lhs) && r.rhs.length > 0 && r.rhs.every(s => nullable.has(s))) { nullable.add(r.lhs); ch = true; } } }
+
+  if (nullable.size === 0) {
+    steps.push({ phase: '', html: 'No nullable symbols — skipping.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  } else {
+    steps.push({
+      phase: '', isPhase: false,
+      html: 'Nullable: ' + [...nullable].map(n => '<span class="nb">' + n + '</span>').join(' '),
+      grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+    const seen1 = new Set(rules.map(r => r.lhs + '\0' + r.rhs.join(' ')));
+    for (let ri = 0; ri < rules.length; ri++) {
+      const r = rules[ri];
+      if (r.rhs.length === 0) continue;
+      const nPos = r.rhs.map((s, i) => nullable.has(s) ? i : -1).filter(i => i >= 0);
+      if (!nPos.length) continue;
+      const added = [];
+      const total = 1 << nPos.length;
+      for (let mask = 0; mask < total - 1; mask++) {
+        const nr2 = r.rhs.filter((s, i) => { const p = nPos.indexOf(i); return p === -1 || !!((mask >> p) & 1); });
+        if (!nr2.length) continue;
+        const key = r.lhs + '\0' + nr2.join(' ');
+        if (seen1.has(key)) continue;
+        seen1.add(key);
+        added.push({ lhs: r.lhs, rhs: nr2 });
+      }
+      if (added.length) {
+        rules = [...rules.slice(0, ri + 1), ...added, ...rules.slice(ri + 1)];
+        nts = new Set(rules.map(r => r.lhs));
+        steps.push({
+          phase: '', isPhase: false,
+          html: '<span class="hl">' + ruleStr(r) + '</span> → adding: ' + added.map(a => '<span class="add">' + ruleStr(a) + '</span>').join(', '),
+          grammarAfter: cloneRules(rules),
+          newRules: added.map((_, k) => ri + 1 + k),
+          activeRules: [ri],
+        });
+      }
+    }
+    // Remove ε-prods
+    const rmEps = [];
+    let sKept = false;
+    for (let i = 0; i < rules.length; i++) {
+      if (rules[i].rhs.length === 0) {
+        if (rules[i].lhs === start && nullable.has(start) && !sKept) { sKept = true; }
+        else rmEps.push(i);
+      }
+    }
+    if (rmEps.length) {
+      const rmSet = new Set(rmEps);
+      const dHtml = rmEps.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+      rules = rules.filter((_, i) => !rmSet.has(i));
+      nts = new Set(rules.map(r => r.lhs));
+      steps.push({ phase: '', isPhase: false, html: 'Remove: ' + dHtml, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Phase 3: unit elimination
+  // ──────────────────────────────────────────────────────────
+  steps.push({
+    phase: 'Phase 3 — Unit Elimination',
+    html:  'Remove all unit productions A → B.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  function isUnit2(r) { return r.rhs.length === 1 && nts.has(r.rhs[0]); }
+
+  if (!rules.some(isUnit2)) {
+    steps.push({ phase: '', html: 'No unit productions — skipping.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  } else {
+    const up = new Map();
+    for (const nt of nts) up.set(nt, new Set([nt]));
+    { let ch = true; while (ch) { ch = false; for (const r of rules) { if (!isUnit2(r)) continue; const A = r.lhs, B = r.rhs[0]; const aS = up.get(A); for (const C of up.get(B)) { if (!aS.has(C)) { aS.add(C); ch = true; } } } } }
+    const seen2 = new Set(rules.map(r => r.lhs + '\0' + r.rhs.join(' ')));
+    for (const [A, bs] of up) {
+      for (const B of bs) {
+        if (B === A) continue;
+        for (const bp of rules.filter(r => r.lhs === B && !isUnit2(r))) {
+          const key = A + '\0' + bp.rhs.join(' ');
+          if (seen2.has(key)) continue;
+          seen2.add(key);
+          const nr = { lhs: A, rhs: [...bp.rhs] };
+          const si = rules.findIndex(r => r.lhs === B && r.rhs.join(' ') === bp.rhs.join(' '));
+          let insertAfter = rules.reduce((last, r, i) => r.lhs === A ? i : last, -1);
+          if (insertAfter === -1) insertAfter = rules.length - 1;
+          rules = [...rules.slice(0, insertAfter + 1), nr, ...rules.slice(insertAfter + 1)];
+          const ni = insertAfter + 1;
+          nts = new Set(rules.map(r => r.lhs));
+          steps.push({ phase: '', isPhase: false, html: 'Pair (<span class="ub">'+A+'</span>,<span class="ub">'+B+'</span>): add <span class="add">'+ruleStr(nr)+'</span>', grammarAfter: cloneRules(rules), newRules: [ni], activeRules: si >= 0 ? [si] : [] });
+        }
+      }
+    }
+    const rmU = rules.map((r, i) => isUnit2(r) ? i : -1).filter(i => i >= 0);
+    if (rmU.length) {
+      const rmSet = new Set(rmU);
+      const dHtml = rmU.map(i => '<span class="del">' + ruleStr(rules[i]) + '</span>').join(', ');
+      rules = rules.filter((_, i) => !rmSet.has(i));
+      nts = new Set(rules.map(r => r.lhs));
+      steps.push({ phase: '', isPhase: false, html: 'Remove: ' + dHtml, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Phase 4: terminal isolation
+  // ──────────────────────────────────────────────────────────
+  steps.push({
+    phase: 'Phase 4 — Terminal Isolation',
+    html:  'In any rule with ≥ 2 RHS symbols, replace each terminal <em>t</em> with a fresh nonterminal Xₜ → t.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  function toSub(n) { return String(n).split('').map(d => '₀₁₂₃₄₅₆₇₈₉'[+d]).join(''); }
+
+  // Which terminals need wrapping?
+  const termMap = new Map();
+  function termNT(t) {
+    if (termMap.has(t)) return termMap.get(t);
+    let ctr = termMap.size + 1;
+    let name = 'X' + toSub(ctr);
+    while (nts.has(name)) name = 'X' + toSub(++ctr);
+    nts.add(name);
+    termMap.set(t, name);
+    return name;
+  }
+
+  // Identify which rules need terminal isolation
+  let termChanged = false;
+  for (const r of rules) {
+    if (r.rhs.length < 2) continue;
+    for (const s of r.rhs) {
+      if (!nts.has(s)) { termNT(s); termChanged = true; }
+    }
+  }
+
+  if (!termChanged || termMap.size === 0) {
+    steps.push({ phase: '', html: 'No terminals appear in rules with ≥ 2 symbols — skipping.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  } else {
+    // Add wrapper rules
+    const wrappers = [...termMap.entries()].map(([t, nt]) => ({ lhs: nt, rhs: [t] }));
+    const before = rules.length;
+    rules = [...rules, ...wrappers];
+    const wIs = wrappers.map((_, k) => before + k);
+    steps.push({
+      phase: '', isPhase: false,
+      html: 'New wrapper rules: ' + wrappers.map(w => '<span class="add">' + ruleStr(w) + '</span>').join(', '),
+      grammarAfter: cloneRules(rules), newRules: wIs, activeRules: [],
+    });
+
+    // Rewrite original rules (not the wrappers)
+    const modIs = [];
+    for (let ri = 0; ri < before; ri++) {
+      const r = rules[ri];
+      if (r.rhs.length < 2) continue;
+      const newRhs = r.rhs.map(s => {
+        if (nts.has(s) && !termMap.has(s)) return s; // real NT, not a terminal key
+        if (termMap.has(s)) return termMap.get(s);
+        return s;
+      });
+      if (newRhs.some((s, i) => s !== r.rhs[i])) {
+        rules[ri] = { lhs: r.lhs, rhs: newRhs };
+        modIs.push(ri);
+      }
+    }
+    if (modIs.length) {
+      steps.push({
+        phase: '', isPhase: false,
+        html: 'Rewrite using wrappers: ' + modIs.map(i => '<span class="hl">' + ruleStr(rules[i]) + '</span>').join(', '),
+        grammarAfter: cloneRules(rules), newRules: [], activeRules: modIs,
+      });
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Phase 5: binarisation
+  // ──────────────────────────────────────────────────────────
+  steps.push({
+    phase: 'Phase 5 — Binarisation',
+    html:  'Replace each rule A → B₁ B₂ … Bₙ (n ≥ 3) with A → B₁ Y, Y → B₂ … Bₙ using fresh nonterminals.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  const freshCtrs = new Map();
+  function freshNT(base) {
+    const root = base.replace(/[₀₁₂₃₄₅₆₇₈₉]+$/, '');
+    let ctr = freshCtrs.get(root) || 0;
+    let name;
+    do { name = root + toSub(++ctr); } while (nts.has(name));
+    freshCtrs.set(root, ctr);
+    nts.add(name);
+    return name;
+  }
+
+  let anyBin = false;
+  let safety = 0;
+  while (true) {
+    const li = rules.findIndex(r => r.rhs.length >= 3);
+    if (li < 0) break;
+    if (++safety > 500) break;
+    anyBin = true;
+    const r = rules[li];
+    const newNT = freshNT(r.lhs);
+    const nr1 = { lhs: r.lhs, rhs: [r.rhs[0], newNT] };
+    const nr2 = { lhs: newNT, rhs: r.rhs.slice(1) };
+    rules[li] = nr1;
+    rules = [...rules.slice(0, li + 1), nr2, ...rules.slice(li + 1)];
+    nts = new Set(rules.map(r => r.lhs));
+    steps.push({
+      phase: '', isPhase: false,
+      html: '<span class="del">' + ruleStr(r) + '</span> → <span class="add">' + ruleStr(nr1) + '</span> + <span class="add">' + ruleStr(nr2) + '</span>',
+      grammarAfter: cloneRules(rules),
+      newRules: [li, li + 1],
+      activeRules: [],
+    });
+  }
+
+  if (!anyBin) {
+    steps.push({ phase: '', html: 'All rules already have ≤ 2 RHS symbols — skipping.', isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [] });
+  }
+
+  // ── Done ──────────────────────────────────────────────────
+  const epsSuffix = nullable.has(start)
+    ? ' <span class="dim">(Plus ' + start + ' → ε since start is nullable.)</span>' : '';
+  steps.push({
+    phase: 'Done — Chomsky Normal Form',
+    html:  'Every production is now A → BC or A → a.' + epsSuffix,
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  return steps;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LEFT-RECURSION ELIMINATION
+// Standard two-pass algorithm (Dragon Book §4.3.3)
+// Pass 1 (outer i-loop): for each Aᵢ, substitute any Aⱼ (j<i)
+//   found at the head of an Aᵢ-rule with Aⱼ's current productions.
+// Pass 2 (inner per-NT): eliminate direct left recursion by
+//   introducing a fresh tail nonterminal Aᵢ′.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function computeLRESteps(g) {
+  const steps = [];
+  let rules = cloneRules(g.rules);
+
+  // Order nonterminals by first appearance in rule list
+  const nts = [];
+  { const seen = new Set(); for (const r of rules) if (!seen.has(r.lhs)) { seen.add(r.lhs); nts.push(r.lhs); } }
+
+  // Return the first name base + "'" + … not already used as a rule LHS
+  function freshName(base) {
+    const used = new Set(rules.map(r => r.lhs));
+    let n = base + "'";
+    while (used.has(n)) n += "'";
+    return n;
+  }
+
+  const ntOrderHtml = nts.map((n, i) => 'A<sub>' + (i+1) + '</sub> = <span class="hl">' + n + '</span>').join(', ');
+
+  steps.push({
+    phase: 'Overview',
+    html:  'Order nonterminals A<sub>1</sub> … A<sub>n</sub> and process each in turn. '
+         + 'For each A<sub>i</sub>: (1) substitute the current productions of any A<sub>j</sub> (j &lt; i) '
+         + 'found at the head of an A<sub>i</sub>-rule; '
+         + '(2) eliminate any remaining direct left recursion in A<sub>i</sub> '
+         + 'by introducing a fresh tail nonterminal A<sub>i</sub>′.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  steps.push({
+    phase: '',
+    html:  'Nonterminal order: ' + ntOrderHtml,
+    isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  let anyChange = false;
+
+  for (let i = 0; i < nts.length; i++) {
+    const Ai = nts[i];
+
+    steps.push({
+      phase: 'A<sub>' + (i+1) + '</sub> = ' + Ai,
+      html:  'Processing <span class="hl">' + Ai + '</span>.',
+      isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+    });
+
+    // ── Step 1: substitute Aⱼ (j < i) into Aᵢ → Aⱼ γ ──────
+    for (let j = 0; j < i; j++) {
+      const Aj = nts[j];
+      const toReplace = rules.filter(r => r.lhs === Ai && r.rhs.length > 0 && r.rhs[0] === Aj);
+      if (toReplace.length === 0) continue;
+
+      const AjProds = rules.filter(r => r.lhs === Aj);
+      const activeIdxs = toReplace.map(r => rules.indexOf(r));
+      steps.push({
+        phase: '',
+        html:  (toReplace.length === 1 ? 'Rule ' : 'Rules ')
+             + toReplace.map(r => '<span class="hl">' + ruleStr(r) + '</span>').join(', ')
+             + (toReplace.length === 1 ? ' starts' : ' start')
+             + ' with <span class="hl">' + Aj + '</span> — substituting its productions.',
+        isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: activeIdxs,
+      });
+
+      const replaceSet = new Set(toReplace.map(r => rules.indexOf(r)));
+      const generated  = [];
+      for (const r of toReplace) {
+        const gamma = r.rhs.slice(1);
+        for (const ajr of AjProds) generated.push({ lhs: Ai, rhs: [...ajr.rhs, ...gamma] });
+      }
+      rules = rules.filter((_, idx) => !replaceSet.has(idx));
+      const insertAt = rules.length;
+      rules.push(...generated);
+
+      steps.push({
+        phase: '',
+        html:  'Removed: ' + toReplace.map(r => '<span class="del">' + ruleStr(r) + '</span>').join(', ')
+             + '<br>Added:&nbsp; ' + generated.map(r => '<span class="add">' + ruleStr(r) + '</span>').join(', '),
+        isPhase: false, grammarAfter: cloneRules(rules),
+        newRules: generated.map((_, k) => insertAt + k), activeRules: [],
+      });
+      anyChange = true;
+    }
+
+    // ── Step 2: eliminate direct left recursion in Aᵢ ───────
+    const lrRules    = rules.filter(r => r.lhs === Ai && r.rhs.length > 0 && r.rhs[0] === Ai);
+    const nonLrRules = rules.filter(r => r.lhs === Ai && !(r.rhs.length > 0 && r.rhs[0] === Ai));
+
+    if (lrRules.length === 0) {
+      steps.push({
+        phase: '',
+        html:  '<span class="hl">' + Ai + '</span> has no direct left recursion — skipping.',
+        isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+      });
+      continue;
+    }
+
+    anyChange = true;
+    const activeIdxs2 = rules.map((r, idx) => r.lhs === Ai ? idx : -1).filter(idx => idx >= 0);
+    steps.push({
+      phase: '',
+      html:  'Direct left recursion in <span class="hl">' + Ai + '</span>:<br>'
+           + 'Left-recursive:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
+           + lrRules.map(r => '<span class="hl">' + ruleStr(r) + '</span>').join(', ') + '<br>'
+           + 'Non-left-recursive: '
+           + (nonLrRules.length
+               ? nonLrRules.map(r => '<span class="hl">' + ruleStr(r) + '</span>').join(', ')
+               : '<span class="dim">none (language contribution of ' + Ai + ' is empty)</span>'),
+      isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: activeIdxs2,
+    });
+
+    const Ai_prime   = freshName(Ai);
+    const newAiRules = nonLrRules.map(r => ({ lhs: Ai,       rhs: [...r.rhs, Ai_prime] }));
+    const newTailRules = [
+      ...lrRules.map(r => ({ lhs: Ai_prime, rhs: [...r.rhs.slice(1), Ai_prime] })),
+      { lhs: Ai_prime, rhs: [] },
+    ];
+
+    rules = rules.filter(r => r.lhs !== Ai);
+    const insertAt2 = rules.length;
+    rules.push(...newAiRules, ...newTailRules);
+
+    steps.push({
+      phase: '',
+      html:  'Introducing tail nonterminal <span class="hl">' + Ai_prime + '</span>:<br>'
+           + Ai       + ':&nbsp; ' + newAiRules.map(r   => '<span class="add">' + ruleStr(r) + '</span>').join(', ') + '<br>'
+           + Ai_prime + ':&nbsp; ' + newTailRules.map(r => '<span class="add">' + ruleStr(r) + '</span>').join(', '),
+      isPhase: false, grammarAfter: cloneRules(rules),
+      newRules: [...newAiRules, ...newTailRules].map((_, k) => insertAt2 + k),
+      activeRules: [],
+    });
+  }
+
+  steps.push({
+    phase: 'Done',
+    html:  anyChange
+      ? 'Left recursion eliminated. The result generates the same language and contains no left-recursive rules.'
+      : 'No left recursion found — grammar is already left-recursion-free.',
+    isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
+  });
+
+  return steps;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ALGORITHM PSEUDOCODE
+// kw, sym, it, cm, hi, _la/_ra/_eps/…, pcBlock — from shared.js
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Cleanup ───────────────────────────────────────────────────
+const PC_PRODUCTIVE = pcBlock(
+  'Productive',
+  [
+    { label: 'Input',  sym: it('G'),    desc: 'the grammar (rules P, nonterminals N)' },
+    { label: 'Output', sym: 'prod',     desc: 'the subset of N whose members can derive a non-empty string of terminals (a nonterminal with only ε-rules is productive, but it still has a derivation)' },
+  ],
+  `prod ${_la} ${_emp}
+${kw('repeat')}
+  ${kw('for each')} rule A ${_ra} X₁ X₂ … Xₙ ${_in} G
+    ${kw('if')} every Xᵢ is a terminal or Xᵢ ${_in} prod${cm('ε-rule (n=0): vacuously true')}
+      add A to prod
+${kw('until')} prod unchanged
+remove every rule where LHS ${_nin} prod or any RHS nonterminal ${_nin} prod
+${kw('return')} prod`
+);
+
+const PC_REACHABLE = pcBlock(
+  'Reachable',
+  [
+    { label: 'Input',  sym: it('G'),    desc: 'grammar after unproductive-rule removal' },
+    { label: '',       sym: it('S'),    desc: 'the start symbol' },
+    { label: 'Output', sym: 'reach',   desc: 'the subset of nonterminals reachable from S in a sentential form' },
+  ],
+  `reach ${_la} { ${it('S')} }
+worklist ${_la} [ ${it('S')} ]
+${kw('while')} worklist ${_neq} ${_emp}
+  take A from worklist
+  ${kw('for each')} rule A ${_ra} X₁ … Xₙ ${_in} G
+    ${kw('for each')} nonterminal Xᵢ ${_nin} reach
+      add Xᵢ to reach and to worklist
+remove every rule whose LHS ${_nin} reach
+${kw('return')} reach`
+);
+
+// ── ε-Production Elimination ──────────────────────────────────
+const PC_NULLABLE = pcBlock(
+  'Nullable',
+  [
+    { label: 'Input',  sym: it('G'),       desc: 'the grammar' },
+    { label: 'Output', sym: 'nullable',    desc: 'the set of nonterminals A such that A ⇒* ε' },
+  ],
+  `nullable ${_la} { A ${_in} N | A ${_ra} ${_eps} ${_in} G }${cm('seed with direct ε-rules')}
+${kw('repeat')}
+  ${kw('for each')} rule A ${_ra} X₁ X₂ … Xₙ ${_in} G  (n ${_neq} 0)
+    ${kw('if')} every Xᵢ ${_in} nullable: add A to nullable
+${kw('until')} nullable unchanged
+${kw('return')} nullable`
+);
+
+const PC_EPS_ELIM = pcBlock(
+  'ε-Eliminate',
+  [
+    { label: 'Input',  sym: it('G'),       desc: 'grammar' },
+    { label: '',       sym: 'nullable',    desc: 'nullable nonterminals' },
+    { label: 'Output', sym: '',            desc: 'equivalent grammar without ε-productions' },
+  ],
+  `${kw('for each')} rule A ${_ra} X₁ X₂ … Xₙ  (n ${_neq} 0)
+  let I ${_la} { i ${_in} [1..n] | Xᵢ ${_in} nullable }${cm('positions of nullable symbols')}
+  ${kw('for each')} non-empty proper subset S ⊊ 2ᴵ${cm('omit full mask — that is the original rule')}
+    let α ${_la} X₁…Xₙ with positions in S omitted
+    ${kw('if')} |α| ≥ 1 and A ${_ra} α not present: add A ${_ra} α
+remove all A ${_ra} ${_eps} rules${cm('keep S → ε if S ∈ nullable — language contains ε')}`
+);
+
+// ── Unit Production Elimination ───────────────────────────────
+const PC_UNIT_PAIRS = pcBlock(
+  'Unit-Pairs',
+  [
+    { label: 'Input',  sym: it('G'),    desc: 'grammar with nonterminal set N' },
+    { label: 'Output', sym: 'pairs',   desc: '{ (A, B) | A ⇒* B using only unit productions A → B }' },
+  ],
+  `pairs ${_la} { (A, A) | A ${_in} N }${cm('reflexive base: every NT is its own unit pair')}
+${kw('repeat')}
+  ${kw('for each')} unit production A ${_ra} B ${_in} G
+    ${kw('for each')} C such that (B, C) ${_in} pairs
+      add (A, C) to pairs
+${kw('until')} pairs unchanged
+${kw('return')} pairs`
+);
+
+const PC_UNIT_ELIM = pcBlock(
+  'Unit-Eliminate',
+  [
+    { label: 'Input',  sym: it('G'),    desc: 'grammar' },
+    { label: '',       sym: 'pairs',   desc: 'unit pairs' },
+    { label: 'Output', sym: '',        desc: 'equivalent grammar without unit productions A → B' },
+  ],
+  `${kw('for each')} (A, B) ${_in} pairs with A ${_neq} B
+  ${kw('for each')} non-unit production B ${_ra} α ${_in} G
+    ${kw('if')} A ${_ra} α not present: add A ${_ra} α
+remove all unit productions A ${_ra} B`
+);
+
+// ── CNF phases 4–5 ────────────────────────────────────────────
+const PC_CNF_TERMS = pcBlock(
+  'Isolate-Terminals',
+  [
+    { label: 'Input',  sym: it('G'),  desc: 'grammar after ε- and unit-elimination' },
+    { label: 'Output', sym: '',       desc: 'grammar where every rule with ≥ 2 RHS symbols contains only nonterminals' },
+  ],
+  `${kw('for each')} rule A ${_ra} X₁ … Xₙ with n ≥ 2
+  ${kw('for each')} terminal Xᵢ in the rule
+    ${kw('if')} Xᵢ not yet wrapped
+      create fresh nonterminal X_t and rule X_t ${_ra} Xᵢ
+    replace Xᵢ with its wrapper X_t`
+);
+
+const PC_CNF_BIN = pcBlock(
+  'Binarise',
+  [
+    { label: 'Input',  sym: it('G'),  desc: 'grammar after terminal isolation' },
+    { label: 'Output', sym: '',       desc: 'grammar in Chomsky Normal Form: every rule is A → BC or A → a' },
+  ],
+  `${kw('while')} ∃ rule A ${_ra} X₁ X₂ … Xₙ with n ≥ 3
+  create fresh nonterminal Y
+  replace A ${_ra} X₁ X₂ … Xₙ with
+    A ${_ra} X₁ Y${cm('peel off the leftmost symbol')}
+    Y ${_ra} X₂ … Xₙ${cm('recurse until binary')}`
+);
+
+// ── Left-Recursion Elimination ────────────────────────────────
+const PC_LRE_DIRECT = pcBlock(
+  'Eliminate-Direct-LR',
+  [
+    { label: 'Input',  sym: it('A'),   desc: 'a nonterminal and its current productions' },
+    { label: 'Output', sym: '',        desc: 'equivalent rules with no direct left recursion, using a fresh tail nonterminal A′' },
+  ],
+  `partition rules for A into:
+  ${it('left-recursive')}: A ${_ra} A α₁ ${_in} … ${_in} A αₖ
+  ${it('base cases')}:     A ${_ra} β₁  ${_in} … ${_in} βₘ
+${kw('if')} k = 0${cm('no direct left recursion — nothing to do')}
+  ${kw('return')}
+create fresh nonterminal A′
+${kw('replace')} all rules for A with:
+  A  ${_ra} β₁ A′ | … | βₘ A′${cm('each base case, followed by the tail')}
+  A′ ${_ra} α₁ A′ | … | αₖ A′${cm('each recursive suffix, followed by the tail')}
+  A′ ${_ra} ${_eps}${cm('allow the tail to terminate')}`
+);
+
+const PC_LRE = pcBlock(
+  'Eliminate-Left-Recursion',
+  [
+    { label: 'Input',  sym: it('G'),   desc: 'grammar; works best after ε-elimination and unit elimination (ε-rules and cycles can cause unexpected results)' },
+    { label: 'Output', sym: '',        desc: 'equivalent grammar with no left-recursive rules' },
+  ],
+  `order nonterminals: A₁, A₂, … , Aₙ${cm('any fixed order; first-appearance order is used here')}
+${kw('for')} i ${_la} 1 to n
+  ${kw('for')} j ${_la} 1 to i − 1
+    ${kw('for each')} rule Aᵢ ${_ra} Aⱼ γ${cm('Aⱼ leads the rule')}
+      ${kw('for each')} current rule Aⱼ ${_ra} δ: add Aᵢ ${_ra} δ γ${cm('substitute Aⱼ')}
+    remove the original rules Aᵢ ${_ra} Aⱼ γ
+  eliminate direct left recursion from Aᵢ${cm('see Eliminate-Direct-LR')}`
+);
+
+// ── Modal open / close ────────────────────────────────────────
+function openAlgoModal() {
+  const overlay   = document.getElementById('algo-overlay');
+  const titleEl   = document.getElementById('algo-title');
+  const subtitleEl = document.getElementById('algo-subtitle');
+  const bodyEl    = document.getElementById('algo-body');
+
+  if (currentMode === 'clean') {
+    titleEl.textContent    = 'Grammar Cleanup';
+    subtitleEl.textContent = 'productive & reachable symbols';
+    bodyEl.innerHTML = PC_PRODUCTIVE + PC_REACHABLE +
+      '<div class="pc-note">Productive removal must precede reachability: removing unproductive rules can sever the only path that made a nonterminal reachable, so running reachability first might miss deletions. Each phase uses its own fixpoint; no outer loop is needed.</div>';
+  } else if (currentMode === 'eps') {
+    titleEl.textContent    = 'ε-Production Elimination';
+    subtitleEl.textContent = '';
+    bodyEl.innerHTML = PC_NULLABLE + PC_EPS_ELIM +
+      '<div class="pc-note">The ε-closure step adds every non-empty combination of the original rule with nullable positions omitted. The original rule itself is retained as-is; only A → ε rules are removed at the end.</div>';
+  } else if (currentMode === 'unit') {
+    titleEl.textContent    = 'Unit Production Elimination';
+    subtitleEl.textContent = '';
+    bodyEl.innerHTML = PC_UNIT_PAIRS + PC_UNIT_ELIM +
+      '<div class="pc-note">A <em>unit production</em> is any rule of the form A → B where B is a single nonterminal. The pair (A, B) is a unit pair when A can reach B by a chain of such rules. Copying B\'s non-unit productions to A preserves the language before the unit rules are deleted.</div>';
+  } else if (currentMode === 'cnf') {
+    titleEl.textContent    = 'CNF Conversion — Phases 4 & 5';
+    subtitleEl.textContent = 'terminal isolation & binarisation';
+    bodyEl.innerHTML = PC_CNF_TERMS + PC_CNF_BIN +
+      '<div class="pc-note">Phases 1–3 (cleanup, ε-elimination, unit elimination) are covered by the first three sub-tools. After those three phases every rule is either a unit production or has only nonterminals or a single terminal in its RHS; terminal isolation and binarisation then complete the CNF conversion.</div>';
+  } else if (currentMode === 'lre') {
+    titleEl.textContent    = 'Left-Recursion Elimination';
+    subtitleEl.textContent = 'indirect & direct';
+    bodyEl.innerHTML = PC_LRE + PC_LRE_DIRECT +
+      '<div class="pc-note">The substitution pass (outer loop) converts any indirect left recursion into direct left recursion for A<sub>i</sub>; the inner pass then removes it. The result is guaranteed left-recursion-free for any ordering of the nonterminals. For grammars with ε-rules or unit cycles the result may contain ε-productions — run ε-elimination and unit elimination beforehand for cleanest output.</div>';
+  }
+
+  overlay.classList.remove('hidden');
+  var closeBtn = overlay.querySelector('.algo-close');
+  if (closeBtn) closeBtn.focus(); else overlay.focus();
+}
+
+function closeAlgoModal() {
+  document.getElementById('algo-overlay').classList.add('hidden');
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAlgoModal(); return; }
+  if (isAlgoModalOpen()) return;
+  if (e.target.matches('input,textarea,select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'l') { e.preventDefault(); stepFwd(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'h')  { e.preventDefault(); stepBack(); }
+  else if (e.key === 'Enter') { e.preventDefault(); runAll(); }
+});
+
+// ── Error handler ─────────────────────────────────────────────
+window.onerror = function(msg, src, line, col, err) {
+  if (!line && !src) return false;
+  const el = document.getElementById('error-msg');
+  if (el) el.textContent = err ? err.message : msg;
+  return false;
+};
+
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  loadPanelState();
+  initAlgoModal();
+  loadExamplesInto('../examples/examples-grammar-rewrite.json', 'examples-select', EXAMPLES, () => {
+    if (!document.getElementById('grammar-input').value.trim()) {
+      const firstKey = Object.keys(EXAMPLES)[0];
+      if (firstKey) { document.getElementById('grammar-input').value = EXAMPLES[firstKey].text; build(); }
+    }
+  });
+  // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
+  let _rebuildTimer = null;
+  document.getElementById('grammar-input').addEventListener('input', () => {
+    clearTimeout(_rebuildTimer);
+    _rebuildTimer = setTimeout(build, 400);
+  });
+});
+</script>
+
+</body>
+</html>

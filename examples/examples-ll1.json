@@ -1,0 +1,90 @@
+{
+  "groups": [
+    {
+      "label": "Expressions",
+      "examples": [
+        {
+          "label": "Arithmetic",
+          "text": [
+            "// Arithmetic — classic LL(1) form",
+            "// Left recursion eliminated",
+            "E -> T E'",
+            "E' -> + T E' | eps",
+            "T -> F T'",
+            "T' -> * F T' | eps",
+            "F -> id"
+          ]
+        },
+        {
+          "label": "Arithmetic + parens",
+          "text": [
+            "// Arithmetic with parentheses",
+            "E -> T E'",
+            "E' -> + T E' | eps",
+            "T -> F T'",
+            "T' -> * F T' | eps",
+            "F -> ( E ) | id"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Structures",
+      "examples": [
+        {
+          "label": "Balanced parentheses",
+          "text": [
+            "// Balanced parentheses",
+            "S -> ( S ) S | eps"
+          ]
+        },
+        {
+          "label": "Simple declarations",
+          "text": [
+            "// Simple declarations (right-factored)",
+            "D -> T id D'",
+            "D' -> ; | [ num ] ;",
+            "T -> int | float | bool"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Non-LL(1)",
+      "examples": [
+        {
+          "label": "Left-recursive",
+          "text": [
+            "// Left-recursive — NOT LL(1)",
+            "// Shows FIRST/FOLLOW conflict detection",
+            "E -> E + T | T",
+            "T -> id"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Larger",
+      "examples": [
+        {
+          "label": "Mini-Pascal",
+          "text": [
+            "// Mini-Pascal subset — LL(1)",
+            "// Left-recursion eliminated, left-factored",
+            "Program -> StmtList",
+            "StmtList -> Stmt StmtList'",
+            "StmtList' -> ; Stmt StmtList' | eps",
+            "Stmt -> id := Expr",
+            "Stmt -> if Expr then Stmt else Stmt",
+            "Stmt -> while Expr do Stmt",
+            "Expr -> Term Expr'",
+            "Expr' -> + Term Expr' | - Term Expr' | eps",
+            "Term -> Factor Term'",
+            "Term' -> * Factor Term' | eps",
+            "Factor -> ( Expr ) | id | num"
+          ]
+        }
+      ]
+    }
+  ]
+}

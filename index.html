@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parser Tools</title>
+<link rel="stylesheet" href="shared/shared.css">
+<style>
+body {
+  display: flex; align-items: center; justify-content: center;
+  height: 100vh; flex-direction: column; gap: 32px;
+}
+.index-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 32px 40px;
+  max-width: 520px;
+  width: 100%;
+}
+.index-card h1 {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: normal;
+  font-style: italic;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.index-card p {
+  font-size: .75rem;
+  color: var(--text-dim);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+.tool-links { display: flex; flex-direction: column; gap: 10px; }
+.tool-link {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.tool-link:hover { border-color: var(--accent); background: var(--accent-bg); }
+.tool-link .tl-title {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: .9rem;
+  color: var(--accent);
+  margin-bottom: 3px;
+}
+.tool-link .tl-desc {
+  font-size: .68rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+.footer {
+  font-size: .62rem;
+  color: var(--text-lo);
+  font-family: var(--font-mono);
+  text-align: center;
+  max-width: 800px;
+}
+</style>
+</head>
+<body>
+<div class="index-card">
+  <h1>Automata and Parsing Tools</h1>
+  <p>Interactive visualisations for teaching regular languages, bottom-up parsing, and top-down parsing.
+     Enter a regular expression or grammar in BNF, step through automaton and table construction,
+     then simulate string recognition or parsing a string with full parse tree growth.</p>
+  <div class="tool-links">
+      <a class="tool-link" href="tools/regex-tool.html">
+        <span class="tl-title">Regular Expressions</span>
+        <span class="tl-desc">Thompson's construction &nbsp;—&nbsp; RE → NFA → DFA, step-by-step, string simulation</span>
+      </a>
+      <a class="tool-link" href="tools/lr-tool.html">
+      <span class="tl-title">LR Parser</span>
+      <span class="tl-desc">LR(0) · SLR(1) · LALR(1) · LR(1) &nbsp;—&nbsp; characteristic automaton, ACTION/GOTO tables, string simulation, parse tree</span>
+    </a>
+    <a class="tool-link" href="tools/ll1-tool.html">
+      <span class="tl-title">LL(1) Parser</span>
+      <span class="tl-desc">Predictive parsing &nbsp;—&nbsp; FIRST/FOLLOW sets, predictive table, derivation steps, string simulation, parse tree</span>
+    </a><a class="tool-link" href="tools/grammar-rewrite-tool.html">
+      <span class="tl-title">Grammar Transformations</span>
+      <span class="tl-desc">Cleanup · ε-elimination · unit elimination · Chomsky Normal Form · left-recursion elimination</span>
+    </a>
+  </div>
+</div>
+<div class="footer">
+    <p>Made by <em>August Ernstsson</em> in large part using <em>Claude Code</em>.</p>
+    <p><b>These tools are experimental and not guaranteed to be correct representations of course theory material.</b></p>
+</div>
+</body>
+</html>
