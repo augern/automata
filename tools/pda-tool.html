@@ -30,88 +30,7 @@
         background: var(--bg-panel);
         max-height: 80px;
         overflow-y: auto;
-      }
-      .cfg-chip {
-        border: 1px solid var(--border);
-        background: var(--bg-cell);
-        padding: 1px 6px;
-        white-space: nowrap;
-        color: var(--text-dim);
-      }
-      .cfg-chip.cfg-accept {
-        border-color: var(--green);
-        background: var(--green-bg);
-        color: var(--green);
-      }
-      .cfg-chip.cfg-dead {
-        opacity: 0.4;
-      }
-      .cfg-chip .cfg-state { color: var(--accent); }
-      .cfg-chip.cfg-accept .cfg-state { color: var(--green); }
-      .cfg-chips-label {
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: 0.65rem;
-        color: var(--text-lo);
-        margin-right: 2px;
-      }
-      .cfg-truncated {
-        color: var(--red);
-        font-size: 0.62rem;
-      }/* ── Configuration tree ── */
-      .tree-start-arrow { stroke: var(--text-dim); stroke-width: 1; }
-
-      /* Tree nodes */
-      .tree-node-g rect {
-        fill: var(--bg); stroke: var(--border); stroke-width: 1;
-      }
-      .tree-node-g.tn-active rect { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.5; }
-      .tree-node-g.tn-accept rect { fill: var(--green-bg);  stroke: var(--green);  stroke-width: 1.5; }
-      .tree-node-g.tn-reject rect { fill: var(--red-bg);    stroke: var(--red); }
-      .tree-node-g.tn-dead   rect { fill: var(--bg-cell);   stroke: var(--border-lo); }
-
-      .tn-state {
-        font-family: var(--font-mono); font-size: 11px; font-weight: bold;
-        fill: var(--text); pointer-events: none;
-      }
-      .tn-stack {
-        font-family: var(--font-mono); font-size: 9px;
-        fill: var(--text-dim); pointer-events: none;
-      }
-      .tree-node-g.tn-active .tn-state { fill: var(--accent); }
-      .tree-node-g.tn-accept .tn-state { fill: var(--green); }
-      .tree-node-g.tn-accept .tn-stack { fill: var(--green); opacity: 0.8; }
-      .tree-node-g.tn-reject .tn-state { fill: var(--red); }
-      .tree-node-g.tn-dead   .tn-state { fill: var(--text-lo); }
-      .tree-node-g.tn-dead   .tn-stack { fill: var(--text-lo); }
-      .tree-node-g.tn-dead   { opacity: 0.45; }
-      .tree-node-g .tn-dead-mark {
-        font-size: 9px; fill: var(--red);
-        font-family: var(--font-mono); opacity: 0.85;
-        pointer-events: none;
-      }
-
-      /* Tree edges */
-      .tree-edge-path {
-        fill: none; stroke: var(--text-dim); stroke-width: 0.9;
-      }
-      .tree-edge-path.te-eps    { stroke: var(--text-lo); stroke-dasharray: 4 3; }
-      .tree-edge-path.te-active { stroke: var(--accent); stroke-width: 1.2; }
-      .tree-edge-path.te-accept      { stroke: var(--green);  stroke-width: 1.2; }
-      .tree-edge-path.te-accept-path { stroke: var(--green);  stroke-width: 2.2; }
-      .tree-edge-path.te-dead        { stroke: var(--border-lo); }
-      .tree-edge-path.te-eps.te-active      { stroke: var(--accent); }
-      .tree-edge-path.te-eps.te-accept      { stroke: var(--green); }
-      .tree-edge-path.te-eps.te-accept-path { stroke: var(--green); stroke-width: 1.8; }
-
-      .tree-edge-lbl {
-        font-family: var(--font-mono); font-size: 8.5px; font-style: italic;
-        fill: var(--text-lo); pointer-events: none;
-      }
-      .tree-edge-lbl.te-active      { fill: var(--accent); }
-      .tree-edge-lbl.te-accept      { fill: var(--green); }
-      .tree-edge-lbl.te-accept-path { fill: var(--green); font-weight: bold; }
-      .tree-edge-lbl.te-dead        { fill: var(--border); }
+      }/* ── Configuration tree ── *//* Tree nodes *//* Tree edges */
     </style>
   </head>
   <body>
@@ -613,18 +532,18 @@ else: ${kw("reject")}`
         const bar = document.getElementById("sim-configs-bar");
         if (configs.length === 0) { bar.style.display = "none"; return; }
         bar.style.display = "flex";
-        let h = `<span class="cfg-chips-label">Configs:</span>`;
+        let h = `<span class="ui-label">Configs:</span>`;
         const shown = configs.slice(0, MAX_CONFIGS);
         for (const c of shown) {
           const isAccept = isAcceptingConfig(c);
           const stackStr = c.stack.length > 0
             ? c.stack.slice().reverse().join("") + " ↑"  // display: bottom…top↑
             : "∅";
-          const cls = "cfg-chip" + (isAccept ? " cfg-accept" : "");
-          h += `<span class="${cls}">(<span class="cfg-state">${esc(c.state)}</span>, ${esc(stackStr)})</span>`;
+          const cls = "ui-badge" + (isAccept ? " ui-badge--accept" : "");
+          h += `<span class="${cls}">(<span class="ui-badge__em">${esc(c.state)}</span>, ${esc(stackStr)})</span>`;
         }
         if (configs.length >= MAX_CONFIGS) {
-          h += `<span class="cfg-truncated">≥${MAX_CONFIGS}</span>`;
+          h += `<span class="ui-badge ui-badge--reject" title="Configuration limit reached">≥${MAX_CONFIGS}</span>`;
         }
         bar.innerHTML = h;
       }
@@ -735,12 +654,12 @@ else: ${kw("reject")}`
           const st       = treeNodeStatus(pd, activeIds);
           const onAccept = acceptPathIds.has(pd.id);
 
-          let pc = "tree-edge-path";
-          if (isEps)     pc += " te-eps";
-          if (onAccept)  pc += " te-accept-path";
-          else if (st === "active")               pc += " te-active";
-          else if (st === "accept")               pc += " te-accept";
-          else if (st === "dead" || st === "reject") pc += " te-dead";
+          let pc = "ct-edge";
+          if (isEps)     pc += " ct-edge--eps";
+          if (onAccept)  pc += " is-accept-path";
+          else if (st === "active")               pc += " is-active";
+          else if (st === "accept")               pc += " is-accept";
+          else if (st === "dead" || st === "reject") pc += " is-dead";
 
           svgRoot.append("path")
             .attr("class", pc)
@@ -748,11 +667,11 @@ else: ${kw("reject")}`
 
           const lbl = treeEdgeLabelStr(pd);
           if (lbl) {
-            let lc = "tree-edge-lbl";
-            if (onAccept)            lc += " te-accept-path";
-            else if (st === "active")  lc += " te-active";
-            else if (st === "accept")  lc += " te-accept";
-            else if (st === "dead" || st === "reject") lc += " te-dead";
+            let lc = "ct-edge-label";
+            if (onAccept)            lc += " is-accept-path";
+            else if (st === "active")  lc += " is-active";
+            else if (st === "accept")  lc += " is-accept";
+            else if (st === "dead" || st === "reject") lc += " is-dead";
             svgRoot.append("text")
               .attr("class", lc)
               .attr("x", mx + 5).attr("y", my - 3)
@@ -763,7 +682,7 @@ else: ${kw("reject")}`
 
         // ── Entry arrow ──
         svgRoot.append("line")
-          .attr("class", "tree-start-arrow")
+          .attr("class", "ag-start")
           .attr("x1", hier.x).attr("y1", hier.y - TREE_NH / 2 - 14)
           .attr("x2", hier.x).attr("y2", hier.y - TREE_NH / 2 - 1)
           .attr("marker-end", "url(#tree-arrow)");
@@ -773,19 +692,19 @@ else: ${kw("reject")}`
           const pd = dn.data;
           const st = treeNodeStatus(pd, activeIds);
           const g  = svgRoot.append("g")
-            .attr("class", "tree-node-g" + (st !== "normal" ? " tn-" + st : ""))
+            .attr("class", "ct-node" + (st !== "normal" ? " is-" + st : ""))
             .attr("transform", `translate(${dn.x - TREE_NW / 2},${dn.y - TREE_NH / 2})`);
           g.append("rect").attr("width", TREE_NW).attr("height", TREE_NH).attr("rx", 3);
-          g.append("text").attr("class", "tn-state")
+          g.append("text").attr("class", "ct-label")
             .attr("x", TREE_NW / 2).attr("y", 13)
             .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
             .text(pd.state);
-          g.append("text").attr("class", "tn-stack")
+          g.append("text").attr("class", "ct-sub")
             .attr("x", TREE_NW / 2).attr("y", 27)
             .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
             .text(stackAbbrev(pd.stack));
           if (pd.dead) {
-            g.append("text").attr("class", "tn-dead-mark")
+            g.append("text").attr("class", "ct-dead-mark")
               .attr("x", TREE_NW - 2).attr("y", 8)
               .attr("text-anchor", "end").attr("dominant-baseline", "middle")
               .text("✗");

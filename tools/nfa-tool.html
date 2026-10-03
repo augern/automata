@@ -50,80 +50,9 @@
         font-style: italic;
         font-size: 0.68rem;
         color: var(--text-lo);
-      }/* Result banner *//* Tree */
+      }/* Result banner *//* Tree *//* Tree nodes *//* Accept double-ring *//* Depth axis labels */
 
-      /* Tree nodes */
-      .tree-node circle {
-        fill: var(--bg);
-        stroke: var(--text);
-        stroke-width: 1.2;
-        transition: fill 0.18s, stroke 0.18s;
-      }
-      .tree-node.tn-active circle  { fill: var(--accent-bg); stroke: var(--accent); }
-      .tree-node.tn-accept circle  { fill: var(--green-bg);  stroke: var(--green); stroke-width: 2; }
-      .tree-node.tn-reject circle  { fill: var(--red-bg);    stroke: var(--red); }
-      .tree-node.tn-dead   circle  { fill: var(--bg-cell);   stroke: var(--border-lo); }
-      .tree-node .tn-label {
-        font-size: 10px;
-        font-family: var(--font-mono);
-        fill: var(--text);
-        pointer-events: none;
-      }
-      .tree-node.tn-active  .tn-label { fill: var(--accent); font-weight: bold; }
-      .tree-node.tn-accept  .tn-label { fill: var(--green);  font-weight: bold; }
-      .tree-node.tn-reject  .tn-label { fill: var(--red); }
-      .tree-node.tn-dead    .tn-label { fill: var(--text-lo); }
-      .tree-node .tn-dead-mark {
-        font-size: 9px;
-        fill: var(--red);
-        font-family: var(--font-mono);
-        opacity: 0.8;
-        pointer-events: none;
-      }
-      /* Accept double-ring */
-      .tree-node.tn-accept .tn-ring {
-        fill: none;
-        stroke: var(--green);
-        stroke-width: 1;
-      }
-      .tree-edge {
-        fill: none;
-        stroke: var(--border);
-        stroke-width: 1;
-        transition: stroke 0.18s;
-      }
-      .tree-edge.te-active { stroke: var(--accent); stroke-width: 1.5; }
-      .tree-edge.te-accept      { stroke: var(--green);  stroke-width: 1.5; }
-      .tree-edge.te-accept-path { stroke: var(--green);  stroke-width: 2.5; }
-      .tree-edge.te-dead        { stroke: var(--border-lo); }
-      .tree-edge.te-eps               { stroke-dasharray: 4 3; stroke: var(--text-lo); }
-      .tree-edge.te-eps.te-active     { stroke: var(--accent); }
-      .tree-edge.te-eps.te-accept     { stroke: var(--green); }
-      .tree-edge.te-eps.te-accept-path { stroke: var(--green); stroke-width: 2; }
-      .tree-edge.te-eps.te-dead       { stroke: var(--border-lo); }
-      .tree-edge-label {
-        font-size: 9px;
-        font-family: var(--font-mono);
-        fill: var(--text-dim);
-        font-style: italic;
-        pointer-events: none;
-      }
-      /* Depth axis labels */
-      .tree-depth-label {
-        font-size: 9px;
-        font-family: var(--font-serif);
-        font-style: italic;
-        fill: var(--text-lo);
-      }
-
-      /* ε-closure chip shown at depth-0 nodes when ε-closure > {start} */
-      .tree-node .tn-eps-badge {
-        font-size: 8px;
-        fill: var(--text-lo);
-        font-family: var(--font-mono);
-        font-style: italic;
-        pointer-events: none;
-      }
+      /* ε-closure chip shown at depth-0 nodes when ε-closure > {start}
     </style>
   </head>
   <body>
@@ -601,11 +530,11 @@ else: ${kw("reject")}`
           if (!pp || !cp) continue;
 
           // Determine edge status/style
-          let cls = "tree-edge";
-          if (child.dead) cls += " te-dead";
-          else if (acceptPathIds.has(child.id)) cls += " te-accept-path";
-          else if (child.depth === revealDepth && !child.dead) cls += " te-active";
-          if (child.viaEps) cls += " te-eps";
+          let cls = "ct-edge";
+          if (child.dead) cls += " is-dead";
+          else if (acceptPathIds.has(child.id)) cls += " is-accept-path";
+          else if (child.depth === revealDepth && !child.dead) cls += " is-active";
+          if (child.viaEps) cls += " ct-edge--eps";
 
           // Edge label: "ε,…,ε,sym,ε,…,ε" reflecting actual ε-hop counts on each leg
           const sym = inputChars[child.depth - 1];
@@ -621,7 +550,7 @@ else: ${kw("reject")}`
             .attr("d", `M${pp.x},${pp.y} C${pp.x},${(pp.y + cp.y) / 2} ${cp.x},${(pp.y + cp.y) / 2} ${cp.x},${cp.y}`);
           if (edgeLabel) {
             edgeG.append("text")
-              .attr("class", "tree-edge-label")
+              .attr("class", "ct-edge-label")
               .attr("x", (pp.x + cp.x) / 2 + 5)
               .attr("y", (pp.y + cp.y) / 2)
               .attr("text-anchor", "start")
@@ -647,27 +576,27 @@ else: ${kw("reject")}`
           const pos = posMap.get(node.id);
           if (!pos) continue;
 
-          let cls = "tree-node";
-          if (node.dead) cls += " tn-dead";
-          else if (node.accepted) cls += " tn-accept";
-          else if (node.rejected) cls += " tn-reject";
-          else if (node.depth === revealDepth) cls += " tn-active";
+          let cls = "ct-node";
+          if (node.dead) cls += " is-dead";
+          else if (node.accepted) cls += " is-accept";
+          else if (node.rejected) cls += " is-reject";
+          else if (node.depth === revealDepth) cls += " is-active";
 
           const ng = root.append("g")
             .attr("class", cls)
             .attr("transform", `translate(${pos.x},${pos.y})`);
           ng.append("circle").attr("r", TREE_R);
           if (node.accepted) {
-            ng.append("circle").attr("class", "tn-ring").attr("r", TREE_R - 3);
+            ng.append("circle").attr("class", "ct-ring").attr("r", TREE_R - 3);
           }
           ng.append("text")
-            .attr("class", "tn-label")
+            .attr("class", "ct-label")
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
             .text(node.state);
           if (node.dead) {
             ng.append("text")
-              .attr("class", "tn-dead-mark")
+              .attr("class", "ct-dead-mark")
               .attr("text-anchor", "middle")
               .attr("x", TREE_R + 1)
               .attr("y", -TREE_R + 1)

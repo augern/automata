@@ -200,6 +200,8 @@
   font-size: var(--fs-xs);
   white-space: nowrap;
 }
+.ui-badge__em { color: var(--st-active); }
+.ui-badge--accept .ui-badge__em { color: inherit; }
 .ui-badge--active { color: var(--st-active); background: var(--st-active-bg); border-color: var(--st-active); }
 .ui-badge--accept { color: var(--st-accept); background: var(--st-accept-bg); border-color: var(--st-accept); }
 .ui-badge--reject { color: var(--st-reject); background: var(--st-reject-bg); border-color: var(--st-reject); }
@@ -383,3 +385,51 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ui-field label:has(input:checked) { color: var(--text); }
 .ui-field input[type="radio"] { cursor: pointer; accent-color: var(--accent); }
 .ui-input--sm { width: 40px; text-align: center; padding: 0 var(--sp-3); }
+
+/* ── Configuration tree (NFA / PDA simulation trees) ───── */
+/* g.ct-node (circle or rect) + text.ct-label [+ text.ct-sub] [+ circle.ct-ring]
+   with state is-active | is-accept | is-reject | is-dead; path.ct-edge (+ ct-edge--eps)
+   with is-active | is-accept | is-accept-path | is-dead; text.ct-edge-label takes
+   the same edge states. */
+.ct-node circle,
+.ct-node rect {
+  fill: var(--bg);
+  stroke: var(--text-dim);
+  stroke-width: 1.2;
+  transition: fill var(--dur-slow), stroke var(--dur-slow), opacity var(--dur-slow);
+}
+.ct-node.is-active circle, .ct-node.is-active rect { fill: var(--st-active-bg); stroke: var(--st-active); stroke-width: 1.5; }
+.ct-node.is-accept circle, .ct-node.is-accept rect { fill: var(--st-accept-bg); stroke: var(--st-accept); stroke-width: 2; }
+.ct-node.is-reject circle, .ct-node.is-reject rect { fill: var(--st-reject-bg); stroke: var(--st-reject); }
+.ct-node.is-dead circle, .ct-node.is-dead rect { fill: var(--bg-cell); stroke: var(--border-lo); }
+.ct-node.is-dead { opacity: 0.5; }
+.ct-node .ct-ring { fill: none; stroke: var(--st-accept); stroke-width: 1; }
+
+.ct-label { font-family: var(--font-mono); font-size: 11px; font-weight: bold; fill: var(--text); pointer-events: none; }
+.ct-sub { font-family: var(--font-mono); font-size: 9px; fill: var(--text-dim); pointer-events: none; }
+.ct-node.is-active .ct-label { fill: var(--st-active); }
+.ct-node.is-accept .ct-label { fill: var(--st-accept); }
+.ct-node.is-accept .ct-sub { fill: var(--st-accept); opacity: 0.8; }
+.ct-node.is-reject .ct-label { fill: var(--st-reject); }
+.ct-node.is-dead .ct-label,
+.ct-node.is-dead .ct-sub { fill: var(--st-dead); }
+.ct-dead-mark { font-family: var(--font-mono); font-size: 9px; fill: var(--st-reject); opacity: 0.85; pointer-events: none; }
+
+.ct-edge {
+  fill: none;
+  stroke: var(--text-dim);
+  stroke-width: 1;
+  transition: stroke var(--dur-slow);
+}
+.ct-edge--eps { stroke-dasharray: 4 3; }
+.ct-edge.is-active { stroke: var(--st-active); stroke-width: 1.5; }
+.ct-edge.is-accept { stroke: var(--st-accept); stroke-width: 1.5; }
+.ct-edge.is-accept-path { stroke: var(--st-accept); stroke-width: 2.4; }
+.ct-edge.is-dead { stroke: var(--border-lo); }
+
+.ct-edge-label { font-family: var(--font-mono); font-size: 9px; font-style: italic; fill: var(--text-dim); pointer-events: none; }
+.ct-edge-label.is-active { fill: var(--st-active); }
+.ct-edge-label.is-accept { fill: var(--st-accept); }
+.ct-edge-label.is-accept-path { fill: var(--st-accept); font-weight: bold; }
+.ct-edge-label.is-dead { fill: var(--st-dead); }
+.ct-depth { font-family: var(--font-serif); font-size: 9px; font-style: italic; fill: var(--text-dim); }
