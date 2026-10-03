@@ -46,6 +46,10 @@ parser-tools/
 │   ├── examples-ll1.json               ← example grammars for LL(1) tool
 │   ├── examples-lr.json                ← example grammars for LR tool
 │   └── examples-tm.json                ← example machines for Turing Machine tool
+├── vendor/
+│   ├── d3.min.js                       ← D3 7.9.0 (ISC), bundled so the tools work offline
+│   ├── dagre.min.js                    ← Dagre 0.8.5 (MIT)
+│   └── LICENSE-*.txt
 ├── shared/
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (BNF parser, FIRST/FOLLOW, parse tree,
@@ -56,7 +60,7 @@ parser-tools/
 ```
 
 `shared.css` and `shared.js` are required by all tools.
-All other runtime dependencies (D3, Dagre) are loaded from CDN.
+D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in the corresponding
 > `examples-*.json` file. No HTML changes are needed — just edit the JSON.
