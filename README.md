@@ -62,6 +62,7 @@ parser-tools/
 │   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimization
 │   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion
 │   │   └── tm.js                       ← pure: TM tape and pre-run
+│   ├── theme.js                        ← light/dark theme (system default, remembered toggle)
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
 │   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
 │   ├── automaton-graph.js              ← dagre/d3 state-diagram rendering for NFA/PDA/TM
@@ -140,6 +141,14 @@ those tokens, named `ui-block`, `ui-block__part`, `ui-block--variant`,
 `is-state`; `shared/ui.js` holds their behaviour (`UI.banner`, `UI.logBar`,
 `UI.table` builders that escape their input, plus `createStepper`,
 `createGraphView`/`drawAutomatonGraph` and the share-link helpers).
+
+**Dark theme.** Every colour is a token, so the dark theme is a second set of
+token values (`:root[data-theme="dark"]` in `shared.css`). `shared/theme.js`
+picks the theme (your system setting by default; the **Dark/Light** button in
+the top bar stores an explicit choice) and is loaded in `<head>` to avoid a
+flash of the wrong theme. `test/theme.test.js` computes WCAG contrast for the
+text and status pairs in both themes, and checks that the dark theme overrides
+every colour token, so a new token can't silently stay light.
 
 Open [`ui-kit.html`](ui-kit.html) to see every component rendered. The rule for
 new work: if a tool needs a control, a status colour or a panel layout, add it

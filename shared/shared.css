@@ -36,6 +36,12 @@
   --red-bg: #fdf0f0;
   --purple: #5a2d8a; /* reduce actions */
 
+  /* Surfaces that are not plain background/text */
+  --btn-primary-hover: #333;
+  --overlay: rgba(17, 17, 16, 0.45);
+  --shadow: rgba(0, 0, 0, 0.2);
+  color-scheme: light;
+
   /* Semantic aliases used in tool CSS */
   --shift-col: var(--accent);
   --reduce-col: var(--purple);
@@ -80,6 +86,46 @@
   --font-serif: "Georgia", "Times New Roman", serif;
   --font-mono: ui-monospace, "Menlo", "Consolas", "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
+}
+
+/* ── Dark theme ────────────────────────────────────────── */
+/* Applied by theme.js as <html data-theme="dark"> (system setting by default,
+   or the user's toggle). Only token values change; components never hard-code
+   colours, so every tool follows. Contrast of the text/status pairs is checked
+   by test/theme.test.js. */
+:root[data-theme="dark"] {
+  --bg: #14161a;
+  --bg-panel: #1b1e23;
+  --bg-cell: #22262c;
+  --bg-input: #101216;
+  --bg-hover: #2a2f36;
+  --bg-code: #1f2329;
+
+  --border: #4a5058;
+  --border-lo: #3a4048;
+  --border-hi: #6b727c;
+
+  --text: #e8e8e4;
+  --text-dim: #a9acb1;
+  --text-lo: #d2d4d6;
+  --text-placeholder: #70757c;
+
+  --accent: #7aa8ff;
+  --accent-bg: #1c2a44;
+  --accent-bd: #7aa8ff;
+  --green: #62d08c;
+  --green-bg: #15281d;
+  --amber: #e2b44e;
+  --amber-bg: #2e2514;
+  --red: #ff8080;
+  --red-bg: #341b1b;
+  --purple: #bb94f2;
+
+  --st-dead: #767b82;
+  --btn-primary-hover: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.62);
+  --shadow: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
 }
 
 /* ── Reset ─────────────────────────────────────────────── */
@@ -207,8 +253,8 @@ body {
   border-color: var(--text);
 }
 .btn.primary:hover:not(:disabled) {
-  background: #333;
-  border-color: #333;
+  background: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
 }
 /* Button groups keep the focus ring above neighbours */
 .btn:focus-visible {
@@ -805,7 +851,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(17, 17, 16, 0.45);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -819,7 +865,7 @@ body {
   width: min(640px, 92vw);
   max-height: 84vh;
   overflow-y: auto;
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 36px var(--shadow);
   display: flex;
   flex-direction: column;
 }
@@ -1098,5 +1144,26 @@ body {
   border-color: var(--accent);
 }
 .share-btn ~ #key-nav {
+  margin-left: 0;
+}
+.theme-btn {
+  margin-left: auto;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 1px 9px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.theme-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.share-btn ~ .theme-btn,
+.theme-btn ~ .share-btn,
+#key-nav ~ .theme-btn {
   margin-left: 0;
 }

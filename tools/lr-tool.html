@@ -8,6 +8,7 @@
     <script src="../vendor/d3.min.js"></script>
     <script src="../vendor/dagre.min.js"></script>
     <link rel="stylesheet" href="../shared/shared.css" />
+    <script src="../shared/theme.js"></script>
     <style>
       /* ── Automaton panel + container ── */
       #p-automaton {
@@ -561,7 +562,7 @@
         <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
         <div class="panel-body">
           <div id="tables-wrap">
-            <div style="color: #2a3a4a; font-size: 0.72rem">Build a grammar to see tables.</div>
+            <div style="color: var(--text-dim); font-size: 0.72rem">Build a grammar to see tables.</div>
           </div>
         </div>
       </div>
@@ -694,7 +695,7 @@
             const tr = document.createElement("tr");
             const fs = [...first[nt]].filter((s) => s !== EPSILON).sort(),
               ls = [...(follow[nt] || [])].sort();
-            tr.innerHTML = '<td class="state-cell">' + esc(nt) + "</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px">{ ' + (esc(fs.join(", ")) || "&mdash;") + " }</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px;color:#6a8a6a">{ ' + (esc(ls.join(", ")) || "&mdash;") + " }</td>";
+            tr.innerHTML = '<td class="state-cell">' + esc(nt) + "</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px">{ ' + (esc(fs.join(", ")) || "&mdash;") + " }</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px;color:var(--green)">{ ' + (esc(ls.join(", ")) || "&mdash;") + " }</td>";
             ffb.appendChild(tr);
           });
         fft.appendChild(ffb);
@@ -784,9 +785,9 @@
         gd.appendChild(gtbl);
         if (conflicts.length) {
           const cd = document.createElement("div");
-          cd.innerHTML = '<div class="tbl-section-label" style="color:#f87171">' + conflicts.length + " Conflict(s)</div>";
+          cd.innerHTML = '<div class="tbl-section-label" style="color:var(--red)">' + conflicts.length + " Conflict(s)</div>";
           const ul = document.createElement("div");
-          ul.style.cssText = "font-size:.66rem;color:#f87171;line-height:1.8";
+          ul.style.cssText = "font-size:.66rem;color:var(--red);line-height:1.8";
           for (const c of conflicts) ul.innerHTML += "<div>State " + c.state + ', "' + esc(c.symbol) + '": ' + esc(c.entries.join(" / ")) + "</div>";
           cd.appendChild(ul);
           wrap.appendChild(cd);
