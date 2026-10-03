@@ -602,6 +602,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/nfa.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
       // shared.js stubs
@@ -1004,133 +1005,17 @@ else: ${kw("reject")}`
       // ε-CLOSURE
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // Thin wrappers binding the pure algorithms in shared/algo/nfa.js to the
+      // tool's current definition.
+      const MAX_TREE_NODES = NFA_MAX_TREE_NODES;
+      function currentNFA() {
+        return { states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts, trans: nfaTrans };
+      }
       function epsClosure(stateNames) {
-        const closure = new Set(stateNames);
-        const stack = [...stateNames];
-        while (stack.length > 0) {
-          const s = stack.pop();
-          const targets = (nfaTrans[s] && nfaTrans[s]["ε"]) || [];
-          for (const t of targets) {
-            if (!closure.has(t)) { closure.add(t); stack.push(t); }
-          }
-        }
-        return closure;
+        return nfaEpsClosure(currentNFA(), stateNames);
       }
-
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // SIMULATION TREE  (fold-ε mode)
-      //
-      // Tree node: { id, state, depth, parent, children, dead, accepted, viaEps }
-      // depth 0  = start states (ε-closure of nfaStart)
-      // depth k  = states after consuming input[k-1], ε-closed
-      // viaEps   = true when the incoming edge involved ε-moves
-      //            (depth-0: state is not the start state itself;
-      //             depth-k: child not directly reachable from parent via sym alone)
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-      const MAX_TREE_NODES = 512;
-
-      // States reachable via sym + trailing ε from fromState, without ε-expanding fromState first.
-      function directReach(fromState, sym) {
-        const rawTargets = (nfaTrans[fromState] && nfaTrans[fromState][sym]) || [];
-        return epsClosure(rawTargets);
-      }
-
-      // BFS: minimum number of ε-steps from fromState to toState (0 if equal, Infinity if unreachable).
-      function epsDistanceBetween(fromState, toState) {
-        if (fromState === toState) return 0;
-        const visited = new Set([fromState]);
-        const queue = [[fromState, 0]];
-        while (queue.length > 0) {
-          const [s, dist] = queue.shift();
-          for (const t of (nfaTrans[s]?.["ε"] || [])) {
-            if (t === toState) return dist + 1;
-            if (!visited.has(t)) { visited.add(t); queue.push([t, dist + 1]); }
-          }
-        }
-        return Infinity;
-      }
-
-      // For a tree edge parent --sym--> child (with ε-closure folded), compute the minimum
-      // ε-hop counts: (n1, n2) where parent --ε×n1--> r --sym--> t --ε×n2--> child.
-      // Picks the path with minimum n1, breaking ties by minimum n2.
-      function epsAnnotation(parentState, sym, childState) {
-        let bestN1 = Infinity, bestN2 = Infinity;
-        for (const r of epsClosure([parentState])) {
-          for (const t of (nfaTrans[r]?.[sym] || [])) {
-            if (!epsClosure([t]).has(childState)) continue;
-            const n1 = epsDistanceBetween(parentState, r);
-            const n2 = epsDistanceBetween(t, childState);
-            if (n1 < bestN1 || (n1 === bestN1 && n2 < bestN2)) {
-              bestN1 = n1; bestN2 = n2;
-            }
-          }
-        }
-        return {
-          epsCountBefore: bestN1 === Infinity ? 0 : bestN1,
-          epsCountAfter:  bestN2 === Infinity ? 0 : bestN2,
-        };
-      }
-
       function buildSimTree(inputStr) {
-        let nodeId = 0;
-        // Virtual root — not rendered, just a container for depth-0 nodes
-        const vRoot = { id: nodeId++, state: null, depth: -1, children: [], parent: null };
-
-        const startName = nfaStates[nfaStartIdx];
-        // Single root = start state; ε-closure of start is folded into the first sym-edges
-        const rootNode = { id: nodeId++, state: startName, depth: 0, parent: vRoot,
-                           children: [], dead: false, accepted: false,
-                           viaEps: false, epsCountBefore: 0, epsCountAfter: 0 };
-        vRoot.children.push(rootNode);
-        let frontier = [rootNode];
-
-        const chars = [...inputStr];
-
-        for (let d = 0; d < chars.length; d++) {
-          const sym = chars[d];
-          const nextFrontier = [];
-
-          for (const node of frontier) {
-            if (nodeId > MAX_TREE_NODES) { node.dead = true; continue; }
-
-            // All states reachable via ε* sym ε* from node.state
-            const nextStates = new Set();
-            for (const s of epsClosure([node.state])) {
-              for (const ns of directReach(s, sym)) nextStates.add(ns);
-            }
-
-            if (nextStates.size === 0) {
-              node.dead = true;
-            } else {
-              for (const ns of nextStates) {
-                if (nodeId > MAX_TREE_NODES) break;
-                const { epsCountBefore, epsCountAfter } = epsAnnotation(node.state, sym, ns);
-                const child = { id: nodeId++, state: ns, depth: d + 1, parent: node,
-                                children: [], dead: false, accepted: false,
-                                viaEps: epsCountBefore > 0 || epsCountAfter > 0,
-                                epsCountBefore, epsCountAfter };
-                node.children.push(child);
-                nextFrontier.push(child);
-              }
-            }
-          }
-          frontier = nextFrontier;
-        }
-
-        // Mark terminal nodes.
-        // depth 0 (empty input): ε-closure of start not expanded as separate nodes → check ε-closure.
-        // depth > 0: all ε-reachable states are already explicit sibling leaves → check F directly.
-        for (const n of frontier) {
-          const accepts = (n.depth === 0)
-            ? [...epsClosure([n.state])].some(s => nfaAccepts.has(nfaStates.indexOf(s)))
-            : nfaAccepts.has(nfaStates.indexOf(n.state));
-          if (accepts) n.accepted = true;
-          else n.rejected = true;
-        }
-
-        const anyAccepted = frontier.some(n => n.accepted);
-        return { vRoot, maxDepth: chars.length, accepted: anyAccepted, truncated: nodeId > MAX_TREE_NODES };
+        return nfaBuildSimTree(currentNFA(), inputStr, MAX_TREE_NODES);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
