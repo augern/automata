@@ -851,6 +851,7 @@
     <script src="../shared/algo/grammar.js"></script>
     <script src="../shared/algo/regex.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/stepper.js"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
       function renderTree() {}
@@ -1078,24 +1079,25 @@
 
       // ── NFA (Thompson) stepper state ───────────────────────────────
       let _nfaSteps = null;
-      let _nfaPos = -1;
+      const nfaStepper = createStepper({
+        buttons: { reset: "btn-tc-reset", back: "btn-tc-back", step: "btn-tc-step", all: "btn-tc-all" },
+        min: -1,
+        last: () => (_nfaSteps ? _nfaSteps.length - 1 : null),
+        onChange: () => nfaRenderStep(),
+      });
+      function nfaSetBtns() { nfaStepper.refresh(); }
+      function nfaReset() { nfaStepper.reset(); }
+      function nfaStepFwd() { nfaStepper.next(); }
+      function nfaBack() { nfaStepper.prev(); }
+      function nfaRunAll() { nfaStepper.end(); }
       let _nfaFinal = null; // { start, accept, numStates } for "done" rendering
-
-      function nfaSetBtns() {
-        const has = _nfaSteps !== null;
-        const atEnd = has && _nfaPos >= _nfaSteps.length - 1;
-        document.getElementById("btn-tc-reset").disabled = !has || _nfaPos < 0;
-        document.getElementById("btn-tc-back").disabled  = !has || _nfaPos < 0;
-        document.getElementById("btn-tc-step").disabled  = !has || atEnd;
-        document.getElementById("btn-tc-all").disabled   = !has || atEnd;
-      }
 
       function nfaRenderStep() {
         const logEl = document.getElementById("tc-log-bar");
         const wrap = document.getElementById("nfa-table-wrap");
         const sumEl = document.getElementById("nfa-summary");
 
-        if (_nfaPos < 0) {
+        if (nfaStepper.pos < 0) {
           logEl.innerHTML = "";
           document.getElementById("nfa-content").style.display = "none";
           document.getElementById("nfa-empty").style.display = "";
@@ -1106,8 +1108,8 @@
         document.getElementById("nfa-empty").style.display = "none";
         document.getElementById("nfa-content").style.display = "flex";
 
-        const step = _nfaSteps[_nfaPos];
-        const isDone = _nfaPos === _nfaSteps.length - 1;
+        const step = _nfaSteps[nfaStepper.pos];
+        const isDone = nfaStepper.pos === _nfaSteps.length - 1;
         logEl.innerHTML = step.logHtml;
 
         if (isDone) {
@@ -1197,30 +1199,6 @@
         nfaSetBtns();
       }
 
-      function nfaReset() {
-        if (!_nfaSteps) return;
-        _nfaPos = -1;
-        nfaRenderStep();
-      }
-
-      function nfaStepFwd() {
-        if (!_nfaSteps || _nfaPos >= _nfaSteps.length - 1) return;
-        _nfaPos++;
-        nfaRenderStep();
-      }
-
-      function nfaBack() {
-        if (!_nfaSteps || _nfaPos < 0) return;
-        _nfaPos--;
-        nfaRenderStep();
-      }
-
-      function nfaRunAll() {
-        if (!_nfaSteps) return;
-        _nfaPos = _nfaSteps.length - 1;
-        nfaRenderStep();
-      }
-
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // SUBSET CONSTRUCTION  (NFA → DFA)
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1232,21 +1210,30 @@
 
       // ── Subset construction stepper state ──────────────────────────
       let _scData = null; // result of subsetConstruct()
-      let _scPos = -1; // current step index  (-1 = not started)
-
-      function scSetBtns() {
-        const hasDfa = _scData !== null;
-        const atEnd = _scData && _scPos >= _scData.steps.length - 1;
-        document.getElementById("btn-sc-reset").disabled = !hasDfa || _scPos < 0;
-        document.getElementById("btn-sc-back").disabled  = !hasDfa || _scPos < 0;
-        document.getElementById("btn-sc-step").disabled  = !hasDfa || atEnd;
-        document.getElementById("btn-sc-all").disabled   = !hasDfa || atEnd;
+      // Back to "not started": empty DFA panel
+      function scShowNotStarted() {
+        document.getElementById("sc-log-bar").innerHTML = "";
+        document.getElementById("dfa-table-wrap").innerHTML = "";
+        document.getElementById("dfa-table-wrap").style.display = "none";
+        document.getElementById("dfa-empty").style.display = "";
       }
+
+      const scStepper = createStepper({
+        buttons: { reset: "btn-sc-reset", back: "btn-sc-back", step: "btn-sc-step", all: "btn-sc-all" },
+        min: -1,
+        last: () => (_scData ? _scData.steps.length - 1 : null),
+        onChange: (pos) => (pos < 0 ? scShowNotStarted() : scRenderStep()),
+      });
+      function scSetBtns() { scStepper.refresh(); }
+      function scReset() { scStepper.reset(); }
+      function scStepFwd() { scStepper.next(); }
+      function scBack() { scStepper.prev(); }
+      function scRunAll() { scStepper.end(); }
 
       function scRenderStep() {
         if (!_scData) return;
         const { dfaStates, dfaAccepts, dfaTrans, alpha, steps } = _scData;
-        const pos = _scPos;
+        const pos = scStepper.pos;
         const step = pos >= 0 ? steps[pos] : null;
         const isDone = step && step.type === "done";
 
@@ -1359,61 +1346,27 @@
         document.getElementById("dfa-empty").style.display = "none";
       }
 
-      function scReset() {
-        if (!_scData) return;
-        _scPos = 0;
-        scBack(); // decrements to -1, reuses that branch to clear the panel
-      }
-
-      function scStepFwd() {
-        if (!_scData || _scPos >= _scData.steps.length - 1) return;
-        _scPos++;
-        scRenderStep();
-        scSetBtns();
-      }
-
-      function scBack() {
-        if (!_scData || _scPos < 0) return;
-        _scPos--;
-        if (_scPos < 0) {
-          // Back to "not started" — show empty DFA panel
-          document.getElementById("sc-log-bar").innerHTML = "";
-          document.getElementById("dfa-table-wrap").innerHTML = "";
-          document.getElementById("dfa-table-wrap").style.display = "none";
-          document.getElementById("dfa-empty").style.display = "";
-        } else {
-          scRenderStep();
-        }
-        scSetBtns();
-      }
-
-      function scRunAll() {
-        if (!_scData) return;
-        _scPos = _scData.steps.length - 1;
-        scRenderStep();
-        scSetBtns();
-      }
-
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // MINIMIZATION STEPPER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       let _minData    = null;   // result of minimizeDFA()
-      let _mcPos      = -1;    // current step (-1 = not started)
+      const mcStepper = createStepper({
+        buttons: { reset: "btn-mc-reset", back: "btn-mc-back", step: "btn-mc-step", all: "btn-mc-all" },
+        min: -1,
+        last: () => (_minData ? _minData.steps.length - 1 : null),
+        onChange: () => mcRenderStep(),
+      });
+      function mcSetBtns() { mcStepper.refresh(); }
+      function mcReset() { mcStepper.reset(); }
+      function mcStepFwd() { mcStepper.next(); }
+      function mcBack() { mcStepper.prev(); }
+      function mcRunAll() { mcStepper.end(); }
       let _minEnabled = true;  // when false, skip min and use raw _scData
 
       // Returns whichever scData should drive graph + simulation.
       function activeScData() {
         return (_minEnabled && _minData) ? _minData : _scData;
-      }
-
-      function mcSetBtns() {
-        const has   = _minData !== null;
-        const atEnd = has && _mcPos >= _minData.steps.length - 1;
-        document.getElementById("btn-mc-reset").disabled = !has || _mcPos < 0;
-        document.getElementById("btn-mc-back").disabled  = !has || _mcPos < 0;
-        document.getElementById("btn-mc-step").disabled  = !has || atEnd;
-        document.getElementById("btn-mc-all").disabled   = !has || atEnd;
       }
 
       // Renders the triangular pair table into #min-table-wrap.
@@ -1472,11 +1425,11 @@
       function mcRenderStep() {
         if (!_minData) { mcSetBtns(); return; }
         const { steps, n, origN, DEAD, groups: finalGroups, alreadyMinimal } = _minData;
-        const step = _mcPos >= 0 ? steps[_mcPos] : null;
+        const step = mcStepper.pos >= 0 ? steps[mcStepper.pos] : null;
 
         document.getElementById("mc-log-bar").innerHTML = step ? step.html : "";
 
-        if (_mcPos < 0) {
+        if (mcStepper.pos < 0) {
           // Show the blank table so the student can see the pairs before stepping
           document.getElementById("min-empty").style.display = "none";
           document.getElementById("min-table-wrap").style.display = "";
@@ -1518,30 +1471,6 @@
         mcSetBtns();
       }
 
-      function mcReset() {
-        if (!_minData) return;
-        _mcPos = -1;
-        mcRenderStep();
-      }
-
-      function mcStepFwd() {
-        if (!_minData || _mcPos >= _minData.steps.length - 1) return;
-        _mcPos++;
-        mcRenderStep();
-      }
-
-      function mcBack() {
-        if (!_minData || _mcPos < 0) return;
-        _mcPos--;
-        mcRenderStep();
-      }
-
-      function mcRunAll() {
-        if (!_minData) return;
-        _mcPos = _minData.steps.length - 1;
-        mcRenderStep();
-      }
-
       function toggleMinimize() {
         _minEnabled = !_minEnabled;
         const btn = document.getElementById("btn-min-toggle");
@@ -1553,7 +1482,7 @@
         renderDFA(d);
         renderExampleChips(generateExamples(d));
         _simSteps = null;
-        _simPos   = -1;
+        sim.pos   = -1;
         simRun();
       }
 
@@ -1577,7 +1506,7 @@
         // Reset NFA stepper — user navigates forward from pos = -1
         _nfaFinal = nfa;
         _nfaSteps = steps;
-        _nfaPos = -1;
+        nfaStepper.pos = -1;
         document.getElementById("tc-log-bar").innerHTML = "";
         document.getElementById("nfa-empty").style.display = "";
         document.getElementById("nfa-content").style.display = "none";
@@ -1585,7 +1514,7 @@
 
         // Pre-compute DFA steps and reset the DFA stepper
         _scData = withSubsetHtml(subsetConstruct(nfa));
-        _scPos = -1;
+        scStepper.pos = -1;
         document.getElementById("sc-log-bar").innerHTML = "";
         document.getElementById("dfa-table-wrap").innerHTML = "";
         document.getElementById("dfa-table-wrap").style.display = "none";
@@ -1594,7 +1523,7 @@
 
         // Compute minimization and reset the min stepper
         _minData = withMinHtml(minimizeDFA(_scData));
-        _mcPos = -1;
+        mcStepper.pos = -1;
         document.getElementById("mc-log-bar").innerHTML = "";
         mcRenderStep(); // shows blank pair table at pos = -1
 
@@ -1604,7 +1533,7 @@
         const examples = generateExamples(activeData);
         renderExampleChips(examples);
         _simSteps = null;
-        _simPos = -1;
+        sim.pos = -1;
         document.getElementById("sim-empty").style.display = "none";
         document.getElementById("sim-content").style.display = "flex";
         document.getElementById("sim-tape-wrap").style.display = "none";
@@ -1841,7 +1770,18 @@
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       let _simSteps = null; // { steps, chars }
-      let _simPos = -1;
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_simSteps ? _simSteps.steps.length - 1 : null),
+        onChange: () => simRenderStep(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
+      sim.pos = -1; // -1 = no string run yet
 
       const escHtml = esc; // alias — shared esc() handles the same escaping
 
@@ -1900,16 +1840,8 @@
         return { steps, chars };
       }
 
-      function simSetBtns() {
-        const n = _simSteps ? _simSteps.steps.length : 0;
-        document.getElementById("btn-sim-reset").disabled = !_simSteps || _simPos <= 0;
-        document.getElementById("btn-sim-back").disabled  = !_simSteps || _simPos <= 0;
-        document.getElementById("btn-sim-step").disabled  = !_simSteps || _simPos >= n - 1;
-        document.getElementById("btn-sim-all").disabled   = !_simSteps || _simPos >= n - 1;
-      }
-
       function simRenderStep() {
-        if (!_simSteps || _simPos < 0) {
+        if (!_simSteps || sim.pos < 0) {
           document.getElementById("sim-tape-wrap").style.display = "none";
           document.getElementById("sim-result").style.display = "none";
           document.getElementById("sim-log-bar").innerHTML = "";
@@ -1919,7 +1851,7 @@
         }
 
         const { steps, chars } = _simSteps;
-        const step = steps[_simPos];
+        const step = steps[sim.pos];
 
         // Log bar
         document.getElementById("sim-log-bar").innerHTML = step.logHtml;
@@ -1976,31 +1908,7 @@
         if (!_scData) return;
         const input = document.getElementById("sim-string-input").value;
         _simSteps = buildSimSteps(activeScData(), input);
-        _simPos = 0;
-        simRenderStep();
-      }
-
-      function simReset() {
-        if (!_simSteps) return;
-        _simPos = 0;
-        simRenderStep();
-      }
-
-      function simStepFwd() {
-        if (!_simSteps || _simPos >= _simSteps.steps.length - 1) return;
-        _simPos++;
-        simRenderStep();
-      }
-
-      function simBack() {
-        if (!_simSteps) return;
-        _simPos--;
-        simRenderStep();
-      }
-
-      function simRunAll() {
-        if (!_simSteps) return;
-        _simPos = _simSteps.steps.length - 1;
+        sim.pos = 0;
         simRenderStep();
       }
 

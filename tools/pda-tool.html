@@ -645,6 +645,7 @@
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/pda.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/stepper.js"></script>
     <script>
       initResize("rh-1", "p-def", +1);
       initResize("rh-2", "p-tree", -1);
@@ -1054,72 +1055,43 @@ else: ${kw("reject")}`
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       let _simHistory  = [];  // _simHistory[i] = configs after consuming i chars
-      let _simPos      = 0;
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_simHistory.length ? _simHistory.length - 1 : null),
+        onChange: () => simRender(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
       let _simChars    = [];
 
       function simRun() {
         const input = document.getElementById("sim-string-input").value;
         _simChars = [...input];
-        _simPos   = 0;
+        sim.pos   = 0;
         document.getElementById("sim-result").style.display = "none";
         buildSimTree();   // populates _simHistory, _treeFrontiers, _simTree
         simRender();
         simSetBtns();
       }
 
-      function simReset() {
-        if (_simHistory.length === 0) return;
-        _simPos = 0;
-        document.getElementById("sim-result").style.display = "none";
-        simRender();
-        simSetBtns();
-      }
-
-      function simStepFwd() {
-        if (_simPos >= _simHistory.length - 1) return;
-        _simPos++;
-        simRender();
-        simSetBtns();
-      }
-
-      function simBack() {
-        if (_simPos <= 0) return;
-        _simPos--;
-        document.getElementById("sim-result").style.display = "none";
-        simRender();
-        simSetBtns();
-      }
-
-      function simRunAll() {
-        if (_simHistory.length === 0) return;
-        _simPos = _simHistory.length - 1;
-        simRender();
-        simSetBtns();
-      }
-
-      function simSetBtns() {
-        const has   = _simHistory.length > 0;
-        const atEnd = _simPos >= _simHistory.length - 1;
-        document.getElementById("btn-sim-reset").disabled = !has || _simPos <= 0;
-        document.getElementById("btn-sim-back").disabled  = !has || _simPos <= 0;
-        document.getElementById("btn-sim-step").disabled  = !has || atEnd;
-        document.getElementById("btn-sim-all").disabled   = !has || atEnd;
-      }
-
       function simRender() {
         if (_simHistory.length === 0) return;
-        const configs  = _simHistory[_simPos];
+        const configs  = _simHistory[sim.pos];
         const maxDepth = _simChars.length;
-        const atEnd    = _simPos === maxDepth;
+        const atEnd    = sim.pos === maxDepth;
 
         // Log bar
         const logBar = document.getElementById("sim-log-bar");
-        if (_simPos === 0) {
+        if (sim.pos === 0) {
           const startName = pdaStates[pdaStartIdx];
           logBar.innerHTML = `Start: <span style="color:var(--accent)">${esc(startName)}</span>` +
             (pdaInitStack ? `  <span style="color:var(--text-lo)">stack: [${esc(pdaInitStack)}]</span>` : "");
         } else if (!atEnd) {
-          const sym = _simChars[_simPos - 1];
+          const sym = _simChars[sim.pos - 1];
           const names = [...new Set(configs.map(c => c.state))];
           logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span>` +
             ` → active: {${names.map(esc).join(", ") || "∅"}}` +
@@ -1255,13 +1227,13 @@ else: ${kw("reject")}`
         const realRoot = _simTree.vRoot.children[0];
         if (!realRoot) { emptyEl.style.display = ""; return; }
 
-        const revealDepth = _simPos;
-        const activeFront = _simPos < _treeFrontiers.length ? _treeFrontiers[_simPos] : [];
+        const revealDepth = sim.pos;
+        const activeFront = sim.pos < _treeFrontiers.length ? _treeFrontiers[sim.pos] : [];
         const activeIds   = new Set(activeFront.map(n => n.id));
 
         // Accepting-path highlight: trace ancestors of accepted leaf nodes
         const acceptPathIds = new Set();
-        if (_simPos === _simChars.length && _treeFrontiers.length > _simChars.length) {
+        if (sim.pos === _simChars.length && _treeFrontiers.length > _simChars.length) {
           for (const node of _treeFrontiers[_simChars.length]) {
             if (node.accepted) {
               let n = node;

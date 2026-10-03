@@ -605,6 +605,7 @@
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/nfa.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/stepper.js"></script>
     <script>
       // shared.js stubs
       function renderTree() {}
@@ -1237,24 +1238,25 @@ else: ${kw("reject")}`
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       let _simTree    = null;  // { vRoot, maxDepth, accepted, truncated }
-      let _simPos     = 0;     // current reveal depth; 0 = initial states shown
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_simTree ? _simTree.maxDepth + 1 : null),
+        onChange: () => simRender(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
+      // sim.pos: current reveal depth; 0 = initial states shown
       let _simChars   = [];    // input characters
-
-      function simSetBtns() {
-        const hasTree  = !!_simTree;
-        const atEnd    = hasTree && _simPos >= _simTree.maxDepth + 1;
-        const atStart  = _simPos <= 0;
-        document.getElementById("btn-sim-reset").disabled = !hasTree || atStart;
-        document.getElementById("btn-sim-back").disabled  = !hasTree || atStart;
-        document.getElementById("btn-sim-step").disabled  = !hasTree || atEnd;
-        document.getElementById("btn-sim-all").disabled   = !hasTree || atEnd;
-      }
 
       function simRun() {
         const input = document.getElementById("sim-string-input").value;
         _simChars = [...input];
         _simTree  = buildSimTree(input);
-        _simPos   = 0;  // start at depth 0 (initial states visible immediately)
+        sim.pos   = 0;  // start at depth 0 (initial states visible immediately)
 
         document.getElementById("sim-result").style.display = "none";
         document.getElementById("sim-tree-empty").style.display = "none";
@@ -1265,40 +1267,10 @@ else: ${kw("reject")}`
         simSetBtns();
       }
 
-      function simReset() {
-        if (!_simTree) return;
-        _simPos = 0;
-        document.getElementById("sim-result").style.display = "none";
-        simRender();
-        simSetBtns();
-      }
-
-      function simStepFwd() {
-        if (!_simTree) return;
-        if (_simPos >= _simTree.maxDepth + 1) return;
-        _simPos++;
-        simRender();
-        simSetBtns();
-      }
-
-      function simBack() {
-        if (!_simTree || _simPos <= 0) return;
-        _simPos--;
-        simRender();
-        simSetBtns();
-      }
-
-      function simRunAll() {
-        if (!_simTree) return;
-        _simPos = _simTree.maxDepth + 1;
-        simRender();
-        simSetBtns();
-      }
-
       function simRender() {
         if (!_simTree) return;
         const { vRoot, maxDepth, accepted, truncated } = _simTree;
-        const revealDepth = _simPos;
+        const revealDepth = sim.pos;
 
         // Tape
         const tapeEl = document.getElementById("sim-tape");

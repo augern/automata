@@ -655,6 +655,7 @@
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/tm.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/stepper.js"></script>
     <script>
       // shared.js stub
       function renderTree() {}
@@ -902,7 +903,17 @@ ${kw("loop")}:
       const MAX_STEPS = TM_MAX_STEPS;
 
       let _configs    = [];   // array of config objects
-      let _simPos     = 0;    // current config index
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_configs.length ? _configs.length - 1 : null),
+        onChange: () => simRender(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
       let _didNotHalt = false;
 
       // Tape access and the pre-run live in shared/algo/tm.js.
@@ -922,49 +933,11 @@ ${kw("loop")}:
         const result = buildConfigs(input);
         _configs    = result.configs;
         _didNotHalt = result.didNotHalt;
-        _simPos     = 0;
+        sim.pos     = 0;
         document.getElementById("sim-result").style.display = "none";
         buildTraceTable();
         simRender();
         simSetBtns();
-      }
-
-      function simReset() {
-        _simPos = 0;
-        document.getElementById("sim-result").style.display = "none";
-        simRender();
-        simSetBtns();
-      }
-
-      function simStepFwd() {
-        if (_simPos >= _configs.length - 1) return;
-        _simPos++;
-        simRender();
-        simSetBtns();
-      }
-
-      function simBack() {
-        if (_simPos <= 0) return;
-        _simPos--;
-        document.getElementById("sim-result").style.display = "none";
-        simRender();
-        simSetBtns();
-      }
-
-      function simRunAll() {
-        _simPos = _configs.length - 1;
-        simRender();
-        simSetBtns();
-      }
-
-      function simSetBtns() {
-        const hasConfigs = _configs.length > 0;
-        const atStart    = _simPos <= 0;
-        const atEnd      = _simPos >= _configs.length - 1;
-        document.getElementById("btn-sim-reset").disabled = !hasConfigs || atStart;
-        document.getElementById("btn-sim-back").disabled  = !hasConfigs || atStart;
-        document.getElementById("btn-sim-step").disabled  = !hasConfigs || atEnd;
-        document.getElementById("btn-sim-all").disabled   = !hasConfigs || atEnd;
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1119,7 +1092,7 @@ ${kw("loop")}:
         // Row highlight
         const prev = tbody.querySelector(".tr-current");
         if (prev) prev.classList.remove("tr-current");
-        const row = tbody.rows[_simPos];
+        const row = tbody.rows[sim.pos];
         if (row) {
           row.classList.add("tr-current");
           row.scrollIntoView({ behavior: "instant", block: "nearest" });
@@ -1128,7 +1101,7 @@ ${kw("loop")}:
         // Cursor circle — also measured from DOM for consistency
         const cursor = section.querySelector("#trace-cursor");
         const wrap   = section.querySelector("#trace-table-wrap");
-        const cfg    = _configs[_simPos];
+        const cfg    = _configs[sim.pos];
         if (cursor && wrap && row && cfg) {
           const minPos = parseInt(section.dataset.minPos ?? "0", 10);
           const cell   = row.cells[cfg.head - minPos + 2];
@@ -1143,11 +1116,11 @@ ${kw("loop")}:
 
       function simRender() {
         if (!_configs.length) return;
-        const cfg      = _configs[_simPos];
+        const cfg      = _configs[sim.pos];
         const { tape, head, state, action } = cfg;
         const isAccept = state === tmStates[tmAcceptIdx];
         const isReject = state === tmStates[tmRejectIdx];
-        const isAtEnd  = _simPos === _configs.length - 1;
+        const isAtEnd  = sim.pos === _configs.length - 1;
 
         // Show tape content
         document.getElementById("sim-tape-empty").style.display = "none";
@@ -1160,7 +1133,7 @@ ${kw("loop")}:
 
         // Step counter
         document.getElementById("sim-step-counter").textContent =
-          "step " + _simPos + (_didNotHalt && isAtEnd ? " (limit)" : "");
+          "step " + sim.pos + (_didNotHalt && isAtEnd ? " (limit)" : "");
 
         // Determine visible tape window
         let minPos = head, maxPos = head;
