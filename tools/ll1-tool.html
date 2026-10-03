@@ -413,7 +413,7 @@
             steps.push({
               type: "conflict",
               nt, term, key,
-              html: '<span class="tl-conf">conflict</span> M[<b>' + nt + '</b>, <b>' + term + '</b>]: rules ' + cur + ' and ' + ruleIdx +
+              html: '<span class="tl-conf">conflict</span> M[<b>' + esc(nt) + '</b>, <b>' + esc(term) + '</b>]: rules ' + cur + ' and ' + ruleIdx +
                     ' <span class="tl-reason">— grammar is not LL(1)</span>',
             });
           }
@@ -429,18 +429,18 @@
           for (const a of [...fa].sort()) {
             if (a === EPSILON) continue;
             addStep(lhs, a, i,
-              '<span class="tl-op">add</span> M[<b>' + lhs + '</b>, <b>' + a + '</b>] = ' + i +
-              ' <span class="tl-reason">' + lhs + ' → ' + rhsStr +
-              ' — ' + a + ' ∈ FIRST(' + rhsStr + ')</span>');
+              '<span class="tl-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(a) + '</b>] = ' + i +
+              ' <span class="tl-reason">' + esc(lhs) + ' → ' + esc(rhsStr) +
+              ' — ' + esc(a) + ' ∈ FIRST(' + esc(rhsStr) + ')</span>');
           }
 
           // Entries from FOLLOW(A) when ε ∈ FIRST(α)
           if (fa.has(EPSILON)) {
             for (const b of [...(follow[lhs] || [])].sort()) {
               addStep(lhs, b, i,
-                '<span class="tl-op">add</span> M[<b>' + lhs + '</b>, <b>' + b + '</b>] = ' + i +
-                ' <span class="tl-reason">' + lhs + ' → ' + rhsStr +
-                ' — ε ∈ FIRST(' + rhsStr + '), ' + b + ' ∈ FOLLOW(' + lhs + ')</span>');
+                '<span class="tl-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(b) + '</b>] = ' + i +
+                ' <span class="tl-reason">' + esc(lhs) + ' → ' + esc(rhsStr) +
+                ' — ε ∈ FIRST(' + esc(rhsStr) + '), ' + esc(b) + ' ∈ FOLLOW(' + esc(lhs) + ')</span>');
             }
           }
         });
@@ -510,7 +510,7 @@
             const tr = document.createElement("tr");
             const fs = [...first[nt]].filter((s) => s !== EPSILON).sort();
             const ls = [...(follow[nt] || [])].sort();
-            tr.innerHTML = '<td class="state-cell">' + nt + "</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px">{ ' + (fs.join(", ") || "&mdash;") + " }</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px;color:#6a8a6a">{ ' + (ls.join(", ") || "&mdash;") + " }</td>";
+            tr.innerHTML = '<td class="state-cell">' + esc(nt) + "</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px">{ ' + (esc(fs.join(", ")) || "&mdash;") + " }</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px;color:#6a8a6a">{ ' + (esc(ls.join(", ")) || "&mdash;") + " }</td>";
             ffb.appendChild(tr);
           });
         fft.appendChild(ffb);
@@ -524,7 +524,7 @@
         const rl = rd.querySelector("#rules-list");
         rules.forEach((r, i) => {
           const line = document.createElement("div");
-          line.innerHTML = '<span class="ri">' + i + ':</span><span class="rule">' + r.lhs + " \u2192 " + (r.rhs.join(" ") || EPSILON) + "</span>";
+          line.innerHTML = '<span class="ri">' + i + ':</span><span class="rule">' + esc(r.lhs) + " \u2192 " + esc(r.rhs.join(" ") || EPSILON) + "</span>";
           rl.appendChild(line);
         });
 
@@ -541,14 +541,14 @@
         tbl.className = "parse-table";
         tbl.id = "ll1-table";
         let hdr = '<thead><tr><th class="state-col">NT</th>';
-        for (const t of termsArr) hdr += "<th>" + t + "</th>";
+        for (const t of termsArr) hdr += "<th>" + esc(t) + "</th>";
         hdr += "</tr></thead>";
         tbl.innerHTML = hdr;
         const tb = document.createElement("tbody");
 
         for (const nt of ntsArr) {
           const tr = document.createElement("tr");
-          tr.innerHTML = '<td class="state-cell">' + nt + "</td>";
+          tr.innerHTML = '<td class="state-cell">' + esc(nt) + "</td>";
           for (const t of termsArr) {
             const td = document.createElement("td");
             td.dataset.nt = nt;
@@ -578,7 +578,7 @@
           cd.innerHTML = '<div class="tbl-section-label" style="color:#f87171">' + conflicts.length + " Conflict(s) — grammar is not LL(1)</div>";
           const ul = document.createElement("div");
           ul.style.cssText = "font-size:.66rem;color:#f87171;line-height:1.8";
-          for (const c of conflicts) ul.innerHTML += "<div>M[" + c.nt + ", " + c.sym + "]: rules " + c.rules.join(", ") + "</div>";
+          for (const c of conflicts) ul.innerHTML += "<div>M[" + esc(c.nt) + ", " + esc(c.sym) + "]: rules " + c.rules.join(", ") + "</div>";
           cd.appendChild(ul);
           wrap.appendChild(cd);
         }
@@ -647,11 +647,11 @@
           // Highlight the leftmost nonterminal in the form
           let formHtml = step.form
             .map((sym, j) => {
-              if (j === 0 && currentGrammar && currentGrammar.nonterminals.has(sym)) return '<span class="ds-focus">' + sym + "</span>";
-              return sym;
+              if (j === 0 && currentGrammar && currentGrammar.nonterminals.has(sym)) return '<span class="ds-focus">' + esc(sym) + "</span>";
+              return esc(sym);
             })
             .join(" ");
-          div.innerHTML = '<span class="ds-num">' + (i + 1) + "</span>" + '<span class="ds-form">' + formHtml + "</span>" + '<span class="ds-action">' + step.action + "</span>";
+          div.innerHTML = '<span class="ds-num">' + (i + 1) + "</span>" + '<span class="ds-form">' + formHtml + "</span>" + '<span class="ds-action">' + esc(step.action) + "</span>";
           area.appendChild(div);
         });
         // Scroll last step into view

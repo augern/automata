@@ -1071,7 +1071,7 @@
         }
 
         // Summary bar
-        document.getElementById("nfa-summary").innerHTML = sumItem("states", numStates) + sumItem("start", "q" + start) + sumItem("accept", "q" + accept) + sumItem("alphabet", alphaSorted.length ? "{ " + alphaSorted.join(", ") + " }" : "—") + sumItem("transitions", trans.length);
+        document.getElementById("nfa-summary").innerHTML = sumItem("states", numStates) + sumItem("start", "q" + start) + sumItem("accept", "q" + accept) + sumItem("alphabet", alphaSorted.length ? "{ " + esc(alphaSorted.join(", ")) + " }" : "—") + sumItem("transitions", trans.length);
 
         // Transition table
         const wrap = document.getElementById("nfa-table-wrap");
@@ -1081,7 +1081,7 @@
         tbl.className = "parse-table";
 
         let hdr = '<thead><tr><th class="state-col">State</th>';
-        for (const c of cols) hdr += "<th>" + c + "</th>";
+        for (const c of cols) hdr += "<th>" + esc(c) + "</th>";
         tbl.innerHTML = hdr + "</tr></thead>";
 
         const tb = document.createElement("tbody");
@@ -1357,7 +1357,7 @@
         const tbl = document.createElement("table");
         tbl.className = "parse-table";
         let hdr = '<thead><tr><th class="state-col">State</th>';
-        for (const c of cols) hdr += "<th>" + c + "</th>";
+        for (const c of cols) hdr += "<th>" + esc(c) + "</th>";
         tbl.innerHTML = hdr + "</tr></thead>";
 
         const tb = document.createElement("tbody");
@@ -1507,7 +1507,7 @@
                 type: "empty",
                 dfaIdx: wi,
                 sym,
-                html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + sym + "</span>) = ∅" + " — no transition",
+                html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + esc(sym) + "</span>) = ∅" + " — no transition",
               });
               continue;
             }
@@ -1528,7 +1528,7 @@
               sym,
               toIdx,
               isNew,
-              html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + sym + "</span>) = " + '<span class="sc-nfa">' + nLabel(mv) + "</span>" + ' → <span class="sc-op">ε-closure</span> → ' + '<span class="sc-nfa">' + nLabel(T) + "</span>" + ' = <span class="sc-state">' + dLabel(toIdx) + "</span>  " + (isNew ? '<span class="sc-new">(new)</span>' : '<span class="sc-seen">(seen)</span>'),
+              html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + esc(sym) + "</span>) = " + '<span class="sc-nfa">' + nLabel(mv) + "</span>" + ' → <span class="sc-op">ε-closure</span> → ' + '<span class="sc-nfa">' + nLabel(T) + "</span>" + ' = <span class="sc-state">' + dLabel(toIdx) + "</span>  " + (isNew ? '<span class="sc-new">(new)</span>' : '<span class="sc-seen">(seen)</span>'),
             });
           }
           wi++;
@@ -1807,7 +1807,7 @@
         tbl.className = "parse-table" + (isDone ? "" : " sc-stepping");
 
         let hdr = '<thead><tr><th class="state-col">State</th><th class="dfa-set-hdr">NFA states</th>';
-        for (const sym of alpha) hdr += "<th>" + sym + "</th>";
+        for (const sym of alpha) hdr += "<th>" + esc(sym) + "</th>";
         tbl.innerHTML = hdr + "</tr></thead>";
 
         const tb = document.createElement("tbody");

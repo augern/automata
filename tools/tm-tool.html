@@ -764,9 +764,9 @@ ${kw("loop")}:
         onTMChange();
       }
 
-      function removeSymbol(sym) {
-        const idx = tmAlphabet.indexOf(sym);
-        if (idx === -1) return;
+      function removeSymbol(idx) {
+        const sym = tmAlphabet[idx];
+        if (sym === undefined) return;
         tmAlphabet.splice(idx, 1);
         for (const s of tmStates) delete tmTrans[s]?.[sym];
         renderDefTable();
@@ -829,9 +829,9 @@ ${kw("loop")}:
         h += `<th title="Accept state" style="color:var(--green)">A</th>`;
         h += `<th title="Reject state" style="color:var(--red)">R</th>`;
         h += `<th style="text-align:left;padding-left:8px">state</th>`;
-        for (const sym of tmAlphabet) {
+        for (const [si, sym] of tmAlphabet.entries()) {
           h += `<th class="sym-hdr">${esc(sym)}` +
-               `<button class="btn-rm-sym" onclick="removeSymbol('${esc(sym)}')" title="Remove '${esc(sym)}'">×</button></th>`;
+               `<button class="btn-rm-sym" onclick="removeSymbol(${si})" title="Remove '${esc(sym)}'">×</button></th>`;
         }
         h += `<th class="blank-hdr">□</th>`;
         h += `</tr></thead><tbody>`;

@@ -720,9 +720,9 @@ else: ${kw("reject")}`
         onNFAChange();
       }
 
-      function removeSymbol(sym) {
-        const idx = nfaAlphabet.indexOf(sym);
-        if (idx === -1) return;
+      function removeSymbol(idx) {
+        const sym = nfaAlphabet[idx];
+        if (sym === undefined) return;
         nfaAlphabet.splice(idx, 1);
         for (const s of nfaStates) {
           if (nfaTrans[s]) delete nfaTrans[s][sym];
@@ -781,9 +781,9 @@ else: ${kw("reject")}`
         h += `<th title="Start state">→</th>`;
         h += `<th title="Accepting state">★</th>`;
         h += `<th style="text-align:left;padding-left:8px">state</th>`;
-        for (const sym of nfaAlphabet) {
+        for (const [si, sym] of nfaAlphabet.entries()) {
           h += `<th class="sym-hdr">${esc(sym)}` +
-               `<button class="btn-rm-sym" onclick="removeSymbol('${esc(sym)}')" title="Remove symbol '${esc(sym)}'">×</button></th>`;
+               `<button class="btn-rm-sym" onclick="removeSymbol(${si})" title="Remove symbol '${esc(sym)}'">×</button></th>`;
         }
         h += `<th class="eps-hdr">ε</th>`;
         h += `</tr></thead><tbody>`;

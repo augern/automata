@@ -253,7 +253,8 @@ function parseGrammarRaw(text) {
   return { rules, start, nts };
 }
 
-function ruleStr(r) { return r.lhs + ' → ' + (r.rhs.length ? r.rhs.join(' ') : EPS); }
+// HTML-safe: every use of ruleStr is inside step-log HTML.
+function ruleStr(r) { return esc(r.lhs) + ' → ' + (r.rhs.length ? esc(r.rhs.join(' ')) : EPS); }
 function cloneRules(rules) { return rules.map(r => ({ lhs: r.lhs, rhs: [...r.rhs] })); }
 
 // ── Example grammars ──────────────────────────────────────────
@@ -473,7 +474,7 @@ function computeCleanupSteps(g) {
   steps.push({
     phase: '',
     html:  'Terminals (productive by definition): '
-         + (prod.size ? [...prod].map(s => '<span class="hl">' + s + '</span>').join(' ')
+         + (prod.size ? [...prod].map(s => '<span class="hl">' + esc(s) + '</span>').join(' ')
                       : '<span class="dim">none</span>'),
     isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
   });
@@ -492,7 +493,7 @@ function computeCleanupSteps(g) {
         steps.push({
           phase: '',
           html:  '<span class="hl">' + ruleStr(r) + '</span> — '
-               + rhsDesc + ' → <span class="add">' + r.lhs + '</span> is productive',
+               + rhsDesc + ' → <span class="add">' + esc(r.lhs) + '</span> is productive',
           isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
         });
       }
@@ -511,7 +512,7 @@ function computeCleanupSteps(g) {
     steps.push({
       phase: '',
       html:  'Unproductive nonterminals: '
-           + [...unprod].map(s => '<span class="del">' + s + '</span>').join(' '),
+           + [...unprod].map(s => '<span class="del">' + esc(s) + '</span>').join(' '),
       isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
     });
 
@@ -537,7 +538,7 @@ function computeCleanupSteps(g) {
   steps.push({
     phase: 'Phase 2 — Reachable symbols',
     html:  'A nonterminal is <em>reachable</em> if it can appear in a sentential form'
-         + ' derived from the start symbol <span class="hl">' + start + '</span>.'
+         + ' derived from the start symbol <span class="hl">' + esc(start) + '</span>.'
          + ' We find all reachable nonterminals with a BFS.',
     isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
   });
@@ -551,7 +552,7 @@ function computeCleanupSteps(g) {
     queue.push(start);
     steps.push({
       phase: '',
-      html:  '<span class="add">' + start + '</span> is reachable (start symbol).',
+      html:  '<span class="add">' + esc(start) + '</span> is reachable (start symbol).',
       isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
     });
   }
@@ -567,7 +568,7 @@ function computeCleanupSteps(g) {
           steps.push({
             phase: '',
             html:  'Via <span class="hl">' + ruleStr(r) + '</span>'
-                 + ' → <span class="add">' + s + '</span> is reachable.',
+                 + ' → <span class="add">' + esc(s) + '</span> is reachable.',
             isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
           });
         }
@@ -587,7 +588,7 @@ function computeCleanupSteps(g) {
     steps.push({
       phase: '',
       html:  'Unreachable nonterminals: '
-           + [...unreachable].map(s => '<span class="del">' + s + '</span>').join(' '),
+           + [...unreachable].map(s => '<span class="del">' + esc(s) + '</span>').join(' '),
       isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
     });
 
@@ -640,7 +641,7 @@ function computeEpsSteps(g) {
     }
   }
 
-  const nbHtml = [...nullable].map(n => '<span class="nb">' + n + '</span>').join(' ');
+  const nbHtml = [...nullable].map(n => '<span class="nb">' + esc(n) + '</span>').join(' ');
   steps.push({
     phase: 'Phase 1 — Nullable set',
     html:  nullable.size
@@ -689,7 +690,7 @@ function computeEpsSteps(g) {
     if (added.length) {
       rules = [...rules.slice(0, ri + 1), ...added, ...rules.slice(ri + 1)];
       const newIs = added.map((_, k) => ri + 1 + k);
-      const nullSyms = nullPos.map(i => '<span class="nb">' + r.rhs[i] + '</span>').join('');
+      const nullSyms = nullPos.map(i => '<span class="nb">' + esc(r.rhs[i]) + '</span>').join('');
       steps.push({
         phase: '',
         html: '<span class="hl">' + ruleStr(r) + '</span> contains nullable ' + nullSyms
@@ -706,7 +707,7 @@ function computeEpsSteps(g) {
     phase: 'Phase 3 — Remove ε-productions',
     html:  'Remove all A → ε'
       + (startNullable
-        ? ', but keep <span class="hl">' + g.start + ' → ε</span> (start symbol is nullable — language contains ε).'
+        ? ', but keep <span class="hl">' + esc(g.start) + ' → ε</span> (start symbol is nullable — language contains ε).'
         : '.'),
     isPhase: true,
     grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
@@ -737,7 +738,7 @@ function computeEpsSteps(g) {
   steps.push({
     phase: 'Done',
     html:  'ε-elimination complete.'
-      + (startNullable ? ' <span class="dim">(' + g.start + ' → ε retained.)</span>' : ''),
+      + (startNullable ? ' <span class="dim">(' + esc(g.start) + ' → ε retained.)</span>' : ''),
     isPhase: true,
     grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
   });
@@ -788,7 +789,7 @@ function computeUnitSteps(g) {
   for (const [A, bs] of unitPairs) {
     const others = [...bs].filter(b => b !== A);
     if (others.length)
-      pairLines.push('<span class="ub">' + A + '</span> ⇒ ' + others.map(b => '<span class="ub">' + b + '</span>').join(', '));
+      pairLines.push('<span class="ub">' + esc(A) + '</span> ⇒ ' + others.map(b => '<span class="ub">' + esc(b) + '</span>').join(', '));
   }
   steps.push({
     phase: '',
@@ -824,7 +825,7 @@ function computeUnitSteps(g) {
         const ni = insertAfter + 1;
         steps.push({
           phase: '',
-          html: 'Pair (<span class="ub">' + A + '</span>, <span class="ub">' + B + '</span>)'
+          html: 'Pair (<span class="ub">' + esc(A) + '</span>, <span class="ub">' + esc(B) + '</span>)'
             + ': copying <span class="dim">' + ruleStr(bp) + '</span>'
             + ' → add <span class="add">' + ruleStr(nr) + '</span>',
           grammarAfter: cloneRules(rules),
@@ -903,7 +904,7 @@ function computeCNFSteps(g) {
             phase: '', isPhase: false,
             html: '<span class="hl">' + ruleStr(r) + '</span> — '
                 + (r.rhs.length === 0 ? 'ε-production' : 'all RHS symbols productive')
-                + ' → <span class="add">' + r.lhs + '</span> is productive',
+                + ' → <span class="add">' + esc(r.lhs) + '</span> is productive',
             grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
           });
         }
@@ -919,7 +920,7 @@ function computeCNFSteps(g) {
       nts = new Set(rules.map(r => r.lhs));
       steps.push({
         phase: '', isPhase: false,
-        html: 'Unproductive: ' + [...unprod1].map(s => '<span class="del">' + s + '</span>').join(' ')
+        html: 'Unproductive: ' + [...unprod1].map(s => '<span class="del">' + esc(s) + '</span>').join(' ')
             + ' — removing: ' + rmHtmlU,
         grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
       });
@@ -947,7 +948,7 @@ function computeCNFSteps(g) {
       nts = new Set(rules.map(r => r.lhs));
       steps.push({
         phase: '', isPhase: false,
-        html: 'Unreachable: ' + [...unreach1].map(s => '<span class="del">' + s + '</span>').join(' ')
+        html: 'Unreachable: ' + [...unreach1].map(s => '<span class="del">' + esc(s) + '</span>').join(' ')
             + ' — removing: ' + rmHtmlR,
         grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
       });
@@ -972,7 +973,7 @@ function computeCNFSteps(g) {
   } else {
     steps.push({
       phase: '', isPhase: false,
-      html: 'Nullable: ' + [...nullable].map(n => '<span class="nb">' + n + '</span>').join(' '),
+      html: 'Nullable: ' + [...nullable].map(n => '<span class="nb">' + esc(n) + '</span>').join(' '),
       grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
     });
     const seen1 = new Set(rules.map(r => r.lhs + '\0' + r.rhs.join(' ')));
@@ -1053,7 +1054,7 @@ function computeCNFSteps(g) {
           rules = [...rules.slice(0, insertAfter + 1), nr, ...rules.slice(insertAfter + 1)];
           const ni = insertAfter + 1;
           nts = new Set(rules.map(r => r.lhs));
-          steps.push({ phase: '', isPhase: false, html: 'Pair (<span class="ub">'+A+'</span>,<span class="ub">'+B+'</span>): add <span class="add">'+ruleStr(nr)+'</span>', grammarAfter: cloneRules(rules), newRules: [ni], activeRules: si >= 0 ? [si] : [] });
+          steps.push({ phase: '', isPhase: false, html: 'Pair (<span class="ub">'+esc(A)+'</span>,<span class="ub">'+esc(B)+'</span>): add <span class="add">'+ruleStr(nr)+'</span>', grammarAfter: cloneRules(rules), newRules: [ni], activeRules: si >= 0 ? [si] : [] });
         }
       }
     }
@@ -1186,7 +1187,7 @@ function computeCNFSteps(g) {
 
   // ── Done ──────────────────────────────────────────────────
   const epsSuffix = nullable.has(start)
-    ? ' <span class="dim">(Plus ' + start + ' → ε since start is nullable.)</span>' : '';
+    ? ' <span class="dim">(Plus ' + esc(start) + ' → ε since start is nullable.)</span>' : '';
   steps.push({
     phase: 'Done — Chomsky Normal Form',
     html:  'Every production is now A → BC or A → a.' + epsSuffix,
@@ -1220,7 +1221,7 @@ function computeLRESteps(g) {
     return n;
   }
 
-  const ntOrderHtml = nts.map((n, i) => 'A<sub>' + (i+1) + '</sub> = <span class="hl">' + n + '</span>').join(', ');
+  const ntOrderHtml = nts.map((n, i) => 'A<sub>' + (i+1) + '</sub> = <span class="hl">' + esc(n) + '</span>').join(', ');
 
   steps.push({
     phase: 'Overview',
@@ -1244,8 +1245,8 @@ function computeLRESteps(g) {
     const Ai = nts[i];
 
     steps.push({
-      phase: 'A<sub>' + (i+1) + '</sub> = ' + Ai,
-      html:  'Processing <span class="hl">' + Ai + '</span>.',
+      phase: 'A<sub>' + (i+1) + '</sub> = ' + esc(Ai),
+      html:  'Processing <span class="hl">' + esc(Ai) + '</span>.',
       isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
     });
 
@@ -1262,7 +1263,7 @@ function computeLRESteps(g) {
         html:  (toReplace.length === 1 ? 'Rule ' : 'Rules ')
              + toReplace.map(r => '<span class="hl">' + ruleStr(r) + '</span>').join(', ')
              + (toReplace.length === 1 ? ' starts' : ' start')
-             + ' with <span class="hl">' + Aj + '</span> — substituting its productions.',
+             + ' with <span class="hl">' + esc(Aj) + '</span> — substituting its productions.',
         isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: activeIdxs,
       });
 
@@ -1293,7 +1294,7 @@ function computeLRESteps(g) {
     if (lrRules.length === 0) {
       steps.push({
         phase: '',
-        html:  '<span class="hl">' + Ai + '</span> has no direct left recursion — skipping.',
+        html:  '<span class="hl">' + esc(Ai) + '</span> has no direct left recursion — skipping.',
         isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
       });
       continue;
@@ -1303,13 +1304,13 @@ function computeLRESteps(g) {
     const activeIdxs2 = rules.map((r, idx) => r.lhs === Ai ? idx : -1).filter(idx => idx >= 0);
     steps.push({
       phase: '',
-      html:  'Direct left recursion in <span class="hl">' + Ai + '</span>:<br>'
+      html:  'Direct left recursion in <span class="hl">' + esc(Ai) + '</span>:<br>'
            + 'Left-recursive:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
            + lrRules.map(r => '<span class="hl">' + ruleStr(r) + '</span>').join(', ') + '<br>'
            + 'Non-left-recursive: '
            + (nonLrRules.length
                ? nonLrRules.map(r => '<span class="hl">' + ruleStr(r) + '</span>').join(', ')
-               : '<span class="dim">none (language contribution of ' + Ai + ' is empty)</span>'),
+               : '<span class="dim">none (language contribution of ' + esc(Ai) + ' is empty)</span>'),
       isPhase: false, grammarAfter: cloneRules(rules), newRules: [], activeRules: activeIdxs2,
     });
 
@@ -1326,9 +1327,9 @@ function computeLRESteps(g) {
 
     steps.push({
       phase: '',
-      html:  'Introducing tail nonterminal <span class="hl">' + Ai_prime + '</span>:<br>'
-           + Ai       + ':&nbsp; ' + newAiRules.map(r   => '<span class="add">' + ruleStr(r) + '</span>').join(', ') + '<br>'
-           + Ai_prime + ':&nbsp; ' + newTailRules.map(r => '<span class="add">' + ruleStr(r) + '</span>').join(', '),
+      html:  'Introducing tail nonterminal <span class="hl">' + esc(Ai_prime) + '</span>:<br>'
+           + esc(Ai)       + ':&nbsp; ' + newAiRules.map(r   => '<span class="add">' + ruleStr(r) + '</span>').join(', ') + '<br>'
+           + esc(Ai_prime) + ':&nbsp; ' + newTailRules.map(r => '<span class="add">' + ruleStr(r) + '</span>').join(', '),
       isPhase: false, grammarAfter: cloneRules(rules),
       newRules: [...newAiRules, ...newTailRules].map((_, k) => insertAt2 + k),
       activeRules: [],
