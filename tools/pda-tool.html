@@ -642,6 +642,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/pda.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
       initResize("rh-1", "p-def", +1);
@@ -703,8 +704,7 @@ else: ${kw("reject")}`
       let pdaAcceptMode  = "final-state";  // "final-state" | "empty-stack"
 
       function isAcceptingConfig(c) {
-        if (pdaAcceptMode === "empty-stack") return c.stack.length === 0;
-        return pdaAccepts.has(pdaStates.indexOf(c.state));
+        return pdaIsAccepting(currentPDA(), c);
       }
 
       function setAcceptMode(mode) {
@@ -1050,67 +1050,7 @@ else: ${kw("reject")}`
       // PDA SIMULATION ENGINE
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      const MAX_CONFIGS = 256;
-
-      // Stack array: last element = top.
-      // Push string: leftmost char = new top → push chars right-to-left.
-      function applyStack(stack, pop, push) {
-        const s = [...stack];
-        if (pop !== "") s.pop();
-        if (push !== "") {
-          const chars = [...push];
-          for (let i = chars.length - 1; i >= 0; i--) s.push(chars[i]);
-        }
-        return s;
-      }
-
-      function stackMatch(stack, pop) {
-        if (pop === "") return true;
-        return stack.length > 0 && stack[stack.length - 1] === pop;
-      }
-
-      // Config key for dedup (state + stack contents)
-      function cfgKey(c) {
-        return c.state + "|" + c.stack.join("\x00");
-      }
-
-      function pdaEpsClosure(configs) {
-        const seen   = new Map();  // key → config
-        const queue  = [];
-        for (const c of configs) {
-          const k = cfgKey(c);
-          if (!seen.has(k)) { seen.set(k, c); queue.push(c); }
-        }
-        let qi = 0;
-        while (qi < queue.length && seen.size < MAX_CONFIGS) {
-          const cfg = queue[qi++];
-          for (const rule of pdaRules) {
-            if (rule.from !== cfg.state || rule.input !== "") continue;
-            if (!stackMatch(cfg.stack, rule.pop)) continue;
-            if (!pdaStates.includes(rule.to)) continue;
-            const newCfg = { state: rule.to, stack: applyStack(cfg.stack, rule.pop, rule.push) };
-            const k = cfgKey(newCfg);
-            if (!seen.has(k)) { seen.set(k, newCfg); queue.push(newCfg); }
-          }
-        }
-        return [...seen.values()];
-      }
-
-      function pdaSymStep(configs, sym) {
-        const result = [];
-        const seen   = new Set();
-        for (const cfg of configs) {
-          for (const rule of pdaRules) {
-            if (rule.from !== cfg.state || rule.input !== sym) continue;
-            if (!stackMatch(cfg.stack, rule.pop)) continue;
-            if (!pdaStates.includes(rule.to)) continue;
-            const newCfg = { state: rule.to, stack: applyStack(cfg.stack, rule.pop, rule.push) };
-            const k = cfgKey(newCfg);
-            if (!seen.has(k)) { seen.add(k); result.push(newCfg); }
-          }
-        }
-        return result;
-      }
+      const MAX_CONFIGS = PDA_MAX_CONFIGS;
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // SIMULATION STEP ENGINE
@@ -1251,103 +1191,21 @@ else: ${kw("reject")}`
 
       let _simTree      = null;  // { vRoot, symDepth }
       let _treeFrontiers = [];   // _treeFrontiers[i] = node[] in frontier at step i
-      let _treeNextId   = 0;
-      const MAX_TREE_NODES = 300;
+      const MAX_TREE_NODES = PDA_MAX_TREE_NODES;
 
-      // Each PDA config in the tree:
-      //   id, state, stack, parent, children[], edgeInput, edgePop, edgePush,
-      //   symDepth,  dead, accepted, rejected
-      function makeTreeNode(state, stack, parent, edgeInput, edgePop, edgePush) {
-        const symDepth = (edgeInput === null || edgeInput === "")
-          ? Math.max(0, parent.symDepth)   // ε-step or root: same symbol depth (vRoot has −1)
-          : parent.symDepth + 1;           // symbol-consuming step
+      function currentPDA() {
         return {
-          id: _treeNextId++, state, stack: [...stack],
-          parent, children: [],
-          edgeInput, edgePop, edgePush, symDepth,
-          dead: false, accepted: false, rejected: false,
+          states: pdaStates, start: pdaStartIdx, accepts: pdaAccepts,
+          rules: pdaRules, initStack: pdaInitStack, acceptMode: pdaAcceptMode,
         };
       }
 
-      // Expand all ε-reachable configs from startNode, adding them as children in the tree.
-      // Uses local dedup (per expansion) to prevent cycles on a single path.
-      function epsExpandTree(startNode) {
-        const seen  = new Set([cfgKey(startNode)]);
-        const queue = [startNode];
-        let qi = 0;
-        while (qi < queue.length && _treeNextId < MAX_TREE_NODES) {
-          const par = queue[qi++];
-          for (const rule of pdaRules) {
-            if (rule.from !== par.state || rule.input !== "") continue;
-            if (!stackMatch(par.stack, rule.pop)) continue;
-            if (!pdaStates.includes(rule.to)) continue;
-            const ns = applyStack(par.stack, rule.pop, rule.push);
-            const k  = cfgKey({ state: rule.to, stack: ns });
-            if (seen.has(k)) continue;
-            seen.add(k);
-            const child = makeTreeNode(rule.to, ns, par, "", rule.pop, rule.push);
-            par.children.push(child);
-            queue.push(child);
-          }
-        }
-        return queue;  // [startNode, ...all ε-descendants]
-      }
-
+      // Algorithm lives in shared/algo/pda.js; this stores the result for the renderers.
       function buildSimTree() {
-        _treeNextId   = 0;
-        _treeFrontiers = [];
-        _simHistory   = [];
-
-        // Virtual root (not rendered; holds the real start node as its child)
-        const vRoot = {
-          id: _treeNextId++, state: null, stack: [], symDepth: -1,
-          parent: null, children: [],
-        };
-
-        const initStack = pdaInitStack ? [pdaInitStack] : [];
-        const root = makeTreeNode(pdaStates[pdaStartIdx], initStack, vRoot, null, null, null);
-        vRoot.children.push(root);
-
-        // Initial ε-closure
-        let frontier = epsExpandTree(root);
-        _treeFrontiers.push([...frontier]);
-        _simHistory.push(frontier.map(n => ({ state: n.state, stack: n.stack })));
-
-        // Symbol steps
-        for (let si = 0; si < _simChars.length; si++) {
-          const sym         = _simChars[si];
-          const nextFrontier = [];
-
-          for (const node of frontier) {
-            let hadChild = false;
-            for (const rule of pdaRules) {
-              if (rule.from !== node.state || rule.input !== sym) continue;
-              if (!stackMatch(node.stack, rule.pop)) continue;
-              if (!pdaStates.includes(rule.to)) continue;
-              if (_treeNextId >= MAX_TREE_NODES) { node.dead = true; break; }
-              hadChild = true;
-              const ns    = applyStack(node.stack, rule.pop, rule.push);
-              const child = makeTreeNode(rule.to, ns, node, sym, rule.pop, rule.push);
-              node.children.push(child);
-              const expanded = epsExpandTree(child);
-              for (const n of expanded) nextFrontier.push(n);
-            }
-            if (!hadChild) node.dead = true;
-          }
-
-          frontier = nextFrontier;
-          _treeFrontiers.push([...frontier]);
-          _simHistory.push(frontier.map(n => ({ state: n.state, stack: n.stack })));
-          if (_treeNextId >= MAX_TREE_NODES) break;
-        }
-
-        // Mark terminal nodes
-        for (const node of frontier) {
-          if (isAcceptingConfig(node)) node.accepted = true;
-          else                         node.rejected = true;
-        }
-
-        _simTree = { vRoot, symDepth: _simChars.length };
+        const t = pdaBuildSimTree(currentPDA(), _simChars, MAX_TREE_NODES);
+        _treeFrontiers = t.frontiers;
+        _simHistory = t.history;
+        _simTree = { vRoot: t.vRoot, symDepth: t.symDepth };
       }
 
       // ── Tree renderer ──────────────────────────────────────
