@@ -139,80 +139,7 @@
       }
       .trans-table input[type="checkbox"] {
         accent-color: var(--green);
-      }/* Definition footer *//* ── NFA graph panel ── */
-
-      /* NFA graph — circles for states */
-      .nfa-node circle {
-        fill: var(--bg);
-        stroke: var(--text);
-        stroke-width: 1.2;
-        transition: fill 0.2s, stroke 0.2s, stroke-width 0.2s;
-      }
-      .nfa-node .accept-ring {
-        fill: none;
-        stroke-width: 1 !important;
-      }
-      .nfa-node .state-label {
-        font-size: 11px;
-        font-weight: bold;
-        fill: var(--text);
-        font-family: var(--font-mono);
-        pointer-events: none;
-      }
-      .nfa-node.accepting circle {
-        stroke: var(--green);
-      }
-      .nfa-node.accepting .state-label {
-        fill: var(--green);
-      }
-      /* Edges */
-      .nfa-edge path {
-        fill: none;
-        stroke: var(--text);
-        stroke-width: 0.9;
-        transition: stroke 0.2s, stroke-width 0.2s;
-      }
-      .nfa-edge.eps-edge path {
-        stroke: var(--text-lo);
-        stroke-dasharray: 4 3;
-      }
-      .nfa-edge line { stroke: none; }
-      .nfa-edge text {
-        font-size: 10px;
-        fill: var(--text-dim);
-        font-family: var(--font-mono);
-        font-style: italic;
-        pointer-events: none;
-      }
-      .nfa-edge.eps-edge text {
-        fill: var(--text-lo);
-        font-style: italic;
-      }
-      .nfa-arrowhead { fill: var(--text); }
-      .nfa-arrowhead-eps { fill: var(--text-lo); }
-      .start-arrow-nfa {
-        stroke: var(--text-dim);
-        stroke-width: 1;
-      }
-      /* Simulation highlighting */
-      .nfa-node.sim-active circle {
-        fill: var(--accent-bg) !important;
-        stroke: var(--accent) !important;
-        stroke-width: 2 !important;
-      }
-      .nfa-node.sim-active .state-label { fill: var(--accent) !important; }
-      .nfa-node.accepting.sim-active circle {
-        fill: var(--green-bg) !important;
-        stroke: var(--green) !important;
-      }
-      .nfa-node.accepting.sim-active .state-label { fill: var(--green) !important; }
-      .nfa-node.sim-dead circle {
-        fill: var(--red-bg) !important;
-        stroke: var(--red) !important;
-        stroke-width: 1.5 !important;
-        opacity: 0.5;
-      }
-      .nfa-node.sim-dead .state-label { fill: var(--red) !important; opacity: 0.5; }/* ── Simulation panel ── */
+      }/* Definition footer *//* ── NFA graph panel ── *//* NFA graph — circles for states *//* Edges *//* Simulation highlighting *//* ── Simulation panel ── */
       /* Tape */
       #sim-tape-wrap {
         flex-shrink: 0;
@@ -368,14 +295,6 @@
         <div class="panel-body">
           <div id="nfa-graph-wrap" class="ui-canvas">
             <svg id="nfa-svg">
-              <defs>
-                <marker id="nfa-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" class="nfa-arrowhead" />
-                </marker>
-                <marker id="nfa-arrow-eps" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" class="nfa-arrowhead-eps" />
-                </marker>
-              </defs>
               <g id="nfa-graph-root"></g>
             </svg>
             <div id="nfa-graph-empty" class="ui-canvas__empty">Define an NFA above.</div>
@@ -726,15 +645,7 @@ else: ${kw("reject")}`
       }
 
       function nfaHighlightStates(activeSet, deadSet) {
-        d3.selectAll(".nfa-node")
-          .classed("sim-active", false)
-          .classed("sim-dead", false);
-        for (const idx of (activeSet || [])) {
-          d3.select("#nfa-state-" + idx).classed("sim-active", true);
-        }
-        for (const idx of (deadSet || [])) {
-          d3.select("#nfa-state-" + idx).classed("sim-dead", true);
-        }
+        highlightAutomatonStates("nfa", activeSet, deadSet);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -879,7 +790,7 @@ else: ${kw("reject")}`
           const rp = posMap.get(rootChild.id);
           if (rp) {
             root.append("line")
-              .attr("class", "start-arrow-nfa")
+              .attr("class", "ag-start")
               .attr("x1", rp.x).attr("y1", rp.y - TREE_R - 16)
               .attr("x2", rp.x).attr("y2", rp.y - TREE_R - 1)
               .attr("marker-end", "url(#tree-arrow)");

@@ -1,18 +1,18 @@
 // Shared dagre + d3 rendering of a state-transition graph, used by the NFA,
 // PDA and TM tools. Requires d3 and dagre (loaded by the page).
 //
-// A page using prefix P provides:
-//   <svg id="P-svg"><g id="P-graph-root"></g></svg> with <marker id="P-arrow">
-//   (and <marker id="P-arrow-eps"> if any edge can be an ε-edge), and optionally
-//   an element #P-graph-empty shown when there are no states.
-// Styling comes from the page's own CSS classes: P-edge (+ eps-edge), P-node
-// (+ accepting / rejecting), accept-ring, reject-ring, state-label,
-// start-arrow-P, and sim-active / sim-dead for highlighting.
+// A page using prefix P provides <svg id="P-svg"><g id="P-graph-root"></g></svg>
+// (usually inside a .ui-canvas), and optionally an element #P-graph-empty shown
+// when there are no states. Arrow markers are created here (ids P-arrow and
+// P-arrow-eps). Styling is the shared `ag-*` component in ui.css: nodes get
+// ag-node + is-accepting / is-rejecting, edges ag-edge (+ ag-edge--eps), and
+// highlightAutomatonStates() toggles is-active / is-dead.
 
 // Zoom/pan on the svg, plus fit-to-view (double-click, and whenever the pane
 // resizes while hasNodes() is true). Returns { fit, zoom }.
 function createGraphView(prefix, { hasNodes = () => true, fallbackWidth = 340 } = {}) {
   const svgSel = d3.select("#" + prefix + "-svg");
+  ensureArrowMarkers(svgSel, prefix);
   const zoom = d3.zoom()
     .scaleExtent([0.1, 8])
     .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
@@ -42,6 +42,25 @@ function createGraphView(prefix, { hasNodes = () => true, fallbackWidth = 340 } 
   return { fit, zoom };
 }
 
+// <marker id="P-arrow"> and <marker id="P-arrow-eps"> in the svg's <defs> (idempotent).
+function ensureArrowMarkers(svgSel, prefix) {
+  if (!svgSel.select("defs").empty() && !svgSel.select("#" + prefix + "-arrow").empty()) return;
+  const defs = svgSel.select("defs").empty() ? svgSel.insert("defs", ":first-child") : svgSel.select("defs");
+  for (const eps of [false, true]) {
+    defs.append("marker")
+      .attr("id", prefix + (eps ? "-arrow-eps" : "-arrow"))
+      .attr("markerWidth", 8).attr("markerHeight", 8).attr("refX", 7).attr("refY", 3).attr("orient", "auto")
+      .append("path").attr("d", "M0,0 L0,6 L8,3 z").attr("class", "ag-arrowhead" + (eps ? " ag-arrowhead--eps" : ""));
+  }
+}
+
+// Mark states (by index) as is-active / is-dead; clears the previous marks.
+function highlightAutomatonStates(prefix, active = [], dead = []) {
+  d3.selectAll("#" + prefix + "-graph-root .ag-node").classed("is-active", false).classed("is-dead", false);
+  for (const i of active) d3.select("#" + prefix + "-state-" + i).classed("is-active", true);
+  for (const i of dead) d3.select("#" + prefix + "-state-" + i).classed("is-dead", true);
+}
+
 // Lay out and draw the graph described by spec:
 //   nodes: [{ label, accepting?, rejecting? }]   (node i has id "P-state-i")
 //   start: index of the start state
@@ -67,7 +86,7 @@ function drawAutomatonGraph(prefix, view, spec) {
   dagre.layout(dg);
 
   const arrowFor = (eps) => "url(#" + prefix + (eps ? "-arrow-eps" : "-arrow") + ")";
-  const edgeClass = (eps) => prefix + "-edge" + (eps ? " eps-edge" : "");
+  const edgeClass = (eps) => "ag-edge" + (eps ? " ag-edge--eps" : "");
 
   // Label text: joined on one line, or stacked tspans centred on (x, y).
   function addLabel(g, labels, x, y) {
@@ -115,17 +134,17 @@ function drawAutomatonGraph(prefix, view, spec) {
     const dn = dg.node(i);
     if (!dn) continue;
     const nd = nodes[i];
-    let cls = prefix + "-node";
-    if (nd.accepting) cls += " accepting";
-    if (nd.rejecting) cls += " rejecting";
+    let cls = "ag-node";
+    if (nd.accepting) cls += " is-accepting";
+    if (nd.rejecting) cls += " is-rejecting";
     const ng = root.append("g").attr("class", cls).attr("id", prefix + "-state-" + i).attr("transform", `translate(${dn.x},${dn.y})`);
     ng.append("circle").attr("r", R);
-    if (nd.accepting) ng.append("circle").attr("class", "accept-ring").attr("r", R - 3);
-    if (nd.rejecting) ng.append("circle").attr("class", "reject-ring").attr("r", R - 3);
-    ng.append("text").attr("class", "state-label").attr("text-anchor", "middle").attr("dominant-baseline", "middle").text(nd.label);
+    if (nd.accepting) ng.append("circle").attr("class", "ag-ring").attr("r", R - 3);
+    if (nd.rejecting) ng.append("circle").attr("class", "ag-ring").attr("r", R - 3);
+    ng.append("text").attr("class", "ag-label").attr("text-anchor", "middle").attr("dominant-baseline", "middle").text(nd.label);
     if (i === start) {
       root.append("line")
-        .attr("class", "start-arrow-" + prefix)
+        .attr("class", "ag-start")
         .attr("x1", dn.x - R - 18).attr("y1", dn.y).attr("x2", dn.x - R - 1).attr("y2", dn.y)
         .attr("marker-end", "url(#" + prefix + "-arrow)");
     }

@@ -205,3 +205,59 @@
 .ui-badge--reject { color: var(--st-reject); background: var(--st-reject-bg); border-color: var(--st-reject); }
 .ui-badge--warn   { color: var(--st-warn);   background: var(--st-warn-bg);   border-color: var(--st-warn); }
 .ui-badge--dead   { color: var(--st-dead);   border-color: var(--st-dead); border-style: dashed; }
+
+/* ── Automaton graph (drawn by automaton-graph.js) ─────── */
+/* g.ag-node (+ is-accepting / is-rejecting / is-active / is-dead) contains
+   circle, .ag-ring and text.ag-label; g.ag-edge (+ ag-edge--eps) contains path,
+   text; the start state has an .ag-start arrow. */
+.ag-node circle {
+  fill: var(--bg);
+  stroke: var(--text);
+  stroke-width: 1.2;
+  transition: fill var(--dur-slow), stroke var(--dur-slow), stroke-width var(--dur-slow);
+}
+.ag-node .ag-ring {
+  fill: none;
+  stroke-width: 1 !important; /* inner ring keeps its weight in every state */
+}
+.ag-node .ag-label {
+  font-size: 11px;
+  font-weight: bold;
+  fill: var(--text);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+.ag-node.is-accepting circle { stroke: var(--st-accept); }
+.ag-node.is-accepting .ag-label { fill: var(--st-accept); }
+.ag-node.is-rejecting circle { stroke: var(--st-reject); }
+.ag-node.is-rejecting .ag-label { fill: var(--st-reject); }
+
+.ag-node.is-active circle { fill: var(--st-active-bg); stroke: var(--st-active); stroke-width: 2; }
+.ag-node.is-active .ag-label { fill: var(--st-active); }
+.ag-node.is-accepting.is-active circle { fill: var(--st-accept-bg); stroke: var(--st-accept); }
+.ag-node.is-accepting.is-active .ag-label { fill: var(--st-accept); }
+.ag-node.is-rejecting.is-active circle { fill: var(--st-reject-bg); stroke: var(--st-reject); }
+.ag-node.is-rejecting.is-active .ag-label { fill: var(--st-reject); }
+.ag-node.is-dead circle { fill: var(--st-reject-bg); stroke: var(--st-reject); stroke-width: 1.5; opacity: 0.5; }
+.ag-node.is-dead .ag-label { fill: var(--st-reject); opacity: 0.5; }
+
+.ag-edge path {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 0.9;
+  transition: stroke var(--dur-slow), stroke-width var(--dur-slow);
+}
+.ag-edge line { stroke: none; }
+.ag-edge text {
+  font-size: 10px;
+  font-style: italic;
+  fill: var(--text-dim);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+.ag-edge--eps path { stroke: var(--text-dim); stroke-dasharray: 4 3; }
+.ag-edge--eps text { fill: var(--text-dim); }
+
+.ag-arrowhead { fill: var(--text); }
+.ag-arrowhead--eps { fill: var(--text-dim); }
+.ag-start { stroke: var(--text-dim); stroke-width: 1; }

@@ -60,6 +60,7 @@
   --ctl-h: 24px; /* height of buttons, inputs, selects */
   --radius: 2px;
   --dur: 0.12s;
+  --dur-slow: 0.2s; /* state-change transitions in drawings */
   --ease: ease;
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 

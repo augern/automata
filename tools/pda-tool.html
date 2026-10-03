@@ -6,6 +6,7 @@
     <script src="../vendor/d3.min.js"></script>
     <script src="../vendor/dagre.min.js"></script>
     <link rel="stylesheet" href="../shared/shared.css" />
+    <link rel="stylesheet" href="../shared/ui.css" />
     <style>
       /* ── Panel widths ── */
       #p-def { width: 400px; }
@@ -268,55 +269,7 @@
         font-size: 0.8rem;
         color: var(--text-lo);
         pointer-events: none;
-      }
-
-      /* PDA graph nodes */
-      .pda-node circle {
-        fill: var(--bg);
-        stroke: var(--text);
-        stroke-width: 1.2;
-        transition: fill 0.2s, stroke 0.2s, stroke-width 0.2s;
-      }
-      .pda-node .accept-ring {
-        fill: none;
-        stroke-width: 1 !important;
-      }
-      .pda-node .state-label {
-        font-size: 11px;
-        font-weight: bold;
-        fill: var(--text);
-        font-family: var(--font-mono);
-        pointer-events: none;
-      }
-      .pda-node.accepting circle  { stroke: var(--green); }
-      .pda-node.accepting .state-label { fill: var(--green); }
-
-      /* PDA graph edges */
-      .pda-edge path {
-        fill: none;
-        stroke: var(--text);
-        stroke-width: 0.9;
-        transition: stroke 0.2s, stroke-width 0.2s;
-      }
-      .pda-edge.eps-edge path { stroke: var(--text-lo); stroke-dasharray: 4 3; }
-      .pda-edge line { stroke: none; }
-      .pda-edge text {
-        font-size: 9px;
-        fill: var(--text-dim);
-        font-family: var(--font-mono);
-        font-style: italic;
-        pointer-events: none;
-      }
-      .pda-edge.eps-edge text { fill: var(--text-lo); }
-      .pda-arrowhead     { fill: var(--text); }
-      .pda-arrowhead-eps { fill: var(--text-lo); }
-      .start-arrow-pda   { stroke: var(--text-dim); stroke-width: 1; }
-
-      /* Simulation highlighting */
-      .pda-node.sim-active circle      { fill: var(--accent-bg) !important; stroke: var(--accent) !important; stroke-width: 2 !important; }
-      .pda-node.sim-active .state-label { fill: var(--accent) !important; }
-      .pda-node.accepting.sim-active circle { fill: var(--green-bg) !important; stroke: var(--green) !important; }
-      .pda-node.accepting.sim-active .state-label { fill: var(--green) !important; }
+      }/* PDA graph nodes *//* PDA graph edges *//* Simulation highlighting */
 
       /* ── Simulation panel ── */
       #sim-controls {
@@ -586,14 +539,6 @@
           <!-- PDA graph -->
           <div id="pda-graph-wrap">
             <svg id="pda-svg">
-              <defs>
-                <marker id="pda-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" class="pda-arrowhead" />
-                </marker>
-                <marker id="pda-arrow-eps" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" class="pda-arrowhead-eps" />
-                </marker>
-              </defs>
               <g id="pda-graph-root"></g>
             </svg>
             <div id="pda-graph-empty">Define a PDA above.</div>
@@ -647,6 +592,7 @@
     <script src="../shared/algo/pda.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
+    <script src="../shared/ui.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -927,10 +873,7 @@ else: ${kw("reject")}`
       }
 
       function pdaHighlightStates(activeSet) {
-        d3.selectAll(".pda-node").classed("sim-active", false);
-        for (const idx of (activeSet || [])) {
-          d3.select("#pda-state-" + idx).classed("sim-active", true);
-        }
+        highlightAutomatonStates("pda", activeSet);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
