@@ -58,6 +58,7 @@
 
   /* Controls, shape and motion */
   --ctl-h: 24px; /* height of buttons, inputs, selects */
+  --cell-h: 22px; /* height of an editable table cell */
   --radius: 2px;
   --dur: 0.12s;
   --dur-slow: 0.2s; /* state-change transitions in drawings */

@@ -14,187 +14,7 @@
       #pda-graph-wrap { border-top: 1px solid var(--border-lo); }
       #p-def { width: 400px; }
       #p-sim { flex: 1; min-width: 280px; }
-      #p-tree { width: 340px; }/* ── Definition panel ── */
-
-      /* Section headers inside def panel */
-      .def-section-label {
-        font-family: var(--font-mono);
-        font-size: 0.60rem;
-        color: var(--text-lo);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin-bottom: 5px;
-      }
-
-      /* ── States mini-table ── */
-      .states-table {
-        border-collapse: collapse;
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        width: 100%;
-      }
-      .states-table th {
-        background: var(--bg-panel);
-        border: 1px solid var(--border-lo);
-        padding: 2px 5px;
-        text-align: center;
-        font-weight: normal;
-        color: var(--text-dim);
-        white-space: nowrap;
-      }
-      .states-table td {
-        border: 1px solid var(--border-lo);
-        padding: 1px 3px;
-        text-align: center;
-        vertical-align: middle;
-      }
-      .states-table td.state-name-cell {
-        font-style: italic;
-        color: var(--text-dim);
-        background: var(--bg-panel);
-        padding: 2px 8px;
-        text-align: left;
-        white-space: nowrap;
-      }
-      .states-table td.state-name-cell.is-start  { color: var(--accent); }
-      .states-table td.state-name-cell.is-accept { color: var(--green); font-weight: bold; }
-      .states-table td.state-name-cell.is-both   { color: var(--amber); font-weight: bold; }
-      .states-table td.marker-cell {
-        background: var(--bg-panel);
-        width: 22px;
-      }
-      .states-table td.rm-cell {
-        width: 18px;
-        padding: 0;
-        background: var(--bg-panel);
-      }
-      .states-table input[type="radio"]    { cursor: pointer; accent-color: var(--accent); }
-      .states-table input[type="checkbox"] { cursor: pointer; accent-color: var(--green); }
-
-      /* Remove buttons */
-      .btn-rm-state, .btn-rm-rule {
-        background: none;
-        border: none;
-        color: var(--text-lo);
-        cursor: pointer;
-        font-size: 0.75rem;
-        line-height: 1;
-        padding: 2px 4px;
-        display: block;
-        width: 100%;
-      }
-      .btn-rm-state:hover, .btn-rm-rule:hover { color: var(--red); }
-
-      /* Initial stack symbol row */
-      #init-stack-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        color: var(--text-dim);
-      }
-      #init-stack-row input {
-        width: 40px;
-        background: var(--bg-input);
-        color: var(--text);
-        border: 1px solid var(--border);
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        padding: 2px 5px;
-        height: 22px;
-        box-sizing: border-box;
-        outline: none;
-        text-align: center;
-      }
-      #init-stack-row input:focus {
-        border-color: var(--accent);
-        outline: 1px solid var(--accent);
-      }
-
-      /* ── Rules table ── */
-      .rules-table {
-        border-collapse: collapse;
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        width: 100%;
-      }
-      .rules-table th {
-        background: var(--bg-panel);
-        border: 1px solid var(--border-lo);
-        padding: 2px 5px;
-        text-align: center;
-        font-weight: normal;
-        color: var(--text-dim);
-        white-space: nowrap;
-      }
-      .rules-table th.arrow-hdr {
-        color: var(--text-lo);
-        padding: 2px 3px;
-      }
-      .rules-table td {
-        border: 1px solid var(--border-lo);
-        padding: 1px 2px;
-        vertical-align: middle;
-      }
-      .rules-table td.rm-cell {
-        width: 18px;
-        padding: 0;
-        background: var(--bg-panel);
-      }
-      .rules-table td.arrow-cell {
-        background: var(--bg-panel);
-        color: var(--text-lo);
-        text-align: center;
-        padding: 0 3px;
-        white-space: nowrap;
-      }
-      .rules-table td input {
-        width: 100%;
-        min-width: 38px;
-        background: var(--bg-input);
-        color: var(--text);
-        border: none;
-        outline: none;
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        padding: 2px 4px;
-        text-align: center;
-        height: 22px;
-        box-sizing: border-box;
-      }
-      .rules-table td input:focus {
-        background: var(--accent-bg);
-        outline: 1px solid var(--accent);
-        outline-offset: -1px;
-      }
-      .rules-table td input:focus::placeholder { color: transparent; }
-      .rules-table td input.invalid { color: var(--red); background: var(--red-bg); }
-      .rules-table td.eps-cell input { color: var(--text-lo); font-style: italic; }
-      .rules-table td.eps-cell input:focus { color: var(--text); font-style: normal; }
-      .rules-table td.from-cell input,
-      .rules-table td.to-cell   input { min-width: 48px; }
-      .rules-table td.sym-cell  input { min-width: 30px; max-width: 44px; }
-      .rules-table td.push-cell input { min-width: 44px; }
-
-      /* Acceptance mode toggle */
-      #accept-mode-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        color: var(--text-dim);
-        flex-wrap: wrap;
-      }
-      #accept-mode-row label {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        cursor: pointer;
-      }
-      #accept-mode-row label:has(input:checked) { color: var(--text); }
-      #accept-mode-row input[type="radio"] { cursor: pointer; accent-color: var(--accent); }/* Definition footer *//* ── PDA graph (inside sim panel) ── *//* PDA graph nodes *//* PDA graph edges *//* Simulation highlighting *//* ── Simulation panel ── *//* Result banner */
+      #p-tree { width: 340px; }/* ── Definition panel ── *//* Section headers inside def panel *//* ── States mini-table ── *//* Remove buttons *//* Initial stack symbol row *//* ── Rules table ── *//* Acceptance mode toggle *//* Definition footer *//* ── PDA graph (inside sim panel) ── *//* PDA graph nodes *//* PDA graph edges *//* Simulation highlighting *//* ── Simulation panel ── *//* Result banner */
 
       /* Configurations bar */
       #sim-configs-bar {
@@ -316,11 +136,11 @@
           <div id="def-scroll" class="ui-scroll">
             <!-- States section -->
             <div>
-              <div class="def-section-label">States</div>
+              <div class="ui-section-label">States</div>
               <div id="states-table-wrap"><!-- rendered by JS --></div>
             </div>
             <!-- Acceptance mode -->
-            <div id="accept-mode-row">
+            <div id="accept-mode-row" class="ui-field">
               <span>Accept by:</span>
               <label>
                 <input type="radio" name="accept-mode" value="final-state" checked
@@ -335,14 +155,14 @@
             </div>
 
             <!-- Initial stack symbol -->
-            <div id="init-stack-row">
+            <div id="init-stack-row" class="ui-field">
               <span>Initial stack symbol:</span>
-              <input id="init-stack-input" type="text" maxlength="4"
+              <input id="init-stack-input" class="ui-input ui-input--sm" type="text" maxlength="4"
                      value="⊥" oninput="onInitStackChange()" />
             </div>
             <!-- Rules section -->
             <div>
-              <div class="def-section-label">Transition rules &nbsp;
+              <div class="ui-section-label">Transition rules &nbsp;
                 <span style="font-style:italic;text-transform:none;letter-spacing:0">
                   δ(from, input, pop) → (to, push)
                 </span>
@@ -558,13 +378,7 @@ else: ${kw("reject")}`
       }
 
       function rerenderStateNameCells() {
-        document.querySelectorAll(".state-name-cell").forEach((td, i) => {
-          const isStart  = i === pdaStartIdx;
-          const isAccept = pdaAccepts.has(i);
-          td.classList.toggle("is-start",  isStart  && !isAccept);
-          td.classList.toggle("is-accept", !isStart && isAccept);
-          td.classList.toggle("is-both",   isStart  && isAccept);
-        });
+        UI.table.refreshStates((i) => UI.table.kind(i === pdaStartIdx, pdaAccepts.has(i)));
       }
 
       function addRule() {
@@ -594,79 +408,53 @@ else: ${kw("reject")}`
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       function renderStatesTable() {
-        const wrap = document.getElementById("states-table-wrap");
-        let h = `<table class="states-table"><thead><tr>`;
-        h += `<th></th>`;
-        h += `<th title="Start state">→</th>`;
-        h += `<th title="Accepting state">★</th>`;
-        h += `<th style="text-align:left;padding-left:8px">state</th>`;
-        h += `</tr></thead><tbody>`;
+        const T = UI.table;
+        let h = T.open() + "<thead><tr>";
+        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting state" }) + T.th("state", { left: true });
+        h += "</tr></thead><tbody>";
         for (let i = 0; i < pdaStates.length; i++) {
-          const sn = pdaStates[i];
-          const isStart  = i === pdaStartIdx;
+          const isStart = i === pdaStartIdx;
           const isAccept = pdaAccepts.has(i);
-          let nameCls = "state-name-cell";
-          if (isStart && isAccept) nameCls += " is-both";
-          else if (isStart)  nameCls += " is-start";
-          else if (isAccept) nameCls += " is-accept";
-          h += `<tr>`;
-          h += `<td class="rm-cell"><button class="btn-rm-state" onclick="removeState(${i})" title="Remove state">×</button></td>`;
-          h += `<td class="marker-cell"><input type="radio" name="pda-start" ${isStart ? "checked" : ""} onchange="setStart(${i})"></td>`;
-          h += `<td class="marker-cell"><input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)"></td>`;
-          h += `<td class="${nameCls}">${esc(sn)}</td>`;
-          h += `</tr>`;
+          h += "<tr>";
+          h += T.rm(`removeState(${i})`, "Remove state");
+          h += T.marker(`<input type="radio" name="pda-start" ${isStart ? "checked" : ""} onchange="setStart(${i})">`);
+          h += T.marker(`<input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)">`);
+          h += T.state(pdaStates[i], T.kind(isStart, isAccept));
+          h += "</tr>";
         }
-        h += `</tbody></table>`;
-        wrap.innerHTML = h;
+        h += "</tbody></table>";
+        document.getElementById("states-table-wrap").innerHTML = h;
       }
 
       function renderRulesTable() {
         const wrap = document.getElementById("rules-table-wrap");
         if (pdaRules.length === 0) {
-          wrap.innerHTML = `<div style="font-family:var(--font-serif);font-style:italic;font-size:0.72rem;color:var(--text-lo);padding:4px 2px">No rules. Click + Rule to add.</div>`;
+          wrap.innerHTML = `<div class="ui-hint">No rules. Click + Rule to add.</div>`;
           return;
         }
-        let h = `<table class="rules-table"><thead><tr>`;
-        h += `<th></th>`;
-        h += `<th>from</th>`;
-        h += `<th>input</th>`;
-        h += `<th>pop</th>`;
-        h += `<th class="arrow-hdr">→</th>`;
-        h += `<th>to</th>`;
-        h += `<th>push</th>`;
-        h += `</tr></thead><tbody>`;
+        const T = UI.table;
+        let h = T.open() + "<thead><tr>";
+        h += T.th("") + T.th("from") + T.th("input") + T.th("pop") + T.th("→", { muted: true }) + T.th("to") + T.th("push");
+        h += "</tr></thead><tbody>";
+        const field = (i, f, value, extra, opts) =>
+          T.input(value, `placeholder="${opts.muted ? "ε" : "–"}" data-ri="${i}" data-field="${f}"${extra}`, opts);
         for (let i = 0; i < pdaRules.length; i++) {
           const r = pdaRules[i];
           const fromValid = pdaStates.includes(r.from) || r.from === "";
           const toValid   = pdaStates.includes(r.to)   || r.to   === "";
-          h += `<tr>`;
-          h += `<td class="rm-cell"><button class="btn-rm-rule" onclick="removeRule(${i})" title="Remove rule">×</button></td>`;
-          h += `<td class="from-cell">` +
-               `<input type="text" value="${esc(r.from)}" placeholder="–"` +
-               ` data-ri="${i}" data-field="from" data-trans-type="states"` +
-               ` oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"` +
-               `${fromValid ? "" : ' class="invalid"'}></td>`;
-          h += `<td class="sym-cell eps-cell">` +
-               `<input type="text" value="${esc(r.input)}" placeholder="ε"` +
-               ` data-ri="${i}" data-field="input"` +
-               ` oninput="onRuleFieldInput(this)"></td>`;
-          h += `<td class="sym-cell eps-cell">` +
-               `<input type="text" value="${esc(r.pop)}" placeholder="ε"` +
-               ` data-ri="${i}" data-field="pop"` +
-               ` oninput="onRuleFieldInput(this)"></td>`;
-          h += `<td class="arrow-cell">→</td>`;
-          h += `<td class="to-cell">` +
-               `<input type="text" value="${esc(r.to)}" placeholder="–"` +
-               ` data-ri="${i}" data-field="to" data-trans-type="states"` +
-               ` oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"` +
-               `${toValid ? "" : ' class="invalid"'}></td>`;
-          h += `<td class="push-cell eps-cell">` +
-               `<input type="text" value="${esc(r.push)}" placeholder="ε"` +
-               ` data-ri="${i}" data-field="push"` +
-               ` oninput="onRuleFieldInput(this)"></td>`;
-          h += `</tr>`;
+          const stateAttrs = ` data-trans-type="states" oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"`;
+          const plainAttrs = ` oninput="onRuleFieldInput(this)"`;
+          h += "<tr>";
+          h += T.rm(`removeRule(${i})`, "Remove rule");
+          h += field(i, "from",  r.from,  stateAttrs, { invalid: !fromValid });
+          h += field(i, "input", r.input, plainAttrs, { muted: true, size: "narrow" });
+          h += field(i, "pop",   r.pop,   plainAttrs, { muted: true, size: "narrow" });
+          h += T.cell("→");
+          h += field(i, "to",    r.to,    stateAttrs, { invalid: !toValid });
+          h += field(i, "push",  r.push,  plainAttrs, { muted: true });
+          h += "</tr>";
         }
-        h += `</tbody></table>`;
+        h += "</tbody></table>";
         wrap.innerHTML = h;
       }
 
