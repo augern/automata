@@ -1,0 +1,178 @@
+{
+  "groups": [
+    {
+      "label": "Regular (Type 3)",
+      "examples": [
+        {
+          "label": "a*b*  (right-linear)",
+          "text": [
+            "// Right-linear grammar for a*b*",
+            "S -> a S | b B | eps",
+            "B -> b B | eps"
+          ]
+        },
+        {
+          "label": "(ab)+  (left-linear)",
+          "text": [
+            "// Left-linear grammar for (ab)+",
+            "// Rules: A -> B w  (nonterminal on the left of the terminal)",
+            "// Compare with the right-linear version: S -> a B, B -> b S | b",
+            "S -> S a b | a b"
+          ]
+        },
+        {
+          "label": "Even number of a's  (left-linear)",
+          "text": [
+            "// Left-linear grammar for strings over {a,b} with an even number of a's",
+            "// S = even count so far (accepting);  A = odd count so far",
+            "// Rules: A -> B w  (nonterminal then terminal)",
+            "S -> A a | S b | eps",
+            "A -> S a | A b"
+          ]
+        },
+        {
+          "label": "Strings ending in ab  (right-linear)",
+          "text": [
+            "// Right-linear grammar for {a,b}* ending in 'ab'",
+            "S -> a S | b S | a A",
+            "A -> b"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Context-free (Type 2)",
+      "examples": [
+        {
+          "label": "Balanced a…b  (aⁿbⁿ)",
+          "text": ["S -> a S b | eps"]
+        },
+        {
+          "label": "Palindromes over {a, b}",
+          "text": ["S -> a S a | b S b | a | b | eps"]
+        },
+        {
+          "label": "Left-recursive expressions",
+          "text": [
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> ( E ) | id"
+          ]
+        },
+        {
+          "label": "Ambiguous arithmetic",
+          "text": [
+            "// Ambiguous — try different expansion orders",
+            "// to see two distinct derivations for the same string",
+            "E -> E + E | E * E | ( E ) | id"
+          ]
+        },
+        {
+          "label": "Dangling else",
+          "text": [
+            "// Classic dangling-else ambiguity",
+            "S -> if S then S else S | if S then S | a"
+          ]
+        },
+        {
+          "label": "LL(1) arithmetic",
+          "text": [
+            "E  -> T E'",
+            "E' -> + T E' | eps",
+            "T  -> F T'",
+            "T' -> * F T' | eps",
+            "F  -> id | ( E )"
+          ]
+        },
+        {
+          "label": "Equal numbers of a and b",
+          "text": [
+            "S -> a B | b A",
+            "A -> a | a S | b A A",
+            "B -> b | b S | a B B"
+          ]
+        },
+        {
+          "label": "Matched parentheses",
+          "text": ["S -> ( S ) S | eps"]
+        }
+      ]
+    },
+    {
+      "label": "Context-sensitive (Type 1)",
+      "examples": [
+        {
+          "label": "aⁿbⁿcⁿ  (n ≥ 1)",
+          "text": [
+            "// Context-sensitive grammar for { aⁿbⁿcⁿ | n ≥ 1 }",
+            "// LHS sequences use uppercase convention for non-terminals",
+            "//",
+            "// Step 1: build a string of n copies of [BC] using S",
+            "// Step 2: sort BC pairs left-to-right using CB -> BC",
+            "// Step 3: replace leading aB with ab, then cascade b/c",
+            "S -> a B c | a S B c",
+            "C B -> B C",
+            "a B -> a b",
+            "b B -> b b",
+            "b C -> b c",
+            "c C -> c c"
+          ]
+        },
+        {
+          "label": "aⁿbⁿcⁿdⁿ  (n ≥ 1)",
+          "text": [
+            "// Context-sensitive grammar for { aⁿbⁿcⁿdⁿ | n ≥ 1 }",
+            "// Uses marker nonterminals B, C, D that bubble right into place",
+            "S -> a B c D | a S B c D",
+            "D c -> c D",
+            "D d -> d d",
+            "c B -> B c",
+            "a B -> a b",
+            "b B -> b b",
+            "b c -> b c",
+            "c d -> c d"
+          ]
+        },
+        {
+          "label": "Equal a's and b's  (aⁿbⁿ, n ≥ 1)",
+          "text": [
+            "// Context-sensitive grammar for { aⁿbⁿ | n ≥ 1 }",
+            "// (also context-free, shown here with CSG rules for comparison)",
+            "S -> a S b | a b"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Unrestricted (Type 0)",
+      "examples": [
+        {
+          "label": "Copy language  (ww)",
+          "text": [
+            "// Unrestricted grammar for { ww | w ∈ {a,b}* }",
+            "// Uses marker X to split and align two copies",
+            "S -> X Y",
+            "X -> X a A | X b B | eps",
+            "A Y -> Y a",
+            "B Y -> Y b",
+            "A a -> a A",
+            "A b -> b A",
+            "B a -> a B",
+            "B b -> b B",
+            "X Y -> eps"
+          ]
+        },
+        {
+          "label": "Shrinking rule demo",
+          "text": [
+            "// Demonstrates a length-decreasing (Type 0) rule",
+            "// Generates { aⁿ | n ≥ 0 } with an erasable marker",
+            "S -> a S M | eps",
+            "a M -> a",
+            "S M -> eps"
+          ]
+        }
+      ]
+    }
+  ]
+}

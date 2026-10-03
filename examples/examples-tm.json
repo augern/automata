@@ -1,0 +1,224 @@
+{
+  "groups": [
+    {
+      "label": "Warm-up",
+      "examples": [
+        {
+          "label": "Even-length strings over {a}",
+          "states": ["q0", "q1", "qA", "qR"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "aa", "aaaa", "aaaaaa", "a", "aaa", "aaaaa"],
+          "trans": {
+            "q0": {
+              "a":  { "next": "q1", "write": "a",  "dir": "R" },
+              "□":  { "next": "qA", "write": "□",  "dir": "R" }
+            },
+            "q1": {
+              "a":  { "next": "q0", "write": "a",  "dir": "R" },
+              "□":  { "next": "qR", "write": "□",  "dir": "R" }
+            },
+            "qA": {},
+            "qR": {}
+          }
+        }
+      ]
+    },
+    {
+      "label": "Recognizers",
+      "examples": [
+        {
+          "label": "aⁿbⁿ (n ≥ 0)",
+          "states": ["q0", "q1", "q2", "qA", "qR"],
+          "alphabet": ["a", "b", "X"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "ab", "aabb", "aaabbb", "aaaabbbb", "a", "b", "aab", "abb", "ba", "abab"],
+          "trans": {
+            "q0": {
+              "a":  { "next": "q1", "write": "X",  "dir": "R" },
+              "X":  { "next": "q0", "write": "X",  "dir": "R" },
+              "□":  { "next": "qA", "write": "□",  "dir": "R" },
+              "b":  { "next": "qR", "write": "b",  "dir": "R" }
+            },
+            "q1": {
+              "a":  { "next": "q1", "write": "a",  "dir": "R" },
+              "X":  { "next": "q1", "write": "X",  "dir": "R" },
+              "b":  { "next": "q2", "write": "X",  "dir": "L" },
+              "□":  { "next": "qR", "write": "□",  "dir": "R" }
+            },
+            "q2": {
+              "a":  { "next": "q2", "write": "a",  "dir": "L" },
+              "b":  { "next": "q2", "write": "b",  "dir": "L" },
+              "X":  { "next": "q2", "write": "X",  "dir": "L" },
+              "□":  { "next": "q0", "write": "□",  "dir": "R" }
+            },
+            "qA": {},
+            "qR": {}
+          }
+        },
+        {
+          "label": "aⁿbⁿcⁿ (n ≥ 0)",
+          "states": ["q0", "q1", "q2", "q3", "qC", "qA", "qR"],
+          "alphabet": ["a", "b", "c", "X", "Y", "Z"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "abc", "aabbcc", "aaabbbccc", "ab", "aab", "abbc", "abcc", "aabbccc"],
+          "trans": {
+            "q0": {
+              "a":  { "next": "q1", "write": "X",  "dir": "R" },
+              "X":  { "next": "q0", "write": "X",  "dir": "R" },
+              "Y":  { "next": "qC", "write": "Y",  "dir": "R" },
+              "□":  { "next": "qA", "write": "□",  "dir": "R" },
+              "b":  { "next": "qR", "write": "b",  "dir": "R" },
+              "c":  { "next": "qR", "write": "c",  "dir": "R" }
+            },
+            "q1": {
+              "a":  { "next": "q1", "write": "a",  "dir": "R" },
+              "X":  { "next": "q1", "write": "X",  "dir": "R" },
+              "Y":  { "next": "q1", "write": "Y",  "dir": "R" },
+              "b":  { "next": "q2", "write": "Y",  "dir": "R" },
+              "Z":  { "next": "qR", "write": "Z",  "dir": "R" },
+              "c":  { "next": "qR", "write": "c",  "dir": "R" },
+              "□":  { "next": "qR", "write": "□",  "dir": "R" }
+            },
+            "q2": {
+              "b":  { "next": "q2", "write": "b",  "dir": "R" },
+              "Y":  { "next": "q2", "write": "Y",  "dir": "R" },
+              "Z":  { "next": "q2", "write": "Z",  "dir": "R" },
+              "c":  { "next": "q3", "write": "Z",  "dir": "L" },
+              "a":  { "next": "qR", "write": "a",  "dir": "R" },
+              "□":  { "next": "qR", "write": "□",  "dir": "R" }
+            },
+            "q3": {
+              "a":  { "next": "q3", "write": "a",  "dir": "L" },
+              "b":  { "next": "q3", "write": "b",  "dir": "L" },
+              "c":  { "next": "q3", "write": "c",  "dir": "L" },
+              "X":  { "next": "q3", "write": "X",  "dir": "L" },
+              "Y":  { "next": "q3", "write": "Y",  "dir": "L" },
+              "Z":  { "next": "q3", "write": "Z",  "dir": "L" },
+              "□":  { "next": "q0", "write": "□",  "dir": "R" }
+            },
+            "qC": {
+              "X":  { "next": "qC", "write": "X",  "dir": "R" },
+              "Y":  { "next": "qC", "write": "Y",  "dir": "R" },
+              "Z":  { "next": "qC", "write": "Z",  "dir": "R" },
+              "□":  { "next": "qA", "write": "□",  "dir": "R" },
+              "a":  { "next": "qR", "write": "a",  "dir": "R" },
+              "b":  { "next": "qR", "write": "b",  "dir": "R" },
+              "c":  { "next": "qR", "write": "c",  "dir": "R" }
+            },
+            "qA": {},
+            "qR": {}
+          }
+        },
+        {
+          "label": "Palindromes over {a, b}",
+          "states": ["q0", "qa", "qb", "qLa", "qLb", "qBk", "qA", "qR"],
+          "alphabet": ["a", "b", "X"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "a", "b", "aa", "bb", "aba", "bab", "abba", "baab", "aabaa", "ab", "ba", "aab", "abab"],
+          "trans": {
+            "q0": {
+              "a":  { "next": "qa",  "write": "X",  "dir": "R" },
+              "b":  { "next": "qb",  "write": "X",  "dir": "R" },
+              "X":  { "next": "q0",  "write": "X",  "dir": "R" },
+              "□":  { "next": "qA",  "write": "□",  "dir": "R" }
+            },
+            "qa": {
+              "a":  { "next": "qa",  "write": "a",  "dir": "R" },
+              "b":  { "next": "qa",  "write": "b",  "dir": "R" },
+              "X":  { "next": "qa",  "write": "X",  "dir": "R" },
+              "□":  { "next": "qLa", "write": "□",  "dir": "L" }
+            },
+            "qLa": {
+              "a":  { "next": "qBk", "write": "X",  "dir": "L" },
+              "b":  { "next": "qR",  "write": "b",  "dir": "L" },
+              "X":  { "next": "qLa", "write": "X",  "dir": "L" },
+              "□":  { "next": "qA",  "write": "□",  "dir": "R" }
+            },
+            "qb": {
+              "a":  { "next": "qb",  "write": "a",  "dir": "R" },
+              "b":  { "next": "qb",  "write": "b",  "dir": "R" },
+              "X":  { "next": "qb",  "write": "X",  "dir": "R" },
+              "□":  { "next": "qLb", "write": "□",  "dir": "L" }
+            },
+            "qLb": {
+              "b":  { "next": "qBk", "write": "X",  "dir": "L" },
+              "a":  { "next": "qR",  "write": "a",  "dir": "L" },
+              "X":  { "next": "qLb", "write": "X",  "dir": "L" },
+              "□":  { "next": "qA",  "write": "□",  "dir": "R" }
+            },
+            "qBk": {
+              "a":  { "next": "qBk", "write": "a",  "dir": "L" },
+              "b":  { "next": "qBk", "write": "b",  "dir": "L" },
+              "X":  { "next": "qBk", "write": "X",  "dir": "L" },
+              "□":  { "next": "q0",  "write": "□",  "dir": "R" }
+            },
+            "qA": {},
+            "qR": {}
+          }
+        }
+      ]
+    },
+    {
+      "label": "Computation",
+      "examples": [
+        {
+          "label": "Binary increment",
+          "states": ["q0", "q1", "qA", "qR"],
+          "alphabet": ["0", "1"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["0", "1", "10", "101", "110", "111", "1111", "0000", "1000"],
+          "trans": {
+            "q0": {
+              "0":  { "next": "q0", "write": "0",  "dir": "R" },
+              "1":  { "next": "q0", "write": "1",  "dir": "R" },
+              "□":  { "next": "q1", "write": "□",  "dir": "L" }
+            },
+            "q1": {
+              "1":  { "next": "q1", "write": "0",  "dir": "L" },
+              "0":  { "next": "qA", "write": "1",  "dir": "R" },
+              "□":  { "next": "qA", "write": "1",  "dir": "R" }
+            },
+            "qA": {},
+            "qR": {}
+          }
+        },
+        {
+          "label": "Unary addition: 1ᵐ # 1ⁿ → 1^(m+n)",
+          "states": ["q0", "q1", "q2", "qA", "qR"],
+          "alphabet": ["1", "#"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["1#1", "11#1", "1#111", "11#111", "111#111", "#", "1#", "#1"],
+          "trans": {
+            "q0": {
+              "1":  { "next": "q0", "write": "1",  "dir": "R" },
+              "#":  { "next": "q1", "write": "1",  "dir": "R" },
+              "□":  { "next": "qR", "write": "□",  "dir": "R" }
+            },
+            "q1": {
+              "1":  { "next": "q1", "write": "1",  "dir": "R" },
+              "□":  { "next": "q2", "write": "□",  "dir": "L" }
+            },
+            "q2": {
+              "1":  { "next": "qA", "write": "□",  "dir": "R" }
+            },
+            "qA": {},
+            "qR": {}
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -662,15 +662,7 @@
 
       // ── Sample grammars ───────────────────────────────────────────────────
       const EXAMPLES = {};
-      function loadExample(k) {
-        if (!k) return;
-        const ex = EXAMPLES[k];
-        if (!ex) return;
-        document.getElementById("grammar-input").value = ex.text;
-        document.getElementById("examples-select").value = "";
-        setError("");
-        build();
-      }
+      // loadExample — defined in shared.js
 
       // ── LR(0) ─────────────────────────────────────────────────────────────
       function ik0(i) {
@@ -863,7 +855,7 @@
       }
 
       // ── Table render ──────────────────────────────────────────────────────
-      function renderTables(g, auto, tables, mode) {
+      function renderTables(g, auto, tables, mode, first, follow) {
         const { rules, nonterminals: nts, terminals: terms } = g,
           { action, goto: gt, conflicts } = tables,
           n = auto.states.length;
@@ -872,8 +864,6 @@
         const ntt = [...nts].filter((nt) => !(g.augmented && nt === g.start)).sort();
         const wrap = document.getElementById("tables-wrap");
         wrap.innerHTML = "";
-        const first = computeFirst(g),
-          follow = computeFollow(g, first);
         // FIRST/FOLLOW
         const ffd = document.createElement("div");
         ffd.innerHTML = '<div class="tbl-section-label">First &amp; Follow</div>';
@@ -886,7 +876,7 @@
           .sort()
           .forEach((nt) => {
             const tr = document.createElement("tr");
-            const fs = [...first[nt]].filter((s) => s !== "e").sort(),
+            const fs = [...first[nt]].filter((s) => s !== EPSILON).sort(),
               ls = [...(follow[nt] || [])].sort();
             tr.innerHTML = '<td class="state-cell">' + nt + "</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px">{ ' + (fs.join(", ") || "&mdash;") + " }</td>" + '<td class="goto-cell" style="text-align:left;padding-left:6px;color:#6a8a6a">{ ' + (ls.join(", ") || "&mdash;") + " }</td>";
             ffb.appendChild(tr);
@@ -1366,11 +1356,7 @@
         simDone = false,
         simPendingGoto = null,
         simTrace = [];
-      function tokenise(str) {
-        const t = str.trim().split(/\s+/).filter(Boolean);
-        t.push("$");
-        return t;
-      }
+      // tokenise — defined in shared.js
       function hiAuto(aid, sids, ef, es) {
         d3.selectAll(".node").classed("active on-stack c-pending c-active t-hi", false);
         d3.selectAll(".edge").classed("active c-pending c-active t-hi", false);
@@ -1381,16 +1367,7 @@
           if (e) d3.select("#edge-" + currentAuto.edges.indexOf(e)).classed("active", true);
         }
       }
-      function renderSimTokens() {
-        const el = document.getElementById("sim-tokens");
-        el.innerHTML = "";
-        simTokens.forEach((t, i) => {
-          const s = document.createElement("span");
-          s.className = "tok" + (i < simPos ? " consumed" : i === simPos ? " current" : "") + (t === "$" ? " eof" : "");
-          s.textContent = t;
-          el.appendChild(s);
-        });
-      }
+      // renderSimTokens — defined in shared.js
       function renderSimStack() {
         const el = document.getElementById("sim-stack");
         el.innerHTML = "";
@@ -1421,19 +1398,12 @@
           el.appendChild(s);
         }
       }
-      function setSimLog(msg, cls) {
-        const el = document.getElementById("sim-log");
-        el.textContent = msg;
-        el.className = cls || "";
-      }
+      // setSimLog — defined in shared.js
       function simSetBtns() {
         const notReady = simDone || !simTables;
         document.getElementById("btn-step").disabled = notReady;
         document.getElementById("btn-run").disabled  = notReady;
         document.getElementById("btn-back").disabled = simHistory.length === 0;
-        const hasTrace = simTrace.length > 0;
-      //  document.getElementById("btn-copy-trace").disabled = !hasTrace;
-      //  document.getElementById("btn-open-trace").disabled = !hasTrace;
       }
       function simSnap() {
         simHistory.push({
@@ -1489,7 +1459,7 @@
         simSyms = snap.syms;
         simPos = snap.pos;
         simDone = false;
-        simPendingGoto = snap.pendingGoto !== undefined ? snap.pendingGoto : null;
+        simPendingGoto = snap.pendingGoto;
         if (snap.traceLen !== undefined) simTrace.length = snap.traceLen;
         tRestore(snap.tree);
         renderSimTokens();
@@ -2184,12 +2154,11 @@
       let tStepIdx = -1;
       let tFilled = new Set(); // "state:sym" keys of cells written so far
 
-      function recordTableSteps(grammar, auto, mode) {
+      function recordTableSteps(grammar, auto, mode, follow) {
         const { rules, nonterminals: nts, terminals: terms, start } = grammar;
         const { states, edges } = auto;
         const steps = [];
         const filled = {}; // tracks what's in each cell for conflict detection
-        const follow = mode === "SLR1" ? computeFollow(grammar, computeFirst(grammar)) : null;
 
         function ils_(item) {
           const rule = rules[item.rule];
@@ -2332,68 +2301,7 @@
         tClearAutoHi();
       }
 
-      function tSetLog(html) {
-        const bar = document.getElementById("tstep-log-bar");
-        bar.innerHTML = html || "";
-        bar.style.display = html ? "" : "none";
-      }
-
-      function tSetBtns() {
-        const has = tSteps.length > 0;
-        document.getElementById("btn-treset").disabled = !has || tStepIdx < 0;
-        document.getElementById("btn-tstep").disabled  = !has || tStepIdx >= tSteps.length - 1;
-        document.getElementById("btn-tback").disabled  = !has || tStepIdx < 0;
-        document.getElementById("btn-trun").disabled   = !has || tStepIdx >= tSteps.length - 1;
-      }
-
-      function tReset() {
-        if (tSteps.length === 0) return;
-        tStepIdx = -1;
-        tClearStepping();
-        tSetLog("");
-        tSetBtns();
-      }
-
-      function tStep() {
-        if (tStepIdx >= tSteps.length - 1) return;
-        // First step: enter stepping mode (dim all cells)
-        if (tStepIdx === -1) {
-          document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("t-stepping"));
-        }
-        tStepIdx++;
-        tApplySteps(tStepIdx);
-        tSetLog(tSteps[tStepIdx].html);
-        tSetBtns();
-      }
-
-      function tBack() {
-        if (tStepIdx < 0) return;
-        tStepIdx--;
-        if (tStepIdx < 0) {
-          tClearStepping();
-          tSetLog("Press Table Step &#8250; to begin filling entries.");
-        } else {
-          tApplySteps(tStepIdx);
-          tSetLog(tSteps[tStepIdx].html);
-        }
-        tSetBtns();
-      }
-
-      function tRunAll() {
-        tStepIdx = tSteps.length - 1;
-        tClearStepping();
-        tSetLog(tSteps[tStepIdx] ? tSteps[tStepIdx].html : "");
-        tSetBtns();
-      }
-
-      function tReset() {
-        tStepIdx = -1;
-        tFilled = new Set();
-        tClearStepping();
-        document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("t-stepping"));
-        tSetLog("Press Table Step &#8250; to begin filling entries.");
-        tSetBtns();
-      }
+      // tSetLog, tSetBtns, tStep, tBack, tRunAll, tReset — defined in shared.js
 
       // ── Controller ────────────────────────────────────────────────────────
       let currentMode = "LR0",
@@ -2463,6 +2371,10 @@
         grammarToURL(text);
         clearConflictHi();
 
+        // Compute FIRST/FOLLOW once and pass to all consumers — avoids recomputing 2-3× per build
+        const first  = computeFirst(currentGrammar);
+        const follow = computeFollow(currentGrammar, first);
+
         // Always build the full automaton for tables/simulation
         currentAuto = currentMode === "LR1" ? buildLR1(currentGrammar) : currentMode === "LALR1" ? mergeLR1toLALR(buildLR1(currentGrammar)) : buildLR0(currentGrammar);
         const tm = currentMode === "LR1" || currentMode === "LALR1" ? "LR1" : currentMode;
@@ -2491,12 +2403,12 @@
           cSetBtns();
         }, 0);
 
-        renderTables(currentGrammar, currentAuto, tables, currentMode);
+        renderTables(currentGrammar, currentAuto, tables, currentMode, first, follow);
 
         // Record table construction steps (always, not just in step mode)
         try {
           const tMode = currentMode === "LR1" || currentMode === "LALR1" ? "LR1" : currentMode;
-          tSteps = recordTableSteps(currentGrammar, currentAuto, tMode);
+          tSteps = recordTableSteps(currentGrammar, currentAuto, tMode, follow);
           tStepIdx = -1;
           tFilled = new Set();
           // Don't enter stepping mode automatically — wait for user to press Table Step
@@ -2634,29 +2546,7 @@ ${kw("return")} C`,
 ${kw("return")} merged collection`,
       );
 
-      // ── FIRST ─────────────────────────────────────────────────────
-      const PC_FIRST = pcBlock(
-        "First",
-        [
-          { label: "Input", sym: it("X"), desc: "a grammar symbol or a sequence of symbols" },
-          {
-            label: "Output",
-            sym: "First(" + it("X") + ")",
-            desc: "the set of terminals t such that " + it("X") + " ⇒* tω for some ω, plus " + _eps + " if " + it("X") + " ⇒* " + _eps,
-          },
-        ],
-        `${kw("if")} X is a terminal
-  ${kw("return")} { X }
-R ${_la} ${_emp}
-${kw("repeat")}
-  ${kw("for each")} production X ${_ra} Y₁ Y₂ … Yₖ ${_in} G
-    ${kw("for")} i ${_la} 1 to k
-      add First(Yᵢ) \\ {${_eps}} to R
-      ${kw("if")} ${_eps} ${_nin} First(Yᵢ)  ${kw("break")}${cm("Yᵢ not nullable; remaining symbols cannot contribute")}
-    ${kw("if")} all Yᵢ are nullable  add ${_eps} to R
-${kw("until")} R is unchanged
-${kw("return")} R`,
-      );
+      // PC_FIRST — defined in shared.js
 
       // ── Table construction ────────────────────────────────────────
       const PC_TABLES = pcBlock(
@@ -2760,9 +2650,7 @@ ${kw("loop")}
         if (closeBtn) closeBtn.focus(); else overlay.focus();
       }
 
-      function closeAlgoModal() {
-        document.getElementById("algo-overlay").classList.add("hidden");
-      }
+      // closeAlgoModal — defined in shared.js
 
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") closeAlgoModal();

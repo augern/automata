@@ -974,3 +974,58 @@ body {
   stroke-width: 1.5;
 }
 /* END SHARED:PARSE-TREE-STYLE */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SHARED:EXAMPLE-CHIPS
+   Clickable string chips shown below the sim input row.
+   #examples-chips is hidden by default; JS calls
+   renderExampleChips() which sets display:flex when needed.
+   Tools that always show the bar (e.g. regex) override
+   display locally.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#examples-chips {
+  flex-shrink: 0;
+  display: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border-lo);
+}
+.examples-label {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-right: 2px;
+}
+.example-chip {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  border: 1px solid var(--border);
+  background: var(--bg-cell);
+  color: var(--text);
+  padding: 1px 7px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.example-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.example-chip.eps-chip {
+  font-style: italic;
+  color: var(--text-dim);
+}
+/* END SHARED:EXAMPLE-CHIPS */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SHARED:TRANS-INPUT
+   Transition table cell inputs used in NFA and TM tools.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Hide the dash placeholder while the field is active */
+.trans-table td.trans-cell input:focus::placeholder {
+  color: transparent;
+}
+/* END SHARED:TRANS-INPUT */

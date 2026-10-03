@@ -20,21 +20,31 @@ const EPSILON = "ε"; // ε — single source of truth for the epsilon sentinel
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const STORAGE_KEY = "parser-tools-v1";
 
+// Default panel list for tools that use the shared key (ll1, lr).
+// Tools with different panel IDs call initPanelStorage() before loadPanelState().
+var _panelStorageKey = STORAGE_KEY;
+var _panelIds = ["p-grammar", "p-main", "p-automaton", "p-tables", "p-tree"];
+
+function initPanelStorage(key, ids) {
+  _panelStorageKey = key;
+  _panelIds = ids;
+}
+
 function savePanelState() {
   try {
     const s = {};
-    ["p-grammar", "p-main", "p-automaton", "p-tables", "p-tree"].forEach((id) => {
+    _panelIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el) s[id] = { width: el.style.width, collapsed: el.classList.contains("collapsed") };
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    localStorage.setItem(_panelStorageKey, JSON.stringify(s));
   } catch (e) {}
 }
 
 function loadPanelState() {
   try {
-    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    ["p-grammar", "p-main", "p-automaton", "p-tables", "p-tree"].forEach((id) => {
+    const s = JSON.parse(localStorage.getItem(_panelStorageKey) || "{}");
+    _panelIds.forEach((id) => {
       if (!s[id]) return;
       const el = document.getElementById(id);
       if (!el) return;
@@ -600,6 +610,55 @@ function pcBlock(name, io, body) {
   return '<div class="pc-block">' + '<div class="pc-name">' + name + "</div>" + '<div class="pc-io">' + rows + "</div>" + '<div class="pc-body">' + body + "</div>" + "</div>";
 }
 
+// Pseudocode block for the First-set algorithm — used by both LR and LL tools.
+const PC_FIRST = pcBlock(
+  "First",
+  [
+    { label: "Input", sym: it("X"), desc: "a grammar symbol or a sequence of symbols" },
+    {
+      label: "Output",
+      sym: "First(" + it("X") + ")",
+      desc: "the set of terminals t such that " + it("X") + " ⇒* tω for some ω, plus " + _eps + " if " + it("X") + " ⇒* " + _eps,
+    },
+  ],
+  `${kw("if")} X is a terminal
+  ${kw("return")} { X }
+R ${_la} ${_emp}
+${kw("repeat")}
+  ${kw("for each")} production X ${_ra} Y₁ Y₂ … Yₖ ${_in} G
+    ${kw("for")} i ${_la} 1 to k
+      add First(Yᵢ) \\ {${_eps}} to R
+      ${kw("if")} ${_eps} ${_nin} First(Yᵢ)  ${kw("break")}${cm("Yᵢ not nullable; remaining symbols cannot contribute")}
+    ${kw("if")} all Yᵢ are nullable  add ${_eps} to R
+${kw("until")} R is unchanged
+${kw("return")} R`,
+);
+
+const PC_FOLLOW = pcBlock(
+  "Follow",
+  [
+    { label: "Input", sym: it("G"), desc: "the grammar" },
+    { label: "", sym: "First", desc: "the First function" },
+    {
+      label: "Output",
+      sym: "Follow(A)",
+      desc: "for each nonterminal A: the set of terminals that can appear immediately to the right of A in a sentential form, plus $ if A can end the input",
+    },
+  ],
+  `Follow(S) ${_la} { $ }${cm("S is the start symbol; $ marks end of input")}
+${kw("for each")} other nonterminal A: Follow(A) ${_la} ${_emp}
+${kw("repeat")}
+  ${kw("for each")} production B ${_ra} Y₁ Y₂ … Yₙ ${_in} G
+    ${kw("for")} i ${_la} 1 to n
+      ${kw("if")} Yᵢ is a nonterminal
+        let β = Yᵢ₊₁ … Yₙ ${cm("the suffix after Yᵢ; empty if i = n")}
+        add First(β) \\ {${_eps}} to Follow(Yᵢ)
+        ${kw("if")} ${_eps} ${_in} First(β)${cm("suffix is nullable, or Yᵢ is last")}
+          add Follow(B) to Follow(Yᵢ)
+${kw("until")} all Follow sets are unchanged
+${kw("return")} Follow`,
+);
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:EXAMPLES-LOADER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -648,6 +707,10 @@ function isAlgoModalOpen() {
   return !!(o && !o.classList.contains("hidden"));
 }
 
+function closeAlgoModal() {
+  document.getElementById("algo-overlay").classList.add("hidden");
+}
+
 // Call once at page load. Focuses the close button when the modal opens and
 // traps Tab inside it (the close button is the only interactive element).
 function initAlgoModal() {
@@ -659,4 +722,208 @@ function initAlgoModal() {
     var btn = overlay.querySelector(".algo-close");
     if (btn) btn.focus();
   });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SHARED:SIM-HELPERS
+// Shared by LR and LL simulation panels.
+// Depend on globals: simTokens, simPos (read-only here).
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function tokenise(str) {
+  const t = str.trim().split(/\s+/).filter(Boolean);
+  t.push("$");
+  return t;
+}
+
+function renderSimTokens() {
+  const el = document.getElementById("sim-tokens");
+  el.innerHTML = "";
+  simTokens.forEach((t, i) => {
+    const s = document.createElement("span");
+    s.className = "tok" + (i < simPos ? " consumed" : i === simPos ? " current" : "") + (t === "$" ? " eof" : "");
+    s.textContent = t;
+    el.appendChild(s);
+  });
+}
+
+function setSimLog(msg, cls) {
+  const el = document.getElementById("sim-log");
+  el.textContent = msg;
+  el.className = cls || "";
+}
+
+// Loads an example grammar. Depends on tool globals: EXAMPLES, setError, build.
+function loadExample(k) {
+  if (!k) return;
+  const ex = EXAMPLES[k];
+  if (!ex) return;
+  document.getElementById("grammar-input").value = ex.text;
+  document.getElementById("examples-select").value = "";
+  setError("");
+  build();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SHARED:TABLE-STEPPER
+// Step engine shared by LR (ACTION/GOTO) and LL (M[A,a]).
+// Depends on tool globals: tSteps, tStepIdx, tClearStepping,
+// tApplySteps (tool-specific DOM query logic).
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function tSetLog(html) {
+  const bar = document.getElementById("tstep-log-bar");
+  bar.innerHTML = html || "";
+  bar.style.display = html ? "" : "none";
+}
+
+function tSetBtns() {
+  const has = tSteps.length > 0;
+  document.getElementById("btn-treset").disabled = !has || tStepIdx < 0;
+  document.getElementById("btn-tback").disabled  = !has || tStepIdx < 0;
+  document.getElementById("btn-tstep").disabled  = !has || tStepIdx >= tSteps.length - 1;
+  document.getElementById("btn-trun").disabled   = !has || tStepIdx >= tSteps.length - 1;
+}
+
+function tStep() {
+  if (tStepIdx >= tSteps.length - 1) return;
+  if (tStepIdx === -1) {
+    document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("t-stepping"));
+  }
+  tStepIdx++;
+  tApplySteps(tStepIdx);
+  tSetLog(tSteps[tStepIdx].html);
+  tSetBtns();
+}
+
+function tBack() {
+  if (tStepIdx < 0) return;
+  tStepIdx--;
+  if (tStepIdx < 0) {
+    tClearStepping();
+    tSetLog("Press Table Step ► to begin filling entries.");
+  } else {
+    tApplySteps(tStepIdx);
+    tSetLog(tSteps[tStepIdx].html);
+  }
+  tSetBtns();
+}
+
+function tRunAll() {
+  tStepIdx = tSteps.length - 1;
+  tClearStepping();
+  tSetLog(tSteps[tStepIdx] ? tSteps[tStepIdx].html : "");
+  tSetBtns();
+}
+
+function tReset() {
+  if (tSteps.length === 0) return;
+  tStepIdx = -1;
+  tClearStepping();
+  document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("t-stepping"));
+  tSetLog("Press Table Step ► to begin filling entries.");
+  tSetBtns();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SHARED:UTILITIES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SHARED:TRANS-INPUT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Auto-prepend "q" when the user starts typing a state name in a transition
+// table cell.  Attach as onkeydown="transInputKeydown(event)".
+//
+// Triggers on digits and the letters A/R (the suffix characters used in
+// state names like q0, q1, qA, qR) when the cursor is at the start of a
+// new token:
+//   - always at the very beginning of the field (position 0), and
+//   - also right after a ", " separator for cells whose data-trans-type
+//     attribute is "states" (NFA cells hold comma-separated state lists).
+//     TM cells hold a "nextState, write, dir" triple, so after a comma the
+//     user is typing a symbol or direction — no auto-prepend there.
+function transInputKeydown(event) {
+  if (!/^[0-9aArR]$/.test(event.key)) return;
+
+  var input = event.target;
+  var start = input.selectionStart;
+  var end   = input.selectionEnd;
+  var val   = input.value;
+  var before = val.slice(0, start);
+  var after  = val.slice(end);
+
+  var isList = input.dataset.transType === "states";
+  var atTokenStart = (start === 0) || (isList && /,\s*$/.test(before));
+  if (!atTokenStart) return;
+
+  event.preventDefault();
+  input.value = before + "q" + event.key + after;
+  var newPos = before.length + 2;
+  input.setSelectionRange(newPos, newPos);
+  // Keep validation in sync
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+// HTML-escape a value for safe insertion into DOM content or attributes.
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Render clickable string chips into #examples-chips / #chips-container.
+// Shows the bar when strings are present, hides it when empty.
+// simFn() is called after the chosen string is written to #sim-string-input.
+function renderExampleChips(strings, simFn) {
+  var bar       = document.getElementById("examples-chips");
+  var container = document.getElementById("chips-container");
+  if (!bar || !container) return;
+  container.innerHTML = "";
+  if (!strings || strings.length === 0) { bar.style.display = "none"; return; }
+  bar.style.display = "flex";
+  for (var i = 0; i < strings.length; i++) {
+    (function(s) {
+      var btn = document.createElement("button");
+      btn.className   = "example-chip" + (s === "" ? " eps-chip" : "");
+      btn.textContent = s === "" ? "ε" : s;
+      btn.onclick = function() {
+        document.getElementById("sim-string-input").value = s;
+        simFn();
+      };
+      container.appendChild(btn);
+    })(strings[i]);
+  }
+}
+
+// Fetch a grouped examples JSON, populate a <select>, store each example
+// into examplesObj keyed as "ex0", "ex1", …, then call loadFn with the
+// first key so the tool opens in a meaningful state.
+function loadAutomataExamples(url, selectId, examplesObj, loadFn) {
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      var firstKey = null, idx = 0;
+      data.groups.forEach(function(group) {
+        var og = document.createElement("optgroup");
+        og.label = group.label;
+        group.examples.forEach(function(ex) {
+          var key = "ex" + idx++;
+          var opt = document.createElement("option");
+          opt.value = key;
+          opt.textContent = ex.label;
+          og.appendChild(opt);
+          examplesObj[key] = ex;
+          if (!firstKey) firstKey = key;
+        });
+        sel.appendChild(og);
+      });
+      if (firstKey) loadFn(firstKey);
+    })
+    .catch(function(err) {
+      console.error("Failed to load examples from " + url, err);
+    });
 }

@@ -117,6 +117,39 @@
       .parse-table td.rule-cell {
         color: var(--purple);
       }
+
+      /* ── Table construction simulation ── */
+      /* Only the predictive table dims; FIRST/FOLLOW table is untouched */
+      #ll1-table.t-stepping td {
+        opacity: 0.22;
+        transition: opacity 0.15s;
+      }
+      #ll1-table.t-stepping th {
+        opacity: 0.5;
+      }
+      #ll1-table.t-stepping td.t-filled {
+        opacity: 0.7;
+      }
+      #ll1-table.t-stepping td.t-active {
+        opacity: 1 !important;
+        outline: 2px solid var(--amber);
+        outline-offset: -1px;
+        background: var(--amber-bg) !important;
+        color: var(--amber) !important;
+        animation: cell-pop 0.2s ease-out;
+      }
+      #ll1-table.t-stepping td.t-conflict {
+        opacity: 1 !important;
+      }
+      #tstep-controls .btn {
+        height: 18px;
+        font-size: 0.62rem;
+        padding: 0 6px;
+        line-height: 1;
+      }
+      #tstep-log-bar .tl-op   { color: var(--accent); }
+      #tstep-log-bar .tl-reason { color: var(--text-lo); font-style: italic; }
+      #tstep-log-bar .tl-conf { color: var(--red); }
     </style>
   </head>
   <body>
@@ -179,6 +212,16 @@
             &#8249;
           </button>
         </div>
+        <div id="tstep-controls" style="display: flex; align-items: center; gap: 6px; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em">
+          <span>Simulate</span>
+          <div class="step-group">
+            <button class="btn icon-restart" id="btn-treset" onclick="tReset()" title="Restart" disabled></button>
+            <button class="btn" id="btn-tback" onclick="tBack()" disabled>&#8249; Back</button>
+            <button class="btn primary" id="btn-tstep" onclick="tStep()" disabled>Table Step &#8250;</button>
+            <button class="btn icon-run-all" id="btn-trun" onclick="tRunAll()" title="Run all" disabled></button>
+          </div>
+        </div>
+        <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
         <div class="panel-body">
           <div id="tables-wrap">
             <div style="color: #2a3a4a; font-size: 0.72rem">Build a grammar to see tables.</div>
@@ -291,15 +334,7 @@
       // ── Sample grammars ───────────────────────────────────────────────────
       const EXAMPLES = {};
 
-      function loadExample(k) {
-        if (!k) return;
-        const ex = EXAMPLES[k];
-        if (!ex) return;
-        document.getElementById("grammar-input").value = ex.text;
-        document.getElementById("examples-select").value = "";
-        setError("");
-        build();
-      }
+      // loadExample — defined in shared.js
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // LL(1) TABLE CONSTRUCTION  (LL-specific)
@@ -344,6 +379,114 @@
 
         return { table, conflicts };
       }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // TABLE CONSTRUCTION STEP ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // Steps mirror exactly the logic in buildLL1Table so the student
+      // can watch each FIRST / FOLLOW lookup write one cell at a time.
+      //
+      // Step types:  "entry"   — a normal (non-conflicting) cell write
+      //              "conflict" — a second production wants the same cell
+      //              "table-done" — all entries processed
+
+      let tSteps = [];
+      let tStepIdx = -1;
+      let tFilled = new Set(); // "NT:term" keys written so far
+
+      function recordTableSteps(grammar, first, follow) {
+        const { rules, nonterminals: nts } = grammar;
+        const steps = [];
+        const filled = {}; // key → ruleIdx (for conflict detection)
+
+        function rhs_(rule) {
+          return rule.rhs.join(" ") || EPSILON;
+        }
+
+        function addStep(nt, term, ruleIdx, html) {
+          const key = nt + ":" + term;
+          const cur = filled[key];
+          if (cur === undefined) {
+            filled[key] = ruleIdx;
+            steps.push({ type: "entry", nt, term, ruleIdx, html, key });
+          } else if (cur !== ruleIdx) {
+            steps.push({
+              type: "conflict",
+              nt, term, key,
+              html: '<span class="tl-conf">conflict</span> M[<b>' + nt + '</b>, <b>' + term + '</b>]: rules ' + cur + ' and ' + ruleIdx +
+                    ' <span class="tl-reason">— grammar is not LL(1)</span>',
+            });
+          }
+        }
+
+        rules.forEach((rule, i) => {
+          const { lhs, rhs } = rule;
+          if (!nts.has(lhs)) return;
+          const fa = firstOfSeq(rhs, first);
+          const rhsStr = rhs_(rule);
+
+          // Entries from FIRST(α) \ {ε}
+          for (const a of [...fa].sort()) {
+            if (a === EPSILON) continue;
+            addStep(lhs, a, i,
+              '<span class="tl-op">add</span> M[<b>' + lhs + '</b>, <b>' + a + '</b>] = ' + i +
+              ' <span class="tl-reason">' + lhs + ' → ' + rhsStr +
+              ' — ' + a + ' ∈ FIRST(' + rhsStr + ')</span>');
+          }
+
+          // Entries from FOLLOW(A) when ε ∈ FIRST(α)
+          if (fa.has(EPSILON)) {
+            for (const b of [...(follow[lhs] || [])].sort()) {
+              addStep(lhs, b, i,
+                '<span class="tl-op">add</span> M[<b>' + lhs + '</b>, <b>' + b + '</b>] = ' + i +
+                ' <span class="tl-reason">' + lhs + ' → ' + rhsStr +
+                ' — ε ∈ FIRST(' + rhsStr + '), ' + b + ' ∈ FOLLOW(' + lhs + ')</span>');
+            }
+          }
+        });
+
+        const nEntries  = steps.filter((s) => s.type === "entry").length;
+        const nConflicts = steps.filter((s) => s.type === "conflict").length;
+        steps.push({
+          type: "table-done",
+          html: '<span class="tl-op">✓ Table complete</span> — ' + nEntries + ' entries' +
+                (nConflicts ? ', ' + nConflicts + ' conflict(s)' : ''),
+        });
+        return steps;
+      }
+
+      // ── Apply stepping visual state ──────────────────────────────────
+      function tApplySteps(upToIdx) {
+        tFilled = new Set();
+        const activeKey = upToIdx >= 0 && upToIdx < tSteps.length ? tSteps[upToIdx].key : null;
+        for (let i = 0; i <= upToIdx && i < tSteps.length; i++) {
+          const s = tSteps[i];
+          if (s.key) tFilled.add(s.key);
+        }
+        const tbl = document.getElementById("ll1-table");
+        if (!tbl) return;
+        tbl.classList.add("t-stepping");
+        tbl.querySelectorAll("td[data-nt]").forEach((td) => {
+          const key = td.dataset.nt + ":" + td.dataset.term;
+          td.classList.remove("t-filled", "t-active");
+          if (key === activeKey) {
+            td.classList.add("t-active");
+            td.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+          } else if (tFilled.has(key)) {
+            td.classList.add("t-filled");
+          }
+        });
+      }
+
+      function tClearStepping() {
+        tFilled = new Set();
+        const tbl = document.getElementById("ll1-table");
+        if (!tbl) return;
+        tbl.classList.remove("t-stepping");
+        tbl.querySelectorAll("td").forEach((td) => td.classList.remove("t-filled", "t-active"));
+      }
+
+      // tSetLog, tSetBtns, tStep, tBack, tRunAll, tReset — defined in shared.js
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // TABLE RENDER  (LL-specific layout, shared table CSS)
@@ -396,6 +539,7 @@
 
         const tbl = document.createElement("table");
         tbl.className = "parse-table";
+        tbl.id = "ll1-table";
         let hdr = '<thead><tr><th class="state-col">NT</th>';
         for (const t of termsArr) hdr += "<th>" + t + "</th>";
         hdr += "</tr></thead>";
@@ -460,22 +604,9 @@
       let simInitialized = false; // true only after simReset() successfully sets up a run
       let derivSteps = []; // { form: string[], action: string, stepClass }
 
-      function tokenise(str) {
-        const t = str.trim().split(/\s+/).filter(Boolean);
-        t.push("$");
-        return t;
-      }
+      // tokenise — defined in shared.js
 
-      function renderSimTokens() {
-        const el = document.getElementById("sim-tokens");
-        el.innerHTML = "";
-        simTokens.forEach((t, i) => {
-          const s = document.createElement("span");
-          s.className = "tok" + (i < simPos ? " consumed" : i === simPos ? " current" : "") + (t === "$" ? " eof" : "");
-          s.textContent = t;
-          el.appendChild(s);
-        });
-      }
+      // renderSimTokens — defined in shared.js
 
       function renderSimStack() {
         const el = document.getElementById("sim-stack");
@@ -491,11 +622,7 @@
         });
       }
 
-      function setSimLog(msg, cls) {
-        const el = document.getElementById("sim-log");
-        el.textContent = msg;
-        el.className = cls || "";
-      }
+      // setSimLog — defined in shared.js
 
       function simSetBtns() {
         const notReady = simDone || !simTable || !simInitialized;
@@ -751,6 +878,13 @@
         simRules = currentGrammar.rules;
         simReset();
         renderTables(currentGrammar, ll1, first, follow);
+        // Wire step engine — recordTableSteps runs after renderTables so the
+        // ll1-table DOM element exists and tbl.id has been set.
+        tSteps = recordTableSteps(currentGrammar, first, follow);
+        tStepIdx = -1;
+        tClearStepping();
+        tSetLog("");
+        tSetBtns();
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -759,55 +893,9 @@
 
       // kw, sym, it, cm, hi, _la/_dot/_ra/…, pcBlock — all from shared.js SHARED:PSEUDOCODE
 
-      // ── First ──────────────────────────────────────────────────────
-      const PC_FIRST = pcBlock(
-        "First",
-        [
-          { label: "Input", sym: it("X"), desc: "a grammar symbol or a sequence of symbols" },
-          {
-            label: "Output",
-            sym: "First(" + it("X") + ")",
-            desc: "the set of terminals t such that " + it("X") + " ⇒* tω for some ω, plus " + _eps + " if " + it("X") + " ⇒* " + _eps,
-          },
-        ],
-        `${kw("if")} X is a terminal
-  ${kw("return")} { X }
-R ${_la} ${_emp}
-${kw("repeat")}
-  ${kw("for each")} production X ${_ra} Y₁ Y₂ … Yₖ ${_in} G
-    ${kw("for")} i ${_la} 1 to k
-      add First(Yᵢ) \\ {${_eps}} to R
-      ${kw("if")} ${_eps} ${_nin} First(Yᵢ)  ${kw("break")}${cm("Yᵢ not nullable; remaining symbols cannot contribute")}
-    ${kw("if")} all Yᵢ are nullable  add ${_eps} to R
-${kw("until")} R is unchanged
-${kw("return")} R`,
-      );
+      // PC_FIRST — defined in shared.js
 
-      // ── Follow ─────────────────────────────────────────────────────
-      const PC_FOLLOW = pcBlock(
-        "Follow",
-        [
-          { label: "Input", sym: it("G"), desc: "the grammar" },
-          { label: "", sym: "First", desc: "the First function" },
-          {
-            label: "Output",
-            sym: "Follow(A)",
-            desc: "for each nonterminal A: the set of terminals that can appear immediately to the right of A in a sentential form, plus $ if A can end the input",
-          },
-        ],
-        `Follow(S) ${_la} { $ }${cm("S is the start symbol; $ marks end of input")}
-${kw("for each")} other nonterminal A: Follow(A) ${_la} ${_emp}
-${kw("repeat")}
-  ${kw("for each")} production B ${_ra} Y₁ Y₂ … Yₙ ${_in} G
-    ${kw("for")} i ${_la} 1 to n
-      ${kw("if")} Yᵢ is a nonterminal
-        let β = Yᵢ₊₁ … Yₙ ${cm("the suffix after Yᵢ; empty if i = n")}
-        add First(β) \\ {${_eps}} to Follow(Yᵢ)
-        ${kw("if")} ${_eps} ${_in} First(β)${cm("suffix is nullable, or Yᵢ is last")}
-          add Follow(B) to Follow(Yᵢ)
-${kw("until")} all Follow sets are unchanged
-${kw("return")} Follow`,
-      );
+      // PC_FOLLOW — defined in shared.js
 
       // ── Build predictive table ─────────────────────────────────────
       const PC_LL1_TABLE = pcBlock(
@@ -887,16 +975,20 @@ ${kw("loop")}
         if (closeBtn) closeBtn.focus(); else overlay.focus();
       }
 
-      function closeAlgoModal() {
-        document.getElementById("algo-overlay").classList.add("hidden");
-      }
+      // closeAlgoModal — defined in shared.js
 
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") { closeAlgoModal(); return; }
         if (isAlgoModalOpen()) return;
         if (e.target.matches("input,textarea,select")) return;
-        if (e.key === "ArrowRight") { e.preventDefault(); simStep(); }
-        else if (e.key === "ArrowLeft") { e.preventDefault(); simBack(); }
+        // Shift+arrow → table stepper; plain arrow → parsing simulation
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          if (e.shiftKey) tStep(); else simStep();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          if (e.shiftKey) tBack(); else simBack();
+        }
       });
 
       // Global error handler — shows errors in the grammar panel

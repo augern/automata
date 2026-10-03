@@ -1,0 +1,100 @@
+{
+  "groups": [
+    {
+      "label": "ε-moves",
+      "examples": [
+        {
+          "label": "ε* (ε-loop)",
+          "states": ["q0", "q1"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "strings": ["", "a", "aa"],
+          "trans": {
+            "q0": { "a": [], "ε": ["q1"] },
+            "q1": { "a": [], "ε": ["q0"] }
+          }
+        },
+        {
+          "label": "a? (zero or one a)",
+          "states": ["q0", "q1"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "strings": ["", "a", "aa", "aaa"],
+          "trans": {
+            "q0": { "a": ["q1"], "ε": ["q1"] },
+            "q1": { "a": [],     "ε": [] }
+          }
+        }
+      ]
+    },
+    {
+      "label": "Nondeterminism",
+      "examples": [
+        {
+          "label": "ends in ab",
+          "states": ["q0", "q1", "q2"],
+          "alphabet": ["a", "b"],
+          "start": "q0",
+          "accepts": ["q2"],
+          "strings": ["ab", "aab", "bab", "aaab", "abab", "a", "b", "ba", "aba", "bb"],
+          "trans": {
+            "q0": { "a": ["q0", "q1"], "b": ["q0"], "ε": [] },
+            "q1": { "a": [],           "b": ["q2"], "ε": [] },
+            "q2": { "a": [],           "b": [],     "ε": [] }
+          }
+        },
+        {
+          "label": "contains aa or bb",
+          "states": ["q0", "q1", "q2", "q3"],
+          "alphabet": ["a", "b"],
+          "start": "q0",
+          "accepts": ["q3"],
+          "strings": ["aa", "bb", "aab", "bba", "abba", "a", "b", "ab", "ba", "aba", "bab"],
+          "trans": {
+            "q0": { "a": ["q0", "q1"], "b": ["q0", "q2"], "ε": [] },
+            "q1": { "a": ["q3"],       "b": [],            "ε": [] },
+            "q2": { "a": [],           "b": ["q3"],        "ε": [] },
+            "q3": { "a": ["q3"],       "b": ["q3"],        "ε": [] }
+          }
+        },
+        {
+          "label": "4th-from-last is a",
+          "states": ["q0", "q1", "q2", "q3", "q4"],
+          "alphabet": ["a", "b"],
+          "start": "q0",
+          "accepts": ["q4"],
+          "strings": ["aaaa", "abbb", "aabb", "abab", "baaaa", "baabb", "b", "bb", "bbb", "bbbb", "baaa"],
+          "trans": {
+            "q0": { "a": ["q0", "q1"], "b": ["q0"], "ε": [] },
+            "q1": { "a": ["q2"],       "b": ["q2"], "ε": [] },
+            "q2": { "a": ["q3"],       "b": ["q3"], "ε": [] },
+            "q3": { "a": ["q4"],       "b": ["q4"], "ε": [] },
+            "q4": { "a": [],           "b": [],     "ε": [] }
+          }
+        }
+      ]
+    },
+    {
+      "label": "Union via ε",
+      "examples": [
+        {
+          "label": "a* ∪ b*",
+          "states": ["q0", "q1", "q2", "q3", "q4"],
+          "alphabet": ["a", "b"],
+          "start": "q0",
+          "accepts": ["q1", "q3"],
+          "strings": ["", "a", "aa", "aaa", "b", "bb", "bbb", "ab", "ba", "aab"],
+          "trans": {
+            "q0": { "a": [],      "b": [],      "ε": ["q1", "q3"] },
+            "q1": { "a": ["q2"],  "b": [],      "ε": [] },
+            "q2": { "a": ["q2"],  "b": [],      "ε": ["q1"] },
+            "q3": { "a": [],      "b": ["q4"],  "ε": [] },
+            "q4": { "a": [],      "b": ["q4"],  "ε": ["q3"] }
+          }
+        }
+      ]
+    }
+  ]
+}

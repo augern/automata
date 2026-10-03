@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grammar Derivations</title>
+    <link rel="stylesheet" href="../shared/shared.css" />
+    <style>
+      #p-grammar     { width: 240px; }
+      #p-productions { width: 200px; }
+      #p-deriv       { flex: 1; min-width: 320px; }
+
+      #grammar-input { flex: 1; }
+
+      /* ── Productions list ── */
+      #productions-wrap {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 10px 14px;
+      }
+.prod-empty {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.72rem;
+        color: var(--text-lo);
+        padding: 4px 2px;
+      }
+      .prod-rule {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        padding: 3px 6px;
+        border: 1px solid transparent;
+        margin-bottom: 2px;
+        font-family: var(--font-mono);
+        font-size: 0.74rem;
+        line-height: 1.5;
+        cursor: default;
+      }
+      .prod-rule.applicable { cursor: pointer; border-color: var(--border); background: var(--bg-cell); }
+      .prod-rule.applicable:hover { border-color: var(--accent); background: var(--accent-bg); }
+      .prod-rule-idx { color: var(--text-lo); font-size: 0.62rem; min-width: 1.6em; text-align: right; flex-shrink: 0; }
+      .prod-arrow    { color: var(--text-lo); }
+      .prod-sym-nt   { color: var(--accent); }
+      .prod-sym-t    { color: var(--text-dim); }
+      .prod-sym-eps  { color: var(--text-lo); font-style: italic; }
+
+      /* ── Derivation toolbar ── */
+      #deriv-toolbar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-bottom: 1px solid var(--border-lo);
+        background: var(--bg-panel);
+      }
+      #deriv-status { flex: 1; font-family: var(--font-mono); font-size: 0.63rem; color: var(--text-dim); }
+      #deriv-status .ds-start { color: var(--accent); font-weight: bold; }
+      #step-count { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-lo); white-space: nowrap; }
+
+      /* ── Derivation scroll ── */
+      #deriv-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 20px 16px;
+        background: var(--bg);
+      }
+      #deriv-empty {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--text-lo);
+      }
+
+      /* One derivation row */
+      .deriv-row {
+        display: flex;
+        align-items: baseline;
+        padding: 2px 0;
+        font-family: var(--font-mono);
+        font-size: 0.84rem;
+        line-height: 1.6;
+      }
+      .deriv-gutter {
+        width: 3.6em;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        padding-right: 0.7em;
+        align-items: center;
+      }
+      .deriv-gutter-label { font-family: var(--font-serif); font-style: italic; font-size: 0.63rem; color: var(--text-lo); }
+
+      /* ⇒ with CSS tooltip */
+      .deriv-arrow {
+        color: var(--text-dim);
+        cursor: help;
+        position: relative;
+        display: inline-block;
+        padding: 0 2px;
+        user-select: none;
+      }
+      .deriv-arrow::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 1.5em;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        padding: 2px 9px;
+        font-size: 0.65rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.12s;
+        z-index: 200;
+        font-family: var(--font-mono);
+        color: var(--text);
+        font-style: normal;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+      }
+      .deriv-arrow:hover::after { opacity: 1; }
+
+      /* Sentential form container */
+      .deriv-form {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+        align-items: center;
+        min-height: 1.6em;
+      }
+
+      /* ── Static symbols in past/current forms ── */
+      .sf-t   { color: var(--text-dim); }
+      .sf-nt  { color: var(--accent); }
+      .sf-eps { color: var(--text-lo); font-style: italic; }
+
+      /* Past-form: range that was rewritten (shown with underline) */
+      .sf-used {
+        color: var(--accent);
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+        opacity: 0.7;
+      }
+      .sf-used.sf-t { color: var(--text-dim); text-decoration-color: var(--text-dim); }
+
+      /* ── Interactive chips in current form ── */
+      button.sf-chip {
+        background: var(--bg-cell);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: inherit;
+        padding: 0 5px;
+        line-height: 1.5;
+        cursor: pointer;
+        transition: border-color 0.08s, background 0.08s, color 0.08s;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      button.sf-chip.chip-nt { color: var(--accent); }
+      button.sf-chip.chip-t  { color: var(--text-dim); }
+      button.sf-chip:hover   { border-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+
+      /* Chip within the actively dragged/committed selection range */
+      button.sf-chip.in-range {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+        color: var(--amber);
+      }
+      /* First chip in range — hint about drag direction */
+      button.sf-chip.range-anchor {
+        font-weight: bold;
+        outline: 1px solid var(--amber);
+        outline-offset: 1px;
+      }
+
+      /* Done indicator */
+      .deriv-done {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        padding: 4px 0;
+        font-size: 0.72rem;
+        font-family: var(--font-serif);
+        font-style: italic;
+        color: var(--green);
+      }
+      .deriv-done .done-word { font-family: var(--font-mono); font-style: normal; color: var(--text); }
+      .deriv-done .done-eps  { font-family: var(--font-mono); font-style: italic; color: var(--text-lo); }
+
+      /* ── Rule picker bar ── */
+      #rule-picker {
+        flex-shrink: 0;
+        display: none;
+        align-items: center;
+        gap: 5px 8px;
+        padding: 6px 12px;
+        border-top: 1.5px solid var(--border-hi);
+        background: var(--bg-panel);
+        flex-wrap: wrap;
+        min-height: 36px;
+      }
+      #rule-picker.visible { display: flex; }
+      .rp-lhs {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--text-lo);
+        white-space: nowrap;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .rp-lhs-sep { color: var(--text-lo); }
+      button.rp-rule {
+        background: var(--bg-cell);
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+        font-size: 0.74rem;
+        padding: 2px 8px;
+        cursor: pointer;
+        transition: border-color 0.1s, background 0.1s, color 0.1s;
+        line-height: 1.5;
+      }
+      button.rp-rule:hover { border-color: var(--accent); background: var(--accent-bg); color: var(--text); }
+      .rp-sym-nt  { color: var(--accent); }
+      .rp-sym-t   { color: var(--text-dim); }
+      .rp-sym-eps { color: var(--text-lo); font-style: italic; }
+      button.rp-rule:hover .rp-sym-nt,
+      button.rp-rule:hover .rp-sym-t,
+      button.rp-rule:hover .rp-sym-eps { color: inherit; }
+      .rp-hint { font-family: var(--font-serif); font-style: italic; font-size: 0.68rem; color: var(--text-lo); }
+      .rp-no-match { font-family: var(--font-serif); font-style: italic; font-size: 0.68rem; color: var(--text-lo); }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../index.html">Grammar Derivations</a></h1>
+      <span class="tag">CFG · CSG · Type 0</span>
+    </div>
+
+    <div id="panels">
+      <!-- 1. Grammar -->
+      <div class="panel" id="p-grammar" data-collapse="left">
+        <div class="panel-header" onclick="toggleCollapse('p-grammar')">
+          <span class="panel-title">Grammar</span>
+          <button class="collapse-btn"
+                  onclick="event.stopPropagation(); toggleCollapse('p-grammar');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="examples-bar">
+            <select id="examples-select" onchange="loadExample(this.value)">
+              <option value="">Example Grammar</option>
+            </select>
+          </div>
+          <textarea id="grammar-input" spellcheck="false"
+                    placeholder="S -> a S b | eps"></textarea>
+          <div id="grammar-footer">
+            <div id="error-msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. Productions -->
+      <div class="panel" id="p-productions">
+        <div class="panel-header" onclick="toggleCollapse('p-productions')">
+          <span class="panel-title">Productions</span>
+          <button class="collapse-btn"
+                  onclick="event.stopPropagation(); toggleCollapse('p-productions');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="productions-wrap">
+            <div id="productions-content">
+              <div class="prod-empty">Enter a grammar above.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Derivation workspace -->
+      <div class="panel" id="p-deriv">
+        <div class="panel-header" onclick="toggleCollapse('p-deriv')">
+          <span class="panel-title">Derivation</span>
+          <button class="collapse-btn"
+                  onclick="event.stopPropagation(); toggleCollapse('p-deriv');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="deriv-toolbar">
+            <button class="btn" id="btn-new"  onclick="derivNew()"  disabled>New Derivation</button>
+            <button class="btn" id="btn-undo" onclick="derivUndo()" disabled>&#8592; Undo</button>
+            <span id="deriv-status"></span>
+            <span id="step-count"></span>
+          </div>
+          <div id="deriv-scroll">
+            <div id="deriv-empty">Enter a grammar to start deriving.</div>
+            <div id="deriv-steps"></div>
+          </div>
+          <div id="rule-picker"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      initResize("rh-1", "p-grammar",     +1);
+      initResize("rh-2", "p-productions", +1);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // GRAMMAR PARSING
+      // Extended beyond parseBNF: LHS can be a sequence of symbols.
+      // Nonterminals = (a) single-symbol-LHS tokens, plus
+      //                (b) uppercase tokens in multi-symbol LHS rules.
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function parseDerivationGrammar(text) {
+        const EPS_TOKENS = new Set(["eps", "epsilon", "ε", "''", '""']);
+        const lines = text.split("\n").map(l => l.trim())
+                          .filter(l => l && !l.startsWith("//"));
+        if (!lines.length) throw new Error("Empty grammar");
+
+        const rules = [];
+        for (const line of lines) {
+          const arrow = line.includes("->") ? "->" : line.includes("→") ? "→" : null;
+          if (!arrow) throw new Error("Missing → in: " + line);
+          const arrowIdx = line.indexOf(arrow);
+          const lhsStr   = line.slice(0, arrowIdx).trim();
+          const rhsStr   = line.slice(arrowIdx + arrow.length).trim();
+          const lhsToks  = lhsStr.split(/\s+/).filter(Boolean);
+          if (!lhsToks.length) throw new Error("Empty LHS in: " + line);
+          for (const alt of rhsStr.split("|")) {
+            const rhsToks = alt.trim().split(/\s+/).filter(Boolean);
+            rules.push({
+              lhs: lhsToks,
+              rhs: rhsToks.length === 1 && EPS_TOKENS.has(rhsToks[0]) ? [] : rhsToks,
+            });
+          }
+        }
+        if (!rules.length) throw new Error("No rules found");
+
+        // Nonterminals: (a) symbols appearing as complete single-token LHS
+        const singleLHSnts = new Set(rules.filter(r => r.lhs.length === 1).map(r => r.lhs[0]));
+        // (b) uppercase-starting tokens in multi-symbol LHS (context-sensitive convention)
+        const multiLHSnts  = new Set(
+          rules.flatMap(r => r.lhs.length > 1 ? r.lhs.filter(s => /^[A-Z]/.test(s)) : [])
+        );
+        const nonterminals = new Set([...singleLHSnts, ...multiLHSnts]);
+
+        // Start symbol: LHS of the first single-token rule
+        const startRule = rules.find(r => r.lhs.length === 1);
+        if (!startRule) throw new Error("No single-symbol LHS found — need at least one rule of the form A -> …");
+        const start = startRule.lhs[0];
+
+        return { rules, nonterminals, start };
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // GRAMMAR STATE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _grammar = null;
+
+      function setError(msg) {
+        document.getElementById("error-msg").textContent = msg || "";
+      }
+
+      function build() {
+        const text = document.getElementById("grammar-input").value;
+        try {
+          _grammar = parseDerivationGrammar(text);
+          setError("");
+        } catch (e) {
+          _grammar = null;
+          setError(e.message);
+        }
+        renderProductions();
+        derivNew();
+      }
+
+      function loadExample(k) {
+        if (!k) return;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        document.getElementById("grammar-input").value = ex.text;
+        setError("");
+        build();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PRODUCTIONS PANEL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderProductions() {
+        const wrap = document.getElementById("productions-content");
+        if (!_grammar) {
+          wrap.innerHTML = '<div class="prod-empty">Enter a grammar above.</div>';
+          return;
+        }
+        const { rules, nonterminals: nts } = _grammar;
+        let h = '';
+        for (let i = 0; i < rules.length; i++) {
+          const applicable = isApplicableRule(i);
+          h += `<div class="prod-rule${applicable ? " applicable" : ""}"` +
+               (applicable ? ` onclick="applyRule(${i})"` : "") + `>`;
+          h += `<span class="prod-rule-idx">${i}</span>`;
+          h += `<span class="prod-arrow">:&nbsp;</span>`;
+          h += fmtRuleHTML(rules[i], nts, "prod-sym-nt", "prod-sym-t", "prod-sym-eps");
+          h += `</div>`;
+        }
+        wrap.innerHTML = h;
+      }
+
+      function isApplicableRule(ruleIdx) {
+        if (!_grammar || !hasCommittedRange() || _steps.length === 0) return false;
+        return matchesRange(_grammar.rules[ruleIdx].lhs);
+      }
+
+      // Returns true if rule.lhs exactly matches form[_selStart.._selEnd]
+      function matchesRange(lhsArr) {
+        if (!hasCommittedRange()) return false;
+        const form = _steps[_steps.length - 1].form;
+        const lo = Math.min(_selStart, _selEnd);
+        const hi = Math.max(_selStart, _selEnd);
+        if (lhsArr.length !== hi - lo + 1) return false;
+        return lhsArr.every((s, j) => form[lo + j] === s);
+      }
+
+      function fmtSyms(syms, nts, clsNT, clsT, clsEps) {
+        if (syms.length === 0) return `<span class="${clsEps}">ε</span>`;
+        return syms.map(s =>
+          nts.has(s)
+            ? `<span class="${clsNT}">${esc(s)}</span>`
+            : `<span class="${clsT}">${esc(s)}</span>`
+        ).join("&thinsp;");
+      }
+
+      function fmtRuleHTML(rule, nts, clsNT, clsT, clsEps) {
+        return fmtSyms(rule.lhs, nts, clsNT, clsT, clsEps) +
+               `<span style="color:var(--text-lo)"> → </span>` +
+               fmtSyms(rule.rhs, nts, clsNT, clsT, clsEps);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DERIVATION STATE
+      // step: { form: string[], ruleIdx: number|null, matchStart: number|null, matchEnd: number|null }
+      //   matchStart/matchEnd — range in the PREVIOUS form that was replaced
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _steps = [];
+
+      // Selection / drag state
+      let _selStart = null;  // committed range start (null = no selection)
+      let _selEnd   = null;  // committed range end
+      let _dragging = false;
+      let _dragCur  = null;  // live drag endpoint (not yet committed)
+
+      function hasCommittedRange() {
+        return _selStart !== null && _selEnd !== null;
+      }
+
+      function selLo() { return Math.min(_selStart, _selEnd); }
+      function selHi() { return Math.max(_selStart, _selEnd); }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DRAG SELECTION HANDLERS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function chipDown(pos, e) {
+        e.preventDefault();
+        _dragging = true;
+        _selStart = pos;
+        _dragCur  = pos;
+        _selEnd   = null;  // clear committed selection while dragging
+        updateChipHighlight();
+        // Clear picker and production highlights while dragging
+        document.getElementById("rule-picker").classList.remove("visible");
+      }
+
+      function chipEnter(pos) {
+        if (!_dragging) return;
+        _dragCur = pos;
+        updateChipHighlight();
+      }
+
+      document.addEventListener("mouseup", () => {
+        if (!_dragging) return;
+        _dragging = false;
+        // Commit selection
+        const lo = Math.min(_selStart, _dragCur);
+        const hi = Math.max(_selStart, _dragCur);
+        _selStart = lo;
+        _selEnd   = hi;
+        _dragCur  = null;
+        updateChipHighlight();
+        updateRulePicker();
+        renderProductions();
+      });
+
+      // Efficiently update chip CSS classes without re-rendering the whole form.
+      function updateChipHighlight() {
+        const chips = document.querySelectorAll("button.sf-chip");
+        const anchor = _selStart;
+        const cur    = _dragging ? _dragCur : null;
+        const lo     = _selStart !== null
+          ? Math.min(_selStart, cur ?? _selEnd ?? _selStart)
+          : null;
+        const hi     = _selStart !== null
+          ? Math.max(_selStart, cur ?? _selEnd ?? _selStart)
+          : null;
+        chips.forEach(chip => {
+          const i = parseInt(chip.dataset.pos, 10);
+          const inRange = lo !== null && i >= lo && i <= hi;
+          chip.classList.toggle("in-range",    inRange);
+          chip.classList.toggle("range-anchor", inRange && i === anchor);
+        });
+      }
+
+      function clearSelection() {
+        _selStart = null;
+        _selEnd   = null;
+        _dragCur  = null;
+        _dragging = false;
+        updateChipHighlight();
+        document.getElementById("rule-picker").classList.remove("visible");
+        document.getElementById("rule-picker").innerHTML = "";
+        renderProductions();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DERIVATION LOGIC
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function derivNew() {
+        _steps = [];
+        clearSelection();
+        if (!_grammar) { renderDeriv(); return; }
+        _steps.push({ form: [_grammar.start], ruleIdx: null, matchStart: null, matchEnd: null });
+        renderDeriv();
+      }
+
+      function derivUndo() {
+        if (_steps.length <= 1) return;
+        _steps.pop();
+        clearSelection();
+        renderDeriv();
+      }
+
+      function applyRule(ruleIdx) {
+        if (!_grammar || !hasCommittedRange() || _steps.length === 0) return;
+        const rule = _grammar.rules[ruleIdx];
+        if (!matchesRange(rule.lhs)) return;
+
+        const lo   = selLo();
+        const hi   = selHi();
+        const form = _steps[_steps.length - 1].form;
+        const newForm = [...form.slice(0, lo), ...rule.rhs, ...form.slice(hi + 1)];
+
+        _steps.push({ form: newForm, ruleIdx, matchStart: lo, matchEnd: hi });
+        clearSelection();
+        renderDeriv();
+        renderProductions();
+      }
+
+      // Is the derivation complete? True when no rule's LHS matches any substring of form.
+      function isDone(form) {
+        for (const rule of _grammar.rules) {
+          const lhs = rule.lhs;
+          if (lhs.length > form.length) continue;
+          for (let i = 0; i <= form.length - lhs.length; i++) {
+            if (lhs.every((s, j) => form[i + j] === s)) return false;
+          }
+        }
+        return true;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DERIVATION RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderDeriv() {
+        const emptyEl  = document.getElementById("deriv-empty");
+        const stepsEl  = document.getElementById("deriv-steps");
+        const statusEl = document.getElementById("deriv-status");
+        const countEl  = document.getElementById("step-count");
+
+        if (!_grammar || _steps.length === 0) {
+          emptyEl.style.display = "";
+          stepsEl.innerHTML = "";
+          statusEl.innerHTML = "";
+          countEl.textContent = "";
+          document.getElementById("btn-new").disabled  = !_grammar;
+          document.getElementById("btn-undo").disabled = true;
+          return;
+        }
+
+        emptyEl.style.display = "none";
+
+        const n = _steps.length - 1;
+        statusEl.innerHTML = `Start: <span class="ds-start">${esc(_grammar.start)}</span>`;
+        countEl.textContent = n === 0 ? "" : n === 1 ? "1 step" : n + " steps";
+        document.getElementById("btn-new").disabled  = false;
+        document.getElementById("btn-undo").disabled = _steps.length <= 1;
+
+        let h = "";
+        for (let i = 0; i < _steps.length; i++) {
+          const isCurrent = i === _steps.length - 1;
+          // Range in THIS form that will be replaced to produce the next form
+          const usedStart = i < _steps.length - 1 ? _steps[i + 1].matchStart : null;
+          const usedEnd   = i < _steps.length - 1 ? _steps[i + 1].matchEnd   : null;
+          h += buildRow(_steps[i], i, isCurrent, usedStart, usedEnd);
+        }
+
+        const lastForm = _steps[_steps.length - 1].form;
+        if (isDone(lastForm)) {
+          const wordHTML = lastForm.length === 0
+            ? `<span class="done-eps">ε</span>`
+            : `<span class="done-word">${lastForm.map(esc).join(" ")}</span>`;
+          h += `<div class="deriv-done">✓ derived ${wordHTML}</div>`;
+        }
+
+        stepsEl.innerHTML = h;
+
+        const scroll = document.getElementById("deriv-scroll");
+        scroll.scrollTop = scroll.scrollHeight;
+
+        // Re-apply chip highlight state (chips were just re-rendered)
+        updateChipHighlight();
+      }
+
+      function buildRow(step, idx, isCurrent, usedStart, usedEnd) {
+        let gutterHTML;
+        if (idx === 0) {
+          gutterHTML = `<span class="deriv-gutter-label">start</span>`;
+        } else {
+          const rule   = _grammar.rules[step.ruleIdx];
+          const lhsStr = rule.lhs.join(" ");
+          const rhsStr = rule.rhs.length > 0 ? rule.rhs.join(" ") : "ε";
+          const tip    = `rule ${step.ruleIdx}: ${lhsStr} → ${rhsStr}`;
+          gutterHTML   = `<span class="deriv-arrow" data-tip="${esc(tip)}">⇒</span>`;
+        }
+
+        const formHTML = isCurrent
+          ? buildCurrentFormHTML(step.form)
+          : buildPastFormHTML(step.form, usedStart, usedEnd);
+
+        return `<div class="deriv-row">` +
+               `<div class="deriv-gutter">${gutterHTML}</div>` +
+               `<div class="deriv-form">${formHTML}</div>` +
+               `</div>`;
+      }
+
+      // Past form: all symbols static; the rewritten range underlined
+      function buildPastFormHTML(form, usedStart, usedEnd) {
+        if (form.length === 0) return `<span class="sf-eps">ε</span>`;
+        const { nonterminals: nts } = _grammar;
+        return form.map((sym, i) => {
+          const isNT   = nts.has(sym);
+          const isUsed = usedStart !== null && i >= usedStart && i <= usedEnd;
+          const baseCls = isNT ? "sf-nt" : "sf-t";
+          const usedCls = isUsed ? " sf-used" + (isNT ? "" : " sf-t") : "";
+          return `<span class="${baseCls}${usedCls}">${esc(sym)}</span>`;
+        }).join("");
+      }
+
+      // Current form: all symbols are interactive chips
+      function buildCurrentFormHTML(form) {
+        if (form.length === 0) return `<span class="sf-eps">ε</span>`;
+        const { nonterminals: nts } = _grammar;
+        return form.map((sym, i) => {
+          const isNT  = nts.has(sym);
+          const cls   = `sf-chip ${isNT ? "chip-nt" : "chip-t"}`;
+          return `<button class="${cls}" data-pos="${i}"` +
+                 ` onmousedown="chipDown(${i},event)" onmouseenter="chipEnter(${i})"` +
+                 `>${esc(sym)}</button>`;
+        }).join("");
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // RULE PICKER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function updateRulePicker() {
+        const picker = document.getElementById("rule-picker");
+        if (!_grammar || !hasCommittedRange() || _steps.length === 0) {
+          picker.classList.remove("visible");
+          picker.innerHTML = "";
+          return;
+        }
+
+        const { rules, nonterminals: nts } = _grammar;
+        const form = _steps[_steps.length - 1].form;
+        const lo   = selLo();
+        const hi   = selHi();
+        const sel  = form.slice(lo, hi + 1);
+
+        const matching = rules.map((r, i) => ({ r, i }))
+                              .filter(({ r }) => matchesRange(r.lhs));
+
+        picker.classList.add("visible");
+
+        // Show what's selected as the LHS label
+        let h = `<span class="rp-lhs">`;
+        h += fmtSyms(sel, nts, "rp-sym-nt", "rp-sym-t", "rp-sym-eps");
+        h += `<span class="rp-lhs-sep"> →</span></span>`;
+
+        if (matching.length === 0) {
+          h += `<span class="rp-no-match">no matching rule</span>`;
+        } else {
+          for (const { r, i } of matching) {
+            h += `<button class="rp-rule" onclick="applyRule(${i})">`;
+            h += `<span style="color:var(--text-lo);font-size:0.62rem">${i}: </span>`;
+            h += fmtSyms(r.rhs, nts, "rp-sym-nt", "rp-sym-t", "rp-sym-eps");
+            h += `</button>`;
+          }
+        }
+        picker.innerHTML = h;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // KEYBOARD
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      document.addEventListener("keydown", e => {
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (e.key === "Escape") { e.preventDefault(); clearSelection(); }
+        if ((e.key === "z" || e.key === "Z") && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault(); derivUndo();
+        }
+      });
+
+      document.getElementById("grammar-input").addEventListener("input", () => build());
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES + INIT
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      initPanelStorage("derivation-tool-v1", ["p-grammar", "p-productions", "p-deriv"]);
+      loadPanelState();
+
+      const EXAMPLES = {};
+
+      loadExamplesInto(
+        "../examples/examples-derivation.json",
+        "examples-select",
+        EXAMPLES,
+        function () {
+          const firstKey = Object.keys(EXAMPLES)[0];
+          if (firstKey) {
+            loadExample(firstKey);
+            document.getElementById("examples-select").value = firstKey;
+          }
+        }
+      );
+
+      build();
+    </script>
+  </body>
+</html>

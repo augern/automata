@@ -1,0 +1,1564 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>NFA Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="../shared/shared.css" />
+    <style>
+      /* ── Panel widths ── */
+      #p-def  { width: 360px; }
+      #p-nfa  { width: 340px; }
+      #p-sim  { flex: 1; min-width: 240px; }
+
+      /* ── Definition panel ── */
+      #def-examples-bar {
+        padding: 5px 10px;
+        border-bottom: 1px solid var(--border-lo);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #def-examples-bar select {
+        flex: 1;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 2px 4px;
+        height: 22px;
+        outline: none;
+      }
+      #def-table-scroll {
+        flex: 1;
+        overflow: auto;
+        padding: 10px 12px 6px;
+      }
+
+      /* Transition table */
+      .trans-table {
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        width: 100%;
+      }
+      .trans-table th {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-lo);
+        padding: 2px 4px;
+        text-align: center;
+        font-weight: normal;
+        color: var(--text-dim);
+        white-space: nowrap;
+        position: relative;
+      }
+      .trans-table th.sym-hdr {
+        min-width: 60px;
+      }
+      .trans-table th.eps-hdr {
+        min-width: 60px;
+        color: var(--text-lo);
+        font-style: italic;
+      }
+      .trans-table td {
+        border: 1px solid var(--border-lo);
+        padding: 1px 3px;
+        text-align: center;
+        vertical-align: middle;
+      }
+      .trans-table td.state-name-cell {
+        font-style: italic;
+        color: var(--text-dim);
+        background: var(--bg-panel);
+        padding: 2px 8px;
+        white-space: nowrap;
+        text-align: left;
+      }
+      .trans-table td.state-name-cell.is-start {
+        color: var(--accent);
+      }
+      .trans-table td.state-name-cell.is-accept {
+        color: var(--green);
+        font-weight: bold;
+      }
+      .trans-table td.state-name-cell.is-both {
+        color: var(--amber);
+        font-weight: bold;
+      }
+      .trans-table td.marker-cell {
+        background: var(--bg-panel);
+        width: 22px;
+        text-align: center;
+      }
+      /* Inline transition input */
+      .trans-table td.trans-cell input {
+        width: 100%;
+        min-width: 48px;
+        background: var(--bg-input);
+        color: var(--text);
+        border: none;
+        outline: none;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 2px 4px;
+        text-align: center;
+        height: 22px;
+        box-sizing: border-box;
+      }
+      .trans-table td.trans-cell input:focus {
+        background: var(--accent-bg);
+        outline: 1px solid var(--accent);
+        outline-offset: -1px;
+      }
+      .trans-table td.trans-cell input.invalid {
+        color: var(--red);
+        background: var(--red-bg);
+      }
+      .trans-table td.trans-cell.eps-cell input {
+        color: var(--text-lo);
+        font-style: italic;
+      }
+      .trans-table td.trans-cell.eps-cell input:focus {
+        color: var(--text);
+        font-style: normal;
+      }
+      /* Remove-state button in first column */
+      .trans-table td.rm-cell {
+        width: 18px;
+        padding: 0;
+        background: var(--bg-panel);
+      }
+      .btn-rm-state {
+        background: none;
+        border: none;
+        color: var(--text-lo);
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        padding: 2px 4px;
+        display: block;
+        width: 100%;
+      }
+      .btn-rm-state:hover { color: var(--red); }
+      /* Remove-symbol button in header */
+      .btn-rm-sym {
+        background: none;
+        border: none;
+        color: var(--text-lo);
+        cursor: pointer;
+        font-size: 0.7rem;
+        margin-left: 3px;
+        padding: 0 1px;
+        vertical-align: middle;
+      }
+      .btn-rm-sym:hover { color: var(--red); }
+
+      /* Radio / checkbox markers */
+      .trans-table input[type="radio"],
+      .trans-table input[type="checkbox"] {
+        cursor: pointer;
+        accent-color: var(--accent);
+      }
+      .trans-table input[type="checkbox"] {
+        accent-color: var(--green);
+      }
+
+      /* Definition footer */
+      #def-footer {
+        flex-shrink: 0;
+        padding: 6px 10px 8px;
+        border-top: 1px solid var(--border-lo);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .def-hint {
+        font-family: var(--font-serif);
+        font-size: 0.63rem;
+        color: var(--text-lo);
+        flex: 1;
+        line-height: 1.6;
+        padding-left: 2px;
+      }
+      .def-hint code {
+        font-family: var(--font-mono);
+        font-size: 0.75em;
+        color: var(--text-dim);
+      }
+
+      /* ── NFA graph panel ── */
+      #nfa-graph-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+      }
+      #nfa-svg {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #nfa-graph-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--text-lo);
+        pointer-events: none;
+      }
+
+      /* NFA graph — circles for states */
+      .nfa-node circle {
+        fill: var(--bg);
+        stroke: var(--text);
+        stroke-width: 1.2;
+        transition: fill 0.2s, stroke 0.2s, stroke-width 0.2s;
+      }
+      .nfa-node .accept-ring {
+        fill: none;
+        stroke-width: 1 !important;
+      }
+      .nfa-node .state-label {
+        font-size: 11px;
+        font-weight: bold;
+        fill: var(--text);
+        font-family: var(--font-mono);
+        pointer-events: none;
+      }
+      .nfa-node.accepting circle {
+        stroke: var(--green);
+      }
+      .nfa-node.accepting .state-label {
+        fill: var(--green);
+      }
+      /* Edges */
+      .nfa-edge path {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 0.9;
+        transition: stroke 0.2s, stroke-width 0.2s;
+      }
+      .nfa-edge.eps-edge path {
+        stroke: var(--text-lo);
+        stroke-dasharray: 4 3;
+      }
+      .nfa-edge line { stroke: none; }
+      .nfa-edge text {
+        font-size: 10px;
+        fill: var(--text-dim);
+        font-family: var(--font-mono);
+        font-style: italic;
+        pointer-events: none;
+      }
+      .nfa-edge.eps-edge text {
+        fill: var(--text-lo);
+        font-style: italic;
+      }
+      .nfa-arrowhead { fill: var(--text); }
+      .nfa-arrowhead-eps { fill: var(--text-lo); }
+      .start-arrow-nfa {
+        stroke: var(--text-dim);
+        stroke-width: 1;
+      }
+      /* Simulation highlighting */
+      .nfa-node.sim-active circle {
+        fill: var(--accent-bg) !important;
+        stroke: var(--accent) !important;
+        stroke-width: 2 !important;
+      }
+      .nfa-node.sim-active .state-label { fill: var(--accent) !important; }
+      .nfa-node.accepting.sim-active circle {
+        fill: var(--green-bg) !important;
+        stroke: var(--green) !important;
+      }
+      .nfa-node.accepting.sim-active .state-label { fill: var(--green) !important; }
+      .nfa-node.sim-dead circle {
+        fill: var(--red-bg) !important;
+        stroke: var(--red) !important;
+        stroke-width: 1.5 !important;
+        opacity: 0.5;
+      }
+      .nfa-node.sim-dead .state-label { fill: var(--red) !important; opacity: 0.5; }
+
+
+      /* ── Simulation panel ── */
+      #sim-controls {
+        flex-shrink: 0;
+        border-bottom: 1.5px solid var(--border-hi);
+        background: var(--bg-panel);
+      }
+      #sim-input-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        flex-wrap: wrap;
+      }
+      #sim-input-row .input-group {
+        flex: 1;
+        min-width: 100px;
+      }
+      #sim-string-input {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.84rem;
+        padding: 3px 7px;
+        height: 22px;
+        box-sizing: border-box;
+        outline: none;
+      }
+      #sim-string-input:focus {
+        border-color: var(--accent);
+        outline: 1px solid var(--accent);
+      }
+      #sim-log-bar {
+        font-size: 0.62rem;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+        padding: 3px 10px 4px;
+        border-top: 1px solid var(--border-lo);
+        min-height: 1.8em;
+        line-height: 1.5;
+      }
+      /* Tape */
+      #sim-tape-wrap {
+        flex-shrink: 0;
+        padding: 8px 12px 6px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        border-bottom: 1px solid var(--border-lo);
+      }
+      .tape {
+        display: flex;
+        gap: 2px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .tape-cell {
+        width: 24px;
+        height: 24px;
+        border: 1.5px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.12s, background 0.12s, color 0.12s, opacity 0.12s;
+      }
+      .tape-cell.tc-consumed { opacity: 0.28; border-color: var(--border-lo); }
+      .tape-cell.tc-current {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+        color: var(--amber);
+        font-weight: bold;
+      }
+      .tape-eof {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.68rem;
+        color: var(--text-lo);
+      }
+
+      /* Result banner */
+      #sim-result {
+        flex-shrink: 0;
+        padding: 5px 12px;
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+      }
+      #sim-result.accept { color: var(--green); background: var(--green-bg); border-bottom: 1px solid var(--green); }
+      #sim-result.reject { color: var(--red);   background: var(--red-bg);   border-bottom: 1px solid var(--red); }
+
+      /* Tree */
+      #sim-tree-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+      }
+      #sim-tree-svg {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #sim-tree-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--text-lo);
+        pointer-events: none;
+      }
+
+      /* Tree nodes */
+      .tree-node circle {
+        fill: var(--bg);
+        stroke: var(--text);
+        stroke-width: 1.2;
+        transition: fill 0.18s, stroke 0.18s;
+      }
+      .tree-node.tn-active circle  { fill: var(--accent-bg); stroke: var(--accent); }
+      .tree-node.tn-accept circle  { fill: var(--green-bg);  stroke: var(--green); stroke-width: 2; }
+      .tree-node.tn-reject circle  { fill: var(--red-bg);    stroke: var(--red); }
+      .tree-node.tn-dead   circle  { fill: var(--bg-cell);   stroke: var(--border-lo); }
+      .tree-node .tn-label {
+        font-size: 10px;
+        font-family: var(--font-mono);
+        fill: var(--text);
+        pointer-events: none;
+      }
+      .tree-node.tn-active  .tn-label { fill: var(--accent); font-weight: bold; }
+      .tree-node.tn-accept  .tn-label { fill: var(--green);  font-weight: bold; }
+      .tree-node.tn-reject  .tn-label { fill: var(--red); }
+      .tree-node.tn-dead    .tn-label { fill: var(--text-lo); }
+      .tree-node .tn-dead-mark {
+        font-size: 9px;
+        fill: var(--red);
+        font-family: var(--font-mono);
+        opacity: 0.8;
+        pointer-events: none;
+      }
+      /* Accept double-ring */
+      .tree-node.tn-accept .tn-ring {
+        fill: none;
+        stroke: var(--green);
+        stroke-width: 1;
+      }
+      .tree-edge {
+        fill: none;
+        stroke: var(--border);
+        stroke-width: 1;
+        transition: stroke 0.18s;
+      }
+      .tree-edge.te-active { stroke: var(--accent); stroke-width: 1.5; }
+      .tree-edge.te-accept      { stroke: var(--green);  stroke-width: 1.5; }
+      .tree-edge.te-accept-path { stroke: var(--green);  stroke-width: 2.5; }
+      .tree-edge.te-dead        { stroke: var(--border-lo); }
+      .tree-edge.te-eps               { stroke-dasharray: 4 3; stroke: var(--text-lo); }
+      .tree-edge.te-eps.te-active     { stroke: var(--accent); }
+      .tree-edge.te-eps.te-accept     { stroke: var(--green); }
+      .tree-edge.te-eps.te-accept-path { stroke: var(--green); stroke-width: 2; }
+      .tree-edge.te-eps.te-dead       { stroke: var(--border-lo); }
+      .tree-edge-label {
+        font-size: 9px;
+        font-family: var(--font-mono);
+        fill: var(--text-dim);
+        font-style: italic;
+        pointer-events: none;
+      }
+      /* Depth axis labels */
+      .tree-depth-label {
+        font-size: 9px;
+        font-family: var(--font-serif);
+        font-style: italic;
+        fill: var(--text-lo);
+      }
+
+      /* ε-closure chip shown at depth-0 nodes when ε-closure > {start} */
+      .tree-node .tn-eps-badge {
+        font-size: 8px;
+        fill: var(--text-lo);
+        font-family: var(--font-mono);
+        font-style: italic;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../index.html">NFA Simulator</a></h1>
+      <span class="tag">NFA · ε-NFA</span>
+    </div>
+
+    <div id="panels">
+      <!-- 1. NFA Definition -->
+      <div class="panel" id="p-def">
+        <div class="panel-header" onclick="toggleCollapse('p-def')">
+          <span class="panel-title">NFA Definition</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="def-examples-bar">
+            <select id="examples-select" onchange="loadExampleNFA(this.value)">
+              <option value="">Example…</option>
+            </select>
+          </div>
+          <div id="def-table-scroll">
+            <!-- transition table rendered by JS -->
+          </div>
+          <div id="def-footer">
+            <button class="btn" onclick="addState()">+ State</button>
+            <button class="btn" onclick="addSymbol()">+ Symbol</button>
+            <span class="def-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for ∅.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. NFA Graph -->
+      <div class="panel" id="p-nfa">
+        <div class="panel-header" onclick="toggleCollapse('p-nfa')">
+          <span class="panel-title">NFA</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="nfa-graph-wrap">
+            <svg id="nfa-svg">
+              <defs>
+                <marker id="nfa-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" class="nfa-arrowhead" />
+                </marker>
+                <marker id="nfa-arrow-eps" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" class="nfa-arrowhead-eps" />
+                </marker>
+              </defs>
+              <g id="nfa-graph-root"></g>
+            </svg>
+            <div id="nfa-graph-empty">Define an NFA above.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Simulation -->
+      <div class="panel" id="p-sim">
+        <div class="panel-header" onclick="toggleCollapse('p-sim')">
+          <span class="panel-title">Simulation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('nfa-sim');" title="NFA simulation algorithm">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="sim-controls">
+            <div id="sim-input-row">
+              <div class="input-group">
+                <input id="sim-string-input" type="text" spellcheck="false" placeholder="enter string…" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()" title="Restart" disabled></button>
+                <button class="btn" id="btn-sim-back"  onclick="simBack()"    disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-sim-step" onclick="simStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all" onclick="simRunAll()" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="examples-chips">
+              <span class="examples-label">Examples:</span>
+              <span id="chips-container"></span>
+            </div>
+            <div id="sim-log-bar"></div>
+          </div>
+          <!-- Accept / Reject banner -->
+          <div id="sim-result"></div>
+          <!-- Tape -->
+          <div id="sim-tape-wrap" style="display:none">
+            <div class="tape" id="sim-tape"></div>
+            <span class="tape-eof">⊣</span>
+          </div>
+          <!-- Tree -->
+          <div id="sim-tree-wrap">
+            <svg id="sim-tree-svg">
+              <defs>
+                <marker id="tree-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L7,3 z" fill="var(--text-dim)" />
+                </marker>
+              </defs>
+              <g id="sim-tree-root"></g>
+            </svg>
+            <div id="sim-tree-empty">Define an NFA and enter a string to simulate.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- #panels -->
+
+    <!-- Algorithm modal (reused from shared pattern) -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1" onclick="if(event.target===this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      // shared.js stubs
+      function renderTree() {}
+
+      initResize("rh-1", "p-def", +1);
+      initResize("rh-2", "p-nfa", +1);
+      initAlgoModal();
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ALGORITHM MODAL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PC_NFA_SIM = pcBlock(
+        "NFA Simulation",
+        [
+          { label: "Input",  sym: it("M") + " = (Q, Σ, δ, q₀, F)", desc: "ε-NFA" },
+          { label: "",       sym: it("w") + " = a₁a₂…aₙ",          desc: "input string" },
+          { label: "Output", sym: "accept / reject",                 desc: "" },
+        ],
+        `current ${_la} {q₀}${cm("start from q₀; ε-closure taken per step below")}
+for i ${_in} 1..n:${cm("consume each input symbol")}
+    reach ${_la} ${_emp}
+    for each q ${_in} current:
+        for each r ${_in} ε-closure({q}):${cm("ε-expand before sym")}
+            reach ${_la} reach ${_cup} ε-closure(δ(r, aᵢ))${cm("sym-transition + ε-close after")}
+    current ${_la} reach
+    if current = ${_emp}: ${kw("reject")}${cm("no active states")}
+if ε-closure(current) ∩ F ${_neq} ${_emp}: ${kw("accept")}${cm("n=0: checks ε-closure({q₀})")}
+else: ${kw("reject")}`
+      );
+
+      function openAlgoModal(key) {
+        const configs = {
+          "nfa-sim": { title: "NFA Simulation", subtitle: "ε-closure fold", pc: PC_NFA_SIM },
+        };
+        const cfg = configs[key];
+        if (!cfg) return;
+        document.getElementById("algo-title").textContent    = cfg.title;
+        document.getElementById("algo-subtitle").textContent = cfg.subtitle || "";
+        document.getElementById("algo-body").innerHTML       = cfg.pc;
+        document.getElementById("algo-overlay").classList.remove("hidden");
+        const closeBtn = document.querySelector(".algo-close");
+        if (closeBtn) closeBtn.focus();
+      }
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && isAlgoModalOpen()) closeAlgoModal();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NFA STATE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let nfaStates   = ["q0", "q1"];   // ordered list of state names
+      let nfaAlphabet = ["a"];           // user-editable symbols; ε always implicit
+      let nfaStartIdx = 0;               // index into nfaStates
+      let nfaAccepts  = new Set([1]);    // indices into nfaStates
+      let nfaTrans    = {                // nfaTrans[state][sym] = [state, ...]
+        "q0": { "a": ["q1"], "ε": [] },
+        "q1": { "a": [],     "ε": [] }
+      };
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NFA MUTATION HELPERS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function addState() {
+        const n = nfaStates.length;
+        const name = "q" + n;
+        nfaStates.push(name);
+        nfaTrans[name] = {};
+        for (const sym of nfaAlphabet) nfaTrans[name][sym] = [];
+        nfaTrans[name]["ε"] = [];
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function removeState(idx) {
+        if (nfaStates.length <= 1) return; // keep at least one
+        const name = nfaStates[idx];
+        nfaStates.splice(idx, 1);
+        delete nfaTrans[name];
+        // Remove references from other states
+        for (const s of nfaStates) {
+          for (const sym of [...nfaAlphabet, "ε"]) {
+            if (nfaTrans[s] && nfaTrans[s][sym]) {
+              nfaTrans[s][sym] = nfaTrans[s][sym].filter(t => t !== name);
+            }
+          }
+        }
+        // Fix start index
+        if (nfaStartIdx >= idx && nfaStartIdx > 0) nfaStartIdx--;
+        // Fix accepts
+        const newAccepts = new Set();
+        for (const a of nfaAccepts) {
+          if (a < idx) newAccepts.add(a);
+          else if (a > idx) newAccepts.add(a - 1);
+        }
+        nfaAccepts = newAccepts;
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function addSymbol() {
+        let name = prompt("New symbol (single character):", "");
+        if (name === null) return;
+        name = name.trim();
+        if (!name || name === "ε") return;
+        if (nfaAlphabet.includes(name)) return;
+        nfaAlphabet.push(name);
+        for (const s of nfaStates) {
+          if (!nfaTrans[s]) nfaTrans[s] = {};
+          if (!nfaTrans[s][name]) nfaTrans[s][name] = [];
+        }
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function removeSymbol(sym) {
+        const idx = nfaAlphabet.indexOf(sym);
+        if (idx === -1) return;
+        nfaAlphabet.splice(idx, 1);
+        for (const s of nfaStates) {
+          if (nfaTrans[s]) delete nfaTrans[s][sym];
+        }
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function setStart(idx) {
+        nfaStartIdx = idx;
+        // Update name-cell classes without full re-render for responsiveness
+        document.querySelectorAll(".state-name-cell").forEach((td, i) => {
+          td.classList.toggle("is-start", i === idx && !nfaAccepts.has(i));
+          td.classList.toggle("is-accept", i !== idx && nfaAccepts.has(i));
+          td.classList.toggle("is-both", i === idx && nfaAccepts.has(i));
+          td.classList.remove("is-start"); // recalculate below
+        });
+        rerenderStateNameCells();
+        onNFAChange();
+      }
+
+      function toggleAccept(idx, checked) {
+        if (checked) nfaAccepts.add(idx);
+        else nfaAccepts.delete(idx);
+        rerenderStateNameCells();
+        onNFAChange();
+      }
+
+      function rerenderStateNameCells() {
+        document.querySelectorAll(".state-name-cell").forEach((td, i) => {
+          const isStart  = i === nfaStartIdx;
+          const isAccept = nfaAccepts.has(i);
+          td.classList.toggle("is-start",  isStart  && !isAccept);
+          td.classList.toggle("is-accept", !isStart && isAccept);
+          td.classList.toggle("is-both",   isStart  && isAccept);
+        });
+      }
+
+      function setTransCell(stateName, sym, value) {
+        if (!nfaTrans[stateName]) nfaTrans[stateName] = {};
+        const parts = value.split(",").map(s => s.trim()).filter(Boolean);
+        nfaTrans[stateName][sym] = parts;
+        onNFAChange();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DEFINITION TABLE RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderDefTable() {
+        const wrap = document.getElementById("def-table-scroll");
+        const allSyms = [...nfaAlphabet, "ε"];
+
+        let h = `<table class="trans-table"><thead><tr>`;
+        h += `<th></th>`;                           // remove-state col
+        h += `<th title="Start state">→</th>`;
+        h += `<th title="Accepting state">★</th>`;
+        h += `<th style="text-align:left;padding-left:8px">state</th>`;
+        for (const sym of nfaAlphabet) {
+          h += `<th class="sym-hdr">${esc(sym)}` +
+               `<button class="btn-rm-sym" onclick="removeSymbol('${esc(sym)}')" title="Remove symbol '${esc(sym)}'">×</button></th>`;
+        }
+        h += `<th class="eps-hdr">ε</th>`;
+        h += `</tr></thead><tbody>`;
+
+        for (let i = 0; i < nfaStates.length; i++) {
+          const sn = nfaStates[i];
+          const isStart  = i === nfaStartIdx;
+          const isAccept = nfaAccepts.has(i);
+          let nameCls = "state-name-cell";
+          if (isStart && isAccept) nameCls += " is-both";
+          else if (isStart)  nameCls += " is-start";
+          else if (isAccept) nameCls += " is-accept";
+
+          h += `<tr>`;
+          h += `<td class="rm-cell"><button class="btn-rm-state" onclick="removeState(${i})" title="Remove state">×</button></td>`;
+          h += `<td class="marker-cell"><input type="radio" name="nfa-start" ${isStart ? "checked" : ""} onchange="setStart(${i})"></td>`;
+          h += `<td class="marker-cell"><input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)"></td>`;
+          h += `<td class="${nameCls}">${esc(sn)}</td>`;
+
+          for (const sym of allSyms) {
+            const val = (nfaTrans[sn] && nfaTrans[sn][sym]) ? nfaTrans[sn][sym].join(", ") : "";
+            const isEps = sym === "ε";
+            h += `<td class="trans-cell${isEps ? " eps-cell" : ""}">` +
+                 `<input type="text" value="${esc(val)}" placeholder="–"` +
+                 ` data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
+                 ` onchange="onTransInput(this)"` +
+                 ` oninput="validateTransInput(this)"` +
+                 ` onkeydown="transInputKeydown(event)"` +
+                 `></td>`;
+          }
+          h += `</tr>`;
+        }
+        h += `</tbody></table>`;
+        wrap.innerHTML = h;
+      }
+
+      function onTransInput(input) {
+        const stateName = input.dataset.state;
+        const sym = input.dataset.sym;
+        setTransCell(stateName, sym, input.value);
+        validateTransInput(input);
+      }
+
+      function validateTransInput(input) {
+        const parts = input.value.split(",").map(s => s.trim()).filter(Boolean);
+        const bad = parts.some(p => !nfaStates.includes(p));
+        input.classList.toggle("invalid", bad);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NFA GRAPH RENDERING  (D3 + Dagre, circles for states)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const NFA_R = 16; // node circle radius
+
+      const _nfaZoom = d3.zoom()
+        .scaleExtent([0.1, 8])
+        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", e => d3.select("#nfa-graph-root").attr("transform", e.transform));
+      d3.select("#nfa-svg").call(_nfaZoom).on("dblclick.zoom", null);
+      document.getElementById("nfa-svg").addEventListener("dblclick", () => fitNFA());
+
+      function fitNFA() {
+        try {
+          const rootEl = document.getElementById("nfa-graph-root");
+          const bb = rootEl.getBBox();
+          const svgEl = document.getElementById("nfa-svg");
+          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 340;
+          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
+          if (!bb || bb.width < 1 || bb.height < 1) return;
+          const sc = Math.min(0.92, Math.min(vw / (bb.width + 80), vh / (bb.height + 60)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
+          d3.select("#nfa-svg").call(_nfaZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch(e) { /* ignore */ }
+      }
+
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => { if (nfaStates.length > 0) fitNFA(); })
+          .observe(document.getElementById("nfa-svg").parentElement);
+      }
+
+      function renderNFAGraph() {
+        const root = d3.select("#nfa-graph-root");
+        root.selectAll("*").remove();
+
+        const n = nfaStates.length;
+        document.getElementById("nfa-graph-empty").style.display = n === 0 ? "" : "none";
+        if (n === 0) return;
+
+        // Collect all edges, group by (from, to, isEps)
+        // edgeMap: "f-t" → { from, to, syms[], isEps }
+        // Separate eps from symbol edges
+        const edgeMap  = new Map(); // non-self
+        const selfLoops = new Map(); // stateIdx → { syms[], hasEps }
+
+        for (let fi = 0; fi < nfaStates.length; fi++) {
+          const sn = nfaStates[fi];
+          const allSyms = [...nfaAlphabet, "ε"];
+          for (const sym of allSyms) {
+            const targets = (nfaTrans[sn] && nfaTrans[sn][sym]) || [];
+            for (const t of targets) {
+              const ti = nfaStates.indexOf(t);
+              if (ti === -1) continue;
+              const isEps = sym === "ε";
+              if (fi === ti) {
+                if (!selfLoops.has(fi)) selfLoops.set(fi, []);
+                selfLoops.get(fi).push({ sym, isEps });
+              } else {
+                const k = fi + "-" + ti;
+                if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, syms: [], hasEps: false });
+                const e = edgeMap.get(k);
+                e.syms.push(sym);
+                if (isEps) e.hasEps = true;
+              }
+            }
+          }
+        }
+
+        // Dagre layout (non-self edges only)
+        const dg = new dagre.graphlib.Graph();
+        dg.setGraph({ rankdir: "LR", nodesep: 36, ranksep: 64, marginx: 50, marginy: 40 });
+        dg.setDefaultEdgeLabel(() => ({}));
+        for (let i = 0; i < n; i++) dg.setNode(i, { width: NFA_R * 2 + 4, height: NFA_R * 2 + 4 });
+        for (const [k, e] of edgeMap) dg.setEdge(e.from, e.to, {});
+        dagre.layout(dg);
+
+        const pathLine = d3.line().x(p => p.x).y(p => p.y).curve(d3.curveCatmullRom);
+
+        // Draw non-self edges
+        for (const [k, e] of edgeMap) {
+          const ed = dg.edge(e.from, e.to);
+          if (!ed) continue;
+          const pts = ed.points;
+          const mid = pts[Math.floor(pts.length / 2)];
+          const allEps = e.syms.every(s => s === "ε");
+          const eg = root.append("g")
+            .attr("class", "nfa-edge" + (allEps ? " eps-edge" : ""))
+            .attr("data-edge", k);
+          const arrowId = allEps ? "nfa-arrow-eps" : "nfa-arrow";
+          eg.append("path").attr("d", pathLine(pts));
+          if (pts.length >= 2) {
+            const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
+            eg.append("line").attr("x1", p0.x).attr("y1", p0.y)
+              .attr("x2", p1.x).attr("y2", p1.y)
+              .attr("stroke", "none").attr("marker-end", `url(#${arrowId})`);
+          }
+          eg.append("text")
+            .attr("x", mid.x).attr("y", mid.y - 6)
+            .attr("text-anchor", "middle")
+            .text(e.syms.join(", "));
+        }
+
+        // Draw self-loops
+        for (const [si, entries] of selfLoops) {
+          const dn = dg.node(si);
+          if (!dn) continue;
+          const cx = dn.x, top = dn.y - NFA_R - 2;
+          const allEps = entries.every(e => e.isEps);
+          const arrowId = allEps ? "nfa-arrow-eps" : "nfa-arrow";
+          const eg = root.append("g")
+            .attr("class", "nfa-edge" + (allEps ? " eps-edge" : ""))
+            .attr("data-self", si);
+          eg.append("path")
+            .attr("d", `M${cx-9},${top} C${cx-28},${top-36} ${cx+28},${top-36} ${cx+9},${top}`)
+            .attr("marker-end", `url(#${arrowId})`);
+          eg.append("text")
+            .attr("x", cx).attr("y", top - 38)
+            .attr("text-anchor", "middle")
+            .text(entries.map(e => e.sym).join(", "));
+        }
+
+        // Draw nodes (on top of edges)
+        for (let i = 0; i < n; i++) {
+          const dn = dg.node(i);
+          if (!dn) continue;
+          const isAccept = nfaAccepts.has(i);
+          const ng = root.append("g")
+            .attr("class", "nfa-node" + (isAccept ? " accepting" : ""))
+            .attr("id", "nfa-state-" + i)
+            .attr("transform", `translate(${dn.x},${dn.y})`);
+          ng.append("circle").attr("r", NFA_R);
+          if (isAccept) {
+            ng.append("circle").attr("class", "accept-ring").attr("r", NFA_R - 3);
+          }
+          ng.append("text")
+            .attr("class", "state-label")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(nfaStates[i]);
+          // Entry arrow for start state
+          if (i === nfaStartIdx) {
+            root.append("line")
+              .attr("class", "start-arrow-nfa")
+              .attr("x1", dn.x - NFA_R - 18).attr("y1", dn.y)
+              .attr("x2", dn.x - NFA_R - 1).attr("y2", dn.y)
+              .attr("marker-end", "url(#nfa-arrow)");
+          }
+        }
+
+        fitNFA();
+      }
+
+      function nfaHighlightStates(activeSet, deadSet) {
+        d3.selectAll(".nfa-node")
+          .classed("sim-active", false)
+          .classed("sim-dead", false);
+        for (const idx of (activeSet || [])) {
+          d3.select("#nfa-state-" + idx).classed("sim-active", true);
+        }
+        for (const idx of (deadSet || [])) {
+          d3.select("#nfa-state-" + idx).classed("sim-dead", true);
+        }
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ε-CLOSURE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function epsClosure(stateNames) {
+        const closure = new Set(stateNames);
+        const stack = [...stateNames];
+        while (stack.length > 0) {
+          const s = stack.pop();
+          const targets = (nfaTrans[s] && nfaTrans[s]["ε"]) || [];
+          for (const t of targets) {
+            if (!closure.has(t)) { closure.add(t); stack.push(t); }
+          }
+        }
+        return closure;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION TREE  (fold-ε mode)
+      //
+      // Tree node: { id, state, depth, parent, children, dead, accepted, viaEps }
+      // depth 0  = start states (ε-closure of nfaStart)
+      // depth k  = states after consuming input[k-1], ε-closed
+      // viaEps   = true when the incoming edge involved ε-moves
+      //            (depth-0: state is not the start state itself;
+      //             depth-k: child not directly reachable from parent via sym alone)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const MAX_TREE_NODES = 512;
+
+      // States reachable via sym + trailing ε from fromState, without ε-expanding fromState first.
+      function directReach(fromState, sym) {
+        const rawTargets = (nfaTrans[fromState] && nfaTrans[fromState][sym]) || [];
+        return epsClosure(rawTargets);
+      }
+
+      // BFS: minimum number of ε-steps from fromState to toState (0 if equal, Infinity if unreachable).
+      function epsDistanceBetween(fromState, toState) {
+        if (fromState === toState) return 0;
+        const visited = new Set([fromState]);
+        const queue = [[fromState, 0]];
+        while (queue.length > 0) {
+          const [s, dist] = queue.shift();
+          for (const t of (nfaTrans[s]?.["ε"] || [])) {
+            if (t === toState) return dist + 1;
+            if (!visited.has(t)) { visited.add(t); queue.push([t, dist + 1]); }
+          }
+        }
+        return Infinity;
+      }
+
+      // For a tree edge parent --sym--> child (with ε-closure folded), compute the minimum
+      // ε-hop counts: (n1, n2) where parent --ε×n1--> r --sym--> t --ε×n2--> child.
+      // Picks the path with minimum n1, breaking ties by minimum n2.
+      function epsAnnotation(parentState, sym, childState) {
+        let bestN1 = Infinity, bestN2 = Infinity;
+        for (const r of epsClosure([parentState])) {
+          for (const t of (nfaTrans[r]?.[sym] || [])) {
+            if (!epsClosure([t]).has(childState)) continue;
+            const n1 = epsDistanceBetween(parentState, r);
+            const n2 = epsDistanceBetween(t, childState);
+            if (n1 < bestN1 || (n1 === bestN1 && n2 < bestN2)) {
+              bestN1 = n1; bestN2 = n2;
+            }
+          }
+        }
+        return {
+          epsCountBefore: bestN1 === Infinity ? 0 : bestN1,
+          epsCountAfter:  bestN2 === Infinity ? 0 : bestN2,
+        };
+      }
+
+      function buildSimTree(inputStr) {
+        let nodeId = 0;
+        // Virtual root — not rendered, just a container for depth-0 nodes
+        const vRoot = { id: nodeId++, state: null, depth: -1, children: [], parent: null };
+
+        const startName = nfaStates[nfaStartIdx];
+        // Single root = start state; ε-closure of start is folded into the first sym-edges
+        const rootNode = { id: nodeId++, state: startName, depth: 0, parent: vRoot,
+                           children: [], dead: false, accepted: false,
+                           viaEps: false, epsCountBefore: 0, epsCountAfter: 0 };
+        vRoot.children.push(rootNode);
+        let frontier = [rootNode];
+
+        const chars = [...inputStr];
+
+        for (let d = 0; d < chars.length; d++) {
+          const sym = chars[d];
+          const nextFrontier = [];
+
+          for (const node of frontier) {
+            if (nodeId > MAX_TREE_NODES) { node.dead = true; continue; }
+
+            // All states reachable via ε* sym ε* from node.state
+            const nextStates = new Set();
+            for (const s of epsClosure([node.state])) {
+              for (const ns of directReach(s, sym)) nextStates.add(ns);
+            }
+
+            if (nextStates.size === 0) {
+              node.dead = true;
+            } else {
+              for (const ns of nextStates) {
+                if (nodeId > MAX_TREE_NODES) break;
+                const { epsCountBefore, epsCountAfter } = epsAnnotation(node.state, sym, ns);
+                const child = { id: nodeId++, state: ns, depth: d + 1, parent: node,
+                                children: [], dead: false, accepted: false,
+                                viaEps: epsCountBefore > 0 || epsCountAfter > 0,
+                                epsCountBefore, epsCountAfter };
+                node.children.push(child);
+                nextFrontier.push(child);
+              }
+            }
+          }
+          frontier = nextFrontier;
+        }
+
+        // Mark terminal nodes.
+        // depth 0 (empty input): ε-closure of start not expanded as separate nodes → check ε-closure.
+        // depth > 0: all ε-reachable states are already explicit sibling leaves → check F directly.
+        for (const n of frontier) {
+          const accepts = (n.depth === 0)
+            ? [...epsClosure([n.state])].some(s => nfaAccepts.has(nfaStates.indexOf(s)))
+            : nfaAccepts.has(nfaStates.indexOf(n.state));
+          if (accepts) n.accepted = true;
+          else n.rejected = true;
+        }
+
+        const anyAccepted = frontier.some(n => n.accepted);
+        return { vRoot, maxDepth: chars.length, accepted: anyAccepted, truncated: nodeId > MAX_TREE_NODES };
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION TREE RENDERER  (D3)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const TREE_R = 13;       // node radius
+      const TREE_ROW_H = 72;   // vertical distance between depth levels
+      const TREE_COL_W = 48;   // min horizontal spacing between sibling nodes
+
+      const _simTreeZoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", e => d3.select("#sim-tree-root").attr("transform", e.transform));
+      d3.select("#sim-tree-svg").call(_simTreeZoom).on("dblclick.zoom", null);
+      document.getElementById("sim-tree-svg").addEventListener("dblclick", () => fitSimTree());
+
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => { if (_simTree) fitSimTree(); })
+          .observe(document.getElementById("sim-tree-svg").parentElement);
+      }
+
+      // Collect all nodes up to revealDepth
+      function collectVisible(vRoot, revealDepth) {
+        const nodes = [], edges = [];
+        function walk(node) {
+          if (node.depth > revealDepth) return;
+          if (node.depth >= 0) nodes.push(node); // skip virtual root
+          for (const c of node.children) {
+            if (c.depth <= revealDepth) {
+              edges.push({ parent: node.depth >= 0 ? node : null, child: c });
+              walk(c);
+            }
+          }
+        }
+        walk(vRoot);
+        return { nodes, edges };
+      }
+
+      // Assign x positions using a simple Reingold-Tilford-inspired approach
+      // (d3.tree() on the vRoot, exclude vRoot from render)
+      function layoutTree(vRoot, revealDepth) {
+        // Build d3 hierarchy from vRoot, filtering to revealDepth
+        function d3Node(n) {
+          const obj = { data: n, children: [] };
+          for (const c of n.children) {
+            if (c.depth <= revealDepth) obj.children.push(d3Node(c));
+          }
+          return obj;
+        }
+        const hier = d3.hierarchy(d3Node(vRoot), d => d.children);
+        const layout = d3.tree().nodeSize([TREE_COL_W, TREE_ROW_H]);
+        layout(hier);
+
+        // Extract position map: nodeId → {x, y}
+        const posMap = new Map();
+        hier.each(d => {
+          posMap.set(d.data.data.id, { x: d.x, y: d.y });
+        });
+        return posMap;
+      }
+
+      function renderSimTree(vRoot, revealDepth, inputChars) {
+        const svg  = document.getElementById("sim-tree-svg");
+        const root = d3.select("#sim-tree-root");
+        root.selectAll("*").remove();
+
+        const { nodes, edges } = collectVisible(vRoot, revealDepth);
+        document.getElementById("sim-tree-empty").style.display =
+          nodes.length === 0 ? "" : "none";
+        if (nodes.length === 0) return;
+
+        const posMap = layoutTree(vRoot, revealDepth);
+
+        // Accepting-path highlight: trace ancestors of accepted leaf nodes (final step only)
+        const acceptPathIds = new Set();
+        if (revealDepth > _simTree.maxDepth) {
+          for (const { child } of edges) {
+            if (child.accepted) {
+              let n = child;
+              while (n && n !== vRoot) { acceptPathIds.add(n.id); n = n.parent; }
+            }
+          }
+        }
+
+        // Draw edges first
+        for (const { parent, child } of edges) {
+          if (!parent) continue; // child of vRoot — edges from vRoot are "hidden" (just connect to top)
+          const pp = posMap.get(parent.id);
+          const cp = posMap.get(child.id);
+          if (!pp || !cp) continue;
+
+          // Determine edge status/style
+          let cls = "tree-edge";
+          if (child.dead) cls += " te-dead";
+          else if (acceptPathIds.has(child.id)) cls += " te-accept-path";
+          else if (child.depth === revealDepth && !child.dead) cls += " te-active";
+          if (child.viaEps) cls += " te-eps";
+
+          // Edge label: "ε,…,ε,sym,ε,…,ε" reflecting actual ε-hop counts on each leg
+          const sym = inputChars[child.depth - 1];
+          const labelParts = [];
+          for (let i = 0; i < (child.epsCountBefore || 0); i++) labelParts.push("ε");
+          if (sym !== undefined) labelParts.push(sym);
+          for (let i = 0; i < (child.epsCountAfter  || 0); i++) labelParts.push("ε");
+          const edgeLabel = labelParts.join(",");
+
+          const edgeG = root.append("g");
+          edgeG.append("path")
+            .attr("class", cls)
+            .attr("d", `M${pp.x},${pp.y} C${pp.x},${(pp.y + cp.y) / 2} ${cp.x},${(pp.y + cp.y) / 2} ${cp.x},${cp.y}`);
+          if (edgeLabel) {
+            edgeG.append("text")
+              .attr("class", "tree-edge-label")
+              .attr("x", (pp.x + cp.x) / 2 + 5)
+              .attr("y", (pp.y + cp.y) / 2)
+              .attr("text-anchor", "start")
+              .text(edgeLabel);
+          }
+        }
+
+        // Draw entry arrow above the single root node
+        const rootChild = vRoot.children[0];
+        if (rootChild) {
+          const rp = posMap.get(rootChild.id);
+          if (rp) {
+            root.append("line")
+              .attr("class", "start-arrow-nfa")
+              .attr("x1", rp.x).attr("y1", rp.y - TREE_R - 16)
+              .attr("x2", rp.x).attr("y2", rp.y - TREE_R - 1)
+              .attr("marker-end", "url(#tree-arrow)");
+          }
+        }
+
+        // Draw nodes
+        for (const node of nodes) {
+          const pos = posMap.get(node.id);
+          if (!pos) continue;
+
+          let cls = "tree-node";
+          if (node.dead) cls += " tn-dead";
+          else if (node.accepted) cls += " tn-accept";
+          else if (node.rejected) cls += " tn-reject";
+          else if (node.depth === revealDepth) cls += " tn-active";
+
+          const ng = root.append("g")
+            .attr("class", cls)
+            .attr("transform", `translate(${pos.x},${pos.y})`);
+          ng.append("circle").attr("r", TREE_R);
+          if (node.accepted) {
+            ng.append("circle").attr("class", "tn-ring").attr("r", TREE_R - 3);
+          }
+          ng.append("text")
+            .attr("class", "tn-label")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(node.state);
+          if (node.dead) {
+            ng.append("text")
+              .attr("class", "tn-dead-mark")
+              .attr("text-anchor", "middle")
+              .attr("x", TREE_R + 1)
+              .attr("y", -TREE_R + 1)
+              .text("✗");
+          }
+        }
+
+        // Compute centering transform from layout positions (avoids getBBox/clientWidth on SVG)
+        fitSimTreeFromLayout(posMap, vRoot, revealDepth);
+      }
+
+      // Fit using bounding box derived from d3 layout positions — no getBBox needed.
+      function fitSimTreeFromLayout(posMap, vRoot, revealDepth) {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const [id, pos] of posMap) {
+          const node = findNodeById(vRoot, id);
+          if (!node || node.depth < 0 || node.depth > revealDepth) continue;
+          minX = Math.min(minX, pos.x - TREE_R);
+          maxX = Math.max(maxX, pos.x + TREE_R + 20); // +20 for label overhang
+          minY = Math.min(minY, pos.y - TREE_R);
+          maxY = Math.max(maxY, pos.y + TREE_R);
+        }
+        if (minX === Infinity) return;
+        minY -= 20; // headroom for start arrow above root node
+        const contentW = maxX - minX;
+        const contentH = maxY - minY;
+        const wrap = document.getElementById("sim-tree-wrap");
+        const vw = wrap.clientWidth  || 400;
+        const vh = wrap.clientHeight || 300;
+        const pad = 32;
+        const sc = Math.min(1, Math.min(vw / (contentW + pad * 2), vh / (contentH + pad * 2)));
+        const tx = (vw - contentW * sc) / 2 - minX * sc;
+        const ty = pad - minY * sc;
+        d3.select("#sim-tree-svg").call(_simTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+      }
+
+      // Manual refit on double-click — uses getBBox as a fallback for arbitrary pan state.
+      function fitSimTree() {
+        try {
+          const rootEl = document.getElementById("sim-tree-root");
+          const bb = rootEl.getBBox();
+          const wrap = document.getElementById("sim-tree-wrap");
+          const vw = wrap.clientWidth  || 400;
+          const vh = wrap.clientHeight || 300;
+          if (!bb || bb.width < 1 || bb.height < 1) return;
+          const pad = 32;
+          const sc = Math.min(1, Math.min(vw / (bb.width + pad * 2), vh / (bb.height + pad * 2)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = pad - bb.y * sc;
+          d3.select("#sim-tree-svg").call(_simTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch(e) { /* ignore */ }
+      }
+
+      function findNodeById(vRoot, id) {
+        if (vRoot.id === id) return vRoot;
+        for (const c of vRoot.children) {
+          const found = findNodeById(c, id);
+          if (found) return found;
+        }
+        return null;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION STEP ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simTree    = null;  // { vRoot, maxDepth, accepted, truncated }
+      let _simPos     = 0;     // current reveal depth; 0 = initial states shown
+      let _simChars   = [];    // input characters
+
+      function simSetBtns() {
+        const hasTree  = !!_simTree;
+        const atEnd    = hasTree && _simPos >= _simTree.maxDepth + 1;
+        const atStart  = _simPos <= 0;
+        document.getElementById("btn-sim-reset").disabled = !hasTree || atStart;
+        document.getElementById("btn-sim-back").disabled  = !hasTree || atStart;
+        document.getElementById("btn-sim-step").disabled  = !hasTree || atEnd;
+        document.getElementById("btn-sim-all").disabled   = !hasTree || atEnd;
+      }
+
+      function simRun() {
+        const input = document.getElementById("sim-string-input").value;
+        _simChars = [...input];
+        _simTree  = buildSimTree(input);
+        _simPos   = 0;  // start at depth 0 (initial states visible immediately)
+
+        document.getElementById("sim-result").style.display = "none";
+        document.getElementById("sim-tree-empty").style.display = "none";
+        d3.select("#sim-tree-root").selectAll("*").remove();
+        nfaHighlightStates([], []);
+
+        simRender();
+        simSetBtns();
+      }
+
+      function simReset() {
+        if (!_simTree) return;
+        _simPos = 0;
+        document.getElementById("sim-result").style.display = "none";
+        simRender();
+        simSetBtns();
+      }
+
+      function simStepFwd() {
+        if (!_simTree) return;
+        if (_simPos >= _simTree.maxDepth + 1) return;
+        _simPos++;
+        simRender();
+        simSetBtns();
+      }
+
+      function simBack() {
+        if (!_simTree || _simPos <= 0) return;
+        _simPos--;
+        simRender();
+        simSetBtns();
+      }
+
+      function simRunAll() {
+        if (!_simTree) return;
+        _simPos = _simTree.maxDepth + 1;
+        simRender();
+        simSetBtns();
+      }
+
+      function simRender() {
+        if (!_simTree) return;
+        const { vRoot, maxDepth, accepted, truncated } = _simTree;
+        const revealDepth = _simPos;
+
+        // Tape
+        const tapeEl = document.getElementById("sim-tape");
+        tapeEl.innerHTML = "";
+        _simChars.forEach((ch, i) => {
+          const cell = document.createElement("div");
+          cell.className = "tape-cell" +
+            (i < revealDepth - 1 ? " tc-consumed" : i === revealDepth - 1 ? " tc-current" : "");
+          cell.textContent = ch;
+          tapeEl.appendChild(cell);
+        });
+        document.getElementById("sim-tape-wrap").style.display =
+          _simChars.length > 0 ? "" : "none";
+
+        // Render tree
+        renderSimTree(vRoot, revealDepth, _simChars);
+
+        // Log bar
+        const logBar = document.getElementById("sim-log-bar");
+        if (revealDepth === 0) {
+          const startName = nfaStates[nfaStartIdx];
+          const epsNames = [...epsClosure([startName])].filter(s => s !== startName);
+          const epsNote = epsNames.length > 0
+            ? `  <span style="color:var(--text-lo)">ε-closure: {${esc([startName, ...epsNames].join(", "))}}</span>`
+            : "";
+          logBar.innerHTML = `Start: <span style="color:var(--accent)">${esc(startName)}</span>${epsNote}`;
+        } else if (revealDepth <= maxDepth) {
+          const sym = _simChars[revealDepth - 1];
+          // Collect active state names at this depth
+          const activeNodes = collectNodesAtDepth(vRoot, revealDepth).filter(n => !n.dead);
+          const names = activeNodes.map(n => n.state);
+          const uniqueNames = [...new Set(names)];
+          logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span> → active: {${esc(uniqueNames.join(", ")) || "∅"}}`;
+        } else {
+          // Final step
+          const finalNodes = collectNodesAtDepth(vRoot, maxDepth);
+          const acceptNodes = finalNodes.filter(n => n.accepted);
+          const uNames = [...new Set(acceptNodes.map(n => n.state))];
+          logBar.innerHTML = accepted
+            ? `<span style="color:var(--green)">✓ Accepted</span> — accepting state(s): {${esc(uNames.join(", "))}}`
+            : `<span style="color:var(--red)">✗ Rejected</span> — no active accepting state`;
+        }
+
+        // Result banner
+        const resultEl = document.getElementById("sim-result");
+        if (revealDepth > maxDepth) {
+          resultEl.style.display = "";
+          if (accepted) { resultEl.textContent = "✓  ACCEPTED"; resultEl.className = "accept"; }
+          else          { resultEl.textContent = "✗  REJECTED"; resultEl.className = "reject"; }
+        } else {
+          resultEl.style.display = "none";
+        }
+
+        // Highlight NFA graph
+        const active = collectNodesAtDepth(vRoot, revealDepth).filter(n => !n.dead);
+        const activeIdxs = [...new Set(active.map(n => nfaStates.indexOf(n.state)))];
+        nfaHighlightStates(activeIdxs, []);
+
+        if (truncated) {
+          logBar.innerHTML += ` <span style="color:var(--red)">(tree truncated at ${MAX_TREE_NODES} nodes)</span>`;
+        }
+      }
+
+      function collectNodesAtDepth(vRoot, depth) {
+        const result = [];
+        function walk(n) {
+          if (n.depth === depth && n.depth >= 0) result.push(n);
+          for (const c of n.children) walk(c);
+        }
+        walk(vRoot);
+        return result;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const EXAMPLES = {};
+
+      function loadExampleNFA(k) {
+        if (!k) return;
+        document.getElementById("examples-select").value = k;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        nfaStates   = [...ex.states];
+        nfaAlphabet = [...ex.alphabet];
+        nfaStartIdx = ex.states.indexOf(ex.start);
+        nfaAccepts  = new Set(ex.accepts.map(s => ex.states.indexOf(s)));
+        nfaTrans    = {};
+        for (const s of nfaStates) {
+          nfaTrans[s] = {};
+          for (const sym of [...nfaAlphabet, "ε"]) {
+            nfaTrans[s][sym] = (ex.trans[s] && ex.trans[s][sym]) ? [...ex.trans[s][sym]] : [];
+          }
+        }
+        renderDefTable();
+        onNFAChange();
+        renderExampleChips(ex.strings || [], simRun);
+      }
+
+      loadAutomataExamples("../examples/examples-nfa.json", "examples-select", EXAMPLES, loadExampleNFA);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CHANGE HANDLER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function onNFAChange() {
+        renderNFAGraph();
+        simRun();  // re-run (or initialise) simulation for current input
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // KEYBOARD SHORTCUTS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      document.addEventListener("keydown", e => {
+        if (isAlgoModalOpen()) return;
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (e.key === "ArrowRight" || e.key === ".") { e.preventDefault(); simStepFwd(); }
+        if (e.key === "ArrowLeft"  || e.key === ",") { e.preventDefault(); simBack(); }
+        if (e.key === "Home")  { e.preventDefault(); simReset(); }
+        if (e.key === "End")   { e.preventDefault(); simRunAll(); }
+      });
+
+      document.getElementById("sim-string-input").addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); simRun(); }
+      });
+      document.getElementById("sim-string-input").addEventListener("input", () => {
+        simRun();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // INIT
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      initPanelStorage("nfa-tool-v1", ["p-def", "p-nfa", "p-sim"]);
+      loadPanelState();
+      renderDefTable();
+      onNFAChange();
+    </script>
+  </body>
+</html>

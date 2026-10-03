@@ -8,7 +8,8 @@
 <style>
 body {
   display: flex; align-items: center; justify-content: center;
-  height: 100vh; flex-direction: column; gap: 32px;
+  min-height: 100vh; flex-direction: column; gap: 32px;
+  padding: 32px 0;
 }
 .index-card {
   background: var(--bg-panel);
@@ -25,17 +26,28 @@ body {
   color: var(--text);
   margin-bottom: 6px;
 }
-.index-card p {
+.index-card > p {
   font-size: .75rem;
   color: var(--text-dim);
   line-height: 1.7;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
-.tool-links { display: flex; flex-direction: column; gap: 10px; }
+.tool-group { margin-bottom: 22px; }
+.tool-group:last-child { margin-bottom: 0; }
+.group-label {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  color: var(--text-lo);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+.tool-links { display: flex; flex-direction: column; gap: 6px; }
 .tool-link {
   display: flex; flex-direction: column;
   border: 1px solid var(--border);
-  padding: 14px 18px;
+  padding: 11px 14px;
   text-decoration: none;
   color: var(--text);
   transition: border-color .15s, background .15s;
@@ -65,25 +77,58 @@ body {
 <body>
 <div class="index-card">
   <h1>Automata and Parsing Tools</h1>
-  <p>Interactive visualisations for teaching regular languages, bottom-up parsing, and top-down parsing.
-     Enter a regular expression or grammar in BNF, step through automaton and table construction,
-     then simulate string recognition or parsing a string with full parse tree growth.</p>
-  <div class="tool-links">
+  <p>Interactive visualisations for teaching formal language theory and parsing.
+     Step through automaton and table construction, simulate string recognition,
+     and grow parse trees.</p>
+
+  <div class="tool-group">
+    <div class="group-label">Regular languages</div>
+    <div class="tool-links">
       <a class="tool-link" href="tools/regex-tool.html">
         <span class="tl-title">Regular Expressions</span>
         <span class="tl-desc">Thompson's construction &nbsp;—&nbsp; RE → NFA → DFA, step-by-step, string simulation</span>
       </a>
+      <a class="tool-link" href="tools/nfa-tool.html">
+        <span class="tl-title">NFA Simulator</span>
+        <span class="tl-desc">ε-NFA &nbsp;—&nbsp; editable transition table, NFA graph, nondeterministic simulation tree</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="tool-group">
+    <div class="group-label">Context-free languages</div>
+    <div class="tool-links">
+      <a class="tool-link" href="tools/grammar-rewrite-tool.html">
+        <span class="tl-title">Grammar Transformations</span>
+        <span class="tl-desc">Cleanup · ε-elimination · unit elimination · Chomsky Normal Form · left-recursion elimination</span>
+      </a>
+      <a class="tool-link" href="tools/derivation-tool.html">
+        <span class="tl-title">Grammar Derivations</span>
+        <span class="tl-desc">Manual derivations &nbsp;—&nbsp; CFG · CSG · Type 0 &nbsp;—&nbsp; select a range, choose a rule, build the sentential form step by step</span>
+      </a>
+      <a class="tool-link" href="tools/pda-tool.html">
+        <span class="tl-title">PDA Simulator</span>
+        <span class="tl-desc">Nondeterministic PDA · ε-PDA &nbsp;—&nbsp; transition rule list, automaton graph, configuration-set simulation</span>
+      </a>
+      <a class="tool-link" href="tools/ll1-tool.html">
+        <span class="tl-title">LL(1) Parser</span>
+        <span class="tl-desc">Predictive parsing &nbsp;—&nbsp; FIRST/FOLLOW sets, predictive table, derivation steps, string simulation, parse tree</span>
+      </a>
       <a class="tool-link" href="tools/lr-tool.html">
-      <span class="tl-title">LR Parser</span>
-      <span class="tl-desc">LR(0) · SLR(1) · LALR(1) · LR(1) &nbsp;—&nbsp; characteristic automaton, ACTION/GOTO tables, string simulation, parse tree</span>
-    </a>
-    <a class="tool-link" href="tools/ll1-tool.html">
-      <span class="tl-title">LL(1) Parser</span>
-      <span class="tl-desc">Predictive parsing &nbsp;—&nbsp; FIRST/FOLLOW sets, predictive table, derivation steps, string simulation, parse tree</span>
-    </a><a class="tool-link" href="tools/grammar-rewrite-tool.html">
-      <span class="tl-title">Grammar Transformations</span>
-      <span class="tl-desc">Cleanup · ε-elimination · unit elimination · Chomsky Normal Form · left-recursion elimination</span>
-    </a>
+        <span class="tl-title">LR Parser</span>
+        <span class="tl-desc">LR(0) · SLR(1) · LALR(1) · LR(1) &nbsp;—&nbsp; characteristic automaton, ACTION/GOTO tables, string simulation, parse tree</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="tool-group">
+    <div class="group-label">Recursively enumerable languages</div>
+    <div class="tool-links">
+      <a class="tool-link" href="tools/tm-tool.html">
+        <span class="tl-title">Turing Machine</span>
+        <span class="tl-desc">Deterministic TM &nbsp;—&nbsp; editable transition table, tape simulation, step-by-step execution</span>
+      </a>
+    </div>
   </div>
 </div>
 <div class="footer">

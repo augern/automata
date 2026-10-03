@@ -1,0 +1,1580 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PDA Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="../shared/shared.css" />
+    <style>
+      /* ── Panel widths ── */
+      #p-def { width: 400px; }
+      #p-sim { flex: 1; min-width: 280px; }
+      #p-tree { width: 340px; }
+
+      /* ── Definition panel ── */
+      #def-examples-bar {
+        padding: 5px 10px;
+        border-bottom: 1px solid var(--border-lo);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #def-examples-bar select {
+        flex: 1;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 2px 4px;
+        height: 22px;
+        outline: none;
+      }
+      #def-scroll {
+        flex: 1;
+        overflow: auto;
+        padding: 10px 12px 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* Section headers inside def panel */
+      .def-section-label {
+        font-family: var(--font-mono);
+        font-size: 0.60rem;
+        color: var(--text-lo);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+
+      /* ── States mini-table ── */
+      .states-table {
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        width: 100%;
+      }
+      .states-table th {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-lo);
+        padding: 2px 5px;
+        text-align: center;
+        font-weight: normal;
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .states-table td {
+        border: 1px solid var(--border-lo);
+        padding: 1px 3px;
+        text-align: center;
+        vertical-align: middle;
+      }
+      .states-table td.state-name-cell {
+        font-style: italic;
+        color: var(--text-dim);
+        background: var(--bg-panel);
+        padding: 2px 8px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      .states-table td.state-name-cell.is-start  { color: var(--accent); }
+      .states-table td.state-name-cell.is-accept { color: var(--green); font-weight: bold; }
+      .states-table td.state-name-cell.is-both   { color: var(--amber); font-weight: bold; }
+      .states-table td.marker-cell {
+        background: var(--bg-panel);
+        width: 22px;
+      }
+      .states-table td.rm-cell {
+        width: 18px;
+        padding: 0;
+        background: var(--bg-panel);
+      }
+      .states-table input[type="radio"]    { cursor: pointer; accent-color: var(--accent); }
+      .states-table input[type="checkbox"] { cursor: pointer; accent-color: var(--green); }
+
+      /* Remove buttons */
+      .btn-rm-state, .btn-rm-rule {
+        background: none;
+        border: none;
+        color: var(--text-lo);
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        padding: 2px 4px;
+        display: block;
+        width: 100%;
+      }
+      .btn-rm-state:hover, .btn-rm-rule:hover { color: var(--red); }
+
+      /* Initial stack symbol row */
+      #init-stack-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+      }
+      #init-stack-row input {
+        width: 40px;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 2px 5px;
+        height: 22px;
+        box-sizing: border-box;
+        outline: none;
+        text-align: center;
+      }
+      #init-stack-row input:focus {
+        border-color: var(--accent);
+        outline: 1px solid var(--accent);
+      }
+
+      /* ── Rules table ── */
+      .rules-table {
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        width: 100%;
+      }
+      .rules-table th {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-lo);
+        padding: 2px 5px;
+        text-align: center;
+        font-weight: normal;
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .rules-table th.arrow-hdr {
+        color: var(--text-lo);
+        padding: 2px 3px;
+      }
+      .rules-table td {
+        border: 1px solid var(--border-lo);
+        padding: 1px 2px;
+        vertical-align: middle;
+      }
+      .rules-table td.rm-cell {
+        width: 18px;
+        padding: 0;
+        background: var(--bg-panel);
+      }
+      .rules-table td.arrow-cell {
+        background: var(--bg-panel);
+        color: var(--text-lo);
+        text-align: center;
+        padding: 0 3px;
+        white-space: nowrap;
+      }
+      .rules-table td input {
+        width: 100%;
+        min-width: 38px;
+        background: var(--bg-input);
+        color: var(--text);
+        border: none;
+        outline: none;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 2px 4px;
+        text-align: center;
+        height: 22px;
+        box-sizing: border-box;
+      }
+      .rules-table td input:focus {
+        background: var(--accent-bg);
+        outline: 1px solid var(--accent);
+        outline-offset: -1px;
+      }
+      .rules-table td input:focus::placeholder { color: transparent; }
+      .rules-table td input.invalid { color: var(--red); background: var(--red-bg); }
+      .rules-table td.eps-cell input { color: var(--text-lo); font-style: italic; }
+      .rules-table td.eps-cell input:focus { color: var(--text); font-style: normal; }
+      .rules-table td.from-cell input,
+      .rules-table td.to-cell   input { min-width: 48px; }
+      .rules-table td.sym-cell  input { min-width: 30px; max-width: 44px; }
+      .rules-table td.push-cell input { min-width: 44px; }
+
+      /* Acceptance mode toggle */
+      #accept-mode-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        flex-wrap: wrap;
+      }
+      #accept-mode-row label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+      }
+      #accept-mode-row label:has(input:checked) { color: var(--text); }
+      #accept-mode-row input[type="radio"] { cursor: pointer; accent-color: var(--accent); }
+
+      /* Definition footer */
+      #def-footer {
+        flex-shrink: 0;
+        padding: 6px 10px 8px;
+        border-top: 1px solid var(--border-lo);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .def-hint {
+        font-family: var(--font-serif);
+        font-size: 0.63rem;
+        color: var(--text-lo);
+        flex: 1;
+        line-height: 1.6;
+        padding-left: 2px;
+      }
+      .def-hint code {
+        font-family: var(--font-mono);
+        font-size: 0.75em;
+        color: var(--text-dim);
+      }
+
+      /* ── PDA graph (inside sim panel) ── */
+      #pda-graph-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        border-top: 1px solid var(--border-lo);
+      }
+      #pda-svg {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #pda-graph-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--text-lo);
+        pointer-events: none;
+      }
+
+      /* PDA graph nodes */
+      .pda-node circle {
+        fill: var(--bg);
+        stroke: var(--text);
+        stroke-width: 1.2;
+        transition: fill 0.2s, stroke 0.2s, stroke-width 0.2s;
+      }
+      .pda-node .accept-ring {
+        fill: none;
+        stroke-width: 1 !important;
+      }
+      .pda-node .state-label {
+        font-size: 11px;
+        font-weight: bold;
+        fill: var(--text);
+        font-family: var(--font-mono);
+        pointer-events: none;
+      }
+      .pda-node.accepting circle  { stroke: var(--green); }
+      .pda-node.accepting .state-label { fill: var(--green); }
+
+      /* PDA graph edges */
+      .pda-edge path {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 0.9;
+        transition: stroke 0.2s, stroke-width 0.2s;
+      }
+      .pda-edge.eps-edge path { stroke: var(--text-lo); stroke-dasharray: 4 3; }
+      .pda-edge line { stroke: none; }
+      .pda-edge text {
+        font-size: 9px;
+        fill: var(--text-dim);
+        font-family: var(--font-mono);
+        font-style: italic;
+        pointer-events: none;
+      }
+      .pda-edge.eps-edge text { fill: var(--text-lo); }
+      .pda-arrowhead     { fill: var(--text); }
+      .pda-arrowhead-eps { fill: var(--text-lo); }
+      .start-arrow-pda   { stroke: var(--text-dim); stroke-width: 1; }
+
+      /* Simulation highlighting */
+      .pda-node.sim-active circle      { fill: var(--accent-bg) !important; stroke: var(--accent) !important; stroke-width: 2 !important; }
+      .pda-node.sim-active .state-label { fill: var(--accent) !important; }
+      .pda-node.accepting.sim-active circle { fill: var(--green-bg) !important; stroke: var(--green) !important; }
+      .pda-node.accepting.sim-active .state-label { fill: var(--green) !important; }
+
+      /* ── Simulation panel ── */
+      #sim-controls {
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--border-lo);
+        background: var(--bg-panel);
+      }
+      #sim-input-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        flex-wrap: wrap;
+      }
+      #sim-input-row .input-group { flex: 1; min-width: 100px; }
+      #sim-string-input {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.84rem;
+        padding: 3px 7px;
+        height: 22px;
+        box-sizing: border-box;
+        outline: none;
+      }
+      #sim-string-input:focus { border-color: var(--accent); outline: 1px solid var(--accent); }
+      #sim-log-bar {
+        font-size: 0.62rem;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+        padding: 3px 10px 4px;
+        border-top: 1px solid var(--border-lo);
+        min-height: 1.8em;
+        line-height: 1.5;
+      }
+
+      /* Result banner */
+      #sim-result {
+        flex-shrink: 0;
+        padding: 5px 12px;
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+      }
+      #sim-result.accept { color: var(--green); background: var(--green-bg); border-bottom: 1px solid var(--green); }
+      #sim-result.reject { color: var(--red);   background: var(--red-bg);   border-bottom: 1px solid var(--red); }
+
+      /* Configurations bar */
+      #sim-configs-bar {
+        flex-shrink: 0;
+        display: none;
+        padding: 5px 10px;
+        border-top: 1px solid var(--border-lo);
+        gap: 4px 6px;
+        flex-wrap: wrap;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        background: var(--bg-panel);
+        max-height: 80px;
+        overflow-y: auto;
+      }
+      .cfg-chip {
+        border: 1px solid var(--border);
+        background: var(--bg-cell);
+        padding: 1px 6px;
+        white-space: nowrap;
+        color: var(--text-dim);
+      }
+      .cfg-chip.cfg-accept {
+        border-color: var(--green);
+        background: var(--green-bg);
+        color: var(--green);
+      }
+      .cfg-chip.cfg-dead {
+        opacity: 0.4;
+      }
+      .cfg-chip .cfg-state { color: var(--accent); }
+      .cfg-chip.cfg-accept .cfg-state { color: var(--green); }
+      .cfg-chips-label {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 0.65rem;
+        color: var(--text-lo);
+        margin-right: 2px;
+      }
+      .cfg-truncated {
+        color: var(--red);
+        font-size: 0.62rem;
+      }
+
+      /* ── Configuration tree ── */
+      #tree-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+      }
+      #tree-svg {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #tree-empty {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-serif); font-style: italic;
+        font-size: 0.8rem; color: var(--text-lo);
+        pointer-events: none;
+      }
+      .tree-start-arrow { stroke: var(--text-dim); stroke-width: 1; }
+
+      /* Tree nodes */
+      .tree-node-g rect {
+        fill: var(--bg); stroke: var(--border); stroke-width: 1;
+      }
+      .tree-node-g.tn-active rect { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.5; }
+      .tree-node-g.tn-accept rect { fill: var(--green-bg);  stroke: var(--green);  stroke-width: 1.5; }
+      .tree-node-g.tn-reject rect { fill: var(--red-bg);    stroke: var(--red); }
+      .tree-node-g.tn-dead   rect { fill: var(--bg-cell);   stroke: var(--border-lo); }
+
+      .tn-state {
+        font-family: var(--font-mono); font-size: 11px; font-weight: bold;
+        fill: var(--text); pointer-events: none;
+      }
+      .tn-stack {
+        font-family: var(--font-mono); font-size: 9px;
+        fill: var(--text-dim); pointer-events: none;
+      }
+      .tree-node-g.tn-active .tn-state { fill: var(--accent); }
+      .tree-node-g.tn-accept .tn-state { fill: var(--green); }
+      .tree-node-g.tn-accept .tn-stack { fill: var(--green); opacity: 0.8; }
+      .tree-node-g.tn-reject .tn-state { fill: var(--red); }
+      .tree-node-g.tn-dead   .tn-state { fill: var(--text-lo); }
+      .tree-node-g.tn-dead   .tn-stack { fill: var(--text-lo); }
+      .tree-node-g.tn-dead   { opacity: 0.45; }
+      .tree-node-g .tn-dead-mark {
+        font-size: 9px; fill: var(--red);
+        font-family: var(--font-mono); opacity: 0.85;
+        pointer-events: none;
+      }
+
+      /* Tree edges */
+      .tree-edge-path {
+        fill: none; stroke: var(--text-dim); stroke-width: 0.9;
+      }
+      .tree-edge-path.te-eps    { stroke: var(--text-lo); stroke-dasharray: 4 3; }
+      .tree-edge-path.te-active { stroke: var(--accent); stroke-width: 1.2; }
+      .tree-edge-path.te-accept      { stroke: var(--green);  stroke-width: 1.2; }
+      .tree-edge-path.te-accept-path { stroke: var(--green);  stroke-width: 2.2; }
+      .tree-edge-path.te-dead        { stroke: var(--border-lo); }
+      .tree-edge-path.te-eps.te-active      { stroke: var(--accent); }
+      .tree-edge-path.te-eps.te-accept      { stroke: var(--green); }
+      .tree-edge-path.te-eps.te-accept-path { stroke: var(--green); stroke-width: 1.8; }
+
+      .tree-edge-lbl {
+        font-family: var(--font-mono); font-size: 8.5px; font-style: italic;
+        fill: var(--text-lo); pointer-events: none;
+      }
+      .tree-edge-lbl.te-active      { fill: var(--accent); }
+      .tree-edge-lbl.te-accept      { fill: var(--green); }
+      .tree-edge-lbl.te-accept-path { fill: var(--green); font-weight: bold; }
+      .tree-edge-lbl.te-dead        { fill: var(--border); }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../index.html">PDA Simulator</a></h1>
+      <span class="tag">PDA · ε-PDA</span>
+    </div>
+
+    <div id="panels">
+      <!-- 1. PDA Definition -->
+      <div class="panel" id="p-def">
+        <div class="panel-header" onclick="toggleCollapse('p-def')">
+          <span class="panel-title">PDA Definition</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="def-examples-bar">
+            <select id="examples-select" onchange="loadExamplePDA(this.value)">
+              <option value="">Example…</option>
+            </select>
+          </div>
+          <div id="def-scroll">
+            <!-- States section -->
+            <div>
+              <div class="def-section-label">States</div>
+              <div id="states-table-wrap"><!-- rendered by JS --></div>
+            </div>
+            <!-- Acceptance mode -->
+            <div id="accept-mode-row">
+              <span>Accept by:</span>
+              <label>
+                <input type="radio" name="accept-mode" value="final-state" checked
+                       onchange="setAcceptMode('final-state')">
+                final state
+              </label>
+              <label>
+                <input type="radio" name="accept-mode" value="empty-stack"
+                       onchange="setAcceptMode('empty-stack')">
+                empty stack
+              </label>
+            </div>
+
+            <!-- Initial stack symbol -->
+            <div id="init-stack-row">
+              <span>Initial stack symbol:</span>
+              <input id="init-stack-input" type="text" maxlength="4"
+                     value="⊥" oninput="onInitStackChange()" />
+            </div>
+            <!-- Rules section -->
+            <div>
+              <div class="def-section-label">Transition rules &nbsp;
+                <span style="font-style:italic;text-transform:none;letter-spacing:0">
+                  δ(from, input, pop) → (to, push)
+                </span>
+              </div>
+              <div id="rules-table-wrap"><!-- rendered by JS --></div>
+            </div>
+          </div>
+          <div id="def-footer">
+            <button class="btn" onclick="addState()">+ State</button>
+            <button class="btn" onclick="addRule()">+ Rule</button>
+            <span class="def-hint">
+              Leave <code>input</code> blank for ε. Leave <code>pop</code>/<code>push</code>
+              blank for no-pop/no-push. Push string: leftmost symbol becomes new stack top.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. Simulation + Graph -->
+      <div class="panel" id="p-sim">
+        <div class="panel-header" onclick="toggleCollapse('p-sim')">
+          <span class="panel-title">Simulation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('pda-sim');" title="PDA simulation algorithm">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <!-- Controls -->
+          <div id="sim-controls">
+            <div id="sim-input-row">
+              <div class="input-group">
+                <input id="sim-string-input" type="text" spellcheck="false" placeholder="enter string…" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()"  title="Restart" disabled></button>
+                <button class="btn"              id="btn-sim-back"  onclick="simBack()"   disabled>&#8249; Back</button>
+                <button class="btn primary"      id="btn-sim-step"  onclick="simStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all"   onclick="simRunAll()" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="examples-chips">
+              <span class="examples-label">Examples:</span>
+              <span id="chips-container"></span>
+            </div>
+            <div id="sim-log-bar"></div>
+          </div>
+          <!-- Accept / Reject banner -->
+          <div id="sim-result"></div>
+          <!-- PDA graph -->
+          <div id="pda-graph-wrap">
+            <svg id="pda-svg">
+              <defs>
+                <marker id="pda-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" class="pda-arrowhead" />
+                </marker>
+                <marker id="pda-arrow-eps" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" class="pda-arrowhead-eps" />
+                </marker>
+              </defs>
+              <g id="pda-graph-root"></g>
+            </svg>
+            <div id="pda-graph-empty">Define a PDA above.</div>
+          </div>
+          <!-- Configurations display -->
+          <div id="sim-configs-bar"></div>
+        </div>
+      </div>
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Configuration tree -->
+      <div class="panel" id="p-tree">
+        <div class="panel-header" onclick="toggleCollapse('p-tree')">
+          <span class="panel-title">Configuration Tree</span>
+          <button class="collapse-btn"
+                  onclick="event.stopPropagation(); toggleCollapse('p-tree');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="tree-wrap">
+            <svg id="tree-svg">
+              <defs>
+                <marker id="tree-arrow" markerWidth="7" markerHeight="7"
+                        refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L7,3 z" fill="var(--text-dim)" />
+                </marker>
+              </defs>
+              <g id="tree-root"></g>
+            </svg>
+            <div id="tree-empty">Enter a PDA and a string to see the configuration tree.</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- #panels -->
+
+    <!-- Algorithm modal -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1"
+         onclick="if(event.target===this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      initResize("rh-1", "p-def", +1);
+      initResize("rh-2", "p-tree", -1);
+      initAlgoModal();
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ALGORITHM MODAL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PC_PDA_SIM = pcBlock(
+        "PDA Simulation",
+        [
+          { label: "Input",  sym: it("M") + " = (Q, Σ, Γ, δ, q₀, Z₀, F)", desc: "nondeterministic PDA" },
+          { label: "",       sym: it("w") + " = a₁a₂…aₙ",                  desc: "input string" },
+          { label: "Output", sym: "accept / reject",                          desc: "" },
+        ],
+        `configs ${_la} ε-closure({(q₀, Z₀)})${cm("initial config; ε-close immediately")}
+for i ${_in} 1..n:${cm("consume each input symbol")}
+    next ${_la} ${_emp}
+    for each (q, γ) ${_in} configs:
+        for each (p, γ') ${_in} δ(q, aᵢ, top(γ)):${cm("symbol transition")}
+            next ${_la} next ${_cup} {(p, γ' · tail(γ))}
+        if top(γ) = ${_emp}: also try rules with pop = ε
+    configs ${_la} ε-closure(next)${cm("ε-close after each symbol")}
+    if configs = ${_emp}: ${kw("reject")}
+if configs ∩ (F × Γ*) ${_neq} ${_emp}: ${kw("accept")}${cm("some config in accepting state")}
+else: ${kw("reject")}`
+      );
+
+      function openAlgoModal(key) {
+        const modeLabel = pdaAcceptMode === "empty-stack" ? "empty stack" : "final state";
+        const configs = {
+          "pda-sim": { title: "PDA Simulation", subtitle: `nondeterministic, accept by ${modeLabel}`, pc: PC_PDA_SIM },
+        };
+        const cfg = configs[key];
+        if (!cfg) return;
+        document.getElementById("algo-title").textContent    = cfg.title;
+        document.getElementById("algo-subtitle").textContent = cfg.subtitle || "";
+        document.getElementById("algo-body").innerHTML       = cfg.pc;
+        document.getElementById("algo-overlay").classList.remove("hidden");
+        const closeBtn = document.querySelector(".algo-close");
+        if (closeBtn) closeBtn.focus();
+      }
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && isAlgoModalOpen()) closeAlgoModal();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PDA STATE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let pdaStates      = ["q0", "q1", "q2"];
+      let pdaStartIdx    = 0;
+      let pdaAccepts     = new Set([2]);
+      let pdaRules       = [];   // [{ from, input, pop, to, push }]
+      let pdaInitStack   = "⊥";
+      let pdaAcceptMode  = "final-state";  // "final-state" | "empty-stack"
+
+      function isAcceptingConfig(c) {
+        if (pdaAcceptMode === "empty-stack") return c.stack.length === 0;
+        return pdaAccepts.has(pdaStates.indexOf(c.state));
+      }
+
+      function setAcceptMode(mode) {
+        pdaAcceptMode = mode;
+        simRun();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // MUTATION HELPERS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function addState() {
+        const name = "q" + pdaStates.length;
+        pdaStates.push(name);
+        renderStatesTable();
+        onPDAChange();
+      }
+
+      function removeState(idx) {
+        if (pdaStates.length <= 1) return;
+        const name = pdaStates[idx];
+        pdaStates.splice(idx, 1);
+        if (pdaStartIdx >= idx && pdaStartIdx > 0) pdaStartIdx--;
+        const newAccepts = new Set();
+        for (const a of pdaAccepts) {
+          if (a < idx) newAccepts.add(a);
+          else if (a > idx) newAccepts.add(a - 1);
+        }
+        pdaAccepts = newAccepts;
+        // Remove rules referencing this state
+        pdaRules = pdaRules.filter(r => r.from !== name && r.to !== name);
+        renderStatesTable();
+        renderRulesTable();
+        onPDAChange();
+      }
+
+      function setStart(idx) {
+        pdaStartIdx = idx;
+        rerenderStateNameCells();
+        onPDAChange();
+      }
+
+      function toggleAccept(idx, checked) {
+        if (checked) pdaAccepts.add(idx);
+        else pdaAccepts.delete(idx);
+        rerenderStateNameCells();
+        onPDAChange();
+      }
+
+      function rerenderStateNameCells() {
+        document.querySelectorAll(".state-name-cell").forEach((td, i) => {
+          const isStart  = i === pdaStartIdx;
+          const isAccept = pdaAccepts.has(i);
+          td.classList.toggle("is-start",  isStart  && !isAccept);
+          td.classList.toggle("is-accept", !isStart && isAccept);
+          td.classList.toggle("is-both",   isStart  && isAccept);
+        });
+      }
+
+      function addRule() {
+        pdaRules.push({ from: pdaStates[pdaStartIdx] || "", input: "", pop: "", to: "", push: "" });
+        renderRulesTable();
+        // Don't trigger onPDAChange here — incomplete rule
+      }
+
+      function removeRule(idx) {
+        pdaRules.splice(idx, 1);
+        renderRulesTable();
+        onPDAChange();
+      }
+
+      function onRuleInput(idx, field, value) {
+        pdaRules[idx][field] = value;
+        onPDAChange();
+      }
+
+      function onInitStackChange() {
+        pdaInitStack = document.getElementById("init-stack-input").value.trim();
+        onPDAChange();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DEFINITION TABLE RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderStatesTable() {
+        const wrap = document.getElementById("states-table-wrap");
+        let h = `<table class="states-table"><thead><tr>`;
+        h += `<th></th>`;
+        h += `<th title="Start state">→</th>`;
+        h += `<th title="Accepting state">★</th>`;
+        h += `<th style="text-align:left;padding-left:8px">state</th>`;
+        h += `</tr></thead><tbody>`;
+        for (let i = 0; i < pdaStates.length; i++) {
+          const sn = pdaStates[i];
+          const isStart  = i === pdaStartIdx;
+          const isAccept = pdaAccepts.has(i);
+          let nameCls = "state-name-cell";
+          if (isStart && isAccept) nameCls += " is-both";
+          else if (isStart)  nameCls += " is-start";
+          else if (isAccept) nameCls += " is-accept";
+          h += `<tr>`;
+          h += `<td class="rm-cell"><button class="btn-rm-state" onclick="removeState(${i})" title="Remove state">×</button></td>`;
+          h += `<td class="marker-cell"><input type="radio" name="pda-start" ${isStart ? "checked" : ""} onchange="setStart(${i})"></td>`;
+          h += `<td class="marker-cell"><input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)"></td>`;
+          h += `<td class="${nameCls}">${esc(sn)}</td>`;
+          h += `</tr>`;
+        }
+        h += `</tbody></table>`;
+        wrap.innerHTML = h;
+      }
+
+      function renderRulesTable() {
+        const wrap = document.getElementById("rules-table-wrap");
+        if (pdaRules.length === 0) {
+          wrap.innerHTML = `<div style="font-family:var(--font-serif);font-style:italic;font-size:0.72rem;color:var(--text-lo);padding:4px 2px">No rules. Click + Rule to add.</div>`;
+          return;
+        }
+        let h = `<table class="rules-table"><thead><tr>`;
+        h += `<th></th>`;
+        h += `<th>from</th>`;
+        h += `<th>input</th>`;
+        h += `<th>pop</th>`;
+        h += `<th class="arrow-hdr">→</th>`;
+        h += `<th>to</th>`;
+        h += `<th>push</th>`;
+        h += `</tr></thead><tbody>`;
+        for (let i = 0; i < pdaRules.length; i++) {
+          const r = pdaRules[i];
+          const fromValid = pdaStates.includes(r.from) || r.from === "";
+          const toValid   = pdaStates.includes(r.to)   || r.to   === "";
+          h += `<tr>`;
+          h += `<td class="rm-cell"><button class="btn-rm-rule" onclick="removeRule(${i})" title="Remove rule">×</button></td>`;
+          h += `<td class="from-cell">` +
+               `<input type="text" value="${esc(r.from)}" placeholder="–"` +
+               ` data-ri="${i}" data-field="from" data-trans-type="states"` +
+               ` oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"` +
+               `${fromValid ? "" : ' class="invalid"'}></td>`;
+          h += `<td class="sym-cell eps-cell">` +
+               `<input type="text" value="${esc(r.input)}" placeholder="ε"` +
+               ` data-ri="${i}" data-field="input"` +
+               ` oninput="onRuleFieldInput(this)"></td>`;
+          h += `<td class="sym-cell eps-cell">` +
+               `<input type="text" value="${esc(r.pop)}" placeholder="ε"` +
+               ` data-ri="${i}" data-field="pop"` +
+               ` oninput="onRuleFieldInput(this)"></td>`;
+          h += `<td class="arrow-cell">→</td>`;
+          h += `<td class="to-cell">` +
+               `<input type="text" value="${esc(r.to)}" placeholder="–"` +
+               ` data-ri="${i}" data-field="to" data-trans-type="states"` +
+               ` oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"` +
+               `${toValid ? "" : ' class="invalid"'}></td>`;
+          h += `<td class="push-cell eps-cell">` +
+               `<input type="text" value="${esc(r.push)}" placeholder="ε"` +
+               ` data-ri="${i}" data-field="push"` +
+               ` oninput="onRuleFieldInput(this)"></td>`;
+          h += `</tr>`;
+        }
+        h += `</tbody></table>`;
+        wrap.innerHTML = h;
+      }
+
+      function onRuleFieldInput(input) {
+        const i     = parseInt(input.dataset.ri, 10);
+        const field = input.dataset.field;
+        pdaRules[i][field] = input.value;
+        // Validate from/to
+        if (field === "from" || field === "to") {
+          const valid = pdaStates.includes(input.value) || input.value === "";
+          input.classList.toggle("invalid", !valid);
+        }
+        onPDAChange();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PDA GRAPH  (D3 + Dagre)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PDA_R = 16;
+
+      const _pdaZoom = d3.zoom()
+        .scaleExtent([0.1, 8])
+        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", e => d3.select("#pda-graph-root").attr("transform", e.transform));
+      d3.select("#pda-svg").call(_pdaZoom).on("dblclick.zoom", null);
+      document.getElementById("pda-svg").addEventListener("dblclick", () => fitPDA());
+
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => { if (pdaStates.length > 0) fitPDA(); })
+          .observe(document.getElementById("pda-svg").parentElement);
+      }
+
+      function fitPDA() {
+        try {
+          const rootEl = document.getElementById("pda-graph-root");
+          const bb = rootEl.getBBox();
+          const svgEl = document.getElementById("pda-svg");
+          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 400;
+          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
+          if (!bb || bb.width < 1 || bb.height < 1) return;
+          const sc = Math.min(0.92, Math.min(vw / (bb.width + 80), vh / (bb.height + 60)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
+          d3.select("#pda-svg").call(_pdaZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch(e) {}
+      }
+
+      function ruleLabel(r) {
+        const inp  = r.input === "" ? "ε" : r.input;
+        const pop  = r.pop   === "" ? "ε" : r.pop;
+        const push = r.push  === "" ? "ε" : r.push;
+        return `${inp}, ${pop}/${push}`;
+      }
+
+      function renderPDAGraph() {
+        const root = d3.select("#pda-graph-root");
+        root.selectAll("*").remove();
+
+        const n = pdaStates.length;
+        document.getElementById("pda-graph-empty").style.display = n === 0 ? "" : "none";
+        if (n === 0) return;
+
+        // Build edge map: "fi-ti" → { from, to, labels[], allEps }
+        const edgeMap   = new Map();
+        const selfLoops = new Map(); // stateIdx → labels[]
+
+        for (const r of pdaRules) {
+          const fi = pdaStates.indexOf(r.from);
+          const ti = pdaStates.indexOf(r.to);
+          if (fi === -1 || ti === -1) continue;
+          const label  = ruleLabel(r);
+          const isEps  = r.input === "";
+          if (fi === ti) {
+            if (!selfLoops.has(fi)) selfLoops.set(fi, []);
+            selfLoops.get(fi).push({ label, isEps });
+          } else {
+            const k = fi + "-" + ti;
+            if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], allEps: true });
+            const e = edgeMap.get(k);
+            e.labels.push(label);
+            if (!isEps) e.allEps = false;
+          }
+        }
+
+        // Dagre layout
+        const dg = new dagre.graphlib.Graph();
+        dg.setGraph({ rankdir: "LR", nodesep: 36, ranksep: 70, marginx: 50, marginy: 40 });
+        dg.setDefaultEdgeLabel(() => ({}));
+        for (let i = 0; i < n; i++) dg.setNode(i, { width: PDA_R * 2 + 4, height: PDA_R * 2 + 4 });
+        for (const [k, e] of edgeMap) dg.setEdge(e.from, e.to, {});
+        dagre.layout(dg);
+
+        const pathLine = d3.line().x(p => p.x).y(p => p.y).curve(d3.curveCatmullRom);
+
+        // Draw non-self edges
+        for (const [k, e] of edgeMap) {
+          const ed = dg.edge(e.from, e.to);
+          if (!ed) continue;
+          const pts = ed.points;
+          const mid = pts[Math.floor(pts.length / 2)];
+          const eg = root.append("g")
+            .attr("class", "pda-edge" + (e.allEps ? " eps-edge" : ""))
+            .attr("data-edge", k);
+          const arrowId = e.allEps ? "pda-arrow-eps" : "pda-arrow";
+          eg.append("path").attr("d", pathLine(pts));
+          if (pts.length >= 2) {
+            const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
+            eg.append("line")
+              .attr("x1", p0.x).attr("y1", p0.y)
+              .attr("x2", p1.x).attr("y2", p1.y)
+              .attr("stroke", "none").attr("marker-end", `url(#${arrowId})`);
+          }
+          // Multi-line label using tspan
+          const textEl = eg.append("text")
+            .attr("x", mid.x).attr("y", mid.y - 4 - (e.labels.length - 1) * 5)
+            .attr("text-anchor", "middle");
+          e.labels.forEach((lbl, li) => {
+            textEl.append("tspan")
+              .attr("x", mid.x).attr("dy", li === 0 ? 0 : "1.1em")
+              .text(lbl);
+          });
+        }
+
+        // Draw self-loops
+        for (const [si, entries] of selfLoops) {
+          const dn = dg.node(si);
+          if (!dn) continue;
+          const cx = dn.x, top = dn.y - PDA_R - 2;
+          const allEps = entries.every(e => e.isEps);
+          const arrowId = allEps ? "pda-arrow-eps" : "pda-arrow";
+          const eg = root.append("g")
+            .attr("class", "pda-edge" + (allEps ? " eps-edge" : ""))
+            .attr("data-self", si);
+          eg.append("path")
+            .attr("d", `M${cx-9},${top} C${cx-28},${top-36} ${cx+28},${top-36} ${cx+9},${top}`)
+            .attr("marker-end", `url(#${arrowId})`);
+          const textEl = eg.append("text")
+            .attr("x", cx).attr("y", top - 40 - (entries.length - 1) * 5)
+            .attr("text-anchor", "middle");
+          entries.forEach((e, li) => {
+            textEl.append("tspan")
+              .attr("x", cx).attr("dy", li === 0 ? 0 : "1.1em")
+              .text(e.label);
+          });
+        }
+
+        // Draw nodes
+        for (let i = 0; i < n; i++) {
+          const dn = dg.node(i);
+          if (!dn) continue;
+          const isAccept = pdaAccepts.has(i);
+          const ng = root.append("g")
+            .attr("class", "pda-node" + (isAccept ? " accepting" : ""))
+            .attr("id", "pda-state-" + i)
+            .attr("transform", `translate(${dn.x},${dn.y})`);
+          ng.append("circle").attr("r", PDA_R);
+          if (isAccept) ng.append("circle").attr("class", "accept-ring").attr("r", PDA_R - 3);
+          ng.append("text")
+            .attr("class", "state-label")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(pdaStates[i]);
+          if (i === pdaStartIdx) {
+            root.append("line")
+              .attr("class", "start-arrow-pda")
+              .attr("x1", dn.x - PDA_R - 18).attr("y1", dn.y)
+              .attr("x2", dn.x - PDA_R - 1).attr("y2", dn.y)
+              .attr("marker-end", "url(#pda-arrow)");
+          }
+        }
+
+        fitPDA();
+      }
+
+      function pdaHighlightStates(activeSet) {
+        d3.selectAll(".pda-node").classed("sim-active", false);
+        for (const idx of (activeSet || [])) {
+          d3.select("#pda-state-" + idx).classed("sim-active", true);
+        }
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PDA SIMULATION ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const MAX_CONFIGS = 256;
+
+      // Stack array: last element = top.
+      // Push string: leftmost char = new top → push chars right-to-left.
+      function applyStack(stack, pop, push) {
+        const s = [...stack];
+        if (pop !== "") s.pop();
+        if (push !== "") {
+          const chars = [...push];
+          for (let i = chars.length - 1; i >= 0; i--) s.push(chars[i]);
+        }
+        return s;
+      }
+
+      function stackMatch(stack, pop) {
+        if (pop === "") return true;
+        return stack.length > 0 && stack[stack.length - 1] === pop;
+      }
+
+      // Config key for dedup (state + stack contents)
+      function cfgKey(c) {
+        return c.state + "|" + c.stack.join("\x00");
+      }
+
+      function pdaEpsClosure(configs) {
+        const seen   = new Map();  // key → config
+        const queue  = [];
+        for (const c of configs) {
+          const k = cfgKey(c);
+          if (!seen.has(k)) { seen.set(k, c); queue.push(c); }
+        }
+        let qi = 0;
+        while (qi < queue.length && seen.size < MAX_CONFIGS) {
+          const cfg = queue[qi++];
+          for (const rule of pdaRules) {
+            if (rule.from !== cfg.state || rule.input !== "") continue;
+            if (!stackMatch(cfg.stack, rule.pop)) continue;
+            if (!pdaStates.includes(rule.to)) continue;
+            const newCfg = { state: rule.to, stack: applyStack(cfg.stack, rule.pop, rule.push) };
+            const k = cfgKey(newCfg);
+            if (!seen.has(k)) { seen.set(k, newCfg); queue.push(newCfg); }
+          }
+        }
+        return [...seen.values()];
+      }
+
+      function pdaSymStep(configs, sym) {
+        const result = [];
+        const seen   = new Set();
+        for (const cfg of configs) {
+          for (const rule of pdaRules) {
+            if (rule.from !== cfg.state || rule.input !== sym) continue;
+            if (!stackMatch(cfg.stack, rule.pop)) continue;
+            if (!pdaStates.includes(rule.to)) continue;
+            const newCfg = { state: rule.to, stack: applyStack(cfg.stack, rule.pop, rule.push) };
+            const k = cfgKey(newCfg);
+            if (!seen.has(k)) { seen.add(k); result.push(newCfg); }
+          }
+        }
+        return result;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION STEP ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simHistory  = [];  // _simHistory[i] = configs after consuming i chars
+      let _simPos      = 0;
+      let _simChars    = [];
+
+      function simRun() {
+        const input = document.getElementById("sim-string-input").value;
+        _simChars = [...input];
+        _simPos   = 0;
+        document.getElementById("sim-result").style.display = "none";
+        buildSimTree();   // populates _simHistory, _treeFrontiers, _simTree
+        simRender();
+        simSetBtns();
+      }
+
+      function simReset() {
+        if (_simHistory.length === 0) return;
+        _simPos = 0;
+        document.getElementById("sim-result").style.display = "none";
+        simRender();
+        simSetBtns();
+      }
+
+      function simStepFwd() {
+        if (_simPos >= _simHistory.length - 1) return;
+        _simPos++;
+        simRender();
+        simSetBtns();
+      }
+
+      function simBack() {
+        if (_simPos <= 0) return;
+        _simPos--;
+        document.getElementById("sim-result").style.display = "none";
+        simRender();
+        simSetBtns();
+      }
+
+      function simRunAll() {
+        if (_simHistory.length === 0) return;
+        _simPos = _simHistory.length - 1;
+        simRender();
+        simSetBtns();
+      }
+
+      function simSetBtns() {
+        const has   = _simHistory.length > 0;
+        const atEnd = _simPos >= _simHistory.length - 1;
+        document.getElementById("btn-sim-reset").disabled = !has || _simPos <= 0;
+        document.getElementById("btn-sim-back").disabled  = !has || _simPos <= 0;
+        document.getElementById("btn-sim-step").disabled  = !has || atEnd;
+        document.getElementById("btn-sim-all").disabled   = !has || atEnd;
+      }
+
+      function simRender() {
+        if (_simHistory.length === 0) return;
+        const configs  = _simHistory[_simPos];
+        const maxDepth = _simChars.length;
+        const atEnd    = _simPos === maxDepth;
+
+        // Log bar
+        const logBar = document.getElementById("sim-log-bar");
+        if (_simPos === 0) {
+          const startName = pdaStates[pdaStartIdx];
+          logBar.innerHTML = `Start: <span style="color:var(--accent)">${esc(startName)}</span>` +
+            (pdaInitStack ? `  <span style="color:var(--text-lo)">stack: [${esc(pdaInitStack)}]</span>` : "");
+        } else if (!atEnd) {
+          const sym = _simChars[_simPos - 1];
+          const names = [...new Set(configs.map(c => c.state))];
+          logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span>` +
+            ` → active: {${names.map(esc).join(", ") || "∅"}}` +
+            (configs.length >= MAX_CONFIGS
+              ? ` <span style="color:var(--red)">(≥${MAX_CONFIGS} configs, truncated)</span>` : "");
+        } else {
+          const acceptCfgs = configs.filter(isAcceptingConfig);
+          if (acceptCfgs.length > 0) {
+            const detail = pdaAcceptMode === "empty-stack"
+              ? `${acceptCfgs.length} config(s) with empty stack`
+              : `accepting state(s): {${[...new Set(acceptCfgs.map(c => c.state))].map(esc).join(", ")}}`;
+            logBar.innerHTML = `<span style="color:var(--green)">✓ Accepted</span> — ${detail}`;
+          } else {
+            const detail = pdaAcceptMode === "empty-stack"
+              ? "no config with empty stack"
+              : "no config in an accepting state";
+            logBar.innerHTML = `<span style="color:var(--red)">✗ Rejected</span> — ${detail}`;
+          }
+        }
+
+        // Result banner
+        const resultEl = document.getElementById("sim-result");
+        if (atEnd) {
+          const accepted = configs.some(isAcceptingConfig);
+          resultEl.style.display = "";
+          if (accepted) { resultEl.textContent = "✓  ACCEPTED"; resultEl.className = "accept"; }
+          else          { resultEl.textContent = "✗  REJECTED"; resultEl.className = "reject"; }
+        } else {
+          resultEl.style.display = "none";
+        }
+
+        // Configs bar
+        renderConfigsBar(configs);
+
+        // Graph highlights
+        const activeIdxs = [...new Set(configs.map(c => pdaStates.indexOf(c.state)).filter(i => i >= 0))];
+        pdaHighlightStates(activeIdxs);
+
+        // Configuration tree
+        renderTree();
+      }
+
+      function renderConfigsBar(configs) {
+        const bar = document.getElementById("sim-configs-bar");
+        if (configs.length === 0) { bar.style.display = "none"; return; }
+        bar.style.display = "flex";
+        let h = `<span class="cfg-chips-label">Configs:</span>`;
+        const shown = configs.slice(0, MAX_CONFIGS);
+        for (const c of shown) {
+          const isAccept = isAcceptingConfig(c);
+          const stackStr = c.stack.length > 0
+            ? c.stack.slice().reverse().join("") + " ↑"  // display: bottom…top↑
+            : "∅";
+          const cls = "cfg-chip" + (isAccept ? " cfg-accept" : "");
+          h += `<span class="${cls}">(<span class="cfg-state">${esc(c.state)}</span>, ${esc(stackStr)})</span>`;
+        }
+        if (configs.length >= MAX_CONFIGS) {
+          h += `<span class="cfg-truncated">≥${MAX_CONFIGS}</span>`;
+        }
+        bar.innerHTML = h;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CONFIGURATION TREE  (build + render)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simTree      = null;  // { vRoot, symDepth }
+      let _treeFrontiers = [];   // _treeFrontiers[i] = node[] in frontier at step i
+      let _treeNextId   = 0;
+      const MAX_TREE_NODES = 300;
+
+      // Each PDA config in the tree:
+      //   id, state, stack, parent, children[], edgeInput, edgePop, edgePush,
+      //   symDepth,  dead, accepted, rejected
+      function makeTreeNode(state, stack, parent, edgeInput, edgePop, edgePush) {
+        const symDepth = (edgeInput === null || edgeInput === "")
+          ? Math.max(0, parent.symDepth)   // ε-step or root: same symbol depth (vRoot has −1)
+          : parent.symDepth + 1;           // symbol-consuming step
+        return {
+          id: _treeNextId++, state, stack: [...stack],
+          parent, children: [],
+          edgeInput, edgePop, edgePush, symDepth,
+          dead: false, accepted: false, rejected: false,
+        };
+      }
+
+      // Expand all ε-reachable configs from startNode, adding them as children in the tree.
+      // Uses local dedup (per expansion) to prevent cycles on a single path.
+      function epsExpandTree(startNode) {
+        const seen  = new Set([cfgKey(startNode)]);
+        const queue = [startNode];
+        let qi = 0;
+        while (qi < queue.length && _treeNextId < MAX_TREE_NODES) {
+          const par = queue[qi++];
+          for (const rule of pdaRules) {
+            if (rule.from !== par.state || rule.input !== "") continue;
+            if (!stackMatch(par.stack, rule.pop)) continue;
+            if (!pdaStates.includes(rule.to)) continue;
+            const ns = applyStack(par.stack, rule.pop, rule.push);
+            const k  = cfgKey({ state: rule.to, stack: ns });
+            if (seen.has(k)) continue;
+            seen.add(k);
+            const child = makeTreeNode(rule.to, ns, par, "", rule.pop, rule.push);
+            par.children.push(child);
+            queue.push(child);
+          }
+        }
+        return queue;  // [startNode, ...all ε-descendants]
+      }
+
+      function buildSimTree() {
+        _treeNextId   = 0;
+        _treeFrontiers = [];
+        _simHistory   = [];
+
+        // Virtual root (not rendered; holds the real start node as its child)
+        const vRoot = {
+          id: _treeNextId++, state: null, stack: [], symDepth: -1,
+          parent: null, children: [],
+        };
+
+        const initStack = pdaInitStack ? [pdaInitStack] : [];
+        const root = makeTreeNode(pdaStates[pdaStartIdx], initStack, vRoot, null, null, null);
+        vRoot.children.push(root);
+
+        // Initial ε-closure
+        let frontier = epsExpandTree(root);
+        _treeFrontiers.push([...frontier]);
+        _simHistory.push(frontier.map(n => ({ state: n.state, stack: n.stack })));
+
+        // Symbol steps
+        for (let si = 0; si < _simChars.length; si++) {
+          const sym         = _simChars[si];
+          const nextFrontier = [];
+
+          for (const node of frontier) {
+            let hadChild = false;
+            for (const rule of pdaRules) {
+              if (rule.from !== node.state || rule.input !== sym) continue;
+              if (!stackMatch(node.stack, rule.pop)) continue;
+              if (!pdaStates.includes(rule.to)) continue;
+              if (_treeNextId >= MAX_TREE_NODES) { node.dead = true; break; }
+              hadChild = true;
+              const ns    = applyStack(node.stack, rule.pop, rule.push);
+              const child = makeTreeNode(rule.to, ns, node, sym, rule.pop, rule.push);
+              node.children.push(child);
+              const expanded = epsExpandTree(child);
+              for (const n of expanded) nextFrontier.push(n);
+            }
+            if (!hadChild) node.dead = true;
+          }
+
+          frontier = nextFrontier;
+          _treeFrontiers.push([...frontier]);
+          _simHistory.push(frontier.map(n => ({ state: n.state, stack: n.stack })));
+          if (_treeNextId >= MAX_TREE_NODES) break;
+        }
+
+        // Mark terminal nodes
+        for (const node of frontier) {
+          if (isAcceptingConfig(node)) node.accepted = true;
+          else                         node.rejected = true;
+        }
+
+        _simTree = { vRoot, symDepth: _simChars.length };
+      }
+
+      // ── Tree renderer ──────────────────────────────────────
+
+      const TREE_NW = 72, TREE_NH = 36;
+
+      const _pdaTreeZoom = d3.zoom()
+        .scaleExtent([0.08, 6])
+        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", e => d3.select("#tree-root").attr("transform", e.transform));
+      d3.select("#tree-svg").call(_pdaTreeZoom).on("dblclick.zoom", null);
+      document.getElementById("tree-svg").addEventListener("dblclick", () => fitSimTree());
+
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => { if (_simTree) fitSimTree(); })
+          .observe(document.getElementById("tree-svg").parentElement);
+      }
+
+      function stackAbbrev(stack) {
+        if (!stack || stack.length === 0) return "∅";
+        const top = [...stack].reverse();
+        const str = top.slice(0, 3).join(" ");
+        return top.length > 3 ? str + " …" : str + " ↑";
+      }
+
+      function treeEdgeLabelStr(child) {
+        if (child.edgeInput === null) return "";
+        const inp  = child.edgeInput === "" ? "ε" : child.edgeInput;
+        const pop  = child.edgePop  === "" ? "ε" : child.edgePop;
+        const push = child.edgePush === "" ? "ε" : child.edgePush;
+        return `${inp}, ${pop}/${push}`;
+      }
+
+      function treeNodeStatus(pd, activeIds) {
+        if (pd.dead)     return "dead";
+        if (pd.accepted) return "accept";
+        if (pd.rejected) return "reject";
+        if (activeIds.has(pd.id)) return "active";
+        return "normal";
+      }
+
+      function renderTree() {
+        const svgRoot = d3.select("#tree-root");
+        svgRoot.selectAll("*").remove();
+
+        const emptyEl = document.getElementById("tree-empty");
+        if (!_simTree) { emptyEl.style.display = ""; return; }
+        emptyEl.style.display = "none";
+
+        const realRoot = _simTree.vRoot.children[0];
+        if (!realRoot) { emptyEl.style.display = ""; return; }
+
+        const revealDepth = _simPos;
+        const activeFront = _simPos < _treeFrontiers.length ? _treeFrontiers[_simPos] : [];
+        const activeIds   = new Set(activeFront.map(n => n.id));
+
+        // Accepting-path highlight: trace ancestors of accepted leaf nodes
+        const acceptPathIds = new Set();
+        if (_simPos === _simChars.length && _treeFrontiers.length > _simChars.length) {
+          for (const node of _treeFrontiers[_simChars.length]) {
+            if (node.accepted) {
+              let n = node;
+              while (n && n.state !== null) { acceptPathIds.add(n.id); n = n.parent; }
+            }
+          }
+        }
+
+        // Build D3 hierarchy, revealing only nodes with symDepth ≤ revealDepth
+        const hier = d3.hierarchy(realRoot, d => {
+          const vis = d.children.filter(c => c.symDepth <= revealDepth);
+          return vis.length > 0 ? vis : null;
+        });
+
+        d3.tree().nodeSize([TREE_NW + 12, TREE_NH + 58])(hier);
+
+        // ── Edges (drawn before nodes so nodes sit on top) ──
+        for (const lnk of hier.links()) {
+          const pd = lnk.target.data;
+          const x1 = lnk.source.x, y1 = lnk.source.y + TREE_NH / 2;
+          const x2 = lnk.target.x, y2 = lnk.target.y - TREE_NH / 2;
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+          const isEps    = pd.edgeInput === "";
+          const st       = treeNodeStatus(pd, activeIds);
+          const onAccept = acceptPathIds.has(pd.id);
+
+          let pc = "tree-edge-path";
+          if (isEps)     pc += " te-eps";
+          if (onAccept)  pc += " te-accept-path";
+          else if (st === "active")               pc += " te-active";
+          else if (st === "accept")               pc += " te-accept";
+          else if (st === "dead" || st === "reject") pc += " te-dead";
+
+          svgRoot.append("path")
+            .attr("class", pc)
+            .attr("d", `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`);
+
+          const lbl = treeEdgeLabelStr(pd);
+          if (lbl) {
+            let lc = "tree-edge-lbl";
+            if (onAccept)            lc += " te-accept-path";
+            else if (st === "active")  lc += " te-active";
+            else if (st === "accept")  lc += " te-accept";
+            else if (st === "dead" || st === "reject") lc += " te-dead";
+            svgRoot.append("text")
+              .attr("class", lc)
+              .attr("x", mx + 5).attr("y", my - 3)
+              .attr("text-anchor", "start")
+              .text(lbl);
+          }
+        }
+
+        // ── Entry arrow ──
+        svgRoot.append("line")
+          .attr("class", "tree-start-arrow")
+          .attr("x1", hier.x).attr("y1", hier.y - TREE_NH / 2 - 14)
+          .attr("x2", hier.x).attr("y2", hier.y - TREE_NH / 2 - 1)
+          .attr("marker-end", "url(#tree-arrow)");
+
+        // ── Nodes ──
+        hier.each(dn => {
+          const pd = dn.data;
+          const st = treeNodeStatus(pd, activeIds);
+          const g  = svgRoot.append("g")
+            .attr("class", "tree-node-g" + (st !== "normal" ? " tn-" + st : ""))
+            .attr("transform", `translate(${dn.x - TREE_NW / 2},${dn.y - TREE_NH / 2})`);
+          g.append("rect").attr("width", TREE_NW).attr("height", TREE_NH).attr("rx", 3);
+          g.append("text").attr("class", "tn-state")
+            .attr("x", TREE_NW / 2).attr("y", 13)
+            .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+            .text(pd.state);
+          g.append("text").attr("class", "tn-stack")
+            .attr("x", TREE_NW / 2).attr("y", 27)
+            .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+            .text(stackAbbrev(pd.stack));
+          if (pd.dead) {
+            g.append("text").attr("class", "tn-dead-mark")
+              .attr("x", TREE_NW - 2).attr("y", 8)
+              .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+              .text("✗");
+          }
+        });
+
+        fitSimTree();
+      }
+
+      function fitSimTree() {
+        try {
+          const rootEl = document.getElementById("tree-root");
+          const bb     = rootEl.getBBox();
+          const svgEl  = document.getElementById("tree-svg");
+          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 340;
+          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 400;
+          if (!bb || bb.width < 1) return;
+          const pad = 28;
+          const sc  = Math.min(1.2,
+            Math.min((vw - pad) / (bb.width  + pad),
+                     (vh - pad) / (bb.height + pad)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = pad;
+          d3.select("#tree-svg")
+            .call(_pdaTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch (e) {}
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const EXAMPLES = {};
+
+      function loadExamplePDA(k) {
+        if (!k) return;
+        document.getElementById("examples-select").value = k;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        pdaStates    = [...ex.states];
+        pdaStartIdx  = ex.states.indexOf(ex.start);
+        pdaAccepts   = new Set(ex.accepts.map(s => ex.states.indexOf(s)));
+        pdaRules     = ex.rules ? ex.rules.map(r => ({ ...r })) : [];
+        pdaInitStack  = ex.initStack !== undefined ? ex.initStack : "Z";
+        document.getElementById("init-stack-input").value = pdaInitStack;
+        pdaAcceptMode = ex.acceptMode || "final-state";
+        document.querySelector(`input[name="accept-mode"][value="${pdaAcceptMode}"]`).checked = true;
+        renderStatesTable();
+        renderRulesTable();
+        onPDAChange();
+        renderExampleChips(ex.strings || [], simRun);
+      }
+
+      loadAutomataExamples("../examples/examples-pda.json", "examples-select", EXAMPLES, loadExamplePDA);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CHANGE HANDLER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function onPDAChange() {
+        renderPDAGraph();
+        simRun();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // KEYBOARD SHORTCUTS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      document.addEventListener("keydown", e => {
+        if (isAlgoModalOpen()) return;
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (e.key === "ArrowRight" || e.key === ".") { e.preventDefault(); simStepFwd(); }
+        if (e.key === "ArrowLeft"  || e.key === ",") { e.preventDefault(); simBack(); }
+        if (e.key === "Home") { e.preventDefault(); simReset(); }
+        if (e.key === "End")  { e.preventDefault(); simRunAll(); }
+      });
+
+      document.getElementById("sim-string-input").addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); simRun(); }
+      });
+      document.getElementById("sim-string-input").addEventListener("input", () => simRun());
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // INIT
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      initPanelStorage("pda-tool-v1", ["p-def", "p-sim", "p-tree"]);
+      loadPanelState();
+      renderStatesTable();
+      renderRulesTable();
+      onPDAChange();
+    </script>
+  </body>
+</html>
