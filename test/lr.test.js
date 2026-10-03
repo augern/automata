@@ -65,3 +65,64 @@ test("state 0 is the closure of the augmented start item", () => {
   // S'->.S, S->.CC, C->.cC, C->.d
   assert.deepEqual(items, ["0:0", "1:0", "2:0", "3:0"]);
 });
+
+// ── Parser driver ─────────────────────────────────────────────────────
+const { lrPickAction, lrDecode, lrGoto } = load("grammar.js", "lr.js");
+
+function parseTokens(g, tables, input) {
+  const tokens = [...input.split(/\s+/).filter(Boolean), "$"];
+  const stack = [0];
+  let pos = 0;
+  const actions = [];
+  for (let n = 0; n < 1000; n++) {
+    const state = stack[stack.length - 1];
+    const entry = lrPickAction(tables.action[state][tokens[pos]]);
+    if (!entry) return { accepted: false, actions };
+    const d = lrDecode(entry);
+    actions.push(d.type === "reduce" ? "r" + d.ruleIdx : d.type === "shift" ? "s" + d.next : "acc");
+    if (d.type === "accept") return { accepted: true, actions };
+    if (d.type === "shift") {
+      stack.push(d.next);
+      pos++;
+    } else {
+      const rule = g.rules[d.ruleIdx];
+      stack.length -= rule.rhs.length;
+      const next = lrGoto(tables, stack[stack.length - 1], rule.lhs);
+      if (next === undefined) return { accepted: false, actions };
+      stack.push(next);
+    }
+  }
+  throw new Error("parser did not terminate");
+}
+
+test("driver: all four methods accept/reject the same strings on a conflict-free grammar", () => {
+  for (const mode of ["SLR1", "LALR1", "LR1"]) {
+    const { g, tables } = lr(EXPR, mode);
+    assert.ok(parseTokens(g, tables, "id + id * id").accepted, mode);
+    assert.ok(parseTokens(g, tables, "( id + id ) * id").accepted, mode);
+    assert.equal(parseTokens(g, tables, "id + + id").accepted, false, mode);
+    assert.equal(parseTokens(g, tables, "( id").accepted, false, mode);
+  }
+});
+
+test("driver: parsing 'id' shifts, then reduces F->id, T->F, E->T, then accepts", () => {
+  const { g, tables } = lr(EXPR, "SLR1");
+  // rules: 0 E'->E, 1 E->E+T, 2 E->T, 3 T->T*F, 4 T->F, 5 F->(E), 6 F->id
+  const actions = parseTokens(g, tables, "id").actions;
+  assert.match(actions[0], /^s\d+$/);
+  assert.deepEqual(actions.slice(1), ["r6", "r4", "r2", "acc"]);
+});
+
+test("lrPickAction prefers shift over reduce on a conflicted cell", () => {
+  assert.equal(lrPickAction(["r2", "s7"]), "s7");
+  assert.equal(lrPickAction(["r2", "r3"]), "r2");
+  assert.equal(lrPickAction("acc"), "acc");
+  assert.equal(lrPickAction(undefined), undefined);
+});
+
+test("S -> a S | a is SLR(1) and parses a+", () => {
+  const { g, tables } = lr("S -> a S | a", "SLR1");
+  assert.equal(tables.conflicts.length, 0);
+  assert.ok(parseTokens(g, tables, "a a a").accepted);
+  assert.equal(parseTokens(g, tables, "").accepted, false);
+});

@@ -1320,7 +1320,7 @@
           const tSyms = simSyms.join(" "),
             tInput = simTokens.slice(simPos).join(" ");
           simPendingGoto = null;
-          const next = gt[top]?.[rule.lhs];
+          const next = lrGoto(simTables, top, rule.lhs);
           if (next === undefined) {
             setSimLog("Error: no goto for " + rule.lhs + " from state " + top, "error");
             simDone = true;
@@ -1351,8 +1351,9 @@
           simSetBtns();
           return;
         }
-        const entry = Array.isArray(act) ? act.find((a) => a.startsWith("s")) || act[0] : act;
-        if (entry === "acc") {
+        const entry = lrPickAction(act);
+        const decoded = lrDecode(entry);
+        if (decoded.type === "accept") {
           const tSyms = simSyms.join(" "),
             tInput = simTokens.slice(simPos).join(" ");
           hiAuto(state, simStack.slice(0, -1), null, null);
@@ -1377,10 +1378,10 @@
           simSetBtns();
           return;
         }
-        if (entry.startsWith("s")) {
+        if (decoded.type === "shift") {
           const tSyms = simSyms.join(" "),
             tInput = simTokens.slice(simPos).join(" ");
-          const next = parseInt(entry.slice(1));
+          const next = decoded.next;
           hiAuto(next, simStack, state, token);
           hiTable(state, token, null, null);
           treeShift(token);
@@ -1395,7 +1396,7 @@
           simTrace.push({ syms: tSyms, input: tInput, action: shiftMsg });
         } else {
           // \u2500\u2500 Step 1 of a reduce: pop stack, expose new top, defer GOTO \u2500\u2500
-          const ri = parseInt(entry.slice(1)),
+          const ri = decoded.ruleIdx,
             rule = currentGrammar.rules[ri],
             pc = rule.rhs.length;
           // Capture BEFORE pop so the trace shows the handle still on the stack

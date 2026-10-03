@@ -192,3 +192,22 @@ function buildTables(g, auto, mode) {
     }
   return { action, goto: gt, conflicts };
 }
+
+// ── Parser driver pieces ──────────────────────────────────────────────
+// On a conflicted ACTION cell the simulator prefers shift, else the first entry.
+function lrPickAction(cell) {
+  if (!cell) return undefined;
+  return Array.isArray(cell) ? cell.find((a) => a.startsWith("s")) || cell[0] : cell;
+}
+
+// "acc" | "s<n>" | "r<n>"  ->  { type: "accept" } | { type: "shift", next } | { type: "reduce", ruleIdx }
+function lrDecode(entry) {
+  if (entry === "acc") return { type: "accept" };
+  if (entry.startsWith("s")) return { type: "shift", next: parseInt(entry.slice(1)) };
+  return { type: "reduce", ruleIdx: parseInt(entry.slice(1)) };
+}
+
+// GOTO[state][nonterminal], or undefined when there is no transition.
+function lrGoto(tables, state, nonterminal) {
+  return tables.goto[state]?.[nonterminal];
+}
