@@ -652,6 +652,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/tm.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
@@ -728,7 +729,7 @@ ${kw("loop")}:
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       function addState() {
-        const name = "q" + tmStates.length;
+        const name = freshStateName(tmStates);
         tmStates.push(name);
         tmTrans[name] = {};
         renderDefTable();
@@ -738,6 +739,7 @@ ${kw("loop")}:
       function removeState(idx) {
         if (tmStates.length <= 1) return;
         const name = tmStates[idx];
+        const oldLength = tmStates.length;
         tmStates.splice(idx, 1);
         delete tmTrans[name];
         // Remove transitions that target the removed state
@@ -747,10 +749,9 @@ ${kw("loop")}:
           }
         }
         // Clamp special indices
-        const clamp = i => Math.min(Math.max(i > idx ? i - 1 : i, 0), tmStates.length - 1);
-        tmStartIdx  = clamp(tmStartIdx);
-        tmAcceptIdx = clamp(tmAcceptIdx);
-        tmRejectIdx = clamp(tmRejectIdx);
+        tmStartIdx  = indexAfterRemoval(tmStartIdx,  idx, oldLength);
+        tmAcceptIdx = indexAfterRemoval(tmAcceptIdx, idx, oldLength);
+        tmRejectIdx = indexAfterRemoval(tmRejectIdx, idx, oldLength);
         renderDefTable();
         onTMChange();
       }

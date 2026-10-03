@@ -602,6 +602,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/nfa.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
@@ -671,8 +672,7 @@ else: ${kw("reject")}`
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       function addState() {
-        const n = nfaStates.length;
-        const name = "q" + n;
+        const name = freshStateName(nfaStates);
         nfaStates.push(name);
         nfaTrans[name] = {};
         for (const sym of nfaAlphabet) nfaTrans[name][sym] = [];
@@ -682,8 +682,9 @@ else: ${kw("reject")}`
       }
 
       function removeState(idx) {
-        if (nfaStates.length <= 1) return; // keep at least one
-        const name = nfaStates[idx];
+        const removed = removeStateAt({ states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts }, idx);
+        if (!removed) return; // keep at least one
+        const name = removed.name;
         nfaStates.splice(idx, 1);
         delete nfaTrans[name];
         // Remove references from other states
@@ -694,15 +695,8 @@ else: ${kw("reject")}`
             }
           }
         }
-        // Fix start index
-        if (nfaStartIdx >= idx && nfaStartIdx > 0) nfaStartIdx--;
-        // Fix accepts
-        const newAccepts = new Set();
-        for (const a of nfaAccepts) {
-          if (a < idx) newAccepts.add(a);
-          else if (a > idx) newAccepts.add(a - 1);
-        }
-        nfaAccepts = newAccepts;
+        nfaStartIdx = removed.start;
+        nfaAccepts = removed.accepts;
         renderDefTable();
         onNFAChange();
       }

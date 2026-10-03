@@ -72,7 +72,7 @@ parser-tools/
 ```
 
 `shared.css`, `shared.js` and `algo/grammar.js` are required by all tools
-(`algo/grammar.js` must be loaded before `shared.js`; `algo/lr.js`, `algo/ll1.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js` and `algo/tm.js` only by their own tools).
+(`algo/grammar.js` must be loaded before `shared.js`; `algo/lr.js`, `algo/ll1.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js`, `algo/tm.js` (and `algo/states.js` for the three automata tools) only where needed).
 D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in the corresponding

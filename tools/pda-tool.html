@@ -642,6 +642,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/pda.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
@@ -717,23 +718,19 @@ else: ${kw("reject")}`
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       function addState() {
-        const name = "q" + pdaStates.length;
+        const name = freshStateName(pdaStates);
         pdaStates.push(name);
         renderStatesTable();
         onPDAChange();
       }
 
       function removeState(idx) {
-        if (pdaStates.length <= 1) return;
-        const name = pdaStates[idx];
+        const removed = removeStateAt({ states: pdaStates, start: pdaStartIdx, accepts: pdaAccepts }, idx);
+        if (!removed) return;
+        const name = removed.name;
         pdaStates.splice(idx, 1);
-        if (pdaStartIdx >= idx && pdaStartIdx > 0) pdaStartIdx--;
-        const newAccepts = new Set();
-        for (const a of pdaAccepts) {
-          if (a < idx) newAccepts.add(a);
-          else if (a > idx) newAccepts.add(a - 1);
-        }
-        pdaAccepts = newAccepts;
+        pdaStartIdx = removed.start;
+        pdaAccepts = removed.accepts;
         // Remove rules referencing this state
         pdaRules = pdaRules.filter(r => r.from !== name && r.to !== name);
         renderStatesTable();
