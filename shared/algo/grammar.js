@@ -4,6 +4,13 @@
 
 const EPSILON = "ε"; // ε — single source of truth for the epsilon sentinel
 
+// HTML-escape a value for safe insertion into DOM content or attributes.
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:BNF-PARSER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -17,7 +24,10 @@ function parseBNF(text, augment = true) {
   for (const line of lines) {
     const arrow = line.includes("->") ? "->" : line.includes("\u2192") ? "\u2192" : null;
     if (!arrow) throw new Error("Missing '->' in: " + line);
-    const [lhs, rhs] = line.split(arrow).map((s) => s.trim());
+    // Split at the first arrow only; any later arrow is an ordinary RHS token.
+    const at = line.indexOf(arrow);
+    const lhs = line.slice(0, at).trim();
+    const rhs = line.slice(at + arrow.length).trim();
     if (!lhs) throw new Error("Missing LHS in: " + line);
     for (const alt of rhs.split("|")) {
       const toks = alt.trim().split(/\s+/).filter(Boolean);

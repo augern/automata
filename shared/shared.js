@@ -764,13 +764,6 @@ function transInputKeydown(event) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-// HTML-escape a value for safe insertion into DOM content or attributes.
-function esc(s) {
-  return String(s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 // Render clickable string chips into #examples-chips / #chips-container.
 // Shows the bar when strings are present, hides it when empty.
 // simFn() is called after the chosen string is written to #sim-string-input.
