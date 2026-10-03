@@ -652,6 +652,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/tm.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
       // shared.js stub
@@ -706,7 +707,7 @@ ${kw("loop")}:
       // CONSTANTS & TM STATE
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      const BLANK = "□";
+      const BLANK = TM_BLANK;
 
       // Default: accepts strings over {a} of even length (parity checker)
       let tmStates   = ["q0", "q1", "qA", "qR"];
@@ -897,55 +898,18 @@ ${kw("loop")}:
       //           action: null | { fromState, sym, write, dir } | { implicit: true, fromState, sym } }
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      const MAX_STEPS = 1000;
+      const MAX_STEPS = TM_MAX_STEPS;
 
       let _configs    = [];   // array of config objects
       let _simPos     = 0;    // current config index
       let _didNotHalt = false;
 
-      function tapeRead(tape, pos) {
-        return tape.has(pos) ? tape.get(pos) : BLANK;
-      }
-
-      function tapeWrite(tape, pos, sym) {
-        if (sym === BLANK) tape.delete(pos); // keep map sparse
-        else tape.set(pos, sym);
-      }
-
+      // Tape access and the pre-run live in shared/algo/tm.js.
+      const tapeRead = tmTapeRead;
       function buildConfigs(inputStr) {
-        const tape = new Map();
-        for (let i = 0; i < inputStr.length; i++) tape.set(i, inputStr[i]);
-
-        let head  = 0;
-        let state = tmStates[tmStartIdx];
-        const configs = [{ tape: new Map(tape), head, state, action: null }];
-
-        let halted = false;
-        for (let step = 0; step < MAX_STEPS && !halted; step++) {
-          const sym   = tapeRead(tape, head);
-          const trans = tmTrans[state]?.[sym];
-
-          if (!trans) {
-            // Implicit halt-reject
-            const prevState = state;
-            state = tmStates[tmRejectIdx];
-            configs.push({ tape: new Map(tape), head, state,
-                           action: { implicit: true, fromState: prevState, sym } });
-            halted = true;
-            break;
-          }
-
-          const fromState = state;
-          tapeWrite(tape, head, trans.write);
-          state  = trans.next;
-          head  += trans.dir === "R" ? 1 : -1;
-          configs.push({ tape: new Map(tape), head, state,
-                         action: { fromState, sym, write: trans.write, dir: trans.dir } });
-
-          if (state === tmStates[tmAcceptIdx] || state === tmStates[tmRejectIdx]) halted = true;
-        }
-
-        return { configs, didNotHalt: !halted };
+        return tmBuildConfigs(
+          { states: tmStates, start: tmStartIdx, accept: tmAcceptIdx, reject: tmRejectIdx, trans: tmTrans },
+          inputStr, MAX_STEPS);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

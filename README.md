@@ -56,7 +56,8 @@ parser-tools/
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── nfa.js                      ← pure: ε-closure, NFA simulation tree, exact acceptance
-│   │   └── pda.js                      ← pure: PDA configurations, simulation tree, exact acceptance
+│   │   ├── pda.js                      ← pure: PDA configurations, simulation tree, exact acceptance
+│   │   └── tm.js                       ← pure: TM tape and pre-run
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (BNF parser, FIRST/FOLLOW, parse tree,
 │                                          panel layout, example loader, modal behaviour,
@@ -68,7 +69,7 @@ parser-tools/
 ```
 
 `shared.css`, `shared.js` and `algo/grammar.js` are required by all tools
-(`algo/grammar.js` must be loaded before `shared.js`; `algo/lr.js`, `algo/ll1.js`, `algo/nfa.js` and `algo/pda.js` only by their own tools).
+(`algo/grammar.js` must be loaded before `shared.js`; `algo/lr.js`, `algo/ll1.js`, `algo/nfa.js`, `algo/pda.js` and `algo/tm.js` only by their own tools).
 D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in the corresponding
