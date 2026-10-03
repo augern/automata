@@ -311,6 +311,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/derivation.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
@@ -323,46 +324,7 @@
       //                (b) uppercase tokens in multi-symbol LHS rules.
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      function parseDerivationGrammar(text) {
-        const EPS_TOKENS = new Set(["eps", "epsilon", "ε", "''", '""']);
-        const lines = text.split("\n").map(l => l.trim())
-                          .filter(l => l && !l.startsWith("//"));
-        if (!lines.length) throw new Error("Empty grammar");
-
-        const rules = [];
-        for (const line of lines) {
-          const arrow = line.includes("->") ? "->" : line.includes("→") ? "→" : null;
-          if (!arrow) throw new Error("Missing → in: " + line);
-          const arrowIdx = line.indexOf(arrow);
-          const lhsStr   = line.slice(0, arrowIdx).trim();
-          const rhsStr   = line.slice(arrowIdx + arrow.length).trim();
-          const lhsToks  = lhsStr.split(/\s+/).filter(Boolean);
-          if (!lhsToks.length) throw new Error("Empty LHS in: " + line);
-          for (const alt of rhsStr.split("|")) {
-            const rhsToks = alt.trim().split(/\s+/).filter(Boolean);
-            rules.push({
-              lhs: lhsToks,
-              rhs: rhsToks.length === 1 && EPS_TOKENS.has(rhsToks[0]) ? [] : rhsToks,
-            });
-          }
-        }
-        if (!rules.length) throw new Error("No rules found");
-
-        // Nonterminals: (a) symbols appearing as complete single-token LHS
-        const singleLHSnts = new Set(rules.filter(r => r.lhs.length === 1).map(r => r.lhs[0]));
-        // (b) uppercase-starting tokens in multi-symbol LHS (context-sensitive convention)
-        const multiLHSnts  = new Set(
-          rules.flatMap(r => r.lhs.length > 1 ? r.lhs.filter(s => /^[A-Z]/.test(s)) : [])
-        );
-        const nonterminals = new Set([...singleLHSnts, ...multiLHSnts]);
-
-        // Start symbol: LHS of the first single-token rule
-        const startRule = rules.find(r => r.lhs.length === 1);
-        if (!startRule) throw new Error("No single-symbol LHS found — need at least one rule of the form A -> …");
-        const start = startRule.lhs[0];
-
-        return { rules, nonterminals, start };
-      }
+      // parseDerivationGrammar — see shared/algo/derivation.js
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // GRAMMAR STATE
@@ -425,14 +387,10 @@
         return matchesRange(_grammar.rules[ruleIdx].lhs);
       }
 
-      // Returns true if rule.lhs exactly matches form[_selStart.._selEnd]
+      // True if lhsArr exactly matches the committed range of the current form.
       function matchesRange(lhsArr) {
         if (!hasCommittedRange()) return false;
-        const form = _steps[_steps.length - 1].form;
-        const lo = Math.min(_selStart, _selEnd);
-        const hi = Math.max(_selStart, _selEnd);
-        if (lhsArr.length !== hi - lo + 1) return false;
-        return lhsArr.every((s, j) => form[lo + j] === s);
+        return derivMatchesRange(_steps[_steps.length - 1].form, selLo(), selHi(), lhsArr);
       }
 
       function fmtSyms(syms, nts, clsNT, clsT, clsEps) {
@@ -563,7 +521,7 @@
         const lo   = selLo();
         const hi   = selHi();
         const form = _steps[_steps.length - 1].form;
-        const newForm = [...form.slice(0, lo), ...rule.rhs, ...form.slice(hi + 1)];
+        const newForm = derivApply(form, lo, hi, rule);
 
         _steps.push({ form: newForm, ruleIdx, matchStart: lo, matchEnd: hi });
         clearSelection();
@@ -571,16 +529,9 @@
         renderProductions();
       }
 
-      // Is the derivation complete? True when no rule's LHS matches any substring of form.
+      // Is the derivation complete? (see derivIsDone in shared/algo/derivation.js)
       function isDone(form) {
-        for (const rule of _grammar.rules) {
-          const lhs = rule.lhs;
-          if (lhs.length > form.length) continue;
-          for (let i = 0; i <= form.length - lhs.length; i++) {
-            if (lhs.every((s, j) => form[i + j] === s)) return false;
-          }
-        }
-        return true;
+        return derivIsDone(_grammar, form);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
