@@ -41,6 +41,39 @@
   --reduce-col: var(--purple);
   --goto-col: var(--text-dim);
 
+  /* Spacing (4px grid) */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 12px;
+  --sp-6: 16px;
+
+  /* Type scale (rem; body is 13px mono). Prefer these over ad-hoc sizes. */
+  --fs-2xs: 0.625rem;
+  --fs-xs: 0.6875rem;
+  --fs-sm: 0.75rem;
+  --fs-md: 0.8125rem;
+  --fs-lg: 0.95rem;
+
+  /* Controls, shape and motion */
+  --ctl-h: 24px; /* height of buttons, inputs, selects */
+  --radius: 2px;
+  --dur: 0.12s;
+  --ease: ease;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  /* Status colours: one meaning, one colour, in every tool */
+  --st-active: var(--accent); /* current / focused item */
+  --st-active-bg: var(--accent-bg);
+  --st-accept: var(--green);
+  --st-accept-bg: var(--green-bg);
+  --st-reject: var(--red);
+  --st-reject-bg: var(--red-bg);
+  --st-dead: #9a9a96; /* abandoned branch */
+  --st-warn: var(--amber);
+  --st-warn-bg: var(--amber-bg);
+
   /* Typography */
   --font-serif: "Georgia", "Times New Roman", serif;
   --font-mono: ui-monospace, "Menlo", "Consolas", "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
@@ -66,6 +99,13 @@ body {
   overflow: hidden;
   color: var(--text);
   user-select: none;
+}
+
+/* ── Keyboard focus ─────────────────────────────────────── */
+/* One visible ring for every control; mouse clicks don't show it. */
+:where(button, select, input, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 /* ── Topbar ─────────────────────────────────────────────── */
@@ -116,11 +156,12 @@ body {
   background: transparent;
   color: var(--text-dim);
   border: 1px solid var(--border);
-  padding: 2px 10px;
+  padding: var(--sp-1) 10px;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .mode-btn.active {
   background: var(--text);
@@ -137,16 +178,17 @@ body {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  padding: 0 9px;
-  height: 22px;
+  padding: 0 var(--sp-4);
+  height: var(--ctl-h);
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   white-space: nowrap;
 }
 .btn:hover:not(:disabled) {
@@ -154,7 +196,7 @@ body {
   border-color: var(--border-hi);
 }
 .btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: default;
 }
 .btn.primary {
@@ -164,6 +206,12 @@ body {
 }
 .btn.primary:hover:not(:disabled) {
   background: #333;
+  border-color: #333;
+}
+/* Button groups keep the focus ring above neighbours */
+.btn:focus-visible {
+  position: relative;
+  z-index: 2;
 }
 
 /* ── Icon buttons (restart / run-all) ──────────────────── */

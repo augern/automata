@@ -6,37 +6,12 @@
     <script src="../vendor/d3.min.js"></script>
     <script src="../vendor/dagre.min.js"></script>
     <link rel="stylesheet" href="../shared/shared.css" />
+    <link rel="stylesheet" href="../shared/ui.css" />
     <style>
       /* ── Panel widths ── */
       #p-def  { width: 360px; }
       #p-nfa  { width: 340px; }
-      #p-sim  { flex: 1; min-width: 240px; }
-
-      /* ── Definition panel ── */
-      #def-examples-bar {
-        padding: 5px 10px;
-        border-bottom: 1px solid var(--border-lo);
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      #def-examples-bar select {
-        flex: 1;
-        background: var(--bg-input);
-        color: var(--text);
-        border: 1px solid var(--border);
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        padding: 2px 4px;
-        height: 22px;
-        outline: none;
-      }
-      #def-table-scroll {
-        flex: 1;
-        overflow: auto;
-        padding: 10px 12px 6px;
-      }
+      #p-sim  { flex: 1; min-width: 240px; }/* ── Definition panel ── */
 
       /* Transition table */
       .trans-table {
@@ -164,55 +139,7 @@
       }
       .trans-table input[type="checkbox"] {
         accent-color: var(--green);
-      }
-
-      /* Definition footer */
-      #def-footer {
-        flex-shrink: 0;
-        padding: 6px 10px 8px;
-        border-top: 1px solid var(--border-lo);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-      .def-hint {
-        font-family: var(--font-serif);
-        font-size: 0.63rem;
-        color: var(--text-lo);
-        flex: 1;
-        line-height: 1.6;
-        padding-left: 2px;
-      }
-      .def-hint code {
-        font-family: var(--font-mono);
-        font-size: 0.75em;
-        color: var(--text-dim);
-      }
-
-      /* ── NFA graph panel ── */
-      #nfa-graph-wrap {
-        flex: 1;
-        position: relative;
-        overflow: hidden;
-      }
-      #nfa-svg {
-        width: 100%;
-        height: 100%;
-        touch-action: none;
-      }
-      #nfa-graph-empty {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: 0.8rem;
-        color: var(--text-lo);
-        pointer-events: none;
-      }
+      }/* Definition footer *//* ── NFA graph panel ── */
 
       /* NFA graph — circles for states */
       .nfa-node circle {
@@ -285,51 +212,7 @@
         stroke-width: 1.5 !important;
         opacity: 0.5;
       }
-      .nfa-node.sim-dead .state-label { fill: var(--red) !important; opacity: 0.5; }
-
-
-      /* ── Simulation panel ── */
-      #sim-controls {
-        flex-shrink: 0;
-        border-bottom: 1.5px solid var(--border-hi);
-        background: var(--bg-panel);
-      }
-      #sim-input-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
-        flex-wrap: wrap;
-      }
-      #sim-input-row .input-group {
-        flex: 1;
-        min-width: 100px;
-      }
-      #sim-string-input {
-        width: 100%;
-        background: var(--bg-input);
-        color: var(--text);
-        border: 1px solid var(--border);
-        font-family: var(--font-mono);
-        font-size: 0.84rem;
-        padding: 3px 7px;
-        height: 22px;
-        box-sizing: border-box;
-        outline: none;
-      }
-      #sim-string-input:focus {
-        border-color: var(--accent);
-        outline: 1px solid var(--accent);
-      }
-      #sim-log-bar {
-        font-size: 0.62rem;
-        color: var(--text-dim);
-        font-family: var(--font-mono);
-        padding: 3px 10px 4px;
-        border-top: 1px solid var(--border-lo);
-        min-height: 1.8em;
-        line-height: 1.5;
-      }
+      .nfa-node.sim-dead .state-label { fill: var(--red) !important; opacity: 0.5; }/* ── Simulation panel ── */
       /* Tape */
       #sim-tape-wrap {
         flex-shrink: 0;
@@ -368,44 +251,7 @@
         font-style: italic;
         font-size: 0.68rem;
         color: var(--text-lo);
-      }
-
-      /* Result banner */
-      #sim-result {
-        flex-shrink: 0;
-        padding: 5px 12px;
-        display: none;
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
-        font-weight: bold;
-        letter-spacing: 0.04em;
-      }
-      #sim-result.accept { color: var(--green); background: var(--green-bg); border-bottom: 1px solid var(--green); }
-      #sim-result.reject { color: var(--red);   background: var(--red-bg);   border-bottom: 1px solid var(--red); }
-
-      /* Tree */
-      #sim-tree-wrap {
-        flex: 1;
-        position: relative;
-        overflow: hidden;
-      }
-      #sim-tree-svg {
-        width: 100%;
-        height: 100%;
-        touch-action: none;
-      }
-      #sim-tree-empty {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: 0.8rem;
-        color: var(--text-lo);
-        pointer-events: none;
-      }
+      }/* Result banner *//* Tree */
 
       /* Tree nodes */
       .tree-node circle {
@@ -495,18 +341,18 @@
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
         </div>
         <div class="panel-body">
-          <div id="def-examples-bar">
-            <select id="examples-select" onchange="loadExampleNFA(this.value)">
+          <div class="ui-bar">
+            <select id="examples-select" class="ui-select ui-select--grow" onchange="loadExampleNFA(this.value)">
               <option value="">Example…</option>
             </select>
           </div>
-          <div id="def-table-scroll">
+          <div id="def-table-scroll" class="ui-scroll">
             <!-- transition table rendered by JS -->
           </div>
-          <div id="def-footer">
+          <div class="ui-footer">
             <button class="btn" onclick="addState()">+ State</button>
             <button class="btn" onclick="addSymbol()">+ Symbol</button>
-            <span class="def-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for ∅.</span>
+            <span class="ui-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for ∅.</span>
           </div>
         </div>
       </div>
@@ -520,7 +366,7 @@
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8249;</button>
         </div>
         <div class="panel-body">
-          <div id="nfa-graph-wrap">
+          <div id="nfa-graph-wrap" class="ui-canvas">
             <svg id="nfa-svg">
               <defs>
                 <marker id="nfa-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
@@ -532,7 +378,7 @@
               </defs>
               <g id="nfa-graph-root"></g>
             </svg>
-            <div id="nfa-graph-empty">Define an NFA above.</div>
+            <div id="nfa-graph-empty" class="ui-canvas__empty">Define an NFA above.</div>
           </div>
         </div>
       </div>
@@ -547,10 +393,10 @@
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
         </div>
         <div class="panel-body">
-          <div id="sim-controls">
-            <div id="sim-input-row">
+          <div class="ui-sim">
+            <div class="ui-sim__row">
               <div class="input-group">
-                <input id="sim-string-input" type="text" spellcheck="false" placeholder="enter string…" />
+                <input id="sim-string-input" class="ui-input ui-input--lg" type="text" spellcheck="false" placeholder="enter string…" />
               </div>
               <div class="step-group">
                 <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()" title="Restart" disabled></button>
@@ -559,21 +405,21 @@
                 <button class="btn icon-run-all" id="btn-sim-all" onclick="simRunAll()" title="Run all" disabled></button>
               </div>
             </div>
-            <div id="examples-chips">
+            <div id="examples-chips" class="ui-chips">
               <span class="examples-label">Examples:</span>
               <span id="chips-container"></span>
             </div>
-            <div id="sim-log-bar"></div>
+            <div id="sim-log-bar" class="ui-logbar"></div>
           </div>
           <!-- Accept / Reject banner -->
-          <div id="sim-result"></div>
+          <div id="sim-result" class="ui-result"></div>
           <!-- Tape -->
           <div id="sim-tape-wrap" style="display:none">
             <div class="tape" id="sim-tape"></div>
             <span class="tape-eof">⊣</span>
           </div>
           <!-- Tree -->
-          <div id="sim-tree-wrap">
+          <div id="sim-tree-wrap" class="ui-canvas">
             <svg id="sim-tree-svg">
               <defs>
                 <marker id="tree-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
@@ -582,7 +428,7 @@
               </defs>
               <g id="sim-tree-root"></g>
             </svg>
-            <div id="sim-tree-empty">Define an NFA and enter a string to simulate.</div>
+            <div id="sim-tree-empty" class="ui-canvas__empty">Define an NFA and enter a string to simulate.</div>
           </div>
         </div>
       </div>
@@ -607,6 +453,7 @@
     <script src="../shared/algo/nfa.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
+    <script src="../shared/ui.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -1132,6 +979,7 @@ else: ${kw("reject")}`
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       let _simTree    = null;  // { vRoot, maxDepth, accepted, truncated }
+      const verdict = UI.banner("sim-result");
       const sim = createStepper({
         buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
         min: 0,
@@ -1153,7 +1001,7 @@ else: ${kw("reject")}`
         _simTree  = buildSimTree(input);
         sim.pos   = 0;  // start at depth 0 (initial states visible immediately)
 
-        document.getElementById("sim-result").style.display = "none";
+        verdict.hide();
         document.getElementById("sim-tree-empty").style.display = "none";
         d3.select("#sim-tree-root").selectAll("*").remove();
         nfaHighlightStates([], []);
@@ -1210,13 +1058,11 @@ else: ${kw("reject")}`
         }
 
         // Result banner
-        const resultEl = document.getElementById("sim-result");
         if (revealDepth > maxDepth) {
-          resultEl.style.display = "";
-          if (accepted) { resultEl.textContent = "✓  ACCEPTED"; resultEl.className = "accept"; }
-          else          { resultEl.textContent = "✗  REJECTED"; resultEl.className = "reject"; }
+          if (accepted) verdict.show("accept", "✓  ACCEPTED");
+          else          verdict.show("reject", "✗  REJECTED");
         } else {
-          resultEl.style.display = "none";
+          verdict.hide();
         }
 
         // Highlight NFA graph

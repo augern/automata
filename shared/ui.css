@@ -1,0 +1,207 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ui.css — shared UI components (load after shared.css)
+
+   Naming: block `ui-name`, parts `ui-name__part`, variants `ui-name--variant`,
+   state `is-state`. Everything is styled from the tokens in shared.css
+   (spacing, type scale, status colours); no component hard-codes a colour or
+   an ad-hoc font size. Tool CSS should only contain what is unique to the tool.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── Form controls ─────────────────────────────────────── */
+.ui-input,
+.ui-select {
+  height: var(--ctl-h);
+  box-sizing: border-box;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 0 var(--sp-3);
+  transition: border-color var(--dur) var(--ease);
+}
+.ui-input:hover,
+.ui-select:hover {
+  border-color: var(--border-hi);
+}
+.ui-input:focus,
+.ui-select:focus {
+  border-color: var(--accent);
+}
+.ui-input--grow,
+.ui-select--grow {
+  flex: 1;
+  min-width: 0;
+}
+.ui-input--lg {
+  font-size: var(--fs-md);
+}
+.ui-input.invalid {
+  border-color: var(--st-reject);
+  background: var(--st-reject-bg);
+}
+
+/* ── Layout helpers inside a panel ─────────────────────── */
+/* Toolbar row (e.g. the examples dropdown) */
+.ui-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-lo);
+}
+/* Scrolling content region */
+.ui-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: var(--sp-5) var(--sp-5) var(--sp-3);
+}
+/* Panel footer with actions and a hint */
+.ui-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--border-lo);
+}
+.ui-hint {
+  flex: 1;
+  font-family: var(--font-serif);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.ui-hint code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.ui-label {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* ── Canvas: a graph or tree drawn in an <svg> ─────────── */
+/* <div class="ui-canvas"><svg>…</svg><div class="ui-canvas__empty">…</div></div> */
+.ui-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.ui-canvas > svg {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.ui-canvas__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+/* ── Simulation header block ───────────────────────────── */
+/* .ui-sim > .ui-sim__row (input + step group), .ui-chips, .ui-logbar */
+.ui-sim {
+  flex-shrink: 0;
+  border-bottom: 1.5px solid var(--border-hi);
+  background: var(--bg-panel);
+}
+.ui-sim__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+.ui-sim__row .input-group {
+  flex: 1;
+  min-width: 100px;
+}
+.ui-sim__row .input-group .ui-input {
+  width: 100%;
+}
+
+/* Example strings shown as clickable chips (filled by renderExampleChips) */
+.ui-chips {
+  display: none;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4) var(--sp-3);
+}
+.ui-chips.is-visible {
+  display: flex;
+}
+
+/* One-line running commentary under the controls */
+.ui-logbar {
+  min-height: 1.8em;
+  padding: var(--sp-2) var(--sp-4) var(--sp-2);
+  border-top: 1px solid var(--border-lo);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* Accept / reject verdict banner; show with UI.banner(el).show(kind, text) */
+.ui-result {
+  display: none;
+  flex-shrink: 0;
+  padding: var(--sp-3) var(--sp-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: bold;
+  letter-spacing: 0.04em;
+}
+.ui-result.is-visible {
+  display: block;
+}
+.ui-result--accept {
+  color: var(--st-accept);
+  background: var(--st-accept-bg);
+  border-bottom: 1px solid var(--st-accept);
+}
+.ui-result--reject {
+  color: var(--st-reject);
+  background: var(--st-reject-bg);
+  border-bottom: 1px solid var(--st-reject);
+}
+.ui-result--warn {
+  color: var(--st-warn);
+  background: var(--st-warn-bg);
+  border-bottom: 1px solid var(--st-warn);
+}
+
+/* ── Badges and chips ──────────────────────────────────── */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.ui-badge--active { color: var(--st-active); background: var(--st-active-bg); border-color: var(--st-active); }
+.ui-badge--accept { color: var(--st-accept); background: var(--st-accept-bg); border-color: var(--st-accept); }
+.ui-badge--reject { color: var(--st-reject); background: var(--st-reject-bg); border-color: var(--st-reject); }
+.ui-badge--warn   { color: var(--st-warn);   background: var(--st-warn-bg);   border-color: var(--st-warn); }
+.ui-badge--dead   { color: var(--st-dead);   border-color: var(--st-dead); border-style: dashed; }
