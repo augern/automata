@@ -849,6 +849,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/regex.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
@@ -885,168 +886,109 @@
       // Exactly one start and one accept per fragment (Thompson invariant).
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      const EPS = "ε";
-      let _nextState = 0;
-      function freshState() {
-        return _nextState++;
-      }
+      const EPS = EPSILON;
+      let _nextState = 0; // number of states in the current NFA (set by buildNFAWithSteps)
 
-      // Base: single symbol (or '.' for any)
-      function nfaSymbol(ch) {
-        const s = freshState(),
-          t = freshState();
-        return { start: s, accept: t, trans: [{ from: s, sym: ch, to: t }] };
-      }
+      // ── Step formatting ────────────────────────────────────────────
+      // The algorithms (shared/algo/regex.js) return data-only steps; the
+      // HTML for the step log is built here.
 
-      // Base: empty string (ε as a regex operand)
-      function nfaEps() {
-        const s = freshState(),
-          t = freshState();
-        return { start: s, accept: t, trans: [{ from: s, sym: EPS, to: t }] };
-      }
+      const dLabel = (i) => "D" + i;
+      const nLabel = (S) =>
+        "{" +
+        [...S]
+          .sort((a, b) => a - b)
+          .map((s) => "q" + s)
+          .join(", ") +
+        "}";
 
-      // r1 | r2
-      function nfaUnion(a, b) {
-        const s = freshState(),
-          t = freshState();
-        return {
-          start: s,
-          accept: t,
-          trans: [...a.trans, ...b.trans, { from: s, sym: EPS, to: a.start }, { from: s, sym: EPS, to: b.start }, { from: a.accept, sym: EPS, to: t }, { from: b.accept, sym: EPS, to: t }],
-        };
-      }
-
-      // r1 r2  (concatenation)
-      function nfaConcat(a, b) {
-        return {
-          start: a.start,
-          accept: b.accept,
-          trans: [...a.trans, ...b.trans, { from: a.accept, sym: EPS, to: b.start }],
-        };
-      }
-
-      // r*  (Kleene star)
-      function nfaStar(a) {
-        const s = freshState(),
-          t = freshState();
-        return {
-          start: s,
-          accept: t,
-          trans: [
-            ...a.trans,
-            { from: s, sym: EPS, to: a.start }, // enter loop
-            { from: s, sym: EPS, to: t }, // skip (zero repetitions)
-            { from: a.accept, sym: EPS, to: a.start }, // repeat
-            { from: a.accept, sym: EPS, to: t }, // exit loop
-          ],
-        };
-      }
-
-      // r+  (one or more)
-      function nfaPlus(a) {
-        const s = freshState(),
-          t = freshState();
-        return {
-          start: s,
-          accept: t,
-          trans: [
-            ...a.trans,
-            { from: s, sym: EPS, to: a.start }, // enter (must pass through at least once)
-            { from: a.accept, sym: EPS, to: a.start }, // repeat
-            { from: a.accept, sym: EPS, to: t }, // exit
-          ],
-        };
-      }
-
-      // r?  (zero or one)
-      function nfaOpt(a) {
-        const s = freshState(),
-          t = freshState();
-        return {
-          start: s,
-          accept: t,
-          trans: [
-            ...a.trans,
-            { from: s, sym: EPS, to: a.start }, // take r
-            { from: s, sym: EPS, to: t }, // skip r
-            { from: a.accept, sym: EPS, to: t },
-          ],
-        };
-      }
-
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // REGEX PARSER  — recursive descent
-      // Grammar (highest precedence first):
-      //   atom   ::= literal | '.' | 'ε' | '(' expr ')'
-      //   unary  ::= atom ( '*' | '+' | '?' )*
-      //   concat ::= unary unary*
-      //   expr   ::= concat ( '|' concat )*
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-      function buildNFA(str) {
-        _nextState = 0;
-        let pos = 0;
-
-        const peek = () => (pos < str.length ? str[pos] : null);
-
-        function parseExpr() {
-          let node = parseConcat();
-          while (peek() === "|") {
-            pos++;
-            node = nfaUnion(node, parseConcat());
-          }
-          return node;
+      function formatNfaStep(st) {
+        const s = st.frag.start,
+          t = st.frag.accept;
+        const frag = '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>";
+        const added = (extra) => '  <span class="sc-new">+q' + s + " +q" + t + extra + "</span>";
+        switch (st.op) {
+          case "symbol":
+            return '<span class="sc-op">Base</span> literal <span class="sc-sym">' + esc(st.ch) + "</span>" + frag + added("");
+          case "eps":
+            return '<span class="sc-op">Base</span> ε' + frag + added("");
+          case "union":
+            return '<span class="sc-op">Union</span> r₁ | r₂' + frag + added("  +4 ε");
+          case "concat":
+            return '<span class="sc-op">Concat</span> r₁ r₂' + frag + '  <span class="sc-new">ε-link q' + st.newTrans[0].from + " → q" + st.newTrans[0].to + "</span>";
+          case "star":
+            return '<span class="sc-op">Star</span> r₁*' + frag + added("  +4 ε");
+          case "plus":
+            return '<span class="sc-op">Plus</span> r₁+' + frag + added("  +3 ε");
+          case "opt":
+            return '<span class="sc-op">Optional</span> r₁?' + frag + added("  +3 ε");
         }
+      }
 
-        function parseConcat() {
-          let node = parseUnary();
-          while (peek() !== null && peek() !== ")" && peek() !== "|") {
-            node = nfaConcat(node, parseUnary());
-          }
-          return node;
+      function buildNFAWithSteps(str) {
+        const steps = [];
+        const nfa = regexToNFA(str, (st) =>
+          steps.push({
+            logHtml: formatNfaStep(st),
+            fragStart: st.frag.start,
+            fragAccept: st.frag.accept,
+            newStates: st.newStates,
+            newTrans: st.newTrans,
+            snapshot: st.snapshot,
+          })
+        );
+        _nextState = nfa.numStates;
+        return { nfa, steps };
+      }
+
+      function formatSubsetStep(st) {
+        switch (st.type) {
+          case "init":
+            return '<span class="sc-op">ε-closure</span>({q' + st.start + "}) = " + '<span class="sc-nfa">' + nLabel(st.closure) + "</span>" + ' → <span class="sc-state">D0</span>  <span class="sc-new">(start state)</span>';
+          case "process":
+            return 'Processing <span class="sc-state">' + dLabel(st.dfaIdx) + "</span>" + ' = <span class="sc-nfa">' + nLabel(st.set) + "</span>";
+          case "empty":
+            return '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(st.dfaIdx) + '</span>, <span class="sc-sym">' + esc(st.sym) + "</span>) = ∅" + " — no transition";
+          case "trans":
+            return '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(st.dfaIdx) + '</span>, <span class="sc-sym">' + esc(st.sym) + "</span>) = " + '<span class="sc-nfa">' + nLabel(st.mv) + "</span>" + ' → <span class="sc-op">ε-closure</span> → ' + '<span class="sc-nfa">' + nLabel(st.closure) + "</span>" + ' = <span class="sc-state">' + dLabel(st.toIdx) + "</span>  " + (st.isNew ? '<span class="sc-new">(new)</span>' : '<span class="sc-seen">(seen)</span>');
+          case "done":
+            return '<span class="sc-new">✓</span>  Construction complete — ' + st.nStates + " DFA states, " + st.nAccepts + " accepting";
         }
+      }
 
-        function parseUnary() {
-          let node = parseAtom();
-          while (peek() === "*" || peek() === "+" || peek() === "?") {
-            const op = str[pos++];
-            if (op === "*") node = nfaStar(node);
-            else if (op === "+") node = nfaPlus(node);
-            else node = nfaOpt(node);
+      function formatMinStep(st, DEAD) {
+        const label = (s) => (s === DEAD ? "∅" : "D" + s);
+        switch (st.type) {
+          case "mark-base": {
+            const [i, j] = st.activePair;
+            return '<span class="sc-op">Base case</span>  mark (' + label(i) + ", " + label(j) + ")  —  " + label(st.accepting.has(i) ? i : j) + " accepts, " + label(st.accepting.has(i) ? j : i) + " does not";
           }
-          return node;
+          case "mark-refine": {
+            const [i, j] = st.activePair;
+            return '<span class="sc-op">Pass ' + st.pass + '</span>  mark (' + label(i) + ", " + label(j) + ")  —  " + 'on <span class="sc-sym">' + esc(st.sym) + "</span>, " + label(i) + "→" + label(st.di) + ", " + label(j) + "→" + label(st.dj) + ", (" + label(Math.min(st.di, st.dj)) + ", " + label(Math.max(st.di, st.dj)) + ") is marked ✗";
+          }
+          case "no-change":
+            return '<span class="sc-new">✓</span>  Pass ' + st.pass + ": fixed point — no new pairs marked";
+          case "result":
+            return st.alreadyMinimal
+              ? '<span class="sc-new">✓</span>  Already minimal — all ' + st.origN + " states are distinguishable"
+              : '<span class="sc-new">✓</span>  ' + st.groups.length + " equivalence class" + (st.groups.length === 1 ? "" : "es") + " → " + st.groups.length + "-state minimal DFA";
         }
+      }
 
-        function parseAtom() {
-          const ch = peek();
-          if (ch === null) throw new Error("Unexpected end of expression");
-          if (ch === "(") {
-            pos++;
-            const inner = parseExpr();
-            if (peek() !== ")") throw new Error("Unmatched ( — missing )");
-            pos++;
-            return inner;
-          }
-          if (ch === ")") throw new Error("Unmatched )");
-          if (ch === "|" || ch === "*" || ch === "+" || ch === "?") throw new Error("Unexpected operator '" + ch + "' at position " + pos);
-          if (ch === "\\") {
-            // Escape: treat next character as a literal symbol
-            pos++;
-            if (peek() === null) throw new Error("Trailing \\");
-            return nfaSymbol(str[pos++]);
-          }
-          if (ch === "ε") {
-            pos++;
-            return nfaEps();
-          }
-          pos++;
-          return nfaSymbol(ch);
-        }
-
-        if (!str.trim()) throw new Error("Empty expression");
-        const nfa = parseExpr();
-        if (pos < str.length) throw new Error("Unexpected character '" + str[pos] + "' at position " + pos);
-        return nfa;
+      // Attach html to each step of a subset-construction / minimization result.
+      function withSubsetHtml(sc) {
+        sc.steps.forEach((st) => (st.html = formatSubsetStep(st)));
+        return sc;
+      }
+      function withMinHtml(min) {
+        // The accepting set of the DFA being minimized (for the base-case wording).
+        const accepting = min.origScData.dfaAccepts;
+        min.steps.forEach((st) => {
+          if (st.type === "mark-base") st.accepting = accepting;
+          st.html = formatMinStep(st, min.DEAD);
+        });
+        return min;
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1133,155 +1075,6 @@
       // Re-parses the regex with instrumented Thompson operations that
       // emit one step per rule application.  Returns { nfa, steps }.
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-      function buildNFAWithSteps(str) {
-        _nextState = 0;
-        const steps = [];
-        const allTrans = []; // growing accumulation of ALL transitions
-
-        // Record one Thompson step and return the fragment.
-        function rec(opLabel, logHtml, frag, newStateIds, newTransArr) {
-          allTrans.push(...newTransArr);
-          steps.push({
-            logHtml,
-            fragStart: frag.start,
-            fragAccept: frag.accept,
-            newStates: [...newStateIds],
-            newTrans: newTransArr.map((t) => ({ ...t })),
-            snapshot: allTrans.map((t) => ({ ...t })),
-          });
-          return frag;
-        }
-
-        // ── Instrumented Thompson operations ──────────────────────────
-
-        function tSymbol(ch) {
-          const s = freshState(),
-            t = freshState();
-          const newT = [{ from: s, sym: ch, to: t }];
-          return rec("symbol", '<span class="sc-op">Base</span> literal <span class="sc-sym">' + ch + "</span>" + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "</span>", { start: s, accept: t, trans: newT }, [s, t], newT);
-        }
-
-        function tEpsOp() {
-          const s = freshState(),
-            t = freshState();
-          const newT = [{ from: s, sym: EPS, to: t }];
-          return rec("eps", '<span class="sc-op">Base</span> ε' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "</span>", { start: s, accept: t, trans: newT }, [s, t], newT);
-        }
-
-        function tUnion(a, b) {
-          const s = freshState(),
-            t = freshState();
-          const newT = [
-            { from: s, sym: EPS, to: a.start },
-            { from: s, sym: EPS, to: b.start },
-            { from: a.accept, sym: EPS, to: t },
-            { from: b.accept, sym: EPS, to: t },
-          ];
-          const frag = { start: s, accept: t, trans: [...a.trans, ...b.trans, ...newT] };
-          return rec("union", '<span class="sc-op">Union</span> r₁ | r₂' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +4 ε</span>", frag, [s, t], newT);
-        }
-
-        function tConcat(a, b) {
-          const newT = [{ from: a.accept, sym: EPS, to: b.start }];
-          const frag = { start: a.start, accept: b.accept, trans: [...a.trans, ...b.trans, ...newT] };
-          return rec("concat", '<span class="sc-op">Concat</span> r₁ r₂' + '  → <span class="sc-state">⟨q' + a.start + ", q" + b.accept + "⟩</span>" + '  <span class="sc-new">ε-link q' + a.accept + " → q" + b.start + "</span>", frag, [], newT);
-        }
-
-        function tStar(a) {
-          const s = freshState(),
-            t = freshState();
-          const newT = [
-            { from: s, sym: EPS, to: a.start },
-            { from: s, sym: EPS, to: t },
-            { from: a.accept, sym: EPS, to: a.start },
-            { from: a.accept, sym: EPS, to: t },
-          ];
-          const frag = { start: s, accept: t, trans: [...a.trans, ...newT] };
-          return rec("star", '<span class="sc-op">Star</span> r₁*' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +4 ε</span>", frag, [s, t], newT);
-        }
-
-        function tPlus(a) {
-          const s = freshState(),
-            t = freshState();
-          const newT = [
-            { from: s, sym: EPS, to: a.start },
-            { from: a.accept, sym: EPS, to: a.start },
-            { from: a.accept, sym: EPS, to: t },
-          ];
-          const frag = { start: s, accept: t, trans: [...a.trans, ...newT] };
-          return rec("plus", '<span class="sc-op">Plus</span> r₁+' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +3 ε</span>", frag, [s, t], newT);
-        }
-
-        function tOpt(a) {
-          const s = freshState(),
-            t = freshState();
-          const newT = [
-            { from: s, sym: EPS, to: a.start },
-            { from: s, sym: EPS, to: t },
-            { from: a.accept, sym: EPS, to: t },
-          ];
-          const frag = { start: s, accept: t, trans: [...a.trans, ...newT] };
-          return rec("opt", '<span class="sc-op">Optional</span> r₁?' + '  → <span class="sc-state">⟨q' + s + ", q" + t + "⟩</span>" + '  <span class="sc-new">+q' + s + " +q" + t + "  +3 ε</span>", frag, [s, t], newT);
-        }
-
-        // ── Parser (same grammar as buildNFA, using t* operations) ────
-        let pos = 0;
-        const peek = () => (pos < str.length ? str[pos] : null);
-
-        function parseExpr() {
-          let n = parseConcat();
-          while (peek() === "|") {
-            pos++;
-            n = tUnion(n, parseConcat());
-          }
-          return n;
-        }
-        function parseConcat() {
-          let n = parseUnary();
-          while (peek() !== null && peek() !== ")" && peek() !== "|") n = tConcat(n, parseUnary());
-          return n;
-        }
-        function parseUnary() {
-          let n = parseAtom();
-          while (peek() === "*" || peek() === "+" || peek() === "?") {
-            const op = str[pos++];
-            if (op === "*") n = tStar(n);
-            else if (op === "+") n = tPlus(n);
-            else n = tOpt(n);
-          }
-          return n;
-        }
-        function parseAtom() {
-          const ch = peek();
-          if (ch === null) throw new Error("Unexpected end of expression");
-          if (ch === "(") {
-            pos++;
-            const inner = parseExpr();
-            if (peek() !== ")") throw new Error("Unmatched (");
-            pos++;
-            return inner;
-          }
-          if (ch === ")") throw new Error("Unmatched )");
-          if ("|*+?".includes(ch)) throw new Error("Unexpected operator '" + ch + "'");
-          if (ch === "\\") {
-            pos++;
-            if (!peek()) throw new Error("Trailing \\");
-            return tSymbol(str[pos++]);
-          }
-          if (ch === "ε") {
-            pos++;
-            return tEpsOp();
-          }
-          pos++;
-          return tSymbol(ch);
-        }
-
-        if (!str.trim()) throw new Error("Empty expression");
-        const nfa = parseExpr();
-        if (pos < str.length) throw new Error("Unexpected character '" + str[pos] + "'");
-        return { nfa, steps };
-      }
 
       // ── NFA (Thompson) stepper state ───────────────────────────────
       let _nfaSteps = null;
@@ -1434,315 +1227,8 @@
       // Returns a pre-computed { dfaStates, dfaAccepts, dfaTrans, alphabet, steps }
       // where steps[] drives the step-by-step display.
 
-      function subsetConstruct(nfa) {
-        const { start, accept, trans } = nfa;
-
-        // ε-closure: all states reachable from `seeds` via ε-transitions only
-        function epsClosure(seeds) {
-          const C = new Set(seeds);
-          const stk = [...seeds];
-          while (stk.length) {
-            const s = stk.pop();
-            for (const t of trans)
-              if (t.from === s && t.sym === EPS && !C.has(t.to)) {
-                C.add(t.to);
-                stk.push(t.to);
-              }
-          }
-          return C;
-        }
-
-        // move: NFA states reachable from `states` on symbol `sym` (no ε)
-        function move(states, sym) {
-          const R = new Set();
-          for (const s of states) for (const t of trans) if (t.from === s && t.sym === sym) R.add(t.to);
-          return R;
-        }
-
-        // Canonical string key for a set of NFA states
-        const key = (S) => [...S].sort((a, b) => a - b).join(",");
-
-        // Collect input alphabet
-        const alphabet = new Set();
-        for (const t of trans) if (t.sym !== EPS) alphabet.add(t.sym);
-        const alpha = [...alphabet].sort();
-
-        const dfaStates = []; // array of Set<nfaStateIdx>
-        const dfaMap = {}; // key → dfaIdx
-        const dfaTrans = []; // { from:dfaIdx, sym, to:dfaIdx }
-        const steps = []; // animation steps
-
-        // Helper: label a DFA state
-        const dLabel = (i) => "D" + i;
-        const nLabel = (S) =>
-          "{" +
-          [...S]
-            .sort((a, b) => a - b)
-            .map((s) => "q" + s)
-            .join(", ") +
-          "}";
-
-        // Step 0: initialise with ε-closure of NFA start state
-        const S0 = epsClosure([start]);
-        dfaStates.push(S0);
-        dfaMap[key(S0)] = 0;
-        steps.push({
-          type: "init",
-          dfaIdx: 0,
-          html: '<span class="sc-op">ε-closure</span>({q' + start + "}) = " + '<span class="sc-nfa">' + nLabel(S0) + "</span>" + ' → <span class="sc-state">D0</span>  <span class="sc-new">(start state)</span>',
-        });
-
-        let wi = 0;
-        while (wi < dfaStates.length) {
-          const S = dfaStates[wi];
-          steps.push({
-            type: "process",
-            dfaIdx: wi,
-            html: 'Processing <span class="sc-state">' + dLabel(wi) + "</span>" + ' = <span class="sc-nfa">' + nLabel(S) + "</span>",
-          });
-
-          for (const sym of alpha) {
-            const mv = move(S, sym);
-            if (!mv.size) {
-              steps.push({
-                type: "empty",
-                dfaIdx: wi,
-                sym,
-                html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + esc(sym) + "</span>) = ∅" + " — no transition",
-              });
-              continue;
-            }
-            const T = epsClosure([...mv]);
-            const k = key(T);
-            const isNew = dfaMap[k] === undefined;
-            let toIdx;
-            if (isNew) {
-              toIdx = dfaStates.length;
-              dfaStates.push(T);
-              dfaMap[k] = toIdx;
-            } else toIdx = dfaMap[k];
-            dfaTrans.push({ from: wi, sym, to: toIdx });
-
-            steps.push({
-              type: "trans",
-              dfaIdx: wi,
-              sym,
-              toIdx,
-              isNew,
-              html: '<span class="sc-op">move</span>(<span class="sc-state">' + dLabel(wi) + '</span>, <span class="sc-sym">' + esc(sym) + "</span>) = " + '<span class="sc-nfa">' + nLabel(mv) + "</span>" + ' → <span class="sc-op">ε-closure</span> → ' + '<span class="sc-nfa">' + nLabel(T) + "</span>" + ' = <span class="sc-state">' + dLabel(toIdx) + "</span>  " + (isNew ? '<span class="sc-new">(new)</span>' : '<span class="sc-seen">(seen)</span>'),
-            });
-          }
-          wi++;
-        }
-
-        // DFA accept states: any DFA state containing NFA accept
-        const dfaAccepts = new Set();
-        dfaStates.forEach((S, i) => {
-          if (S.has(accept)) dfaAccepts.add(i);
-        });
-
-        steps.push({
-          type: "done",
-          html: '<span class="sc-new">✓</span>  Construction complete — ' + dfaStates.length + " DFA states, " + dfaAccepts.size + " accepting",
-        });
-
-        return { dfaStates, dfaAccepts, dfaTrans, alpha, steps };
-      }
-
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // DFA MINIMIZATION — table-filling algorithm
-      // Input: scData from subsetConstruct.
-      // Output: { dfaStates, dfaAccepts, dfaTrans, alpha, steps, groups,
-      //           origN, n, DEAD, origScData, renumMap, alreadyMinimal }
-      // The returned object is shape-compatible with scData so renderDFA,
-      // generateExamples, and buildSimSteps can consume it directly.
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-      function minimizeDFA(scData) {
-        const { dfaStates, dfaAccepts, dfaTrans, alpha } = scData;
-        const origN = dfaStates.length;
-
-        // Complete the DFA: add implicit dead state at index origN if any
-        // state is missing a transition on any alphabet symbol.
-        const deadNeeded = dfaStates.some((_, s) =>
-          alpha.some(a => !dfaTrans.find(t => t.from === s && t.sym === a))
-        );
-        const n    = deadNeeded ? origN + 1 : origN;
-        const DEAD = deadNeeded ? origN     : -1;
-
-        const isAcc  = s => s !== DEAD && dfaAccepts.has(s);
-        const delta  = (s, a) => {
-          if (s === DEAD) return DEAD;
-          const t = dfaTrans.find(t => t.from === s && t.sym === a);
-          return t !== undefined ? t.to : (deadNeeded ? DEAD : undefined);
-        };
-        const label   = s => s === DEAD ? "∅" : "D" + s;
-        const pairKey = (a, b) => a < b ? a + "," + b : b + "," + a;
-
-        const marked = new Set();
-        const steps  = [];
-
-        // ── Base case: mark all (accepting, non-accepting) pairs ──────
-        for (let i = 0; i < n; i++) {
-          for (let j = i + 1; j < n; j++) {
-            if (isAcc(i) !== isAcc(j)) {
-              marked.add(pairKey(i, j));
-              steps.push({
-                type: "mark-base",
-                markedSnapshot: new Set(marked),
-                activePair: [i, j],
-                html: '<span class="sc-op">Base case</span>  mark (' + label(i) + ", " + label(j) + ")  —  " +
-                  label(isAcc(i) ? i : j) + " accepts, " + label(isAcc(i) ? j : i) + " does not",
-              });
-            }
-          }
-        }
-
-        // ── Refinement: propagate distinguishability ──────────────────
-        let pass = 0;
-        let changed = true;
-        while (changed) {
-          changed = false;
-          pass++;
-          for (let i = 0; i < n; i++) {
-            for (let j = i + 1; j < n; j++) {
-              if (marked.has(pairKey(i, j))) continue;
-              for (const a of alpha) {
-                const di = delta(i, a);
-                const dj = delta(j, a);
-                if (di === dj) continue;
-                if (di === undefined || dj === undefined) continue;
-                if (marked.has(pairKey(di, dj))) {
-                  marked.add(pairKey(i, j));
-                  changed = true;
-                  steps.push({
-                    type: "mark-refine",
-                    markedSnapshot: new Set(marked),
-                    activePair: [i, j],
-                    html: '<span class="sc-op">Pass ' + pass + '</span>  mark (' + label(i) + ", " + label(j) + ")  —  " +
-                      "on <span class=\"sc-sym\">" + a + "</span>, " +
-                      label(i) + "→" + label(di) + ", " + label(j) + "→" + label(dj) +
-                      ", (" + label(Math.min(di, dj)) + ", " + label(Math.max(di, dj)) + ") is marked ✗",
-                  });
-                  break;
-                }
-              }
-            }
-          }
-          if (!changed) {
-            steps.push({
-              type: "no-change",
-              markedSnapshot: new Set(marked),
-              activePair: null,
-              html: '<span class="sc-new">✓</span>  Pass ' + pass + ": fixed point — no new pairs marked",
-            });
-          }
-        }
-
-        // ── Build equivalence classes via union-find ──────────────────
-        const parent = Array.from({ length: n }, (_, i) => i);
-        function find(x) { return parent[x] === x ? x : (parent[x] = find(parent[x])); }
-        function unite(x, y) { parent[find(x)] = find(y); }
-
-        for (let i = 0; i < n; i++)
-          for (let j = i + 1; j < n; j++)
-            if (!marked.has(pairKey(i, j)))
-              unite(i, j);
-
-        // Groups over original states only (exclude dead state ∅)
-        const repToGroup = {};
-        const groups = [];
-        for (let i = 0; i < origN; i++) {
-          const rep = find(i);
-          if (repToGroup[rep] === undefined) {
-            repToGroup[rep] = groups.length;
-            groups.push([]);
-          }
-          groups[repToGroup[rep]].push(i);
-        }
-
-        // Equiv pairs for final display (original states only)
-        const equivPairs = new Set();
-        for (let i = 0; i < origN; i++)
-          for (let j = i + 1; j < origN; j++)
-            if (!marked.has(pairKey(i, j)))
-              equivPairs.add(pairKey(i, j));
-
-        const alreadyMinimal = groups.length === origN;
-        steps.push({
-          type: "result",
-          markedSnapshot: new Set(marked),
-          equivPairs,
-          activePair: null,
-          groups,
-          html: alreadyMinimal
-            ? '<span class="sc-new">✓</span>  Already minimal — all ' + origN + " states are distinguishable"
-            : '<span class="sc-new">✓</span>  ' + groups.length + " equivalence class" + (groups.length === 1 ? "" : "es") +
-              " → " + groups.length + "-state minimal DFA",
-        });
-
-        // ── Build minimized DFA ───────────────────────────────────────
-        const minN     = groups.length;
-        const minStart = repToGroup[find(0)];
-
-        const minAccepts = new Set();
-        for (let i = 0; i < origN; i++)
-          if (dfaAccepts.has(i)) minAccepts.add(repToGroup[find(i)]);
-
-        const minTransSet = new Set();
-        const minTrans    = [];
-        for (let i = 0; i < origN; i++) {
-          for (const a of alpha) {
-            const t = dfaTrans.find(t => t.from === i && t.sym === a);
-            if (t !== undefined) {
-              const from = repToGroup[find(i)];
-              const to   = repToGroup[find(t.to)];
-              const k    = from + "," + a + "," + to;
-              if (!minTransSet.has(k)) {
-                minTransSet.add(k);
-                minTrans.push({ from, sym: a, to });
-              }
-            }
-          }
-        }
-
-        // Renumber so start state = 0 (BFS order from minStart)
-        const renumMap = new Array(minN).fill(-1);
-        let   newIdx   = 0;
-        renumMap[minStart] = newIdx++;
-        const bfsQ = [minStart];
-        while (bfsQ.length) {
-          const s = bfsQ.shift();
-          for (const a of alpha) {
-            const tx = minTrans.find(t => t.from === s && t.sym === a);
-            if (tx && renumMap[tx.to] === -1) {
-              renumMap[tx.to] = newIdx++;
-              bfsQ.push(tx.to);
-            }
-          }
-        }
-        for (let i = 0; i < minN; i++) if (renumMap[i] === -1) renumMap[i] = newIdx++;
-
-        const minAcceptsR = new Set([...minAccepts].map(i => renumMap[i]));
-        const minTransR   = minTrans.map(t => ({ from: renumMap[t.from], sym: t.sym, to: renumMap[t.to] }));
-        // dfaStates: dummy array — renderDFA only needs its .length
-        const minDfaStates = Array.from({ length: minN }, () => new Set());
-
-        return {
-          dfaStates: minDfaStates,
-          dfaAccepts: minAcceptsR,
-          dfaTrans: minTransR,
-          alpha,
-          steps,
-          groups,
-          origN,
-          n,
-          DEAD,
-          origScData: scData,
-          renumMap,
-          alreadyMinimal,
-        };
-      }
+      // Subset construction, minimization and Thompson's construction live in
+      // shared/algo/regex.js; this file formats their steps and renders the results.
 
       // ── Subset construction stepper state ──────────────────────────
       let _scData = null; // result of subsetConstruct()
@@ -2098,7 +1584,7 @@
         nfaSetBtns();
 
         // Pre-compute DFA steps and reset the DFA stepper
-        _scData = subsetConstruct(nfa);
+        _scData = withSubsetHtml(subsetConstruct(nfa));
         _scPos = -1;
         document.getElementById("sc-log-bar").innerHTML = "";
         document.getElementById("dfa-table-wrap").innerHTML = "";
@@ -2107,7 +1593,7 @@
         scSetBtns();
 
         // Compute minimization and reset the min stepper
-        _minData = minimizeDFA(_scData);
+        _minData = withMinHtml(minimizeDFA(_scData));
         _mcPos = -1;
         document.getElementById("mc-log-bar").innerHTML = "";
         mcRenderStep(); // shows blank pair table at pos = -1
@@ -2327,38 +1813,6 @@
 
       // BFS over the DFA to find the shortest accepted strings.
       // Keyed by (state, length) so cycles are handled: a* yields ε, a, aa, aaa…
-      function generateExamples(scData, maxLen = 7, maxCount = 12) {
-        const { dfaAccepts, dfaTrans, alpha } = scData;
-        const results = [];
-        const seen = new Set();
-        const queue = [[0, ""]];
-        seen.add("0|0");
-
-        while (queue.length && results.length < maxCount) {
-          const [state, str] = queue.shift();
-
-          if (dfaAccepts.has(state)) {
-            results.push(str);
-            if (results.length >= maxCount) break;
-          }
-
-          if (str.length >= maxLen) continue;
-
-          for (const a of alpha) {
-            const tx = dfaTrans.find((t) => t.from === state && t.sym === a);
-            if (tx !== undefined) {
-              const key = tx.to + "|" + (str.length + 1);
-              if (!seen.has(key)) {
-                seen.add(key);
-                queue.push([tx.to, str + a]);
-              }
-            }
-          }
-        }
-
-        return results;
-      }
-
       function renderExampleChips(examples) {
         const container = document.getElementById("chips-container");
         container.innerHTML = "";
