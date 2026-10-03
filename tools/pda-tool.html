@@ -646,6 +646,7 @@
     <script src="../shared/algo/pda.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/stepper.js"></script>
+    <script src="../shared/automaton-graph.js"></script>
     <script>
       initResize("rh-1", "p-def", +1);
       initResize("rh-2", "p-tree", -1);
@@ -883,32 +884,8 @@ else: ${kw("reject")}`
 
       const PDA_R = 16;
 
-      const _pdaZoom = d3.zoom()
-        .scaleExtent([0.1, 8])
-        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", e => d3.select("#pda-graph-root").attr("transform", e.transform));
-      d3.select("#pda-svg").call(_pdaZoom).on("dblclick.zoom", null);
-      document.getElementById("pda-svg").addEventListener("dblclick", () => fitPDA());
-
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => { if (pdaStates.length > 0) fitPDA(); })
-          .observe(document.getElementById("pda-svg").parentElement);
-      }
-
-      function fitPDA() {
-        try {
-          const rootEl = document.getElementById("pda-graph-root");
-          const bb = rootEl.getBBox();
-          const svgEl = document.getElementById("pda-svg");
-          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 400;
-          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const sc = Math.min(0.92, Math.min(vw / (bb.width + 80), vh / (bb.height + 60)));
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-          d3.select("#pda-svg").call(_pdaZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch(e) {}
-      }
+      const pdaGraph = createGraphView("pda", { hasNodes: () => pdaStates.length > 0, fallbackWidth: 400 });
+      function fitPDA() { pdaGraph.fit(); }
 
       function ruleLabel(r) {
         const inp  = r.input === "" ? "ε" : r.input;
@@ -918,123 +895,33 @@ else: ${kw("reject")}`
       }
 
       function renderPDAGraph() {
-        const root = d3.select("#pda-graph-root");
-        root.selectAll("*").remove();
-
-        const n = pdaStates.length;
-        document.getElementById("pda-graph-empty").style.display = n === 0 ? "" : "none";
-        if (n === 0) return;
-
-        // Build edge map: "fi-ti" → { from, to, labels[], allEps }
-        const edgeMap   = new Map();
-        const selfLoops = new Map(); // stateIdx → labels[]
-
+        // One edge per (from, to) pair with one stacked label per rule; self-loops separately.
+        const edgeMap = new Map(); // "fi-ti" → { from, to, labels[], eps }
+        const loopMap = new Map(); // stateIdx → { node, labels[], eps }
         for (const r of pdaRules) {
           const fi = pdaStates.indexOf(r.from);
           const ti = pdaStates.indexOf(r.to);
           if (fi === -1 || ti === -1) continue;
-          const label  = ruleLabel(r);
-          const isEps  = r.input === "";
+          let e;
           if (fi === ti) {
-            if (!selfLoops.has(fi)) selfLoops.set(fi, []);
-            selfLoops.get(fi).push({ label, isEps });
+            if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], eps: true });
+            e = loopMap.get(fi);
           } else {
             const k = fi + "-" + ti;
-            if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], allEps: true });
-            const e = edgeMap.get(k);
-            e.labels.push(label);
-            if (!isEps) e.allEps = false;
+            if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], eps: true });
+            e = edgeMap.get(k);
           }
+          e.labels.push(ruleLabel(r));
+          if (r.input !== "") e.eps = false;
         }
-
-        // Dagre layout
-        const dg = new dagre.graphlib.Graph();
-        dg.setGraph({ rankdir: "LR", nodesep: 36, ranksep: 70, marginx: 50, marginy: 40 });
-        dg.setDefaultEdgeLabel(() => ({}));
-        for (let i = 0; i < n; i++) dg.setNode(i, { width: PDA_R * 2 + 4, height: PDA_R * 2 + 4 });
-        for (const [k, e] of edgeMap) dg.setEdge(e.from, e.to, {});
-        dagre.layout(dg);
-
-        const pathLine = d3.line().x(p => p.x).y(p => p.y).curve(d3.curveCatmullRom);
-
-        // Draw non-self edges
-        for (const [k, e] of edgeMap) {
-          const ed = dg.edge(e.from, e.to);
-          if (!ed) continue;
-          const pts = ed.points;
-          const mid = pts[Math.floor(pts.length / 2)];
-          const eg = root.append("g")
-            .attr("class", "pda-edge" + (e.allEps ? " eps-edge" : ""))
-            .attr("data-edge", k);
-          const arrowId = e.allEps ? "pda-arrow-eps" : "pda-arrow";
-          eg.append("path").attr("d", pathLine(pts));
-          if (pts.length >= 2) {
-            const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
-            eg.append("line")
-              .attr("x1", p0.x).attr("y1", p0.y)
-              .attr("x2", p1.x).attr("y2", p1.y)
-              .attr("stroke", "none").attr("marker-end", `url(#${arrowId})`);
-          }
-          // Multi-line label using tspan
-          const textEl = eg.append("text")
-            .attr("x", mid.x).attr("y", mid.y - 4 - (e.labels.length - 1) * 5)
-            .attr("text-anchor", "middle");
-          e.labels.forEach((lbl, li) => {
-            textEl.append("tspan")
-              .attr("x", mid.x).attr("dy", li === 0 ? 0 : "1.1em")
-              .text(lbl);
-          });
-        }
-
-        // Draw self-loops
-        for (const [si, entries] of selfLoops) {
-          const dn = dg.node(si);
-          if (!dn) continue;
-          const cx = dn.x, top = dn.y - PDA_R - 2;
-          const allEps = entries.every(e => e.isEps);
-          const arrowId = allEps ? "pda-arrow-eps" : "pda-arrow";
-          const eg = root.append("g")
-            .attr("class", "pda-edge" + (allEps ? " eps-edge" : ""))
-            .attr("data-self", si);
-          eg.append("path")
-            .attr("d", `M${cx-9},${top} C${cx-28},${top-36} ${cx+28},${top-36} ${cx+9},${top}`)
-            .attr("marker-end", `url(#${arrowId})`);
-          const textEl = eg.append("text")
-            .attr("x", cx).attr("y", top - 40 - (entries.length - 1) * 5)
-            .attr("text-anchor", "middle");
-          entries.forEach((e, li) => {
-            textEl.append("tspan")
-              .attr("x", cx).attr("dy", li === 0 ? 0 : "1.1em")
-              .text(e.label);
-          });
-        }
-
-        // Draw nodes
-        for (let i = 0; i < n; i++) {
-          const dn = dg.node(i);
-          if (!dn) continue;
-          const isAccept = pdaAccepts.has(i);
-          const ng = root.append("g")
-            .attr("class", "pda-node" + (isAccept ? " accepting" : ""))
-            .attr("id", "pda-state-" + i)
-            .attr("transform", `translate(${dn.x},${dn.y})`);
-          ng.append("circle").attr("r", PDA_R);
-          if (isAccept) ng.append("circle").attr("class", "accept-ring").attr("r", PDA_R - 3);
-          ng.append("text")
-            .attr("class", "state-label")
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .text(pdaStates[i]);
-          if (i === pdaStartIdx) {
-            root.append("line")
-              .attr("class", "start-arrow-pda")
-              .attr("x1", dn.x - PDA_R - 18).attr("y1", dn.y)
-              .attr("x2", dn.x - PDA_R - 1).attr("y2", dn.y)
-              .attr("marker-end", "url(#pda-arrow)");
-          }
-        }
-
-        fitPDA();
+        drawAutomatonGraph("pda", pdaGraph, {
+          nodes: pdaStates.map((name, i) => ({ label: name, accepting: pdaAccepts.has(i) })),
+          start: pdaStartIdx,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          radius: PDA_R,
+          ranksep: 70,
+        });
       }
 
       function pdaHighlightStates(activeSet) {

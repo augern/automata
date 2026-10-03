@@ -61,6 +61,7 @@ parser-tools/
 │   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimization
 │   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion
 │   │   └── tm.js                       ← pure: TM tape and pre-run
+│   ├── automaton-graph.js              ← dagre/d3 state-diagram rendering for NFA/PDA/TM
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (parse tree,

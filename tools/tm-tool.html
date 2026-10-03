@@ -656,6 +656,7 @@
     <script src="../shared/algo/tm.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/stepper.js"></script>
+    <script src="../shared/automaton-graph.js"></script>
     <script>
       // shared.js stub
       function renderTree() {}
@@ -1262,31 +1263,8 @@ ${kw("loop")}:
 
       const TM_R = 16; // node radius
 
-      const _tmZoom = d3.zoom()
-        .scaleExtent([0.1, 8])
-        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", e => d3.select("#tm-graph-root").attr("transform", e.transform));
-      d3.select("#tm-svg").call(_tmZoom).on("dblclick.zoom", null);
-      document.getElementById("tm-svg").addEventListener("dblclick", () => fitTMGraph());
-
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => { if (tmStates.length > 0) fitTMGraph(); })
-          .observe(document.getElementById("tm-svg").parentElement);
-      }
-
-      function fitTMGraph() {
-        try {
-          const bb  = document.getElementById("tm-graph-root").getBBox();
-          const svgEl = document.getElementById("tm-svg");
-          const vw  = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 320;
-          const vh  = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const sc  = Math.min(0.92, Math.min(vw / (bb.width + 80), vh / (bb.height + 60)));
-          const tx  = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty  = (vh - bb.height * sc) / 2 - bb.y * sc;
-          d3.select("#tm-svg").call(_tmZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch(e) { /* ignore */ }
-      }
+      const tmGraph = createGraphView("tm", { hasNodes: () => tmStates.length > 0, fallbackWidth: 320 });
+      function fitTMGraph() { tmGraph.fit(); }
 
       // Edge label: "r/w, D" abbreviated to "r, D" when read === write
       function tmEdgeLabel(r, w, dir) {
@@ -1294,27 +1272,18 @@ ${kw("loop")}:
       }
 
       function renderTMGraph() {
-        const root = d3.select("#tm-graph-root");
-        root.selectAll("*").remove();
-
-        const n = tmStates.length;
-        document.getElementById("tm-graph-empty").style.display = n === 0 ? "" : "none";
-        if (n === 0) return;
-
-        // Collect edges grouped by (from, to) and self-loops
-        const edgeMap   = new Map(); // "fi-ti" → { from, to, labels[] }
-        const selfLoops = new Map(); // fi → labels[]
-
-        for (let fi = 0; fi < n; fi++) {
-          const sn = tmStates[fi];
-          for (const [sym, t] of Object.entries(tmTrans[sn] || {})) {
+        // One edge per (from, to) pair with one stacked label per transition; self-loops separately.
+        const edgeMap = new Map(); // "fi-ti" → { from, to, labels[] }
+        const loopMap = new Map(); // fi → { node, labels[] }
+        for (let fi = 0; fi < tmStates.length; fi++) {
+          for (const [sym, t] of Object.entries(tmTrans[tmStates[fi]] || {})) {
             if (!t?.next) continue;
             const ti = tmStates.indexOf(t.next);
             if (ti === -1) continue;
             const label = tmEdgeLabel(sym, t.write, t.dir);
             if (fi === ti) {
-              if (!selfLoops.has(fi)) selfLoops.set(fi, []);
-              selfLoops.get(fi).push(label);
+              if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [] });
+              loopMap.get(fi).labels.push(label);
             } else {
               const k = `${fi}-${ti}`;
               if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [] });
@@ -1322,91 +1291,14 @@ ${kw("loop")}:
             }
           }
         }
-
-        // Dagre layout
-        const dg = new dagre.graphlib.Graph();
-        dg.setGraph({ rankdir: "LR", nodesep: 36, ranksep: 64, marginx: 50, marginy: 40 });
-        dg.setDefaultEdgeLabel(() => ({}));
-        for (let i = 0; i < n; i++) dg.setNode(i, { width: TM_R * 2 + 4, height: TM_R * 2 + 4 });
-        for (const [, e] of edgeMap) dg.setEdge(e.from, e.to, {});
-        dagre.layout(dg);
-
-        const pathLine = d3.line().x(p => p.x).y(p => p.y).curve(d3.curveCatmullRom);
-
-        // Draw non-self edges
-        for (const [, e] of edgeMap) {
-          const ed = dg.edge(e.from, e.to);
-          if (!ed) continue;
-          const pts = ed.points;
-          const mid = pts[Math.floor(pts.length / 2)];
-          const eg  = root.append("g").attr("class", "tm-edge");
-          eg.append("path").attr("d", pathLine(pts));
-          if (pts.length >= 2) {
-            const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
-            eg.append("line")
-              .attr("x1", p0.x).attr("y1", p0.y)
-              .attr("x2", p1.x).attr("y2", p1.y)
-              .attr("stroke", "none").attr("marker-end", "url(#tm-arrow)");
-          }
-          const txt = eg.append("text").attr("text-anchor", "middle");
-          e.labels.forEach((lbl, i) => {
-            txt.append("tspan")
-              .attr("x", mid.x).attr("y", mid.y - 6)
-              .attr("dy", i === 0 ? "0" : "1.1em")
-              .text(lbl);
-          });
-        }
-
-        // Draw self-loops
-        for (const [si, labels] of selfLoops) {
-          const dn = dg.node(si);
-          if (!dn) continue;
-          const cx = dn.x, top = dn.y - TM_R - 2;
-          const eg = root.append("g").attr("class", "tm-edge");
-          eg.append("path")
-            .attr("d", `M${cx-9},${top} C${cx-28},${top-36} ${cx+28},${top-36} ${cx+9},${top}`)
-            .attr("marker-end", "url(#tm-arrow)");
-          const txt = eg.append("text").attr("text-anchor", "middle");
-          labels.forEach((lbl, i) => {
-            txt.append("tspan")
-              .attr("x", cx).attr("y", top - 40)
-              .attr("dy", i === 0 ? "0" : "1.1em")
-              .text(lbl);
-          });
-        }
-
-        // Draw nodes (on top of edges)
-        for (let i = 0; i < n; i++) {
-          const dn = dg.node(i);
-          if (!dn) continue;
-          const isAccept = i === tmAcceptIdx;
-          const isReject = i === tmRejectIdx;
-          let cls = "tm-node";
-          if (isAccept) cls += " accepting";
-          if (isReject) cls += " rejecting";
-          const ng = root.append("g")
-            .attr("class", cls)
-            .attr("id", "tm-state-" + i)
-            .attr("transform", `translate(${dn.x},${dn.y})`);
-          ng.append("circle").attr("r", TM_R);
-          if (isAccept) ng.append("circle").attr("class", "accept-ring").attr("r", TM_R - 3);
-          if (isReject) ng.append("circle").attr("class", "reject-ring").attr("r", TM_R - 3);
-          ng.append("text")
-            .attr("class", "state-label")
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .text(tmStates[i]);
-          // Entry arrow for start state
-          if (i === tmStartIdx) {
-            root.append("line")
-              .attr("class", "start-arrow-tm")
-              .attr("x1", dn.x - TM_R - 18).attr("y1", dn.y)
-              .attr("x2", dn.x - TM_R - 1 ).attr("y2", dn.y)
-              .attr("marker-end", "url(#tm-arrow)");
-          }
-        }
-
-        fitTMGraph();
+        drawAutomatonGraph("tm", tmGraph, {
+          nodes: tmStates.map((name, i) => ({ label: name, accepting: i === tmAcceptIdx, rejecting: i === tmRejectIdx })),
+          start: tmStartIdx,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          radius: TM_R,
+          ranksep: 64,
+        });
       }
 
       function tmHighlightState(stateName) {

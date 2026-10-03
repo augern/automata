@@ -606,6 +606,7 @@
     <script src="../shared/algo/nfa.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/stepper.js"></script>
+    <script src="../shared/automaton-graph.js"></script>
     <script>
       // shared.js stubs
       function renderTree() {}
@@ -836,152 +837,43 @@ else: ${kw("reject")}`
 
       const NFA_R = 16; // node circle radius
 
-      const _nfaZoom = d3.zoom()
-        .scaleExtent([0.1, 8])
-        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", e => d3.select("#nfa-graph-root").attr("transform", e.transform));
-      d3.select("#nfa-svg").call(_nfaZoom).on("dblclick.zoom", null);
-      document.getElementById("nfa-svg").addEventListener("dblclick", () => fitNFA());
-
-      function fitNFA() {
-        try {
-          const rootEl = document.getElementById("nfa-graph-root");
-          const bb = rootEl.getBBox();
-          const svgEl = document.getElementById("nfa-svg");
-          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 340;
-          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const sc = Math.min(0.92, Math.min(vw / (bb.width + 80), vh / (bb.height + 60)));
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-          d3.select("#nfa-svg").call(_nfaZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch(e) { /* ignore */ }
-      }
-
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => { if (nfaStates.length > 0) fitNFA(); })
-          .observe(document.getElementById("nfa-svg").parentElement);
-      }
+      const nfaGraph = createGraphView("nfa", { hasNodes: () => nfaStates.length > 0, fallbackWidth: 340 });
+      function fitNFA() { nfaGraph.fit(); }
 
       function renderNFAGraph() {
-        const root = d3.select("#nfa-graph-root");
-        root.selectAll("*").remove();
-
-        const n = nfaStates.length;
-        document.getElementById("nfa-graph-empty").style.display = n === 0 ? "" : "none";
-        if (n === 0) return;
-
-        // Collect all edges, group by (from, to, isEps)
-        // edgeMap: "f-t" → { from, to, syms[], isEps }
-        // Separate eps from symbol edges
-        const edgeMap  = new Map(); // non-self
-        const selfLoops = new Map(); // stateIdx → { syms[], hasEps }
-
+        // One edge per (from, to) pair, labelled with all its symbols; self-loops separately.
+        const edgeMap = new Map(); // "f-t" → { from, to, labels[], eps }
+        const loopMap = new Map(); // stateIdx → { node, labels[], eps }
         for (let fi = 0; fi < nfaStates.length; fi++) {
           const sn = nfaStates[fi];
-          const allSyms = [...nfaAlphabet, "ε"];
-          for (const sym of allSyms) {
-            const targets = (nfaTrans[sn] && nfaTrans[sn][sym]) || [];
-            for (const t of targets) {
+          for (const sym of [...nfaAlphabet, "ε"]) {
+            for (const t of (nfaTrans[sn] && nfaTrans[sn][sym]) || []) {
               const ti = nfaStates.indexOf(t);
               if (ti === -1) continue;
               const isEps = sym === "ε";
+              let e;
               if (fi === ti) {
-                if (!selfLoops.has(fi)) selfLoops.set(fi, []);
-                selfLoops.get(fi).push({ sym, isEps });
+                if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], eps: true });
+                e = loopMap.get(fi);
               } else {
                 const k = fi + "-" + ti;
-                if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, syms: [], hasEps: false });
-                const e = edgeMap.get(k);
-                e.syms.push(sym);
-                if (isEps) e.hasEps = true;
+                if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], eps: true });
+                e = edgeMap.get(k);
               }
+              e.labels.push(sym);
+              if (!isEps) e.eps = false;
             }
           }
         }
-
-        // Dagre layout (non-self edges only)
-        const dg = new dagre.graphlib.Graph();
-        dg.setGraph({ rankdir: "LR", nodesep: 36, ranksep: 64, marginx: 50, marginy: 40 });
-        dg.setDefaultEdgeLabel(() => ({}));
-        for (let i = 0; i < n; i++) dg.setNode(i, { width: NFA_R * 2 + 4, height: NFA_R * 2 + 4 });
-        for (const [k, e] of edgeMap) dg.setEdge(e.from, e.to, {});
-        dagre.layout(dg);
-
-        const pathLine = d3.line().x(p => p.x).y(p => p.y).curve(d3.curveCatmullRom);
-
-        // Draw non-self edges
-        for (const [k, e] of edgeMap) {
-          const ed = dg.edge(e.from, e.to);
-          if (!ed) continue;
-          const pts = ed.points;
-          const mid = pts[Math.floor(pts.length / 2)];
-          const allEps = e.syms.every(s => s === "ε");
-          const eg = root.append("g")
-            .attr("class", "nfa-edge" + (allEps ? " eps-edge" : ""))
-            .attr("data-edge", k);
-          const arrowId = allEps ? "nfa-arrow-eps" : "nfa-arrow";
-          eg.append("path").attr("d", pathLine(pts));
-          if (pts.length >= 2) {
-            const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
-            eg.append("line").attr("x1", p0.x).attr("y1", p0.y)
-              .attr("x2", p1.x).attr("y2", p1.y)
-              .attr("stroke", "none").attr("marker-end", `url(#${arrowId})`);
-          }
-          eg.append("text")
-            .attr("x", mid.x).attr("y", mid.y - 6)
-            .attr("text-anchor", "middle")
-            .text(e.syms.join(", "));
-        }
-
-        // Draw self-loops
-        for (const [si, entries] of selfLoops) {
-          const dn = dg.node(si);
-          if (!dn) continue;
-          const cx = dn.x, top = dn.y - NFA_R - 2;
-          const allEps = entries.every(e => e.isEps);
-          const arrowId = allEps ? "nfa-arrow-eps" : "nfa-arrow";
-          const eg = root.append("g")
-            .attr("class", "nfa-edge" + (allEps ? " eps-edge" : ""))
-            .attr("data-self", si);
-          eg.append("path")
-            .attr("d", `M${cx-9},${top} C${cx-28},${top-36} ${cx+28},${top-36} ${cx+9},${top}`)
-            .attr("marker-end", `url(#${arrowId})`);
-          eg.append("text")
-            .attr("x", cx).attr("y", top - 38)
-            .attr("text-anchor", "middle")
-            .text(entries.map(e => e.sym).join(", "));
-        }
-
-        // Draw nodes (on top of edges)
-        for (let i = 0; i < n; i++) {
-          const dn = dg.node(i);
-          if (!dn) continue;
-          const isAccept = nfaAccepts.has(i);
-          const ng = root.append("g")
-            .attr("class", "nfa-node" + (isAccept ? " accepting" : ""))
-            .attr("id", "nfa-state-" + i)
-            .attr("transform", `translate(${dn.x},${dn.y})`);
-          ng.append("circle").attr("r", NFA_R);
-          if (isAccept) {
-            ng.append("circle").attr("class", "accept-ring").attr("r", NFA_R - 3);
-          }
-          ng.append("text")
-            .attr("class", "state-label")
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .text(nfaStates[i]);
-          // Entry arrow for start state
-          if (i === nfaStartIdx) {
-            root.append("line")
-              .attr("class", "start-arrow-nfa")
-              .attr("x1", dn.x - NFA_R - 18).attr("y1", dn.y)
-              .attr("x2", dn.x - NFA_R - 1).attr("y2", dn.y)
-              .attr("marker-end", "url(#nfa-arrow)");
-          }
-        }
-
-        fitNFA();
+        drawAutomatonGraph("nfa", nfaGraph, {
+          nodes: nfaStates.map((name, i) => ({ label: name, accepting: nfaAccepts.has(i) })),
+          start: nfaStartIdx,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          radius: NFA_R,
+          ranksep: 64,
+          joinLabels: true,
+        });
       }
 
       function nfaHighlightStates(activeSet, deadSet) {
