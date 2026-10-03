@@ -311,8 +311,10 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/derivation.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/share-link.js"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
       initResize("rh-2", "p-productions", +1);
@@ -345,8 +347,19 @@
           _grammar = null;
           setError(e.message);
         }
+        saveShare();
         renderProductions();
         derivNew();
+      }
+
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({ g: document.getElementById("grammar-input").value }));
+      let sharedStateApplied = false;
+      function applyShareState() {
+        const st = shareValidateTextState(readShareState(), "g");
+        if (!st) return;
+        sharedStateApplied = true;
+        document.getElementById("grammar-input").value = st.g;
       }
 
       function loadExample(k) {
@@ -698,6 +711,8 @@
 
       initPanelStorage("derivation-tool-v1", ["p-grammar", "p-productions", "p-deriv"]);
       loadPanelState();
+      applyShareState();
+      installShareButton();
 
       const EXAMPLES = {};
 
@@ -707,7 +722,7 @@
         EXAMPLES,
         function () {
           const firstKey = Object.keys(EXAMPLES)[0];
-          if (firstKey) {
+          if (firstKey && !sharedStateApplied) {
             loadExample(firstKey);
             document.getElementById("examples-select").value = firstKey;
           }

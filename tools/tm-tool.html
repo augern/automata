@@ -652,9 +652,11 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/tm.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/share-link.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -930,6 +932,7 @@ ${kw("loop")}:
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       function simRun() {
+        saveShare();
         const input  = document.getElementById("sim-string-input").value;
         const result = buildConfigs(input);
         _configs    = result.configs;
@@ -1255,7 +1258,8 @@ ${kw("loop")}:
         renderExampleChips(ex.strings || [], simRun);
       }
 
-      loadAutomataExamples("../examples/examples-tm.json", "examples-select", EXAMPLES, loadExampleTM);
+      let sharedStateApplied = false; // set when the page was restored from a shareable link
+      loadAutomataExamples("../examples/examples-tm.json", "examples-select", EXAMPLES, loadExampleTM, () => !sharedStateApplied);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // TM GRAPH RENDERING  (D3 + Dagre)
@@ -1340,8 +1344,30 @@ ${kw("loop")}:
       // INIT
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        tm: { states: tmStates, alphabet: tmAlphabet, start: tmStartIdx, accept: tmAcceptIdx, reject: tmRejectIdx, trans: tmTrans },
+        s: document.getElementById("sim-string-input").value,
+      }));
+
+      function applyShareState() {
+        const st = shareValidateTM(readShareState());
+        if (!st) return;
+        sharedStateApplied = true;
+        const d = st.tm;
+        tmStates = d.states;
+        tmAlphabet = d.alphabet;
+        tmStartIdx = d.start;
+        tmAcceptIdx = d.accept;
+        tmRejectIdx = d.reject;
+        tmTrans = d.trans;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
       initPanelStorage("tm-tool-v1", ["p-def", "p-tm", "p-sim"]);
       loadPanelState();
+      applyShareState();
+      installShareButton();
       renderDefTable();
       onTMChange();
     </script>

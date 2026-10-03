@@ -602,9 +602,11 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/nfa.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/share-link.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -1145,6 +1147,7 @@ else: ${kw("reject")}`
       let _simChars   = [];    // input characters
 
       function simRun() {
+        saveShare();
         const input = document.getElementById("sim-string-input").value;
         _simChars = [...input];
         _simTree  = buildSimTree(input);
@@ -1263,7 +1266,8 @@ else: ${kw("reject")}`
         renderExampleChips(ex.strings || [], simRun);
       }
 
-      loadAutomataExamples("../examples/examples-nfa.json", "examples-select", EXAMPLES, loadExampleNFA);
+      let sharedStateApplied = false; // set when the page was restored from a shareable link
+      loadAutomataExamples("../examples/examples-nfa.json", "examples-select", EXAMPLES, loadExampleNFA, () => !sharedStateApplied);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // CHANGE HANDLER
@@ -1299,8 +1303,29 @@ else: ${kw("reject")}`
       // INIT
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        nfa: { states: nfaStates, alphabet: nfaAlphabet, start: nfaStartIdx, accepts: [...nfaAccepts], trans: nfaTrans },
+        s: document.getElementById("sim-string-input").value,
+      }));
+
+      function applyShareState() {
+        const st = shareValidateNFA(readShareState());
+        if (!st) return;
+        sharedStateApplied = true;
+        const d = st.nfa;
+        nfaStates = d.states;
+        nfaAlphabet = d.alphabet;
+        nfaStartIdx = d.start;
+        nfaAccepts = new Set(d.accepts);
+        nfaTrans = d.trans;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
       initPanelStorage("nfa-tool-v1", ["p-def", "p-nfa", "p-sim"]);
       loadPanelState();
+      applyShareState();
+      installShareButton();
       renderDefTable();
       onNFAChange();
     </script>

@@ -192,8 +192,10 @@
 </div>
 
 <script src="../shared/algo/grammar.js"></script>
+<script src="../shared/algo/share.js"></script>
 <script src="../shared/algo/rewrite.js"></script>
 <script src="../shared/shared.js"></script>
+<script src="../shared/share-link.js"></script>
 <script>
 'use strict';
 
@@ -275,6 +277,7 @@ function setMode(m) {
   document.getElementById('main-title').textContent = MODE_TITLES[m];
   if (inputGrammar) resetSim();
   savePanelState();
+  saveShare();
 }
 
 function setError(msg) { document.getElementById('error-msg').textContent = msg || ''; }
@@ -285,7 +288,24 @@ function build() {
   const text = document.getElementById('grammar-input').value.trim();
   try { inputGrammar = parseGrammarRaw(text); }
   catch(e) { setError(e.message); inputGrammar = null; updateBtns(); return; }
+  saveShare();
   resetSim();
+}
+
+// ── Shareable link ────────────────────────────────────────────
+const saveShare = createShareSaver(() => ({
+  g: document.getElementById('grammar-input').value,
+  m: currentMode,
+}));
+
+// Restore grammar and transformation from the link; returns true if one was applied.
+function applyShareState() {
+  const st = shareValidateTextState(readShareState(), 'g', Object.keys(MODE_TITLES));
+  if (!st) return false;
+  document.getElementById('grammar-input').value = st.g;
+  if (st.m) setMode(st.m);
+  build();
+  return true;
 }
 
 function resetSim() {
@@ -638,6 +658,8 @@ window.onerror = function(msg, src, line, col, err) {
 window.addEventListener('load', () => {
   loadPanelState();
   initAlgoModal();
+  installShareButton();
+  applyShareState();
   loadExamplesInto('../examples/examples-grammar-rewrite.json', 'examples-select', EXAMPLES, () => {
     if (!document.getElementById('grammar-input').value.trim()) {
       const firstKey = Object.keys(EXAMPLES)[0];

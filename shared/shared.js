@@ -791,7 +791,9 @@ function renderExampleChips(strings, simFn) {
 // Fetch a grouped examples JSON, populate a <select>, store each example
 // into examplesObj keyed as "ex0", "ex1", …, then call loadFn with the
 // first key so the tool opens in a meaningful state.
-function loadAutomataExamples(url, selectId, examplesObj, loadFn) {
+// shouldLoadFirst (optional): called once the examples are in; return false to skip loading the
+// first example (e.g. because the page was restored from a shareable link).
+function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirst) {
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -812,7 +814,7 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn) {
         });
         sel.appendChild(og);
       });
-      if (firstKey) loadFn(firstKey);
+      if (firstKey && (!shouldLoadFirst || shouldLoadFirst())) loadFn(firstKey);
     })
     .catch(function(err) {
       console.error("Failed to load examples from " + url, err);

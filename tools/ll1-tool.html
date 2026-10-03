@@ -323,8 +323,10 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/ll1.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/share-link.js"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
       initResize("rh-1", "p-grammar", +1);
@@ -826,6 +828,7 @@
           setError(e.message);
           return;
         }
+        saveShare();
         const first = computeFirst(currentGrammar);
         const follow = computeFollow(currentGrammar, first);
         const ll1 = buildLL1Table(currentGrammar, first, follow);
@@ -956,11 +959,25 @@ ${kw("loop")}
         return false;
       };
 
+      // ── Shareable link ────────────────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        g: document.getElementById("grammar-input").value,
+        s: document.getElementById("sim-input").value,
+      }));
+      function applyShareState() {
+        const st = shareValidateTextState(readShareState(), "g");
+        if (!st) return;
+        document.getElementById("grammar-input").value = st.g;
+        document.getElementById("sim-input").value = st.s;
+      }
+
       window.addEventListener("load", () => {
         loadPanelState();
         initAlgoModal();
         loadExamplesInto("../examples/examples-ll1.json", "examples-select", EXAMPLES);
         document.getElementById("grammar-input").value = "E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> id";
+        applyShareState();
+        installShareButton();
         build();
         // Initialise tree zoom (defined in shared.js)
         if (typeof initTreeZoom === "function") initTreeZoom();
@@ -973,6 +990,7 @@ ${kw("loop")}
         // Clear sim immediately on each keystroke; re-initialize after typing pauses
         let _simInputTimer = null;
         document.getElementById("sim-input").addEventListener("input", () => {
+          saveShare();
           simClear();
           clearTimeout(_simInputTimer);
           _simInputTimer = setTimeout(simReset, 300);

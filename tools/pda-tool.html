@@ -642,9 +642,11 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/pda.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/share-link.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -956,6 +958,7 @@ else: ${kw("reject")}`
       let _simChars    = [];
 
       function simRun() {
+        saveShare();
         const input = document.getElementById("sim-string-input").value;
         _simChars = [...input];
         sim.pos   = 0;
@@ -1251,7 +1254,8 @@ else: ${kw("reject")}`
         renderExampleChips(ex.strings || [], simRun);
       }
 
-      loadAutomataExamples("../examples/examples-pda.json", "examples-select", EXAMPLES, loadExamplePDA);
+      let sharedStateApplied = false; // set when the page was restored from a shareable link
+      loadAutomataExamples("../examples/examples-pda.json", "examples-select", EXAMPLES, loadExamplePDA, () => !sharedStateApplied);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // CHANGE HANDLER
@@ -1285,8 +1289,32 @@ else: ${kw("reject")}`
       // INIT
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        pda: { states: pdaStates, start: pdaStartIdx, accepts: [...pdaAccepts], initStack: pdaInitStack, acceptMode: pdaAcceptMode, rules: pdaRules },
+        s: document.getElementById("sim-string-input").value,
+      }));
+
+      function applyShareState() {
+        const st = shareValidatePDA(readShareState());
+        if (!st) return;
+        sharedStateApplied = true;
+        const d = st.pda;
+        pdaStates = d.states;
+        pdaStartIdx = d.start;
+        pdaAccepts = new Set(d.accepts);
+        pdaRules = d.rules;
+        pdaInitStack = d.initStack;
+        pdaAcceptMode = d.acceptMode;
+        document.getElementById("init-stack-input").value = pdaInitStack;
+        document.querySelector(`input[name="accept-mode"][value="${pdaAcceptMode}"]`).checked = true;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
       initPanelStorage("pda-tool-v1", ["p-def", "p-sim", "p-tree"]);
       loadPanelState();
+      applyShareState();
+      installShareButton();
       renderStatesTable();
       renderRulesTable();
       onPDAChange();

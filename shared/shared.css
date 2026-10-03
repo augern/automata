@@ -1029,3 +1029,24 @@ body {
   color: transparent;
 }
 /* END SHARED:TRANS-INPUT */
+
+/* ── Share button (topbar) ── */
+.share-btn {
+  margin-left: auto;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 1px 9px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.share-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.share-btn ~ #key-nav {
+  margin-left: 0;
+}

@@ -849,8 +849,10 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/regex.js"></script>
     <script src="../shared/shared.js"></script>
+    <script src="../shared/share-link.js"></script>
     <script src="../shared/stepper.js"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
@@ -1492,6 +1494,7 @@
 
       function build() {
         setError("");
+        saveShare();
         const raw = document.getElementById("regex-input").value;
         let nfa, steps;
         try {
@@ -2172,11 +2175,25 @@ ${kw("return")} D′`,
         return false;
       };
 
+      // ── Shareable link ────────────────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        re: document.getElementById("regex-input").value,
+        s: document.getElementById("sim-string-input").value,
+      }));
+      function applyShareState() {
+        const st = shareValidateTextState(readShareState(), "re");
+        if (!st) return;
+        document.getElementById("regex-input").value = st.re;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
       window.addEventListener("load", () => {
         initPanelStorage("regex-tool-v1", ["p-regex", "p-nfa", "p-dfa", "p-min", "p-sim"]);
         loadPanelState();
         loadExamplesInto("../examples/examples-regex.json", "examples-select", EXAMPLES);
         document.getElementById("regex-input").value = "(a|b)*abb";
+        applyShareState();
+        installShareButton();
         build();
         // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
         let _rebuildTimer = null;
@@ -2187,6 +2204,7 @@ ${kw("return")} D′`,
         // Auto-run simulation when the input string changes
         let _simTimer = null;
         document.getElementById("sim-string-input").addEventListener("input", () => {
+          saveShare();
           clearTimeout(_simTimer);
           _simTimer = setTimeout(simRun, 300);
         });

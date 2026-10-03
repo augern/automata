@@ -62,6 +62,7 @@ parser-tools/
 │   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion
 │   │   └── tm.js                       ← pure: TM tape and pre-run
 │   ├── automaton-graph.js              ← dagre/d3 state-diagram rendering for NFA/PDA/TM
+│   ├── share-link.js                   ← URL-fragment state, Share button
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (parse tree,
@@ -123,6 +124,20 @@ Shared sections in `shared.js` are delimited by comments:
 // ━━━ SHARED:UTILITIES ━━━
 // ━━━ SHARED:TRANS-INPUT ━━━
 ```
+
+---
+
+## Shareable links
+
+Every tool keeps its current input in the URL fragment (`#s=…`), and the
+**Share** button in the top bar copies the link. Opening a link restores the
+grammar, regular expression, or automaton definition (plus the tool's mode and
+the simulation string). The fragment is never sent to a server.
+
+The data in a link is untrusted, so it is decoded defensively: anything
+malformed, oversized or of the wrong shape is ignored and the tool opens with
+its default example. Old LR-tool links (`?g=…`) still work. States too large for
+a link (over 8000 characters) are not written to the address bar.
 
 ---
 
