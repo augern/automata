@@ -1,12 +1,10 @@
 pages:
   stage: deploy
   script:
-    - mkdir -p public/tools public/shared public/examples public/vendor
+    - mkdir -p public/tools
     - cp index.html public/
     - cp tools/*.html public/tools/
-    - cp shared/shared.css shared/shared.js public/shared/
-    - cp examples/*.json public/examples/
-    - cp vendor/* public/vendor/
+    - cp -r shared examples vendor public/
   artifacts:
     paths:
       - public
