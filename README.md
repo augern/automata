@@ -1,14 +1,18 @@
 # Automata & Parser Tools
 
 Interactive browser-based teaching tools for formal language theory, covering
-regular expressions, context-free grammars, and parsing.
+regular languages, context-free grammars and parsing, and Turing machines.
 
 | Tool | Coverage |
 |---|---|
-| **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
-| **LL(1) Parser Tool** | Predictive parsing — FIRST/FOLLOW sets, predictive table M[A,a], derivation steps, string simulation, parse tree |
 | **Regular Expression Tool** | Thompson's NFA construction — RE → NFA (step-by-step), NFA → DFA (subset construction, step-by-step), DFA string simulation |
+| **NFA Simulator** | ε-NFA — editable transition table, NFA graph, nondeterministic simulation tree |
 | **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination |
+| **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step |
+| **PDA Simulator** | Nondeterministic PDA / ε-PDA — transition rule list, automaton graph, configuration-set simulation |
+| **LL(1) Parser Tool** | Predictive parsing — FIRST/FOLLOW sets, predictive table M[A,a], derivation steps, string simulation, parse tree |
+| **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
+| **Turing Machine Simulator** | Deterministic TM — editable transition table, tape simulation, step-by-step execution |
 
 All tools share a common visual language (academic, high-contrast) and support
 step-by-step algorithm visualisation with Back/Forward controls.
@@ -22,22 +26,31 @@ step-by-step algorithm visualisation with Back/Forward controls.
 ## File structure
 
 ```
-automata-tools/
+parser-tools/
 ├── index.html                          ← landing page
 ├── tools/
-│   ├── lr-tool.html                    ← LR parser tool
-│   ├── ll1-tool.html                   ← LL(1) parser tool
 │   ├── regex-tool.html                 ← regular expression / NFA / DFA tool
-│   └── grammar-rewrite-tool.html       ← grammar transformation tool
+│   ├── nfa-tool.html                   ← NFA simulator
+│   ├── grammar-rewrite-tool.html       ← grammar transformation tool
+│   ├── derivation-tool.html            ← grammar derivation tool
+│   ├── pda-tool.html                   ← PDA simulator
+│   ├── ll1-tool.html                   ← LL(1) parser tool
+│   ├── lr-tool.html                    ← LR parser tool
+│   └── tm-tool.html                    ← Turing machine simulator
 ├── examples/
 │   ├── examples-regex.json             ← example expressions for Regular Expression tool
-│   ├── examples-lr.json                ← example grammars for LR tool
+│   ├── examples-nfa.json               ← example automata for NFA tool
+│   ├── examples-grammar-rewrite.json   ← example grammars for Grammar Transformations tool
+│   ├── examples-derivation.json        ← example grammars for Grammar Derivations tool
+│   ├── examples-pda.json               ← example automata for PDA tool
 │   ├── examples-ll1.json               ← example grammars for LL(1) tool
-│   └── examples-grammar-rewrite.json   ← example grammars for Grammar Transformations tool
+│   ├── examples-lr.json                ← example grammars for LR tool
+│   └── examples-tm.json                ← example machines for Turing Machine tool
 ├── shared/
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (BNF parser, FIRST/FOLLOW, parse tree,
-│                                          panel layout, example loader, modal behaviour)
+│                                          panel layout, example loader, modal behaviour,
+│                                          automata simulation helpers)
 ├── LICENSE                             ← MIT
 └── .gitlab-ci.yml                      ← GitLab Pages deployment
 ```
@@ -88,6 +101,10 @@ Shared sections in `shared.js` are delimited by comments:
 // ━━━ SHARED:PSEUDOCODE ━━━
 // ━━━ SHARED:EXAMPLES-LOADER ━━━
 // ━━━ SHARED:MODAL ━━━
+// ━━━ SHARED:SIM-HELPERS ━━━
+// ━━━ SHARED:TABLE-STEPPER ━━━
+// ━━━ SHARED:UTILITIES ━━━
+// ━━━ SHARED:TRANS-INPUT ━━━
 ```
 
 ---
