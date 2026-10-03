@@ -323,6 +323,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/ll1.js"></script>
     <script src="../shared/shared.js"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
@@ -337,49 +338,7 @@
 
       // loadExample — defined in shared.js
 
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // LL(1) TABLE CONSTRUCTION  (LL-specific)
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // Returns { table, conflicts }
-      // table[NT][terminal] = ruleIndex  (or array if conflict)
-      function buildLL1Table(g, first, follow) {
-        const { rules, nonterminals: nts, terminals: terms } = g;
-        const table = {},
-          conflicts = [];
-
-        for (const nt of nts) table[nt] = {};
-
-        function add(nt, sym, ruleIdx) {
-          const cur = table[nt][sym];
-          if (cur === undefined) {
-            table[nt][sym] = ruleIdx;
-          } else if (cur !== ruleIdx) {
-            const ex = Array.isArray(cur) ? cur : [cur];
-            if (!ex.includes(ruleIdx)) {
-              const merged = [...ex, ruleIdx];
-              table[nt][sym] = merged;
-              conflicts.push({ nt, sym, rules: merged });
-            }
-          }
-        }
-
-        // For each rule A -> alpha (index i):
-        rules.forEach((rule, i) => {
-          const { lhs, rhs } = rule;
-          if (!nts.has(lhs)) return;
-          const fa = firstOfSeq(rhs, first);
-          // For each terminal in FIRST(alpha) \ {eps}: add to M[A][a]
-          for (const a of fa) {
-            if (a !== EPSILON) add(lhs, a, i);
-          }
-          // If eps in FIRST(alpha): for each b in FOLLOW(A): add to M[A][b]
-          if (fa.has(EPSILON)) {
-            for (const b of follow[lhs] || []) add(lhs, b, i);
-          }
-        });
-
-        return { table, conflicts };
-      }
+      // buildLL1Table, ll1Step — see shared/algo/ll1.js
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // TABLE CONSTRUCTION STEP ENGINE
@@ -778,11 +737,10 @@
       function simStep() {
         if (simDone || !simTable) return;
         const token = simTokens[simPos];
-        const top = simStack[simStack.length - 1];
         simSnapshot();
+        const act = ll1Step(currentGrammar, simTable, simStack, simTokens, simPos);
 
-        // Case 1: both top and token are $  → accept
-        if (top === "$" && token === "$") {
+        if (act.type === "accept") {
           setSimLog("\u2713 Accepted!", "accept");
           addDerivStep([], "accepted", "accepted");
           simDone = true;
@@ -791,40 +749,36 @@
           return;
         }
 
-        // Case 2: top is a terminal — must match
-        if (!currentGrammar.nonterminals.has(top)) {
-          if (top === token) {
-            simStack.pop();
-            simFront.shift(); // consumed leaf
-            simPos++;
-            renderSimTokens();
-            renderSimStack();
-            treeLastNew = [];
-            renderTree();
-            // Update deriv: replace top terminal with nothing (it's consumed)
-            const cur = derivSteps[derivSteps.length - 1]?.form || [];
-            addDerivStep(cur.slice(1), 'match "' + token + '"', "");
-            setSimLog('Match  "' + token + '"', "match");
-          } else {
-            setSimLog('Error: expected "' + top + '", got "' + token + '"', "error");
-            simDone = true;
-          }
+        if (act.type === "match") {
+          simStack.pop();
+          simFront.shift(); // consumed leaf
+          simPos++;
+          renderSimTokens();
+          renderSimStack();
+          treeLastNew = [];
+          renderTree();
+          // Update deriv: replace top terminal with nothing (it's consumed)
+          const cur = derivSteps[derivSteps.length - 1]?.form || [];
+          addDerivStep(cur.slice(1), 'match "' + token + '"', "");
+          setSimLog('Match  "' + token + '"', "match");
           simSetBtns();
           return;
         }
 
-        // Case 3: top is a nonterminal — expand via table
-        const ruleIdx = simTable[top] && simTable[top][token];
-        if (ruleIdx === undefined) {
-          setSimLog("Error: no rule for M[" + top + ", " + token + "]", "error");
+        if (act.type === "error") {
+          setSimLog(
+            act.reason === "mismatch"
+              ? 'Error: expected "' + act.expected + '", got "' + act.got + '"'
+              : "Error: no rule for M[" + act.nt + ", " + act.token + "]",
+            "error"
+          );
           simDone = true;
           simSetBtns();
           return;
         }
 
-        // Conflict — use first rule
-        const ri = Array.isArray(ruleIdx) ? ruleIdx[0] : ruleIdx;
-        const rule = currentGrammar.rules[ri];
+        // act.type === "expand"
+        const { nt: top, ruleIdx: ri, rule } = act;
 
         hiTableCell(top, token);
 
