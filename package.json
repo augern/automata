@@ -1,0 +1,9 @@
+{
+  "name": "parser-tools",
+  "private": true,
+  "description": "Interactive teaching tools for automata and parsing theory",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/"
+  }
+}

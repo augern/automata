@@ -51,15 +51,21 @@ parser-tools/
 │   ├── dagre.min.js                    ← Dagre 0.8.5 (MIT)
 │   └── LICENSE-*.txt
 ├── shared/
+│   ├── algo/
+│   │   ├── grammar.js                  ← pure: BNF parser, FIRST/FOLLOW (no DOM)
+│   │   └── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (BNF parser, FIRST/FOLLOW, parse tree,
 │                                          panel layout, example loader, modal behaviour,
 │                                          automata simulation helpers)
+├── test/                               ← node:test suites for shared/algo/ (npm test)
+├── package.json                        ← test script only; no runtime dependencies
 ├── LICENSE                             ← MIT
 └── .gitlab-ci.yml                      ← GitLab Pages deployment
 ```
 
-`shared.css` and `shared.js` are required by all tools.
+`shared.css`, `shared.js` and `algo/grammar.js` are required by all tools
+(`algo/grammar.js` must be loaded before `shared.js`; `algo/lr.js` only by the LR tool).
 D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in the corresponding
@@ -110,6 +116,21 @@ Shared sections in `shared.js` are delimited by comments:
 // ━━━ SHARED:UTILITIES ━━━
 // ━━━ SHARED:TRANS-INPUT ━━━
 ```
+
+---
+
+## Tests
+
+The algorithm modules in `shared/algo/` have no DOM access and are covered by
+tests that check results against textbook answers (state counts and conflicts
+from the dragon book, FIRST/FOLLOW sets). They need Node 18+ and no packages:
+
+```bash
+npm test
+```
+
+The modules are plain classic scripts, so the browser loads them unchanged;
+`test/load.js` evaluates them in a `vm` context.
 
 ---
 
