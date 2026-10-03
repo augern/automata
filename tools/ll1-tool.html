@@ -22,7 +22,7 @@
       #deriv-head {
         display: flex;
         gap: 10px;
-        font-size: 0.6rem;
+        font-size: var(--fs-2xs);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -44,14 +44,14 @@
         color: var(--text-lo);
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         padding-top: 8px;
       }
       .deriv-step {
         display: flex;
         gap: 10px;
         align-items: baseline;
-        font-size: 0.72rem;
+        font-size: var(--fs-sm);
         padding: 4px 0;
         border-bottom: 1px solid var(--border-lo);
         line-height: 1.7;
@@ -69,7 +69,7 @@
       }
       .deriv-step .ds-action {
         color: var(--text-lo);
-        font-size: 0.64rem;
+        font-size: var(--fs-2xs);
         font-style: italic;
       }
       .deriv-step.current .ds-form {
@@ -88,7 +88,7 @@
 
       /* LL stack items */
       .stk-sym-item {
-        font-size: 0.7rem;
+        font-size: var(--fs-xs);
         padding: 0 7px;
         background: var(--bg-cell);
         border: 1px solid var(--border);
@@ -144,7 +144,7 @@
       }
       #tstep-controls .btn {
         height: 18px;
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         padding: 0 6px;
         line-height: 1;
       }
@@ -213,7 +213,7 @@
             &#8249;
           </button>
         </div>
-        <div id="tstep-controls" style="display: flex; align-items: center; gap: 6px; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em">
+        <div id="tstep-controls" style="display: flex; align-items: center; gap: 6px; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em">
           <span>Simulate</span>
           <div class="step-group">
             <button class="btn icon-restart" id="btn-treset" onclick="tReset()" title="Restart" disabled></button>
@@ -222,10 +222,10 @@
             <button class="btn icon-run-all" id="btn-trun" onclick="tRunAll()" title="Run all" disabled></button>
           </div>
         </div>
-        <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
+        <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
         <div class="panel-body">
           <div id="tables-wrap">
-            <div style="color: var(--text-dim); font-size: 0.72rem">Build a grammar to see tables.</div>
+            <div style="color: var(--text-dim); font-size: var(--fs-sm)">Build a grammar to see tables.</div>
           </div>
         </div>
       </div>
@@ -540,7 +540,7 @@
           const cd = document.createElement("div");
           cd.innerHTML = '<div class="tbl-section-label" style="color:var(--red)">' + conflicts.length + " Conflict(s) — grammar is not LL(1)</div>";
           const ul = document.createElement("div");
-          ul.style.cssText = "font-size:.66rem;color:var(--red);line-height:1.8";
+          ul.style.cssText = "font-size:var(--fs-2xs);color:var(--red);line-height:1.8";
           for (const c of conflicts) ul.innerHTML += "<div>M[" + esc(c.nt) + ", " + esc(c.sym) + "]: rules " + c.rules.join(", ") + "</div>";
           cd.appendChild(ul);
           wrap.appendChild(cd);

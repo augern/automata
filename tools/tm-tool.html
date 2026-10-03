@@ -29,7 +29,7 @@
         justify-content: center;
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         color: var(--text-lo);
       }
       #sim-tape-content {
@@ -58,7 +58,7 @@
       .trace-table {
         border-collapse: collapse;
         font-family: var(--font-mono);
-        font-size: 0.6rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
       }
       .trace-table th, .trace-table td {
@@ -81,7 +81,7 @@
         background: var(--bg-panel);
         width: 24px; min-width: 24px; max-width: 24px;
         color: var(--text-lo);
-        font-size: 0.55rem;
+        font-size: var(--fs-2xs);
         z-index: 1;
       }
       .tc-sticky-left {
@@ -102,7 +102,7 @@
       }
       thead .tc-step,
       thead .tc-sticky-left { z-index: 3; }
-      .tc-state { color: var(--text-dim); font-size: 0.58rem; }
+      .tc-state { color: var(--text-dim); font-size: var(--fs-2xs); }
       .tc-cell  { color: var(--text-dim); }
       .tc-cell.tc-blank { color: var(--text-lo); }
       .tc-head-marker {
@@ -137,7 +137,7 @@
         padding: 5px 10px;
         border-top: 1px solid var(--border-lo);
         font-family: var(--font-mono);
-        font-size: 0.61rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
         background: var(--bg-panel);
       }
@@ -152,7 +152,7 @@
       }
       .state-badge {
         font-family: var(--font-mono);
-        font-size: 0.88rem;
+        font-size: var(--fs-md);
         font-weight: bold;
         padding: 4px 14px;
         border: 1.5px solid var(--border);
@@ -165,7 +165,7 @@
       .state-badge.sb-reject  { border-color: var(--red);    color: var(--red);    background: var(--red-bg); }
       .sim-step-counter {
         font-family: var(--font-mono);
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         color: var(--text-lo);
       }
 
@@ -190,7 +190,7 @@
         border: 1.5px solid var(--border);
         margin-right: -1px;
         font-family: var(--font-mono);
-        font-size: 0.82rem;
+        font-size: var(--fs-md);
         display: flex;
         align-items: center;
         justify-content: center;

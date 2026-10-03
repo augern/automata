@@ -21,25 +21,25 @@
   color: var(--text-lo);
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: .8rem;
+  font-size: var(--fs-md);
   padding-top: 4px;
 }
 
 .step-entry {
   padding: 5px 0 5px 0;
   border-bottom: 1px solid var(--border-lo);
-  font-size: .71rem;
+  font-size: var(--fs-xs);
   line-height: 1.65;
   font-family: var(--font-mono);
 }
 .step-entry .step-num {
   color: var(--text-lo); font-style: italic;
   min-width: 24px; display: inline-block;
-  font-size: .64rem;
+  font-size: var(--fs-2xs);
 }
 .step-entry .step-phase {
   font-family: var(--font-serif); font-style: italic;
-  color: var(--text-dim); font-size: .67rem;
+  color: var(--text-dim); font-size: var(--fs-xs);
   display: block; margin-bottom: 1px;
 }
 .step-entry.phase-hdr { background: var(--bg-panel); }
@@ -58,12 +58,12 @@
 .nb { /* nullable */
   display: inline-block;
   border: 1px solid var(--green); color: var(--green); background: var(--green-bg);
-  font-family: var(--font-mono); font-size: .63rem; padding: 0 4px; margin: 0 1px;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 4px; margin: 0 1px;
 }
 .ub { /* unit pair */
   display: inline-block;
   border: 1px solid var(--accent); color: var(--accent); background: var(--accent-bg);
-  font-family: var(--font-mono); font-size: .63rem; padding: 0 4px; margin: 0 1px;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 4px; margin: 0 1px;
 }
 
 /* Step controls */
@@ -80,11 +80,11 @@
   flex: 1; overflow-y: auto;
   padding: 10px 12px;
   font-family: var(--font-mono);
-  font-size: .73rem;
+  font-size: var(--fs-sm);
 }
 .gr-section {
   font-family: var(--font-serif); font-style: italic;
-  color: var(--text-dim); font-size: .67rem;
+  color: var(--text-dim); font-size: var(--fs-xs);
   border-bottom: 1px solid var(--border-lo);
   padding-bottom: 2px; margin-bottom: 5px; margin-top: 10px;
 }
@@ -172,7 +172,7 @@
     </div>
     <div class="panel-body">
       <div id="grammar-display">
-        <span style="color:var(--text-lo);font-family:var(--font-serif);font-style:italic;font-size:.8rem">
+        <span style="color:var(--text-lo);font-family:var(--font-serif);font-style:italic;font-size:var(--fs-md)">
           Build a grammar to see it here.
         </span>
       </div>

@@ -32,7 +32,7 @@
       }
       .input-sublabel {
         font-family: var(--font-serif);
-        font-size: 0.68rem;
+        font-size: var(--fs-xs);
         font-style: italic;
         color: var(--text-dim);
         margin-bottom: 4px;
@@ -43,7 +43,7 @@
         color: var(--text);
         border: 1px solid var(--border);
         font-family: var(--font-mono);
-        font-size: 0.84rem;
+        font-size: var(--fs-md);
         padding: 4px 8px;
         outline: none;
         letter-spacing: 0.04em;
@@ -63,7 +63,7 @@
       }
       .syntax-hint {
         font-family: var(--font-serif);
-        font-size: 0.65rem;
+        font-size: var(--fs-2xs);
         color: var(--text-lo);
         line-height: 1.75;
         padding-top: 1px;
@@ -79,7 +79,7 @@
         color: var(--text-lo);
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         padding: 16px;
       }
       .nfa-summary {
@@ -99,12 +99,12 @@
       .nfa-summary-key {
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.63rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
       }
       .nfa-summary-val {
         font-family: var(--font-mono);
-        font-size: 0.68rem;
+        font-size: var(--fs-xs);
         color: var(--text);
       }
 
@@ -187,7 +187,7 @@
       #tc-log-bar,
       #sc-log-bar,
       #mc-log-bar {
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
         font-family: var(--font-mono);
         padding: 3px 10px 4px;
@@ -240,7 +240,7 @@
         color: var(--text-lo);
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         padding: 16px;
       }
 
@@ -296,13 +296,13 @@
       /* NFA-set column in DFA table */
       .parse-table th.dfa-set-hdr {
         font-weight: normal;
-        font-size: 0.6rem;
+        font-size: var(--fs-2xs);
         color: var(--text-lo);
         font-style: italic;
       }
       .parse-table td.dfa-set-cell {
         color: var(--text-lo);
-        font-size: 0.64rem;
+        font-size: var(--fs-2xs);
       }
 
       /* ── Simulation panel ── */
@@ -312,7 +312,7 @@
         background: var(--bg-panel);
       }
       #sim-log-bar {
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
         font-family: var(--font-mono);
         padding: 3px 10px 4px;
@@ -340,7 +340,7 @@
         color: var(--text);
         border: 1px solid var(--border);
         font-family: var(--font-mono);
-        font-size: 0.84rem;
+        font-size: var(--fs-md);
         padding: 3px 7px;
         height: 22px;
         box-sizing: border-box;
@@ -370,7 +370,7 @@
         height: 26px;
         border: 1.5px solid var(--border);
         font-family: var(--font-mono);
-        font-size: 0.82rem;
+        font-size: var(--fs-md);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -399,12 +399,12 @@
       .sim-state-label {
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.6rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
       }
       .sim-state-badge {
         font-family: var(--font-mono);
-        font-size: 0.88rem;
+        font-size: var(--fs-md);
         font-weight: bold;
         border: 1.5px solid var(--accent);
         background: var(--accent-bg);
@@ -429,7 +429,7 @@
         padding: 5px 12px;
         display: none;
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--fs-sm);
         font-weight: bold;
         letter-spacing: 0.04em;
       }
@@ -447,7 +447,7 @@
         color: var(--text-lo);
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         padding: 16px;
       }
 
@@ -456,7 +456,7 @@
         color: var(--text-lo);
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         padding: 16px;
       }
       #min-table-wrap {
@@ -469,7 +469,7 @@
       }
       /* Toggle button in panel header */
       .min-toggle {
-        font-size: 0.64rem;
+        font-size: var(--fs-2xs);
         padding: 1px 5px;
         transition: color 0.15s, border-color 0.15s;
       }
@@ -487,7 +487,7 @@
       }
       .pair-table th {
         font-family: var(--font-mono);
-        font-size: 0.68rem;
+        font-size: var(--fs-xs);
         font-weight: normal;
         padding: 2px 5px;
         color: var(--text-dim);
@@ -499,7 +499,7 @@
         text-align: center;
         border: 1px solid var(--border-lo);
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--fs-sm);
         transition: background 0.12s;
       }
       .pair-table td.pair-blocked {
@@ -531,7 +531,7 @@
         padding: 6px 0 2px;
         border-top: 1px solid var(--border-lo);
         font-family: var(--font-mono);
-        font-size: 0.68rem;
+        font-size: var(--fs-xs);
         color: var(--text-dim);
       }
       .min-group-item {
@@ -561,7 +561,7 @@
         justify-content: center;
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         color: var(--text-lo);
         pointer-events: none;
       }
@@ -1751,7 +1751,7 @@
         container.innerHTML = "";
         if (examples.length === 0) {
           const note = document.createElement("span");
-          note.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:.65rem;color:var(--text-lo)";
+          note.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:var(--fs-2xs);color:var(--text-lo)";
           note.textContent = "none found up to length 7";
           container.appendChild(note);
           return;
@@ -1870,7 +1870,7 @@
         tape.innerHTML = "";
         if (chars.length === 0) {
           const eps = document.createElement("span");
-          eps.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:.82rem;color:var(--text-lo);padding:2px 4px";
+          eps.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:var(--fs-md);color:var(--text-lo);padding:2px 4px";
           eps.textContent = "ε";
           tape.appendChild(eps);
         } else {

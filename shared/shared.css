@@ -61,6 +61,7 @@
   --fs-sm: 0.75rem;
   --fs-md: 0.8125rem;
   --fs-lg: 0.95rem;
+  --fs-xl: 1.3rem; /* page headings */
 
   /* Controls, shape and motion */
   --ctl-h: 24px; /* height of buttons, inputs, selects */
@@ -171,7 +172,7 @@ body {
 
 #topbar h1 {
   font-family: var(--font-serif);
-  font-size: 0.95rem;
+  font-size: var(--fs-lg);
   font-weight: normal;
   font-style: italic;
   color: var(--text);
@@ -193,7 +194,7 @@ body {
   border: 1px solid var(--border);
   padding: 1px 7px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   white-space: nowrap;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -359,7 +360,7 @@ body {
 }
 .panel-title {
   font-family: var(--font-serif);
-  font-size: 0.72rem;
+  font-size: var(--fs-sm);
   font-style: italic;
   color: var(--text-dim);
   white-space: nowrap;
@@ -371,7 +372,7 @@ body {
   border: none;
   color: var(--text-lo);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: var(--fs-md);
   padding: 1px 3px;
   line-height: 1;
   transition: color 0.12s;
@@ -394,7 +395,7 @@ body {
   border-right: 1px solid var(--border);
 }
 .panel.collapsed .panel-title {
-  font-size: 0.58rem;
+  font-size: var(--fs-2xs);
   transform: rotate(180deg);
   text-align: right;
 }
@@ -442,7 +443,7 @@ body {
   color: var(--text-dim);
   border: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   padding: 3px 5px;
   outline: none;
   cursor: pointer;
@@ -465,7 +466,7 @@ body {
   border: none;
   outline: none;
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   line-height: 1.75;
   padding: 10px 12px;
   resize: none;
@@ -479,7 +480,7 @@ body {
   flex-shrink: 0;
 }
 #error-msg {
-  font-size: 0.64rem;
+  font-size: var(--fs-2xs);
   color: var(--red);
   min-height: 1em;
   line-height: 1.4;
@@ -501,7 +502,7 @@ body {
 /* Section labels — like LaTeX \paragraph headings */
 .tbl-section-label {
   font-family: var(--font-serif);
-  font-size: 0.72rem;
+  font-size: var(--fs-sm);
   font-style: italic;
   color: var(--text-dim);
   margin-bottom: 4px;
@@ -512,7 +513,7 @@ body {
 /* Parse tables — Graphviz/LaTeX table aesthetic */
 .parse-table {
   border-collapse: collapse;
-  font-size: 0.67rem;
+  font-size: var(--fs-xs);
   width: 100%;
   font-family: var(--font-mono);
 }
@@ -602,7 +603,7 @@ body {
 
 /* Productions list */
 #rules-list {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   line-height: 1.9;
   color: var(--text);
 }
@@ -636,7 +637,7 @@ body {
 }
 .sim-label {
   font-family: var(--font-serif);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   font-style: italic;
   color: var(--text-lo);
   white-space: nowrap;
@@ -655,7 +656,7 @@ body {
   color: var(--text);
   border: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: var(--fs-sm);
   padding: 0 7px;
   height: 22px;
   box-sizing: border-box;
@@ -691,7 +692,7 @@ body {
 }
 
 .tok {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   padding: 0px 5px;
   border: 1px solid var(--border);
   color: var(--text-dim);
@@ -717,7 +718,7 @@ body {
 
 /* LR stack: state number badges */
 .stk-state {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   padding: 0px 7px;
   background: var(--bg-cell);
   border: 1px solid var(--border);
@@ -733,19 +734,19 @@ body {
   font-weight: bold;
 }
 .stk-sym {
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   color: var(--text-lo);
   padding: 0 3px;
 }
 .stk-arrow {
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   color: var(--border-hi);
   padding: 0 1px;
 }
 
 /* LL stack: symbol items */
 .stk-sym-item {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   padding: 0px 7px;
   background: var(--bg-cell);
   border: 1px solid var(--border);
@@ -773,7 +774,7 @@ body {
 
 /* Simulation action log */
 #sim-log {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   padding-top: 2px;
   color: var(--text-dim);
   font-family: var(--font-mono);
@@ -842,7 +843,7 @@ body {
   color: var(--text-lo);
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 0.8rem;
+  font-size: var(--fs-md);
   pointer-events: none;
 }
 
@@ -883,7 +884,7 @@ body {
 }
 .algo-modal-head h2 {
   font-family: var(--font-serif);
-  font-size: 0.92rem;
+  font-size: var(--fs-lg);
   font-weight: normal;
   font-style: italic;
   color: var(--text);
@@ -892,14 +893,14 @@ body {
 }
 .algo-subtitle {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
 }
 .algo-close {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--fs-lg);
   color: var(--text-lo);
   padding: 0 3px;
   line-height: 1;
@@ -923,7 +924,7 @@ body {
 }
 .pc-name {
   font-family: var(--font-serif);
-  font-size: 0.8rem;
+  font-size: var(--fs-md);
   font-weight: bold;
   color: var(--text);
   padding: 5px 0;
@@ -938,13 +939,13 @@ body {
   padding: 7px 0 6px;
   border-bottom: 1px solid var(--border);
   font-family: var(--font-serif);
-  font-size: 0.74rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
 }
 .pc-io-label {
   color: var(--text-dim);
   font-style: italic;
-  font-size: 0.71rem;
+  font-size: var(--fs-xs);
   align-self: start;
   padding-top: 1px;
 }
@@ -960,7 +961,7 @@ body {
 .pc-body {
   padding: 9px 0 7px;
   font-family: var(--font-serif);
-  font-size: 0.77rem;
+  font-size: var(--fs-sm);
   line-height: 1.92;
   white-space: pre;
   color: var(--text);
@@ -986,7 +987,7 @@ body {
 }
 .pc-note {
   font-family: var(--font-serif);
-  font-size: 0.73rem;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
   border-left: 2px solid var(--border);
   padding-left: 9px;
@@ -1000,7 +1001,7 @@ body {
   border: 1px solid var(--border);
   padding: 1px 7px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.04em;
   cursor: pointer;
   white-space: nowrap;
@@ -1091,13 +1092,13 @@ body {
 .examples-label {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   margin-right: 2px;
 }
 .example-chip {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-sm);
   border: 1px solid var(--border);
   background: var(--bg-cell);
   color: var(--text);
@@ -1134,7 +1135,7 @@ body {
   border: 1px solid var(--border);
   padding: 1px 9px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
@@ -1153,7 +1154,7 @@ body {
   border: 1px solid var(--border);
   padding: 1px 9px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;

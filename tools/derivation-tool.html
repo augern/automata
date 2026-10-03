@@ -22,7 +22,7 @@
 .prod-empty {
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.72rem;
+        font-size: var(--fs-sm);
         color: var(--text-lo);
         padding: 4px 2px;
       }
@@ -34,13 +34,13 @@
         border: 1px solid transparent;
         margin-bottom: 2px;
         font-family: var(--font-mono);
-        font-size: 0.74rem;
+        font-size: var(--fs-sm);
         line-height: 1.5;
         cursor: default;
       }
       .prod-rule.applicable { cursor: pointer; border-color: var(--border); background: var(--bg-cell); }
       .prod-rule.applicable:hover { border-color: var(--accent); background: var(--accent-bg); }
-      .prod-rule-idx { color: var(--text-lo); font-size: 0.62rem; min-width: 1.6em; text-align: right; flex-shrink: 0; }
+      .prod-rule-idx { color: var(--text-lo); font-size: var(--fs-2xs); min-width: 1.6em; text-align: right; flex-shrink: 0; }
       .prod-arrow    { color: var(--text-lo); }
       .prod-sym-nt   { color: var(--accent); }
       .prod-sym-t    { color: var(--text-dim); }
@@ -56,9 +56,9 @@
         border-bottom: 1px solid var(--border-lo);
         background: var(--bg-panel);
       }
-      #deriv-status { flex: 1; font-family: var(--font-mono); font-size: 0.63rem; color: var(--text-dim); }
+      #deriv-status { flex: 1; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-dim); }
       #deriv-status .ds-start { color: var(--accent); font-weight: bold; }
-      #step-count { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-lo); white-space: nowrap; }
+      #step-count { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); white-space: nowrap; }
 
       /* ── Derivation scroll ── */
       #deriv-scroll {
@@ -70,7 +70,7 @@
       #deriv-empty {
         font-family: var(--font-serif);
         font-style: italic;
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         color: var(--text-lo);
       }
 
@@ -80,7 +80,7 @@
         align-items: baseline;
         padding: 2px 0;
         font-family: var(--font-mono);
-        font-size: 0.84rem;
+        font-size: var(--fs-md);
         line-height: 1.6;
       }
       .deriv-gutter {
@@ -91,7 +91,7 @@
         padding-right: 0.7em;
         align-items: center;
       }
-      .deriv-gutter-label { font-family: var(--font-serif); font-style: italic; font-size: 0.63rem; color: var(--text-lo); }
+      .deriv-gutter-label { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-2xs); color: var(--text-lo); }
 
       /* ⇒ with CSS tooltip */
       .deriv-arrow {
@@ -111,7 +111,7 @@
         background: var(--bg-panel);
         border: 1px solid var(--border);
         padding: 2px 9px;
-        font-size: 0.65rem;
+        font-size: var(--fs-2xs);
         white-space: nowrap;
         pointer-events: none;
         opacity: 0;
@@ -186,7 +186,7 @@
         gap: 6px;
         margin-top: 10px;
         padding: 4px 0;
-        font-size: 0.72rem;
+        font-size: var(--fs-sm);
         font-family: var(--font-serif);
         font-style: italic;
         color: var(--green);
@@ -209,7 +209,7 @@
       #rule-picker.visible { display: flex; }
       .rp-lhs {
         font-family: var(--font-mono);
-        font-size: 0.72rem;
+        font-size: var(--fs-sm);
         color: var(--text-lo);
         white-space: nowrap;
         flex-shrink: 0;
@@ -223,7 +223,7 @@
         border: 1px solid var(--border);
         color: var(--text-dim);
         font-family: var(--font-mono);
-        font-size: 0.74rem;
+        font-size: var(--fs-sm);
         padding: 2px 8px;
         cursor: pointer;
         transition: border-color 0.1s, background 0.1s, color 0.1s;
@@ -236,8 +236,8 @@
       button.rp-rule:hover .rp-sym-nt,
       button.rp-rule:hover .rp-sym-t,
       button.rp-rule:hover .rp-sym-eps { color: inherit; }
-      .rp-hint { font-family: var(--font-serif); font-style: italic; font-size: 0.68rem; color: var(--text-lo); }
-      .rp-no-match { font-family: var(--font-serif); font-style: italic; font-size: 0.68rem; color: var(--text-lo); }
+      .rp-hint { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); }
+      .rp-no-match { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); }
     </style>
   </head>
   <body>
@@ -683,7 +683,7 @@
         } else {
           for (const { r, i } of matching) {
             h += `<button class="rp-rule" onclick="applyRule(${i})">`;
-            h += `<span style="color:var(--text-lo);font-size:0.62rem">${i}: </span>`;
+            h += `<span style="color:var(--text-lo);font-size:var(--fs-2xs)">${i}: </span>`;
             h += fmtSyms(r.rhs, nts, "rp-sym-nt", "rp-sym-t", "rp-sym-eps");
             h += `</button>`;
           }

@@ -39,7 +39,7 @@
         font-family: var(--font-serif);
         font-style: italic;
         color: var(--text-lo);
-        font-size: 0.8rem;
+        font-size: var(--fs-md);
         pointer-events: none;
       }
 
@@ -205,7 +205,7 @@
         display: flex;
         align-items: center;
         gap: 3px;
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
         white-space: nowrap;
       }
@@ -221,11 +221,11 @@
       /* Compact button row inside the tables panel — smaller than standard .btn */
       #tstep-controls .btn {
         height: 18px;
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         padding: 0 6px;
       }
       #cstep-log {
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
         line-height: 1.5;
         font-family: var(--font-mono);
@@ -415,7 +415,7 @@
       /* ── Parse trace buttons (in sim-header) ── */
       #trace-sep {
         color: var(--border-hi);
-        font-size: 0.7rem;
+        font-size: var(--fs-xs);
         padding: 0 1px;
       }
 
@@ -428,12 +428,12 @@
       }
       #key-nav-label {
         font-family: var(--font-mono);
-        font-size: 0.72rem;
+        font-size: var(--fs-sm);
         color: var(--text-dim);
       }
       #key-select {
         font-family: var(--font-mono);
-        font-size: 0.62rem;
+        font-size: var(--fs-2xs);
         color: var(--text-dim);
         background: var(--bg-panel);
         border: 1px solid var(--border);
@@ -453,7 +453,7 @@
       <button class="mode-btn" id="btn-slr1" onclick="setMode('SLR1')">SLR(1)</button>
       <button class="mode-btn" id="btn-lalr1" onclick="setMode('LALR1')">LALR(1)</button>
       <button class="mode-btn" id="btn-lr1" onclick="setMode('LR1')">LR(1)</button>
-      <label id="merge-la-label" style="display: none; align-items: center; gap: 4px; font-size: 0.65rem; color: var(--text-dim); cursor: pointer; margin-left: 6px">
+      <label id="merge-la-label" style="display: none; align-items: center; gap: 4px; font-size: var(--fs-2xs); color: var(--text-dim); cursor: pointer; margin-left: 6px">
         <input type="checkbox" id="merge-la-cb" onchange="setMergeLA(this.checked)" style="cursor: pointer; accent-color: var(--accent)" />
         Merge lookahead sets
       </label>
@@ -550,7 +550,7 @@
             onclick="event.stopPropagation(); toggleCollapse('p-tables');"
           >&#8250;</button>
         </div>
-        <div id="tstep-controls" style="display: flex; align-items: center; gap: 6px; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em">
+        <div id="tstep-controls" style="display: flex; align-items: center; gap: 6px; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em">
           <p>Simulate</p>
           <div class="step-group">
             <button class="btn icon-restart" id="btn-treset" onclick="event.stopPropagation(); tReset();" title="Restart" disabled></button>
@@ -559,10 +559,10 @@
             <button class="btn icon-run-all" id="btn-trun" title="Run all" onclick="event.stopPropagation(); tRunAll();" disabled></button>
           </div>
         </div>
-        <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: 0.62rem; font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
+        <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
         <div class="panel-body">
           <div id="tables-wrap">
-            <div style="color: var(--text-dim); font-size: 0.72rem">Build a grammar to see tables.</div>
+            <div style="color: var(--text-dim); font-size: var(--fs-sm)">Build a grammar to see tables.</div>
           </div>
         </div>
       </div>
@@ -787,7 +787,7 @@
           const cd = document.createElement("div");
           cd.innerHTML = '<div class="tbl-section-label" style="color:var(--red)">' + conflicts.length + " Conflict(s)</div>";
           const ul = document.createElement("div");
-          ul.style.cssText = "font-size:.66rem;color:var(--red);line-height:1.8";
+          ul.style.cssText = "font-size:var(--fs-2xs);color:var(--red);line-height:1.8";
           for (const c of conflicts) ul.innerHTML += "<div>State " + c.state + ', "' + esc(c.symbol) + '": ' + esc(c.entries.join(" / ")) + "</div>";
           cd.appendChild(ul);
           wrap.appendChild(cd);
