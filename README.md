@@ -103,8 +103,6 @@ Each file has the structure:
 Shared sections in `shared.js` are delimited by comments:
 
 ```
-// ━━━ SHARED:BNF-PARSER ━━━
-// ━━━ SHARED:FIRST-FOLLOW ━━━
 // ━━━ SHARED:PARSE-TREE ━━━
 // ━━━ SHARED:PANEL-LAYOUT ━━━
 // ━━━ SHARED:EXAMPLE-GENERATOR ━━━
