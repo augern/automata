@@ -2,7 +2,7 @@ pages:
   stage: deploy
   script:
     - mkdir -p public/tools
-    - cp index.html public/
+    - cp index.html ui-kit.html public/
     - cp tools/*.html public/tools/
     - cp -r shared examples vendor public/
   artifacts:

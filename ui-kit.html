@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UI Kit | Parser Tools</title>
+<link rel="stylesheet" href="shared/shared.css" />
+<link rel="stylesheet" href="shared/ui.css" />
+<style>
+  /* The tools are full-viewport apps; this page just scrolls. */
+  body { height: auto; overflow: auto; user-select: text; display: block; }
+  main { max-width: 980px; margin: 0 auto; padding: var(--sp-6); }
+  h2 { font-family: var(--font-serif); font-style: italic; font-weight: normal; font-size: var(--fs-lg);
+       border-bottom: 1px solid var(--border-hi); padding-bottom: var(--sp-2); margin: 28px 0 var(--sp-4); }
+  p.note { font-family: var(--font-serif); font-size: var(--fs-sm); color: var(--text-dim); margin-bottom: var(--sp-4); max-width: 70ch; line-height: 1.6; }
+  code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-code); padding: 0 var(--sp-2); }
+  .demo { border: 1px solid var(--border-lo); background: var(--bg); padding: var(--sp-5); margin-bottom: var(--sp-4); }
+  .demo.flush { padding: 0; }
+  .row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-4); }
+  .swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+  .sw { width: 96px; font-size: var(--fs-2xs); }
+  .sw i { display: block; height: 28px; border: 1px solid var(--border-lo); margin-bottom: 2px; }
+  .box { height: 220px; display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1><a href="index.html">UI Kit</a></h1>
+  <span class="tag">shared/ui.css · shared/ui.js</span>
+</div>
+<main>
+  <p class="note">Every component the tools use, rendered from the shared stylesheet. If a tool needs something that isn't here, add it here
+  first. Classes follow <code>ui-block</code>, <code>ui-block__part</code>, <code>ui-block--variant</code> and <code>is-state</code>;
+  colours and sizes come from the tokens in <code>shared.css</code>.</p>
+
+  <h2>Tokens</h2>
+  <div class="demo">
+    <div class="swatches" id="swatches"></div>
+    <p class="note" style="margin-top: var(--sp-4)">Type scale:
+      <span style="font-size: var(--fs-2xs)">2xs</span> ·
+      <span style="font-size: var(--fs-xs)">xs</span> ·
+      <span style="font-size: var(--fs-sm)">sm</span> ·
+      <span style="font-size: var(--fs-md)">md</span> ·
+      <span style="font-size: var(--fs-lg)">lg</span></p>
+  </div>
+
+  <h2>Buttons and inputs</h2>
+  <div class="demo">
+    <div class="row">
+      <button class="btn">Button</button>
+      <button class="btn primary">Primary</button>
+      <button class="btn" disabled>Disabled</button>
+      <span class="step-group">
+        <button class="btn icon-restart" title="Restart"></button>
+        <button class="btn">&#8249; Back</button>
+        <button class="btn primary">Step &#8250;</button>
+        <button class="btn icon-run-all" title="Run all"></button>
+      </span>
+      <input class="ui-input" placeholder="ui-input" />
+      <input class="ui-input invalid" value="invalid" />
+      <select class="ui-select"><option>ui-select</option><option>Second</option></select>
+      <span class="ui-label">ui-label</span>
+    </div>
+    <p class="note" style="margin: var(--sp-4) 0 0">Tab through the controls: every one shows the same focus ring.</p>
+  </div>
+
+  <h2>Verdicts, badges, log bar</h2>
+  <div class="demo flush">
+    <div class="ui-result is-visible ui-result--accept">✓  ACCEPTED</div>
+    <div class="ui-result is-visible ui-result--reject">✗  REJECTED</div>
+    <div class="ui-result is-visible ui-result--warn">⚠  DID NOT HALT  (limit: 1000 steps)</div>
+    <div class="ui-logbar">Read <b>a</b> → active: {q0, q1}</div>
+    <div style="padding: var(--sp-4)" class="row">
+      <span class="ui-badge">neutral</span>
+      <span class="ui-badge ui-badge--active">active</span>
+      <span class="ui-badge ui-badge--accept">accept</span>
+      <span class="ui-badge ui-badge--reject">reject</span>
+      <span class="ui-badge ui-badge--warn">warn</span>
+      <span class="ui-badge ui-badge--dead">dead</span>
+    </div>
+  </div>
+
+  <h2>Simulation header</h2>
+  <div class="demo flush">
+    <div class="ui-sim">
+      <div class="ui-sim__row">
+        <div class="input-group"><input class="ui-input ui-input--lg" placeholder="enter string…" /></div>
+        <div class="step-group">
+          <button class="btn icon-restart"></button><button class="btn">&#8249; Back</button>
+          <button class="btn primary">Step &#8250;</button><button class="btn icon-run-all"></button>
+        </div>
+      </div>
+      <div class="ui-chips is-visible"><span class="examples-label">Examples:</span>
+        <button class="example-chip">ab</button><button class="example-chip">aab</button><button class="example-chip eps-chip">ε</button></div>
+      <div class="ui-logbar">Start: <span style="color: var(--accent)">q0</span></div>
+    </div>
+  </div>
+
+  <h2>Definition table</h2>
+  <p class="note">Built with <code>UI.table</code>; text arguments are escaped. Edit a cell, or enter an invalid one (<code>zz</code>) to see the error state.</p>
+  <div class="demo"><div id="demo-table"></div></div>
+
+  <h2>Panel sections</h2>
+  <div class="demo flush"><div class="box" style="border: none">
+    <div class="ui-bar"><select class="ui-select ui-select--grow"><option>ui-bar with a growing select</option></select></div>
+    <div class="ui-scroll"><div class="ui-section-label">ui-section-label</div>
+      <div class="ui-field"><span>ui-field:</span><label><input type="radio" name="f" checked> one</label><label><input type="radio" name="f"> two</label>
+        <input class="ui-input ui-input--sm" value="⊥" /></div></div>
+    <div class="ui-footer"><button class="btn">+ Action</button><span class="ui-hint">ui-hint with <code>code</code> in a ui-footer.</span></div>
+  </div></div>
+
+  <h2>Automaton graph</h2>
+  <p class="note">Drawn by <code>drawAutomatonGraph</code> in <code>automaton-graph.js</code>; the buttons use <code>highlightAutomatonStates</code>.</p>
+  <div class="demo flush">
+    <div class="row" style="padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-lo)">
+      <button class="btn" onclick="highlightAutomatonStates('kit', [0])">Active q0</button>
+      <button class="btn" onclick="highlightAutomatonStates('kit', [1], [2])">Active q1, dead q2</button>
+      <button class="btn" onclick="highlightAutomatonStates('kit')">Clear</button>
+    </div>
+    <div class="box"><div class="ui-canvas"><svg id="kit-svg"><g id="kit-graph-root"></g></svg><div class="ui-canvas__empty" id="kit-graph-empty">empty</div></div></div>
+  </div>
+
+  <h2>Configuration tree</h2>
+  <div class="demo flush"><div class="box" style="height: 200px"><div class="ui-canvas"><svg id="ct-svg" viewBox="0 0 520 190"></svg></div></div></div>
+</main>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/dagre.min.js"></script>
+<script src="shared/algo/grammar.js"></script>
+<script src="shared/shared.js"></script>
+<script src="shared/ui.js"></script>
+<script src="shared/automaton-graph.js"></script>
+<script>
+  // Tokens
+  const tokens = ["--bg","--bg-panel","--bg-cell","--text","--text-dim","--border","--border-hi","--st-active","--st-accept","--st-reject","--st-warn","--st-dead","--accent-bg","--green-bg","--red-bg","--amber-bg"];
+  document.getElementById("swatches").innerHTML = tokens.map((t) => `<div class="sw"><i style="background: var(${t})"></i>${t}</div>`).join("");
+
+  // Table
+  const T = UI.table;
+  document.getElementById("demo-table").innerHTML =
+    T.open() + "<thead><tr>" + T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting" }) + T.th("state", { left: true }) +
+    T.th("a" + T.rmInline("void 0", "Remove a"), { sym: true }) + T.th("ε", { sym: true, muted: true }) + "</tr></thead><tbody>" +
+    [["q0", "start", "q0, q1", ""], ["q1", "", "q2", "q0"], ["q2", "accept", "", ""], ["q3", "both", "q3", ""]].map(([name, kind, a, e]) =>
+      "<tr>" + T.rm("void 0", "Remove state") +
+      T.marker('<input type="radio" name="kit-start"' + (kind === "start" || kind === "both" ? " checked" : "") + ">") +
+      T.marker('<input type="checkbox"' + (kind === "accept" || kind === "both" ? " checked" : "") + ">") +
+      T.state(name, kind) + T.input(a, 'placeholder="–" oninput="this.classList.toggle(\'invalid\', /zz/.test(this.value))"') +
+      T.input(e, 'placeholder="–"', { muted: true }) + "</tr>").join("") + "</tbody></table>";
+
+  // Graph
+  const kitView = createGraphView("kit", { fallbackWidth: 600 });
+  drawAutomatonGraph("kit", kitView, {
+    nodes: [{ label: "q0" }, { label: "q1" }, { label: "q2", accepting: true }, { label: "q3", rejecting: true }],
+    start: 0,
+    edges: [{ from: 0, to: 1, labels: ["a"] }, { from: 1, to: 2, labels: ["b", "ε"], eps: false }, { from: 0, to: 3, labels: ["ε"], eps: true }],
+    loops: [{ node: 0, labels: ["b"] }],
+    joinLabels: true,
+  });
+
+  // Tree (static sample)
+  const ct = d3.select("#ct-svg");
+  const node = (x, y, cls, label, sub, shape) => {
+    const g = ct.append("g").attr("class", "ct-node " + cls).attr("transform", `translate(${x},${y})`);
+    if (shape === "rect") g.append("rect").attr("x", -30).attr("y", -16).attr("width", 60).attr("height", 32).attr("rx", 2);
+    else g.append("circle").attr("r", 14);
+    g.append("text").attr("class", "ct-label").attr("text-anchor", "middle").attr("dy", sub ? -2 : 4).text(label);
+    if (sub) g.append("text").attr("class", "ct-sub").attr("text-anchor", "middle").attr("dy", 10).text(sub);
+  };
+  const edge = (x1, y1, x2, y2, cls, label) => {
+    ct.append("path").attr("class", "ct-edge " + cls).attr("d", `M${x1},${y1 + 16}L${x2},${y2 - 16}`);
+    if (label) ct.append("text").attr("class", "ct-edge-label " + cls.replace("ct-edge--eps", "")).attr("x", (x1 + x2) / 2 + 6).attr("y", (y1 + y2) / 2).text(label);
+  };
+  edge(260, 30, 120, 95, "is-dead", "a"); edge(260, 30, 260, 95, "is-accept-path", "b"); edge(260, 30, 400, 95, "ct-edge--eps is-active", "ε");
+  edge(260, 95, 260, 160, "is-accept-path", "c");
+  node(260, 30, "", "q0", "⊥", "rect"); node(120, 95, "is-dead", "q1", "⊥", "rect"); node(260, 95, "", "q2", "A⊥", "rect");
+  node(400, 95, "is-active", "q3", "⊥", "rect"); node(260, 160, "is-accept", "q4", "", "circle");
+  node(60, 160, "is-reject", "q5", "", "circle");
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..");
-const pages = [["index.html"], ...fs.readdirSync(path.join(root, "tools")).filter((f) => f.endsWith(".html")).map((f) => ["tools", f])];
+const pages = [["index.html"], ["ui-kit.html"], ...fs.readdirSync(path.join(root, "tools")).filter((f) => f.endsWith(".html")).map((f) => ["tools", f])];
 
 test("every local script and stylesheet referenced by a page exists", () => {
   for (const page of pages) {
@@ -45,5 +45,5 @@ test("the Pages job copies every directory the pages load from", () => {
   dirs.add("examples");
   for (const d of dirs) assert.match(ci, new RegExp(`cp -r [^\\n]*\\b${d}\\b`), `.gitlab-ci.yml does not copy ${d}/`);
   assert.match(ci, /cp tools\/\*\.html/);
-  assert.match(ci, /cp index\.html/);
+  assert.match(ci, /cp index\.html ui-kit\.html/);
 });

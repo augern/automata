@@ -28,6 +28,7 @@ step-by-step algorithm visualisation with Back/Forward controls.
 ```
 parser-tools/
 ├── index.html                          ← landing page
+├── ui-kit.html                         ← living gallery of every shared UI component
 ├── tools/
 │   ├── regex-tool.html                 ← regular expression / NFA / DFA tool
 │   ├── nfa-tool.html                   ← NFA simulator
@@ -61,6 +62,8 @@ parser-tools/
 │   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimization
 │   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion
 │   │   └── tm.js                       ← pure: TM tape and pre-run
+│   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
+│   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
 │   ├── automaton-graph.js              ← dagre/d3 state-diagram rendering for NFA/PDA/TM
 │   ├── share-link.js                   ← URL-fragment state, Share button
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
@@ -124,6 +127,27 @@ Shared sections in `shared.js` are delimited by comments:
 // ━━━ SHARED:UTILITIES ━━━
 // ━━━ SHARED:TRANS-INPUT ━━━
 ```
+
+---
+
+## Shared UI framework
+
+The look is defined once. `shared/shared.css` holds the **design tokens**
+(colours, a 4px spacing scale, a type scale, control height, motion, and
+status colours such as `--st-accept` / `--st-reject`) plus the base styles and
+one keyboard focus ring. `shared/ui.css` holds **components** built only from
+those tokens, named `ui-block`, `ui-block__part`, `ui-block--variant`,
+`is-state`; `shared/ui.js` holds their behaviour (`UI.banner`, `UI.logBar`,
+`UI.table` builders that escape their input, plus `createStepper`,
+`createGraphView`/`drawAutomatonGraph` and the share-link helpers).
+
+Open [`ui-kit.html`](ui-kit.html) to see every component rendered. The rule for
+new work: if a tool needs a control, a status colour or a panel layout, add it
+to the kit and the shared files first; tool CSS should only contain what is
+unique to that tool (the TM tape, the PDA stack chips, panel widths).
+
+Migrated so far: the NFA, PDA and TM tools. The other tools still use their
+own CSS on top of `shared.css`.
 
 ---
 
