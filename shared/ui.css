@@ -42,6 +42,20 @@
   background: var(--st-reject-bg);
 }
 
+/* The examples menu button (upgradeExamplesSelect in shared.js): looks like the select it replaces */
+.examples-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+.examples-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.examples-btn::after { content: "▾"; color: var(--text-lo); flex-shrink: 0; }
+#examples-bar .examples-btn { width: 100%; }
+
 /* ── Layout helpers inside a panel ─────────────────────── */
 /* Toolbar row (e.g. the examples dropdown) */
 .ui-bar {

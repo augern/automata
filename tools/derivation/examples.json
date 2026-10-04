@@ -5,6 +5,7 @@
       "examples": [
         {
           "label": "a*b*  (right-linear)",
+          "purpose": "Regular languages have right-linear grammars: each step extends the word on the right.",
           "text": [
             "// Right-linear grammar for a*b*",
             "S -> a S | b B | eps",
@@ -13,6 +14,7 @@
         },
         {
           "label": "(ab)+  (left-linear)",
+          "purpose": "A left-linear grammar: the word grows on the left of the nonterminal.",
           "text": [
             "// Left-linear grammar for (ab)+",
             "// Rules: A -> B w  (nonterminal on the left of the terminal)",
@@ -22,6 +24,7 @@
         },
         {
           "label": "Even number of a's  (left-linear)",
+          "purpose": "A counting language as a grammar: the nonterminals remember the parity.",
           "text": [
             "// Left-linear grammar for strings over {a,b} with an even number of a's",
             "// S = even count so far (accepting);  A = odd count so far",
@@ -32,6 +35,7 @@
         },
         {
           "label": "Strings ending in ab  (right-linear)",
+          "purpose": "The classic suffix language: nonterminals track progress toward the final ab.",
           "text": [
             "// Right-linear grammar for {a,b}* ending in 'ab'",
             "S -> a S | b S | a A",
@@ -45,14 +49,17 @@
       "examples": [
         {
           "label": "Balanced a…b  (aⁿbⁿ)",
+          "purpose": "The standard non-regular context-free language: matching pairs built from the outside in.",
           "text": ["S -> a S b | eps"]
         },
         {
           "label": "Palindromes over {a, b}",
+          "purpose": "Rules that mirror: each step adds a matching symbol on both sides.",
           "text": ["S -> a S a | b S b | a | b | eps"]
         },
         {
           "label": "Left-recursive expressions",
+          "purpose": "Operator precedence built into the grammar's structure.",
           "text": [
             "E -> E + T | T",
             "T -> T * F | F",
@@ -61,6 +68,7 @@
         },
         {
           "label": "Ambiguous arithmetic",
+          "purpose": "One string, two derivation trees: try different orders to find them.",
           "text": [
             "// Ambiguous — try different expansion orders",
             "// to see two distinct derivations for the same string",
@@ -69,6 +77,7 @@
         },
         {
           "label": "Dangling else",
+          "purpose": "The classic ambiguity of nested conditionals.",
           "text": [
             "// Classic dangling-else ambiguity",
             "S -> if S then S else S | if S then S | a"
@@ -76,6 +85,7 @@
         },
         {
           "label": "LL(1) arithmetic",
+          "purpose": "The same expressions as the left-recursive grammar, rewritten for top-down parsing.",
           "text": [
             "E  -> T E'",
             "E' -> + T E' | eps",
@@ -86,6 +96,7 @@
         },
         {
           "label": "Equal numbers of a and b",
+          "purpose": "Context-free but not regular: any order of a and b, with balanced counts.",
           "text": [
             "S -> a B | b A",
             "A -> a | a S | b A A",
@@ -94,6 +105,7 @@
         },
         {
           "label": "Matched parentheses",
+          "purpose": "Nested balanced parentheses, the standard Dyck language.",
           "text": ["S -> ( S ) S | eps"]
         }
       ]
@@ -103,6 +115,7 @@
       "examples": [
         {
           "label": "aⁿbⁿcⁿ  (n ≥ 1)",
+          "purpose": "The standard context-sensitive language: not context-free.",
           "text": [
             "// Context-sensitive grammar for { aⁿbⁿcⁿ | n ≥ 1 }",
             "// LHS sequences use uppercase convention for non-terminals",
@@ -120,6 +133,7 @@
         },
         {
           "label": "aⁿbⁿcⁿdⁿ  (n ≥ 1)",
+          "purpose": "Four-way counting: the same technique with one more symbol.",
           "text": [
             "// Context-sensitive grammar for { aⁿbⁿcⁿdⁿ | n ≥ 1 }",
             "// Uses marker nonterminals B, C, D that bubble right into place",
@@ -135,6 +149,7 @@
         },
         {
           "label": "Equal a's and b's  (aⁿbⁿ, n ≥ 1)",
+          "purpose": "A context-free language written with context-sensitive rules for comparison.",
           "text": [
             "// Context-sensitive grammar for { aⁿbⁿ | n ≥ 1 }",
             "// (also context-free, shown here with CSG rules for comparison)",
@@ -148,6 +163,7 @@
       "examples": [
         {
           "label": "Copy language  (ww)",
+          "purpose": "Unrestricted rules copy a word; ww is not context-free.",
           "text": [
             "// Unrestricted grammar for { ww | w ∈ {a,b}* }",
             "// Uses marker X to split and align two copies",
@@ -164,6 +180,7 @@
         },
         {
           "label": "Shrinking rule demo",
+          "purpose": "A length-decreasing rule makes the grammar Type 0.",
           "text": [
             "// Demonstrates a length-decreasing (Type 0) rule",
             "// Generates { aⁿ | n ≥ 0 } with an erasable marker",

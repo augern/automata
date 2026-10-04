@@ -99,6 +99,7 @@ Each file has the structure:
       "examples": [
         {
           "label": "Display name",
+          "purpose": "One sentence: what this example demonstrates (shown as a tooltip in the examples menu; required)",
           "text": [
             "// Optional comment",
             "S -> A B",

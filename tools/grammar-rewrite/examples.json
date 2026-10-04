@@ -5,6 +5,7 @@
       "examples": [
         {
           "label": "Unreachable rules",
+          "purpose": "Symbols that can never be reached from the start symbol are dead weight; cleanup removes them.",
           "text": [
             "// Unreachable rules",
             "S -> A B",
@@ -16,6 +17,7 @@
         },
         {
           "label": "Unproductive nonterminals",
+          "purpose": "Nonterminals that derive no terminal string can never be used.",
           "text": [
             "// Unproductive nonterminals",
             "S -> A | B",
@@ -26,6 +28,7 @@
         },
         {
           "label": "Both issues",
+          "purpose": "Order matters: removing unproductive symbols can leave others unreachable.",
           "text": [
             "// Both issues",
             "S -> A | B",
@@ -43,6 +46,7 @@
       "examples": [
         {
           "label": "Single nullable",
+          "purpose": "One ε-production: the nullable symbol becomes optional wherever it appears.",
           "text": [
             "// Single nullable symbol",
             "S -> A B",
@@ -52,6 +56,7 @@
         },
         {
           "label": "Multiple nullable",
+          "purpose": "Several nullable symbols in one rule: every combination of omissions must be added.",
           "text": [
             "// Multiple nullable symbols",
             "S -> A B C",
@@ -62,6 +67,7 @@
         },
         {
           "label": "Start nullable",
+          "purpose": "The start symbol derives ε, so the language contains the empty string.",
           "text": [
             "// Start symbol is nullable",
             "S -> A S | eps",
@@ -75,6 +81,7 @@
       "examples": [
         {
           "label": "Simple unit",
+          "purpose": "A single unit production A → B is replaced by B's own rules.",
           "text": [
             "// Simple unit productions",
             "S -> A | a b",
@@ -84,6 +91,7 @@
         },
         {
           "label": "Unit chain",
+          "purpose": "A chain of unit productions A → B → C: the unit pairs are transitive.",
           "text": [
             "// Unit chain",
             "A -> B",
@@ -93,6 +101,7 @@
         },
         {
           "label": "Arithmetic (units)",
+          "purpose": "The expression grammar's E → T and T → F are unit productions in disguise.",
           "text": [
             "// Arithmetic grammar (unit prods in disguise)",
             "E -> E + T | T",
@@ -107,6 +116,7 @@
       "examples": [
         {
           "label": "Long rules",
+          "purpose": "Right-hand sides longer than two symbols must be split into binary rules.",
           "text": [
             "// Long rules — needs binarisation",
             "S -> A B C D",
@@ -118,6 +128,7 @@
         },
         {
           "label": "Mixed — all issues",
+          "purpose": "ε-, unit and long rules together: the whole conversion pipeline in one grammar.",
           "text": [
             "// Mixed: ε, unit, long rules",
             "S -> A B | C",
@@ -129,6 +140,7 @@
         },
         {
           "label": "Expression grammar",
+          "purpose": "A realistic grammar taken all the way to Chomsky normal form.",
           "text": [
             "// Expression grammar — full CNF conversion",
             "E -> T E'",
@@ -140,6 +152,7 @@
         },
         {
           "label": "Balanced parentheses",
+          "purpose": "Terminals inside longer rules and a nullable start symbol in one grammar.",
           "text": [
             "// Terminals inside longer rules and a nullable start symbol",
             "S -> ( S ) | S S | eps"
@@ -147,6 +160,7 @@
         },
         {
           "label": "Palindromes",
+          "purpose": "Short and long rules mixed, with single terminals and ε as alternatives.",
           "text": [
             "// Short and long rules mixed; ε and single terminals as alternatives",
             "S -> a S a | b S b | a | b | eps"
@@ -159,6 +173,7 @@
       "examples": [
         {
           "label": "Direct recursion",
+          "purpose": "A → Aα: the standard rewrite moves the tail into a new nonterminal.",
           "text": [
             "// Direct left recursion",
             "E -> E + T | T",
@@ -167,6 +182,7 @@
         },
         {
           "label": "Indirect recursion",
+          "purpose": "Recursion through another nonterminal (S → A a, A → S c): substitute first, then remove it.",
           "text": [
             "// Indirect left recursion",
             "S -> A a | b",
@@ -175,6 +191,7 @@
         },
         {
           "label": "Multiple NTs",
+          "purpose": "Several left-recursive nonterminals at once: the expression grammar made ready for top-down parsing.",
           "text": [
             "// Multiple nonterminals — direct and indirect",
             "E -> E + T | T",

@@ -5,6 +5,7 @@
       "examples": [
         {
           "label": "Even-length strings over {a}",
+          "purpose": "The simplest machine: a finite automaton in disguise that never writes.",
           "states": ["q0", "q1", "qA", "qR"],
           "alphabet": ["a"],
           "start": "q0",
@@ -26,6 +27,7 @@
         },
         {
           "label": "Even number of 1s",
+          "purpose": "A parity check: the head only moves right and the state remembers the parity.",
           "states": ["q0", "q1", "qA", "qR"],
           "alphabet": ["0", "1"],
           "start": "q0",
@@ -46,6 +48,7 @@
       "examples": [
         {
           "label": "aⁿbⁿ (n ≥ 0)",
+          "purpose": "Crosses symbols off in pairs, using the tape as scratch space.",
           "states": ["q0", "q1", "q2", "qA", "qR"],
           "alphabet": ["a", "b", "X"],
           "start": "q0",
@@ -77,6 +80,7 @@
         },
         {
           "label": "aⁿbⁿcⁿ (n ≥ 0)",
+          "purpose": "Not context-free, yet easy for a Turing machine: three-way matching by repeated sweeps.",
           "states": ["q0", "q1", "q2", "q3", "qC", "qA", "qR"],
           "alphabet": ["a", "b", "c", "X", "Y", "Z"],
           "start": "q0",
@@ -133,6 +137,7 @@
         },
         {
           "label": "Palindromes over {a, b}",
+          "purpose": "Compares the first and last symbol, erases both and repeats: the head keeps reversing.",
           "states": ["q0", "qa", "qb", "qLa", "qLb", "qBk", "qA", "qR"],
           "alphabet": ["a", "b", "X"],
           "start": "q0",
@@ -187,6 +192,7 @@
       "examples": [
         {
           "label": "Binary increment",
+          "purpose": "A function, not a decision: the machine walks to the end and carries from the right.",
           "states": ["q0", "q1", "qA", "qR"],
           "alphabet": ["0", "1"],
           "start": "q0",
@@ -210,6 +216,7 @@
         },
         {
           "label": "Unary addition: 1ᵐ # 1ⁿ → 1^(m+n)",
+          "purpose": "A machine as a calculator: the output is left on the tape.",
           "states": ["q0", "q1", "q2", "qA", "qR"],
           "alphabet": ["1", "#"],
           "start": "q0",
@@ -235,6 +242,7 @@
         },
         {
           "label": "Bit complement (flips every bit)",
+          "purpose": "The simplest transducer: one pass that writes the complement of every bit.",
           "states": ["q0", "qA", "qR"],
           "alphabet": ["0", "1"],
           "start": "q0",
@@ -254,6 +262,7 @@
       "examples": [
         {
           "label": "Loops forever on odd length",
+          "purpose": "Halts on some inputs and never on others: recognising a language is weaker than deciding it.",
           "states": ["q0", "q1", "qA", "qR"],
           "alphabet": ["a"],
           "start": "q0",

@@ -5,6 +5,7 @@
       "examples": [
         {
           "label": "Even number of a's — a deterministic automaton is an NFA too",
+          "purpose": "A DFA is a special NFA: one choice at every step, so the computation tree is a single path.",
           "states": ["q0", "q1"],
           "alphabet": ["a", "b"],
           "start": "q0",
@@ -22,6 +23,7 @@
       "examples": [
         {
           "label": "ends in ab",
+          "purpose": "The classic nondeterministic guess: stay in q0, or guess that the final ab starts here.",
           "states": ["q0", "q1", "q2"],
           "alphabet": ["a", "b"],
           "start": "q0",
@@ -35,6 +37,7 @@
         },
         {
           "label": "contains aa or bb",
+          "purpose": "Two independent guesses; the tree shows branches dying when a guess was wrong.",
           "states": ["q0", "q1", "q2", "q3"],
           "alphabet": ["a", "b"],
           "start": "q0",
@@ -49,6 +52,7 @@
         },
         {
           "label": "4th-from-last is a",
+          "purpose": "A 5-state NFA whose smallest DFA needs 16 states: nondeterminism can be exponentially more compact.",
           "states": ["q0", "q1", "q2", "q3", "q4"],
           "alphabet": ["a", "b"],
           "start": "q0",
@@ -69,6 +73,7 @@
       "examples": [
         {
           "label": "ε* (ε-loop)",
+          "purpose": "An ε-cycle: the ε-closure still terminates although q0 and q1 lead to each other.",
           "states": ["q0", "q1"],
           "alphabet": ["a"],
           "start": "q0",
@@ -81,6 +86,7 @@
         },
         {
           "label": "a? (zero or one a)",
+          "purpose": "An optional symbol: an ε-move that lets the NFA skip the a.",
           "states": ["q0", "q1"],
           "alphabet": ["a"],
           "start": "q0",
@@ -98,6 +104,7 @@
       "examples": [
         {
           "label": "a* ∪ b*",
+          "purpose": "Union via ε: a fresh start state branches into the two automata.",
           "states": ["q0", "q1", "q2", "q3", "q4"],
           "alphabet": ["a", "b"],
           "start": "q0",
@@ -118,6 +125,7 @@
       "examples": [
         {
           "label": "Many accepting paths for one string",
+          "purpose": "One string, several accepting computations: acceptance only asks that at least one exists.",
           "states": ["q0", "q1"],
           "alphabet": ["a"],
           "start": "q0",
@@ -135,6 +143,7 @@
       "examples": [
         {
           "label": "a*b* — concatenation via ε",
+          "purpose": "Concatenation: an ε-move from the first automaton's accepting state into the second.",
           "states": ["q0", "q1"],
           "alphabet": ["a", "b"],
           "start": "q0",

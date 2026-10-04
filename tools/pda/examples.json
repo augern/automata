@@ -5,6 +5,7 @@
       "examples": [
         {
           "label": "aⁿbⁿ  (n ≥ 0)",
+          "purpose": "The canonical context-free language that no finite automaton can recognise: the stack counts the a's.",
           "states": ["q0", "q1", "q2"],
           "start": "q0",
           "accepts": ["q2"],
@@ -22,6 +23,7 @@
         },
         {
           "label": "Balanced parentheses",
+          "purpose": "Nesting depth kept on the stack, as in the parsers of programming languages.",
           "states": ["q0", "q1"],
           "start": "q0",
           "accepts": ["q1"],
@@ -36,6 +38,7 @@
         },
         {
           "label": "Palindromes over {a, b}",
+          "purpose": "Needs nondeterminism: the machine must guess where the middle is.",
           "states": ["q0", "q1", "q2"],
           "start": "q0",
           "accepts": ["q2"],
@@ -60,6 +63,7 @@
       "examples": [
         {
           "label": "aⁿbⁿ  (n ≥ 1)",
+          "purpose": "The same idea accepted by empty stack instead of by a final state.",
           "states": ["q0", "q1"],
           "start": "q0",
           "accepts": [],
@@ -81,6 +85,7 @@
       "examples": [
         {
           "label": "aⁿb²ⁿ — push two symbols per a",
+          "purpose": "Pushing two symbols per input symbol: the stack as a counter with arithmetic.",
           "states": ["q0", "q1", "q2"],
           "start": "q0",
           "accepts": ["q2"],
@@ -98,6 +103,7 @@
         },
         {
           "label": "Equal numbers of a's and b's, any order",
+          "purpose": "The stack holds the surplus of one symbol over the other; a symbol of the opposite kind cancels one.",
           "states": ["q0", "q1"],
           "start": "q0",
           "accepts": ["q1"],
@@ -121,6 +127,7 @@
       "examples": [
         {
           "label": "wcwᴿ — deterministic (compare palindromes)",
+          "purpose": "Palindromes with a marked middle are deterministic: compare with the nondeterministic palindrome machine.",
           "states": ["q0", "q1", "q2"],
           "start": "q0",
           "accepts": ["q2"],
@@ -149,6 +156,7 @@
       "examples": [
         {
           "label": "Two kinds of brackets",
+          "purpose": "Matching brackets of two kinds: the stack remembers which kind is open, as in code or HTML.",
           "states": ["q0", "q1"],
           "start": "q0",
           "accepts": ["q1"],
@@ -169,6 +177,7 @@
         },
         {
           "label": "Balanced parentheses — accept by empty stack",
+          "purpose": "Acceptance by empty stack: the machine pops the bottom marker itself at the end.",
           "states": ["q0"],
           "start": "q0",
           "accepts": [],

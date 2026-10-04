@@ -5,6 +5,7 @@
       "examples": [
         {
           "label": "Arithmetic",
+          "purpose": "The classic LL(1) form of the expression grammar, with the left recursion already eliminated.",
           "text": [
             "// Arithmetic — classic LL(1) form",
             "// Left recursion eliminated",
@@ -17,6 +18,7 @@
         },
         {
           "label": "Arithmetic + parens",
+          "purpose": "Adds parentheses: recursion through the start symbol and nested parse trees.",
           "text": [
             "// Arithmetic with parentheses",
             "E -> T E'",
@@ -33,6 +35,7 @@
       "examples": [
         {
           "label": "Balanced parentheses",
+          "purpose": "A short grammar with an ε-production: FOLLOW decides when to expand to ε.",
           "text": [
             "// Balanced parentheses",
             "S -> ( S ) S | eps"
@@ -40,6 +43,7 @@
         },
         {
           "label": "Simple declarations",
+          "purpose": "A practical, right-factored declaration grammar with an optional array suffix.",
           "text": [
             "// Simple declarations (right-factored)",
             "D -> T id D'",
@@ -54,6 +58,7 @@
       "examples": [
         {
           "label": "Left-recursive",
+          "purpose": "Left recursion puts two productions in M[E, id]: the grammar is not LL(1).",
           "text": [
             "// Left-recursive — NOT LL(1)",
             "// Shows FIRST/FOLLOW conflict detection",
@@ -63,6 +68,7 @@
         },
         {
           "label": "Common prefix (needs left factoring)",
+          "purpose": "Two alternatives start with the same terminal, so one lookahead symbol cannot choose.",
           "text": [
             "// Two alternatives begin with the same symbol: one symbol of lookahead cannot choose",
             "// Fix: factor out the common beginning",
@@ -71,6 +77,7 @@
         },
         {
           "label": "Dangling else (ambiguous)",
+          "purpose": "The classic ambiguity of nested conditionals; no lookahead resolves it.",
           "text": [
             "// The classic ambiguity: both alternatives of S begin with 'if E then S'",
             "S -> if E then S | if E then S else S | other",
@@ -84,6 +91,7 @@
       "examples": [
         {
           "label": "Mini-Pascal",
+          "purpose": "A realistic language grammar: larger FIRST and FOLLOW sets and a full table.",
           "text": [
             "// Mini-Pascal subset — LL(1)",
             "// Left-recursion eliminated, left-factored",
@@ -107,6 +115,7 @@
       "examples": [
         {
           "label": "FIRST/FOLLOW with ε (nullable chain)",
+          "purpose": "Practice FIRST and FOLLOW when several nonterminals can derive ε.",
           "text": [
             "// Every nonterminal after S can vanish: practice FIRST and FOLLOW with nullable symbols",
             "S -> A B C",
@@ -122,6 +131,7 @@
       "examples": [
         {
           "label": "JSON-like values",
+          "purpose": "A practical, fully LL(1) grammar: the next token decides every choice.",
           "text": [
             "// Tokens are separated by spaces: { \"k\" : 1 , \"l\" : [ 1 , 2 ] }",
             "value -> obj | arr | str | num | true | false | null",

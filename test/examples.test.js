@@ -28,6 +28,16 @@ test("example files are well-formed (unique labels, group labels present)", () =
   }
 });
 
+test("every example has a one-line purpose (shown as the tooltip in the examples menu)", () => {
+  const tools = fs.readdirSync(path.join(__dirname, "..", "tools"), { withFileTypes: true }).filter((d) => d.isDirectory());
+  for (const d of tools) {
+    for (const ex of examples(d.name)) {
+      assert.ok(typeof ex.purpose === "string" && ex.purpose.length >= 20, `${d.name}: "${ex.label}" has no purpose`);
+      assert.ok(ex.purpose.length <= 160, `${d.name}: the purpose of "${ex.label}" is too long`);
+    }
+  }
+});
+
 test("LR examples build automata and tables in every mode", () => {
   for (const ex of examples("lr")) {
     const g = A.parseBNF(textOf(ex));

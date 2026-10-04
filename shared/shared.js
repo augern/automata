@@ -936,6 +936,54 @@ ${kw("return")} Follow`,
 // JSON format: { groups: [{ label, examples: [{ value, label, text }] }] }
 // examplesObj will have keys added as { text: "..." } entries.
 // onReady (optional) is called once the dropdown and examplesObj are populated.
+// Replace an examples <select> by a button that opens a menu: examples grouped under their
+// headings, each with its one-line purpose as a tooltip (native option tooltips are not shown
+// by every browser). The <select> stays in the page, hidden, as the place tools read and set the
+// current example, so existing code that uses it keeps working.
+//   groups: [{ label, items: [{ key, label, purpose }] }]
+function upgradeExamplesSelect(sel, groups) {
+  sel._exGroups = groups;
+  if (sel._exBtn || typeof UI === "undefined") return;
+  var placeholder = sel.options.length ? sel.options[0].textContent : "Examples";
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "examples-btn";
+  btn.className = "ui-select ui-select--grow examples-btn";
+  btn.innerHTML = "<span></span>";
+  sel.parentNode.insertBefore(btn, sel);
+  sel.hidden = true;
+  sel._exBtn = btn;
+  function sync() {
+    var cur = null;
+    sel._exGroups.forEach(function (g) { g.items.forEach(function (it) { if (it.key === sel.value) cur = it; }); });
+    btn.firstChild.textContent = cur ? cur.label : placeholder;
+    btn.title = cur && cur.purpose ? cur.purpose : "";
+  }
+  // Tools set the current example with `select.value = key`: follow that.
+  var desc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  Object.defineProperty(sel, "value", {
+    get: function () { return desc.get.call(this); },
+    set: function (v) { desc.set.call(this, v); sync(); },
+  });
+  sel.addEventListener("change", sync);
+  UI.menu(btn, function () {
+    var items = [];
+    sel._exGroups.forEach(function (g) {
+      items.push({ heading: g.label });
+      g.items.forEach(function (it) {
+        items.push({
+          label: it.label,
+          title: it.purpose || undefined,
+          checked: it.key === sel.value ? true : undefined,
+          onSelect: function () { sel.value = it.key; sel.dispatchEvent(new Event("change")); },
+        });
+      });
+    });
+    return items;
+  }, { align: "left" });
+  sync();
+}
+
 function loadExamplesInto(url, selectId, examplesObj, onReady) {
   fetch(url)
     .then(function (r) { return r.json(); })
@@ -944,10 +992,11 @@ function loadExamplesInto(url, selectId, examplesObj, onReady) {
       if (!sel) return;
       // Remove any previously rendered optgroups (keep the placeholder option)
       Array.from(sel.querySelectorAll("optgroup")).forEach(function (g) { g.remove(); });
-      var idx = 0;
+      var idx = 0, groups = [];
       data.groups.forEach(function (group) {
         var og = document.createElement("optgroup");
         og.label = group.label;
+        var items = [];
         group.examples.forEach(function (ex) {
           var key = "ex" + idx++;
           var opt = document.createElement("option");
@@ -955,9 +1004,12 @@ function loadExamplesInto(url, selectId, examplesObj, onReady) {
           opt.textContent = ex.label;
           og.appendChild(opt);
           examplesObj[key] = { text: Array.isArray(ex.text) ? ex.text.join("\n") : ex.text };
+          items.push({ key: key, label: ex.label, purpose: ex.purpose });
         });
+        groups.push({ label: group.label, items: items });
         sel.appendChild(og);
       });
+      upgradeExamplesSelect(sel, groups);
       if (typeof onReady === "function") onReady();
     })
     .catch(function (err) {
@@ -1146,10 +1198,11 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
     .then(function(data) {
       var sel = document.getElementById(selectId);
       if (!sel) return;
-      var firstKey = null, idx = 0;
+      var firstKey = null, idx = 0, groups = [];
       data.groups.forEach(function(group) {
         var og = document.createElement("optgroup");
         og.label = group.label;
+        var items = [];
         group.examples.forEach(function(ex) {
           var key = "ex" + idx++;
           var opt = document.createElement("option");
@@ -1157,10 +1210,13 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
           opt.textContent = ex.label;
           og.appendChild(opt);
           examplesObj[key] = ex;
+          items.push({ key: key, label: ex.label, purpose: ex.purpose });
           if (!firstKey) firstKey = key;
         });
+        groups.push({ label: group.label, items: items });
         sel.appendChild(og);
       });
+      upgradeExamplesSelect(sel, groups);
       if (firstKey && (!shouldLoadFirst || shouldLoadFirst())) loadFn(firstKey);
     })
     .catch(function(err) {
