@@ -192,6 +192,7 @@
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
     <script src="../shared/ui.js"></script>
+    <script src="../shared/view-menu.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -822,7 +823,6 @@ else: ${kw("reject")}`
       initPanelStorage("pda-tool-v1", ["p-def", "p-sim", "p-tree"]);
       loadPanelState();
       applyShareState();
-      installShareButton();
       renderStatesTable();
       renderRulesTable();
       onPDAChange();

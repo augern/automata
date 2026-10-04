@@ -274,6 +274,8 @@
     <script src="../shared/algo/ll1.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
+    <script src="../shared/ui.js"></script>
+    <script src="../shared/view-menu.js"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
       initResize("rh-1", "p-grammar", +1);
@@ -924,7 +926,6 @@ ${kw("loop")}
         loadExamplesInto("../examples/examples-ll1.json", "examples-select", EXAMPLES);
         document.getElementById("grammar-input").value = "E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> id";
         applyShareState();
-        installShareButton();
         build();
         // Initialise tree zoom (defined in shared.js)
         if (typeof initTreeZoom === "function") initTreeZoom();

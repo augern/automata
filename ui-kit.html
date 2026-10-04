@@ -124,6 +124,14 @@
   <p class="note">Built with <code>UI.table</code>; text arguments are escaped. Edit a cell, or enter an invalid one (<code>zz</code>) to see the error state.</p>
   <div class="demo"><div id="demo-table"></div></div>
 
+  <h2>Menu and toast</h2>
+  <p class="note">Built with <code>UI.menu(trigger, getItems)</code>: arrow keys, Home/End, Enter and Escape work, and the item list is read each time it opens. Used for each panel's <code>⋯</code> menu and the top bar's View menu.</p>
+  <div class="demo"><div class="row">
+    <button class="ui-menu-btn" id="kit-kebab" title="Panel menu" aria-label="Panel menu">⋯</button>
+    <button class="view-btn" id="kit-view" style="margin-left: 0">View <span aria-hidden="true">▾</span></button>
+    <button class="btn" onclick="UI.toast('Link copied')">Show toast</button>
+  </div></div>
+
   <h2>Panel sections</h2>
   <div class="demo flush"><div class="box" style="border: none">
     <div class="ui-bar"><select class="ui-select ui-select--grow"><option>ui-bar with a growing select</option></select></div>
@@ -153,6 +161,7 @@
 <script src="shared/algo/grammar.js"></script>
 <script src="shared/shared.js"></script>
 <script src="shared/ui.js"></script>
+<script src="shared/view-menu.js"></script>
 <script src="shared/automaton-graph.js"></script>
 <script>
   // Tokens
@@ -170,6 +179,11 @@
       T.marker('<input type="checkbox"' + (kind === "accept" || kind === "both" ? " checked" : "") + ">") +
       T.state(name, kind) + T.input(a, 'placeholder="–" oninput="this.classList.toggle(\'invalid\', /zz/.test(this.value))"') +
       T.input(e, 'placeholder="–"', { muted: true }) + "</tr>").join("") + "</tbody></table>";
+
+  // Menus
+  let kitOpts = { checked: true };
+  UI.menu("kit-kebab", () => [{ label: "Algorithm", onSelect: () => UI.toast("Algorithm") }, { label: "Show grid", checked: kitOpts.checked, onSelect: () => (kitOpts.checked = !kitOpts.checked) }, { separator: true }, { label: "Focus on this panel" }, { label: "Disabled item", disabled: true }], { align: "left" });
+  UI.menu("kit-view", () => [{ label: "Copy link to this view", hint: "share" }, { label: "Switch to dark theme", onSelect: themeToggle }, { separator: true }, { heading: "Layout" }, { label: "Restore default layout" }], { align: "left" });
 
   // Graph
   const kitView = createGraphView("kit", { fallbackWidth: 600 });

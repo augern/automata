@@ -97,20 +97,9 @@ function loadPanelState() {
 // collapsing lower-priority panels if the row would otherwise overflow.
 function toggleCollapse(id) {
   const el = document.getElementById(id);
-  const collapsing = !el.classList.contains("collapsed");
-  el.classList.toggle("collapsed", collapsing);
-  delete el.dataset.auto;
-  if (collapsing) {
-    el.dataset.locked = "1";
-    delete el.dataset.protect;
-  } else {
-    delete el.dataset.locked;
-    el.dataset.protect = "1"; // don't auto-collapse what the user just opened
-  }
-  updateCollapseBtn(id, collapsing);
-  fitPanelLayout();
-  savePanelState();
-  _panelsChanged();
+  if (el.classList.contains("collapsed")) _expandNow(el);
+  else _collapseNow(el);
+  _layoutChanged();
 }
 
 function updateCollapseBtn(id, collapsed) {
@@ -143,6 +132,93 @@ function updateCollapseBtn(id, collapsed) {
       head.removeAttribute("title");
     }
   }
+}
+
+// Collapse / expand as the user's own decision (kept across reloads).
+function _collapseNow(el) {
+  el.classList.add("collapsed");
+  el.dataset.locked = "1";
+  delete el.dataset.auto;
+  delete el.dataset.protect;
+  updateCollapseBtn(el.id, true);
+}
+function _expandNow(el) {
+  el.classList.remove("collapsed");
+  delete el.dataset.locked;
+  delete el.dataset.auto;
+  el.dataset.protect = "1"; // opened on purpose: don't auto-collapse it
+  updateCollapseBtn(el.id, false);
+}
+function _panelName(el) {
+  return ((el.querySelector(".panel-title") || {}).textContent || el.id).trim();
+}
+function _layoutChanged() {
+  fitPanelLayout();
+  savePanelState();
+  _panelsChanged();
+}
+
+// ── Layout presets (also offered in each tool's View menu) ──
+// The panels' designed proportions; everything open.
+function panelsResetLayout() {
+  _panels().forEach((el) => {
+    _setWeight(el, parseFloat(el.dataset.pw0) || 300);
+    el.classList.remove("collapsed");
+    ["locked", "auto", "protect"].forEach((k) => delete el.dataset[k]);
+    updateCollapseBtn(el.id, false);
+  });
+  _layoutChanged();
+}
+// Every open panel the same width.
+function panelsEqualWidths() {
+  _panels().forEach((el) => { if (!el.classList.contains("collapsed")) _setWeight(el, 100); });
+  _layoutChanged();
+}
+// Open every panel (the row scrolls if they don't all fit).
+function panelsExpandAll() {
+  _panels().forEach((el) => { if (el.classList.contains("collapsed")) _expandNow(el); else el.dataset.protect = "1"; });
+  _layoutChanged();
+}
+// Show one panel at full width; the rest become strips you can click to reopen.
+function panelFocus(id) {
+  _panels().forEach((el) => { if (el.id === id) { if (el.classList.contains("collapsed")) _expandNow(el); else el.dataset.protect = "1"; } else if (!el.classList.contains("collapsed")) _collapseNow(el); });
+  _layoutChanged();
+}
+function panelSummaries() {
+  return _panels().map((el) => ({ id: el.id, title: _panelName(el), collapsed: el.classList.contains("collapsed") }));
+}
+
+// Each panel header's secondary buttons (Algorithm, view toggles...) move into
+// a "…" menu, next to the standard panel actions; the original buttons stay in
+// the DOM (hidden) so existing handlers and state keep working.
+function installPanelMenus() {
+  if (typeof UI === "undefined") return;
+  _panels().forEach((el) => {
+    const head = el.querySelector(":scope > .panel-header");
+    if (!head || head.querySelector(".panel-menu")) return;
+    const sources = Array.from(head.querySelectorAll(":scope > .algo-btn"));
+    sources.forEach((b) => b.classList.add("panel-menu-source"));
+    const kebab = document.createElement("button");
+    kebab.type = "button";
+    kebab.className = "ui-menu-btn panel-menu";
+    kebab.textContent = "⋯";
+    kebab.title = "Panel menu";
+    kebab.setAttribute("aria-label", "Menu for " + _panelName(el));
+    kebab.addEventListener("click", (e) => e.stopPropagation());
+    head.insertBefore(kebab, head.querySelector(".collapse-btn"));
+    UI.menu(kebab, () => {
+      const items = sources.map((b) => ({
+        label: b.textContent.trim(),
+        title: b.title,
+        checked: b.classList.contains("min-toggle") ? b.classList.contains("active") : undefined,
+        onSelect: () => b.click(),
+      }));
+      if (items.length) items.push({ separator: true });
+      items.push({ label: "Focus on this panel", onSelect: () => panelFocus(el.id) });
+      if (el.querySelector(".collapse-btn")) items.push({ label: "Collapse panel", onSelect: () => toggleCollapse(el.id) });
+      return items;
+    });
+  });
 }
 
 // Charts that draw into a sized container re-render after the layout moves.
@@ -206,6 +282,7 @@ function startPanelLayout() {
     });
     _panelObserver.observe(row);
   }
+  installPanelMenus();
   fitPanelLayout();
 }
 
@@ -244,8 +321,20 @@ function initResize(hid) {
     if (sess.widthR < sess.minR) { sess.widthL -= sess.minR - sess.widthR; sess.widthR = sess.minR; }
     return sess;
   }
+  // Dragging well past a panel's minimum collapses it (and back again if you
+  // drag back); panels without a collapse button just stop at the minimum.
   function apply(sess, dx) {
-    const r = panelDrag({ ...sess, dx });
+    const r = panelDrag({ ...sess, dx, canCollapseL: !!left.querySelector(".collapse-btn"), canCollapseR: !!right.querySelector(".collapse-btn") });
+    if (r.collapse) {
+      const gone = r.collapse === "left" ? left : right;
+      const kept = r.collapse === "left" ? right : left;
+      if (!gone.classList.contains("collapsed")) _collapseNow(gone);
+      sess.dragCollapsed = gone;
+      _setWeight(kept, sess.widthL + sess.widthR - PANEL_COLLAPSED_W);
+      return;
+    }
+    if (sess.dragCollapsed && sess.dragCollapsed.classList.contains("collapsed")) _expandNow(sess.dragCollapsed);
+    sess.dragCollapsed = null;
     _setWeight(left, r.left);
     _setWeight(right, r.right);
   }

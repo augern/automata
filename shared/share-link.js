@@ -42,34 +42,19 @@ function createShareSaver(getState, delay = 300) {
   };
 }
 
-// Adds a "Share" button to #topbar that copies the current link.
-function installShareButton() {
-  const bar = document.getElementById("topbar");
-  if (!bar || document.getElementById("btn-share")) return;
-  const btn = document.createElement("button");
-  btn.id = "btn-share";
-  btn.className = "share-btn";
-  btn.textContent = "Share";
-  btn.title = "Copy a link to this tool with its current input";
-  btn.onclick = async () => {
-    let msg = "Copied!";
-    if (location.hash === "" && location.search === "") msg = "Nothing to share yet";
-    else {
-      try {
-        await navigator.clipboard.writeText(location.href);
-      } catch (e) {
-        const ta = document.createElement("textarea");
-        ta.value = location.href;
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand("copy"); } catch (e2) { msg = "Copy failed"; }
-        ta.remove();
-      }
-    }
-    btn.textContent = msg;
-    setTimeout(() => (btn.textContent = "Share"), 1500);
-  };
-  const keyNav = document.getElementById("key-nav");
-  if (keyNav) bar.insertBefore(btn, keyNav);
-  else bar.appendChild(btn);
+// Copy the current address (which carries the tool's state) to the clipboard.
+// Resolves false when there is no state in the URL yet.
+async function copyShareLink() {
+  if (location.hash === "" && location.search === "") return false;
+  try {
+    await navigator.clipboard.writeText(location.href);
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = location.href;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e2) { ta.remove(); return false; }
+    ta.remove();
+  }
+  return true;
 }

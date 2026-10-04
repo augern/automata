@@ -81,6 +81,115 @@ const UI = (() => {
       },
     },
 
+    // Pop-up menu attached to a trigger button.
+    //   UI.menu(button, () => [
+    //     { label: "Algorithm", onSelect: fn },
+    //     { label: "Show grid", checked: true, onSelect: fn },
+    //     { separator: true },
+    //     { heading: "Layout" },
+    //     { label: "Reset", hint: "Ctrl+0", disabled: false, title: "tooltip", onSelect: fn },
+    //   ], { align: "right" })
+    // The item list is read each time the menu opens, so labels and checkmarks
+    // are always current. Arrow keys, Home/End, Enter/Space and Escape work;
+    // clicking elsewhere closes it. Returns { open, close }.
+    menu(trigger, getItems, { align = "right" } = {}) {
+      const btn = el(trigger);
+      let pop = null;
+      btn.setAttribute("aria-haspopup", "menu");
+      btn.setAttribute("aria-expanded", "false");
+
+      const enabled = () => (pop ? [...pop.querySelectorAll(".ui-menu__item:not([disabled])")] : []);
+      function focusAt(i) {
+        const items = enabled();
+        if (items.length) items[(i + items.length) % items.length].focus();
+      }
+      function close(returnFocus) {
+        if (!pop) return;
+        pop.remove();
+        pop = null;
+        btn.setAttribute("aria-expanded", "false");
+        document.removeEventListener("mousedown", onOutside, true);
+        document.removeEventListener("keydown", onKey, true);
+        window.removeEventListener("resize", onResize);
+        if (returnFocus) btn.focus();
+      }
+      const onOutside = (e) => { if (pop && !pop.contains(e.target) && !btn.contains(e.target)) close(false); };
+      const onResize = () => close(false);
+      function onKey(e) {
+        if (!pop) return;
+        const items = enabled();
+        const i = items.indexOf(document.activeElement);
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
+        else if (e.key === "ArrowDown") { e.preventDefault(); focusAt(i + 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); focusAt(i < 0 ? -1 : i - 1); }
+        else if (e.key === "Home") { e.preventDefault(); focusAt(0); }
+        else if (e.key === "End") { e.preventDefault(); focusAt(-1); }
+        else if (e.key === "Tab") close(false);
+      }
+      function open() {
+        close(false);
+        pop = document.createElement("div");
+        pop.className = "ui-menu";
+        pop.setAttribute("role", "menu");
+        for (const it of getItems()) {
+          if (it.separator) {
+            const sep = document.createElement("div");
+            sep.className = "ui-menu__sep";
+            sep.setAttribute("role", "separator");
+            pop.appendChild(sep);
+          } else if (it.heading) {
+            const h = document.createElement("div");
+            h.className = "ui-menu__heading";
+            h.textContent = it.heading;
+            pop.appendChild(h);
+          } else {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "ui-menu__item";
+            b.setAttribute("role", it.checked === undefined ? "menuitem" : "menuitemcheckbox");
+            if (it.checked !== undefined) b.setAttribute("aria-checked", String(!!it.checked));
+            if (it.title) b.title = it.title;
+            if (it.disabled) b.disabled = true;
+            b.innerHTML = '<span class="ui-menu__check">' + (it.checked ? "✓" : "") + "</span>" +
+              '<span class="ui-menu__label"></span>' + (it.hint ? '<span class="ui-menu__hint"></span>' : "");
+            b.querySelector(".ui-menu__label").textContent = it.label;
+            if (it.hint) b.querySelector(".ui-menu__hint").textContent = it.hint;
+            b.addEventListener("click", () => { close(true); if (it.onSelect) it.onSelect(); });
+            pop.appendChild(b);
+          }
+        }
+        document.body.appendChild(pop);
+        // Place under the trigger, kept inside the viewport.
+        const r = btn.getBoundingClientRect();
+        pop.style.top = r.bottom + 4 + "px";
+        pop.style.maxHeight = Math.max(120, window.innerHeight - r.bottom - 12) + "px";
+        const w = pop.offsetWidth;
+        const left = align === "right" ? r.right - w : r.left;
+        pop.style.left = Math.max(8, Math.min(left, window.innerWidth - w - 8)) + "px";
+        btn.setAttribute("aria-expanded", "true");
+        document.addEventListener("mousedown", onOutside, true);
+        document.addEventListener("keydown", onKey, true);
+        window.addEventListener("resize", onResize);
+        focusAt(0);
+      }
+      btn.addEventListener("click", (e) => { e.stopPropagation(); if (pop) close(true); else open(); });
+      btn.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (!pop) open(); }
+      });
+      return { open, close };
+    },
+
+    // A short message at the bottom of the window that fades after ~2 seconds.
+    toast(message) {
+      const t = document.createElement("div");
+      t.className = "ui-toast";
+      t.setAttribute("role", "status");
+      t.textContent = message;
+      document.body.appendChild(t);
+      requestAnimationFrame(() => t.classList.add("is-visible"));
+      setTimeout(() => { t.classList.remove("is-visible"); setTimeout(() => t.remove(), 250); }, 2000);
+    },
+
     logBar(target) {
       const e = el(target);
       return {

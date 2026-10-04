@@ -179,6 +179,7 @@
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
     <script src="../shared/ui.js"></script>
+    <script src="../shared/view-menu.js"></script>
     <script src="../shared/stepper.js"></script>
     <script src="../shared/automaton-graph.js"></script>
     <script>
@@ -861,7 +862,6 @@ else: ${kw("reject")}`
       initPanelStorage("nfa-tool-v1", ["p-def", "p-nfa", "p-sim"]);
       loadPanelState();
       applyShareState();
-      installShareButton();
       renderDefTable();
       onNFAChange();
     </script>

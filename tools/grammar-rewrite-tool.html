@@ -118,6 +118,7 @@
     <div class="panel-header">
       <span class="panel-title" id="main-title">ε-Production Elimination</span>
       <button class="algo-btn" id="btn-algo" onclick="openAlgoModal()" title="Algorithm for the current sub-tool">Algorithm</button>
+      <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-main');">&#8250;</button>
     </div>
     <div class="panel-body" style="display:flex;flex-direction:column;overflow:hidden;">
       <div id="step-area">
@@ -169,6 +170,8 @@
 <script src="../shared/algo/rewrite.js"></script>
 <script src="../shared/shared.js"></script>
 <script src="../shared/share-link.js"></script>
+<script src="../shared/ui.js"></script>
+<script src="../shared/view-menu.js"></script>
 <script>
 'use strict';
 
@@ -179,30 +182,9 @@ function renderTree() {}
 initResize('rh-1', 'p-grammar', +1);
 initResize('rh-2', 'p-result',  -1);
 
-// Override savePanelState / loadPanelState for this tool's panels and mode
-function savePanelState() {
-  try {
-    const s = { mode: currentMode };
-    ['p-grammar','p-result'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) s[id] = { width: el.style.width, collapsed: el.classList.contains('collapsed') };
-    });
-    localStorage.setItem('grammar-rewrite-v1', JSON.stringify(s));
-  } catch(e) {}
-}
-function loadPanelState() {
-  try {
-    const s = JSON.parse(localStorage.getItem('grammar-rewrite-v1') || '{}');
-    // Restore panel sizes first so that setMode → savePanelState captures them correctly
-    ['p-grammar','p-result'].forEach(id => {
-      if (!s[id]) return;
-      const el = document.getElementById(id); if (!el) return;
-      if (s[id].width) el.style.width = s[id].width;
-      if (s[id].collapsed) { el.classList.add('collapsed'); updateCollapseBtn(id, true); }
-    });
-    if (s.mode) setMode(s.mode);
-  } catch(e) {}
-}
+// Panel layout comes from shared.js; the chosen transformation is remembered separately.
+initPanelStorage('grammar-rewrite-v1');
+const MODE_KEY = 'grammar-rewrite-mode';
 
 // parseGrammarRaw, ruleStr, cloneRules — see shared/algo/rewrite.js
 
@@ -249,7 +231,7 @@ function setMode(m) {
   });
   document.getElementById('main-title').textContent = MODE_TITLES[m];
   if (inputGrammar) resetSim();
-  savePanelState();
+  try { localStorage.setItem(MODE_KEY, m); } catch(e) {}
   saveShare();
 }
 
@@ -631,7 +613,7 @@ window.onerror = function(msg, src, line, col, err) {
 window.addEventListener('load', () => {
   loadPanelState();
   initAlgoModal();
-  installShareButton();
+  try { const m = localStorage.getItem(MODE_KEY); if (m && MODE_TITLES[m]) setMode(m); } catch(e) {}
   applyShareState();
   loadExamplesInto('../examples/examples-grammar-rewrite.json', 'examples-select', EXAMPLES, () => {
     if (!document.getElementById('grammar-input').value.trim()) {

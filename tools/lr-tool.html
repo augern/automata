@@ -405,6 +405,7 @@
           <span class="panel-title">Characteristic Automaton</span>
           <button class="algo-btn" onclick="openAlgoModal('construction')" title="Closure, Goto &amp; Items construction algorithm">Algorithm</button>
           <button class="algo-btn" id="btn-layout" onclick="toggleLayout()" title="Toggle automaton layout direction">&#8644; Horizontal</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-automaton');">&#8250;</button>
         </div>
         <div class="panel-body">
           <div id="automaton-header" class="ui-sim">
@@ -547,6 +548,8 @@
     <script src="../shared/algo/lr.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
+    <script src="../shared/ui.js"></script>
+    <script src="../shared/view-menu.js"></script>
     <script>
       // Global error catcher — shows errors visibly on mobile
       window.onerror = function (msg, src, line, col, err) {
@@ -2412,7 +2415,6 @@ ${kw("loop")}
         try { const m = localStorage.getItem("lr-tool-mode"); if (m) setMode(m); } catch (e) {}
         try { const d = localStorage.getItem("lr-tool-layout"); if (d) { cLayoutDir = d; applyLayoutBtn(); } } catch (e) {}
         applyShareState();
-        installShareButton();
         if (!document.getElementById("grammar-input").value.trim()) document.getElementById("grammar-input").value = "S -> E\nE -> E + T | T\nT -> id";
         build();
         // Tree zoom is already initialised above via d3.select('#tree-svg').call(_treeZoom)

@@ -162,10 +162,11 @@ body {
   background: var(--bg-panel);
   border-bottom: 1.5px solid var(--border-hi);
   padding: 0 var(--sp-6);
-  height: 36px;
+  min-height: 36px; /* one row at normal widths; wraps to a second on narrow windows */
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
-  gap: var(--sp-5);
+  gap: var(--sp-2) var(--sp-5); /* row gap when the bar wraps, column gap between items */
   flex-shrink: 0;
   z-index: 10;
 }
@@ -475,6 +476,9 @@ body {
 }
 .panel.collapsed .panel-header:focus-visible {
   box-shadow: inset 0 0 0 2px var(--accent);
+}
+.panel-menu-source {
+  display: none !important;
 }
 .panel.collapsed .algo-btn,
 .panel.collapsed .panel-menu,
@@ -1193,44 +1197,27 @@ body {
 }
 /* END SHARED:EXAMPLE-CHIPS */
 
-/* ── Share button (topbar) ── */
-.share-btn {
+/* ── View menu button (top bar, far right) ── */
+.view-btn {
   margin-left: auto;
   background: transparent;
   color: var(--text-dim);
   border: 1px solid var(--border);
-  padding: 1px var(--sp-4);
+  border-radius: var(--radius);
+  padding: var(--sp-1) var(--sp-4);
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
-.share-btn:hover {
-  color: var(--text);
+.view-btn:hover,
+.view-btn[aria-expanded="true"] {
+  color: var(--accent);
   border-color: var(--accent);
+  background: var(--accent-bg);
 }
-.share-btn ~ #key-nav {
-  margin-left: 0;
-}
-.theme-btn {
-  margin-left: auto;
-  background: transparent;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  padding: 1px var(--sp-4);
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.theme-btn:hover {
-  color: var(--text);
-  border-color: var(--accent);
-}
-.share-btn ~ .theme-btn,
-.theme-btn ~ .share-btn,
-#key-nav ~ .theme-btn {
+#key-nav ~ .view-btn {
   margin-left: 0;
 }

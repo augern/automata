@@ -8,17 +8,34 @@ const arr = (x) => Array.from(x);
 
 test("panelDrag moves the boundary and keeps the pair's total width", () => {
   const r = panelDrag({ widthL: 300, widthR: 500, minL: 150, minR: 200, dx: 100 });
-  assert.deepEqual({ ...r }, { left: 400, right: 400 });
+  assert.deepEqual({ ...r }, { left: 400, right: 400, collapse: null });
   assert.equal(r.left + r.right, 800);
 });
 
 test("panelDrag respects both minimums", () => {
-  assert.deepEqual({ ...panelDrag({ widthL: 300, widthR: 500, minL: 150, minR: 200, dx: -999 }) }, { left: 150, right: 650 });
-  assert.deepEqual({ ...panelDrag({ widthL: 300, widthR: 500, minL: 150, minR: 200, dx: 999 }) }, { left: 600, right: 200 });
+  assert.deepEqual({ ...panelDrag({ widthL: 300, widthR: 500, minL: 150, minR: 200, dx: -999, canCollapseL: false }) }, { left: 150, right: 650, collapse: null });
+  assert.deepEqual({ ...panelDrag({ widthL: 300, widthR: 500, minL: 150, minR: 200, dx: 999, canCollapseR: false }) }, { left: 600, right: 200, collapse: null });
+});
+
+test("panelDrag collapses a panel dragged far enough past its minimum", () => {
+  const base = { widthL: 300, widthR: 500, minL: 150, minR: 200, collapsedW: 36 };
+  // left min is 150: raw = 300-250 = 50, which is more than 48 below the minimum
+  assert.deepEqual({ ...panelDrag({ ...base, dx: -250 }) }, { left: 36, right: 764, collapse: "left" });
+  assert.equal(panelDrag({ ...base, dx: -180 }).collapse, null); // raw 120: within 48 of the minimum (150)
+  assert.equal(panelDrag({ ...base, dx: -200 }).collapse, "left"); // raw 100: 50 below it
+  assert.deepEqual({ ...panelDrag({ ...base, dx: 400 }) }, { left: 764, right: 36, collapse: "right" }); // raw 700 > 600+48
+  assert.equal(panelDrag({ ...base, dx: 330 }).collapse, null); // raw 630: past the minimum, inside the threshold
+});
+
+test("panelDrag does not collapse a side that cannot collapse", () => {
+  const base = { widthL: 300, widthR: 500, minL: 150, minR: 200, collapsedW: 36 };
+  const r = panelDrag({ ...base, dx: -999, canCollapseL: false });
+  assert.deepEqual({ ...r }, { left: 150, right: 650, collapse: null });
+  assert.equal(panelDrag({ ...base, dx: 999, canCollapseR: false }).collapse, null);
 });
 
 test("panelDrag when the pair is already below its minimums does not invert", () => {
-  const r = panelDrag({ widthL: 100, widthR: 100, minL: 150, minR: 150, dx: 20 });
+  const r = panelDrag({ widthL: 100, widthR: 100, minL: 150, minR: 150, dx: 20, canCollapseL: false, canCollapseR: false });
   assert.equal(r.left, 150);
   assert.equal(r.left + r.right, 200);
 });

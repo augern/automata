@@ -529,3 +529,94 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
   font-weight: bold;
 }
 .ui-tape__end { color: var(--text-dim); margin-left: var(--sp-2); }
+
+/* ── Menu and toast ────────────────────────────────────── */
+/* Built by UI.menu / UI.toast in ui.js. Trigger buttons: .ui-menu-btn (icon)
+   and .view-btn (top bar). */
+.ui-menu {
+  position: fixed;
+  z-index: 300;
+  min-width: 220px;
+  overflow-y: auto;
+  padding: var(--sp-2);
+  background: var(--bg);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px var(--shadow);
+}
+.ui-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.ui-menu__item:hover,
+.ui-menu__item:focus-visible {
+  background: var(--accent-bg);
+  color: var(--accent);
+  outline: none;
+  box-shadow: none;
+}
+.ui-menu__item:disabled { opacity: 0.4; cursor: default; background: none; color: var(--text); }
+.ui-menu__check { width: 14px; flex-shrink: 0; color: var(--accent); }
+.ui-menu__label { flex: 1; white-space: nowrap; }
+.ui-menu__hint { color: var(--text-dim); font-size: var(--fs-xs); }
+.ui-menu__sep { height: 1px; margin: var(--sp-2) var(--sp-2); background: var(--border-lo); }
+.ui-menu__heading {
+  padding: var(--sp-3) var(--sp-4) var(--sp-1);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ui-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: var(--fs-lg);
+  line-height: 1;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.ui-menu-btn:hover,
+.ui-menu-btn[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.ui-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 400;
+  transform: translate(-50%, 8px);
+  padding: var(--sp-3) var(--sp-6);
+  background: var(--text);
+  color: var(--bg);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  pointer-events: none;
+}
+.ui-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }

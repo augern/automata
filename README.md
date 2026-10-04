@@ -67,7 +67,8 @@ parser-tools/
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
 │   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
 │   ├── automaton-graph.js              ← dagre/d3 state-diagram rendering for NFA/PDA/TM
-│   ├── share-link.js                   ← URL-fragment state, Share button
+│   ├── share-link.js                   ← URL-fragment state and the copy-link action
+│   ├── view-menu.js                    ← the top bar's View menu (share, theme, layout presets)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (parse tree,
@@ -139,14 +140,14 @@ The look is defined once. `shared/shared.css` holds the **design tokens**
 status colours such as `--st-accept` / `--st-reject`) plus the base styles and
 one keyboard focus ring. `shared/ui.css` holds **components** built only from
 those tokens, named `ui-block`, `ui-block__part`, `ui-block--variant`,
-`is-state`; `shared/ui.js` holds their behaviour (`UI.banner`, `UI.logBar`,
+`is-state`; `shared/ui.js` holds their behaviour (`UI.banner`, `UI.logBar`, `UI.menu`, `UI.toast`,
 `UI.table` builders that escape their input, plus `createStepper`,
 `createGraphView`/`drawAutomatonGraph` and the share-link helpers).
 
 **Dark theme.** Every colour is a token, so the dark theme is a second set of
 token values (`:root[data-theme="dark"]` in `shared.css`). `shared/theme.js`
-picks the theme (your system setting by default; the **Dark/Light** button in
-the top bar stores an explicit choice) and is loaded in `<head>` to avoid a
+picks the theme (your system setting by default; the theme item in the **View**
+menu stores an explicit choice) and is loaded in `<head>` to avoid a
 flash of the wrong theme. `test/theme.test.js` computes WCAG contrast for the
 text and status pairs in both themes, and checks that the dark theme overrides
 every colour token, so a new token can't silently stay light.
@@ -178,8 +179,19 @@ Every tool is a row of resizable panels (`#panels`). The row behaves like this:
   is room. Opening a strip in a cramped window makes room by collapsing the next
   lowest panel. Panels you collapse yourself stay collapsed. If even that isn't
   enough the row scrolls sideways.
-- **Collapse controls.** The chevron collapses a panel; clicking its strip
-  opens it. The panel with keyboard focus gets an accent rule under its header.
+- **Collapse controls.** The chevron (a 24px target; it leans the way the panel
+  will move and its tooltip names the action) collapses a panel. A collapsed
+  panel is a 36px strip with an expand button and a rotated label; the whole
+  strip highlights on hover, and clicking it (or Enter/Space) opens it. Dragging a
+  handle well past a panel's minimum collapses that panel, and dragging back
+  reopens it. The panel with keyboard focus gets an accent rule under its header.
+- **Panel menus.** Each header has a `⋯` menu holding the panel's secondary
+  actions (Algorithm, view toggles) plus "Focus on this panel" and "Collapse
+  panel", which keeps headers uncluttered. The buttons themselves stay in the
+  markup (hidden) and are triggered from the menu.
+- **View menu.** The top bar's right-hand **View** menu has Copy link, the
+  light/dark theme switch, and layout presets: *Restore default layout*, *Equal
+  panel widths*, *Expand all panels* and *Focus on* each panel.
 
 To add a panel: give it `data-priority`, and in the tool CSS set `--pw` and
 `--pmin`. The layout logic is `shared/algo/panels.js` (tested) and the panel
@@ -189,8 +201,8 @@ section of `shared/shared.js`.
 
 ## Shareable links
 
-Every tool keeps its current input in the URL fragment (`#s=…`), and the
-**Share** button in the top bar copies the link. Opening a link restores the
+Every tool keeps its current input in the URL fragment (`#s=…`), and
+**View → Copy link to this view** copies it. Opening a link restores the
 grammar, regular expression, or automaton definition (plus the tool's mode and
 the simulation string). The fragment is never sent to a server.
 

@@ -8,11 +8,17 @@
 const PANEL_COLLAPSED_W = 36;
 
 // New widths for the two panels either side of a handle dragged by dx pixels.
-// The pair keeps its combined width; neither goes below its minimum.
-function panelDrag({ widthL, widthR, minL, minR, dx }) {
+// The pair keeps its combined width; neither goes below its minimum. Dragging
+// further than `collapseAfter` pixels past a minimum collapses that panel to
+// its strip (result.collapse is "left" or "right"); the other takes the space.
+// canCollapseL / canCollapseR switch this off for a side.
+function panelDrag({ widthL, widthR, minL, minR, dx, collapseAfter = 48, canCollapseL = true, canCollapseR = true, collapsedW = PANEL_COLLAPSED_W }) {
   const total = widthL + widthR;
-  const left = Math.min(Math.max(widthL + dx, minL), Math.max(minL, total - minR));
-  return { left, right: total - left };
+  const raw = widthL + dx;
+  if (canCollapseL && raw < minL - collapseAfter) return { left: collapsedW, right: total - collapsedW, collapse: "left" };
+  if (canCollapseR && raw > total - minR + collapseAfter) return { left: total - collapsedW, right: collapsedW, collapse: "right" };
+  const left = Math.min(Math.max(raw, minL), Math.max(minL, total - minR));
+  return { left, right: total - left, collapse: null };
 }
 
 // Weights that reproduce the current widths (collapsed panels keep weight 0).

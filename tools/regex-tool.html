@@ -463,6 +463,7 @@
         <div class="panel-header">
           <span class="panel-title">NFA — Thompson's Construction</span>
           <button class="algo-btn" onclick="openAlgoModal('thompson')" title="Thompson's construction algorithm">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8250;</button>
         </div>
         <div class="panel-body">
           <div id="tc-header" class="ui-sim">
@@ -624,6 +625,7 @@
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
     <script src="../shared/ui.js"></script>
+    <script src="../shared/view-menu.js"></script>
     <script src="../shared/stepper.js"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
@@ -1959,7 +1961,6 @@ ${kw("return")} D′`,
         loadExamplesInto("../examples/examples-regex.json", "examples-select", EXAMPLES);
         document.getElementById("regex-input").value = "(a|b)*abb";
         applyShareState();
-        installShareButton();
         build();
         // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
         let _rebuildTimer = null;
