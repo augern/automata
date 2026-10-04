@@ -14,11 +14,6 @@
       /* ── Automaton panel + container ── */
       #p-automaton {
       }
-      .automaton-container {
-        flex: 1;
-        position: relative;
-        overflow: hidden;
-      }
       /* touch-action:none lets D3 capture trackpad pinch/pan without browser interference */
       #cy {
         width: 100%;
@@ -30,18 +25,6 @@
         width: 100%;
         height: 100%;
         touch-action: none;
-      }
-      #empty-msg {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--font-serif);
-        font-style: italic;
-        color: var(--text-lo);
-        font-size: var(--fs-md);
-        pointer-events: none;
       }
 
       /* ── Automaton SVG: Graphviz dot aesthetic ── */
@@ -180,14 +163,7 @@
       }
       .edge.active .arrowhead {
         fill: var(--accent) !important;
-      }
-
-      /* ── Construction simulation controls ── */
-      #automaton-header {
-        flex-shrink: 0;
-        border-bottom: 1.5px solid var(--border-hi);
-        background: var(--bg-panel);
-      }
+      }/* ── Construction simulation controls ── */
       #build-row {
         display: flex;
         align-items: center;
@@ -196,23 +172,6 @@
         padding-left: 0.5em;
         padding-top: var(--sp-1);
         padding-bottom: var(--sp-1);
-      }
-      #build-mode-row {
-        display: flex;
-        gap: var(--sp-5);
-      }
-      #build-mode-row label {
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: var(--sp-2);
-        font-size: var(--fs-2xs);
-        color: var(--text-dim);
-        white-space: nowrap;
-      }
-      #build-mode-row input {
-        cursor: pointer;
-        accent-color: var(--accent);
       }
       #cstep-row {
         display: flex;
@@ -224,15 +183,6 @@
         height: 18px;
         font-size: var(--fs-2xs);
         padding: 0 var(--sp-3);
-      }
-      #cstep-log {
-        font-size: var(--fs-2xs);
-        color: var(--text-dim);
-        line-height: 1.5;
-        font-family: var(--font-mono);
-        border-top: 1px solid var(--border-lo);
-        padding-top: var(--sp-2);
-        margin-top: var(--sp-1);
       }
       #cstep-log:empty,
       #error-msg:empty { display: none; }
@@ -400,19 +350,6 @@
         font-size: var(--fs-sm);
         color: var(--text-dim);
       }
-      #key-select {
-        font-family: var(--font-mono);
-        font-size: var(--fs-2xs);
-        color: var(--text-dim);
-        background: var(--bg-panel);
-        border: 1px solid var(--border);
-        padding: var(--sp-1) var(--sp-2);
-        cursor: pointer;
-      }
-      #key-select:focus {
-        outline: none;
-        border-color: var(--accent);
-      }
     </style>
   </head>
   <body>
@@ -432,7 +369,7 @@
       </label>
       <div id="key-nav">
         <span id="key-nav-label">Arrow Keys</span>
-        <select id="key-select" onchange="keyTarget = this.value" title="Arrow keys control which simulator">
+        <select id="key-select" class="ui-select" onchange="keyTarget = this.value" title="Arrow keys control which simulator">
           <option value="automaton">Automaton</option>
           <option value="tables">Tables</option>
           <option value="parsing">Parsing</option>
@@ -472,10 +409,10 @@
           <button class="algo-btn" id="btn-layout" onclick="toggleLayout()" title="Toggle automaton layout direction">&#8644; Horizontal</button>
         </div>
         <div class="panel-body">
-          <div id="automaton-header">
+          <div id="automaton-header" class="ui-sim">
             <div id="build-row">
                 <p>Simulate</p>
-              <div id="build-mode-row">
+              <div id="build-mode-row" class="ui-field">
                 <label><input type="radio" name="build-mode" value="coarse" checked onchange="setBuildMode('coarse')" /> Coarse steps</label>
                 <label><input type="radio" name="build-mode" value="fine" onchange="setBuildMode('fine')" /> Fine steps</label>
               </div>
@@ -488,10 +425,10 @@
                 </div>
               </div>
             </div>
-            <div id="cstep-log"></div>
+            <div id="cstep-log" class="ui-logbar"></div>
             <div id="error-msg"></div>
           </div>
-          <div class="automaton-container">
+          <div class="automaton-container ui-canvas">
             <svg id="cy" width="100%" height="100%">
               <defs>
                 <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
@@ -500,7 +437,7 @@
               </defs>
               <g id="root"></g>
             </svg>
-            <div id="empty-msg">Enter a grammar above</div>
+            <div id="empty-msg" class="ui-canvas__empty">Enter a grammar above</div>
           </div>
         </div>
       </div>
