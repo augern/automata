@@ -155,8 +155,9 @@ new work: if a tool needs a control, a status colour or a panel layout, add it
 to the kit and the shared files first; tool CSS should only contain what is
 unique to that tool (the TM tape, the PDA stack chips, panel widths).
 
-Migrated so far: the NFA, PDA and TM tools. The other tools still use their
-own CSS on top of `shared.css`.
+All eight tools now use the shared components. What remains in each tool's own
+CSS is specific to it: the LR item-set diagram and parse tables, the derivation
+chips, the TM tape and trace table, the regex DFA graph and pair table.
 
 ---
 

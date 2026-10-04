@@ -81,6 +81,29 @@
     </div>
   </div>
 
+  <h2>Log tokens and control bar</h2>
+  <p class="note">Inline spans for step logs and log bars, and the bar that holds step buttons under a log.</p>
+  <div class="demo flush">
+    <div style="padding: var(--sp-5); font-size: var(--fs-xs); line-height: 1.8">
+      <span class="lg-op">closure</span> added <span class="lg-item">E → · E + T</span> <span class="lg-seen">via E → · T</span> ·
+      <span class="lg-goto">goto</span>(I0, <b>E</b>) = I1 <span class="lg-new">[new]</span> ·
+      <span class="lg-op">reduce</span> <span class="lg-state">q3</span> on <span class="lg-sym">a</span> ·
+      <span class="lg-conf">conflict</span> · <span class="lg-del">A → ε</span> · <span class="lg-hl">highlight</span> ·
+      <span class="lg-dim">dim</span> · <span class="lg-done">done</span>
+    </div>
+    <div class="ui-controlbar"><span class="step-group"><button class="btn icon-restart"></button><button class="btn">&#8249; Back</button><button class="btn primary">Step &#8250;</button><button class="btn icon-run-all"></button></span></div>
+  </div>
+
+  <h2>Stepped table, tape, empty state</h2>
+  <div class="demo">
+    <table class="parse-table is-stepping" style="margin-bottom: var(--sp-5)"><thead><tr><th>NT</th><th>a</th><th>b</th><th>$</th></tr></thead>
+      <tbody><tr><td class="state-cell">S</td><td class="is-filled">0</td><td class="is-active">1</td><td></td></tr>
+      <tr><td class="state-cell">A</td><td class="is-filled">2</td><td></td><td class="is-active-goto">3</td></tr></tbody></table>
+    <div class="ui-tape" style="margin-bottom: var(--sp-5)"><div class="ui-tape__cell is-consumed">a</div><div class="ui-tape__cell is-current">b</div><div class="ui-tape__cell">a</div><span class="ui-tape__end">⊣</span></div>
+    <div class="row"><span class="ui-badge ui-badge--lg ui-badge--active">D0</span><span class="ui-badge ui-badge--lg ui-badge--accept">D3</span><span class="ui-badge ui-badge--lg ui-badge--reject">∅</span></div>
+    <div class="ui-empty">ui-empty: nothing to show yet.</div>
+  </div>
+
   <h2>Simulation header</h2>
   <div class="demo flush">
     <div class="ui-sim">
