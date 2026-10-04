@@ -8,16 +8,63 @@
 <script src="shared/theme.js?v=9222f18e"></script>
 <style>
 /* The tools are full-viewport apps (shared.css fixes body to 100vh and hides
-   overflow); this page is a normal document that scrolls. The auto margins on
-   the card and footer centre it when it fits and never clip it when it doesn't. */
+   overflow); this page is a normal document that scrolls. The default view is a map of the
+   tools on the Chomsky hierarchy; a plain list is the narrow-window fallback and one click away. */
 body {
-  display: flex; align-items: center; flex-direction: column; gap: 32px;
+  display: flex; align-items: center; flex-direction: column; gap: var(--sp-5);
   height: auto; min-height: 100vh; overflow-y: auto;
-  padding: 32px var(--sp-6);
+  padding: var(--sp-6);
   user-select: text;
+  font-family: var(--font-serif);
 }
-.index-card { margin-top: auto; }
-.footer { margin-bottom: auto; }
+header { text-align: center; max-width: 720px; }
+h1 { font-weight: normal; font-style: italic; font-size: var(--fs-xl); margin: 0 0 var(--sp-2); color: var(--text); }
+header p { margin: 0; font-size: var(--fs-md); line-height: 1.5; color: var(--text-dim); }
+header p.views { margin-top: var(--sp-3); font-size: var(--fs-xs); color: var(--text-lo); }
+a { color: var(--accent); }
+
+/* ── Which view is shown ── */
+body[data-view="map"] #view-list { display: none; }
+body[data-view="list"] #view-map { display: none; }
+@media (max-width: 720px) {
+  body #view-map, body .views { display: none; }
+  body[data-view="map"] #view-list { display: block; }
+}
+
+/* ── Map ── */
+#view-map { width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-5); }
+#map { width: 100%; height: auto; }
+.ring { stroke: var(--border-hi); stroke-width: 1.2; }
+/* Chomsky's four classes have solid outlines; the other classes inside them are dashed */
+.ring-sub { stroke-dasharray: 6 5; }
+/* each ring a little darker than the one around it */
+.ring-0 { fill: color-mix(in srgb, var(--text) 3%, var(--bg)); }
+.ring-1 { fill: color-mix(in srgb, var(--text) 6%, var(--bg)); }
+.ring-2 { fill: color-mix(in srgb, var(--text) 9%, var(--bg)); }
+.ring-3 { fill: color-mix(in srgb, var(--text) 12%, var(--bg)); }
+.ring-4 { fill: color-mix(in srgb, var(--text) 15%, var(--bg)); }
+.ring-5 { fill: color-mix(in srgb, var(--text) 18%, var(--bg)); }
+.ring-name { font-family: var(--font-serif); font-size: 15px; font-style: italic; fill: var(--text); }
+.ring-eg { font-family: var(--font-serif); font-size: 12px; fill: var(--text-dim); }
+
+.pill rect { fill: var(--bg); stroke: var(--accent); stroke-width: 1.2; transition: fill var(--dur) var(--ease); }
+.pill text { font-family: var(--font-serif); font-style: italic; font-size: 14px; fill: var(--accent); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.pill:hover rect, .pill:focus rect { fill: var(--accent-bg); }
+.pill:focus { outline: none; }
+.pill:focus rect { stroke-width: 2.4; }
+.pill { cursor: pointer; }
+.needs { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 5 4; pointer-events: none; }
+.needs-head { fill: var(--accent); stroke: none; }
+
+#info {
+  width: 100%; max-width: 720px; min-height: 5.2em; box-sizing: border-box;
+  padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border); background: var(--bg-panel);
+  font-size: var(--fs-md); line-height: 1.45; color: var(--text-dim);
+}
+#info b { font-weight: normal; font-style: italic; font-size: var(--fs-lg); color: var(--accent); }
+#info .needs-line { display: block; margin-top: var(--sp-2); font-style: italic; font-size: var(--fs-sm); color: var(--text-lo); }
+
+/* ── List ── */
 .index-card {
   background: var(--bg-panel);
   border: 1px solid var(--border);
@@ -25,23 +72,6 @@ body {
   max-width: 520px;
   width: 100%;
 }
-.index-card h1 {
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
-  font-weight: normal;
-  font-style: italic;
-  color: var(--text);
-  margin-bottom: var(--sp-3);
-}
-.index-card > p {
-  font-family: var(--font-serif);
-  font-size: var(--fs-md);
-  color: var(--text-dim);
-  line-height: 1.5;
-  margin-bottom: 28px;
-}
-.index-card > p.views { font-size: var(--fs-xs); color: var(--text-lo); margin: 0 0 var(--sp-4); }
-.views a { color: var(--accent); }
 .tool-group { margin-bottom: 22px; }
 .tool-group:last-child { margin-bottom: 0; }
 .group-label {
@@ -51,7 +81,6 @@ body {
   letter-spacing: .06em;
   text-transform: uppercase;
   margin-bottom: var(--sp-4);
-  padding-left: var(--sp-1);
 }
 .tool-links { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tool-link {
@@ -63,105 +92,173 @@ body {
   transition: border-color .15s, background .15s;
 }
 .tool-link:hover { border-color: var(--accent); background: var(--accent-bg); }
-.tool-link .tl-title {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: var(--fs-lg);
-  color: var(--accent);
-  margin-bottom: var(--sp-2);
-}
-.tool-link .tl-desc {
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  color: var(--text-dim);
-  font-family: var(--font-serif);
-}
-.tool-link .tl-needs {
-  margin-top: var(--sp-2);
-  font-family: var(--font-serif);
-  font-size: var(--fs-xs);
-  font-style: italic;
-  color: var(--text-lo);
-}
-.footer {
-  font-size: var(--fs-xs);
-  color: var(--text-lo);
-  font-family: var(--font-serif);
-  text-align: center;
-  max-width: 800px;
-}
+.tool-link .tl-title { font-style: italic; font-size: var(--fs-lg); color: var(--accent); margin-bottom: var(--sp-2); }
+.tool-link .tl-desc { font-size: var(--fs-sm); line-height: 1.4; color: var(--text-dim); }
+.tool-link .tl-needs { margin-top: var(--sp-2); font-size: var(--fs-xs); font-style: italic; color: var(--text-lo); }
+
+.footer { font-size: var(--fs-xs); color: var(--text-lo); text-align: center; max-width: 720px; }
+.footer p { margin: var(--sp-2) 0; }
 </style>
 </head>
-<body>
-<div class="index-card">
+<body data-view="map">
+<header>
   <h1>Automata and Parsing Tools</h1>
-  <p class="views">List view · <a href="map.html">Map view</a></p>
   <p>Interactive companions for the study of formal languages, automata and parsing.
-     Each tool exposes the stages of a classical construction or algorithm for
-     inspection and stepwise execution, and lets the reader test recognition of
-     input strings and examine the resulting derivations and parse trees.</p>
+     Each tool exposes the stages of a classical construction or algorithm for inspection and stepwise
+     execution, and lets the reader test recognition of input strings and examine the resulting
+     derivations and parse trees.</p>
+  <p class="views"><a href="#list" id="to-list">List view</a><a href="#map" id="to-map" hidden>Map view</a></p>
+</header>
 
-  <div class="tool-group">
-    <div class="group-label">Regular languages</div>
-    <div class="tool-links">
-      <a class="tool-link" href="tools/nfa/">
-        <span class="tl-title">NFA Simulator</span>
-        <span class="tl-desc">Nondeterministic finite automata with ε-transitions &nbsp;—&nbsp; transition table and state graph, and the computation tree of a nondeterministic run</span>
-        <span class="tl-needs">Builds on: the idea of a finite automaton (states, transitions, DFAs)</span>
-      </a>
-      <a class="tool-link" href="tools/regex/">
-        <span class="tl-title">Regular Expressions</span>
-        <span class="tl-desc">Thompson's construction, subset construction and DFA minimisation &nbsp;—&nbsp; the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition</span>
-        <span class="tl-needs">Builds on: NFA Simulator</span>
-      </a>
-    </div>
-  </div>
+<!-- Map view: the tools placed on the Chomsky hierarchy -->
+<section id="view-map" aria-label="Map of the tools">
+<svg id="map" viewBox="0 0 1000 540" role="group" aria-label="The tools placed on the Chomsky hierarchy">
+  <!-- Rings, outermost first. Solid: Chomsky's classes; dashed: subclasses of the context-free languages. -->
+  <rect class="ring ring-0" x="10"  y="10"  width="980" height="520" rx="64"/>
+  <rect class="ring ring-1" x="56"  y="66"  width="888" height="438" rx="54"/>
+  <rect class="ring ring-2" x="102" y="122" width="796" height="356" rx="46"/>
+  <rect class="ring ring-3 ring-sub" x="148" y="178" width="704" height="274" rx="38"/>
+  <rect class="ring ring-4 ring-sub" x="194" y="234" width="612" height="192" rx="30"/>
+  <rect class="ring ring-5" x="240" y="290" width="520" height="110" rx="22"/>
 
-  <div class="tool-group">
-    <div class="group-label">Context-free languages</div>
-    <div class="tool-links">
-      <a class="tool-link" href="tools/derivation/">
-        <span class="tl-title">Grammar Derivations</span>
-        <span class="tl-desc">Derivations in grammars of types 0, 1 and 2 &nbsp;—&nbsp; construct a derivation by choosing a production and the substring it rewrites, or sample one at random</span>
-        <span class="tl-needs">Builds on: context-free grammars</span>
-      </a>
-      <a class="tool-link" href="tools/grammar-rewrite/">
-        <span class="tl-title">Grammar Transformations</span>
-        <span class="tl-desc">Normalisation of context-free grammars &nbsp;—&nbsp; removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form</span>
-        <span class="tl-needs">Builds on: context-free grammars</span>
-      </a>
-      <a class="tool-link" href="tools/pda/">
-        <span class="tl-title">PDA Simulator</span>
-        <span class="tl-desc">Nondeterministic pushdown automata &nbsp;—&nbsp; transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations</span>
-        <span class="tl-needs">Builds on: NFA Simulator, Grammar Derivations</span>
-      </a>
-      <a class="tool-link" href="tools/ll1/">
-        <span class="tl-title">LL(1) Parser</span>
-        <span class="tl-desc">Top-down predictive parsing &nbsp;—&nbsp; computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree</span>
-        <span class="tl-needs">Builds on: Grammar Derivations; Grammar Transformations removes the left recursion LL(1) cannot handle</span>
-      </a>
-      <a class="tool-link" href="tools/lr/">
-        <span class="tl-title">LR Parser</span>
-        <span class="tl-desc">Bottom-up shift–reduce parsing &nbsp;—&nbsp; LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree</span>
-        <span class="tl-needs">Builds on: LL(1) Parser, NFA Simulator (the automaton of items)</span>
-      </a>
-    </div>
-  </div>
+  <!-- Ring names, each with an example language that belongs to it but not to the ring inside -->
+  <text x="40"  y="44"><tspan class="ring-name">Recursively enumerable · Type 0</tspan><tspan class="ring-eg" dx="12">e.g. the halting problem</tspan></text>
+  <text x="86"  y="100"><tspan class="ring-name">Context-sensitive · Type 1</tspan><tspan class="ring-eg" dx="12">e.g. aⁿbⁿcⁿ</tspan></text>
+  <text x="132" y="156"><tspan class="ring-name">Context-free · Type 2</tspan><tspan class="ring-eg" dx="12">e.g. palindromes wwᴿ</tspan></text>
+  <text x="178" y="212"><tspan class="ring-name">Deterministic context-free = LR(1)</tspan></text>
+  <text x="224" y="268"><tspan class="ring-name">LL(1)</tspan><tspan class="ring-eg" dx="12">e.g. aⁿbⁿ</tspan></text>
+  <text x="266" y="322"><tspan class="ring-name">Regular · Type 3</tspan><tspan class="ring-eg" dx="12">e.g. (a|b)*abb</tspan></text>
 
-  <div class="tool-group">
-    <div class="group-label">Recursively enumerable languages</div>
-    <div class="tool-links">
-      <a class="tool-link" href="tools/tm/">
-        <span class="tl-title">Turing Machine</span>
-        <span class="tl-desc">Deterministic single-tape Turing machines &nbsp;—&nbsp; transition function, tape and head, and stepwise execution of the computation</span>
-        <span class="tl-needs">Builds on: PDA Simulator</span>
-      </a>
-    </div>
-  </div>
-</div>
+  <!-- Tools: placed by the languages they work with; text and prerequisites come from TOOLS below -->
+  <a class="pill" id="t-tm" href="tools/tm/" tabindex="0"><rect x="790" y="19" width="170" height="34" rx="17"/><text x="875" y="36">Turing Machine</text></a>
+  <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="700" y="76" width="210" height="34" rx="17"/><text x="805" y="93">Grammar Derivations</text></a>
+  <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="652" y="132" width="214" height="34" rx="17"/><text x="759" y="149">Grammar Transformations</text></a>
+  <a class="pill" id="t-pda" href="tools/pda/" tabindex="0"><rect x="520" y="132" width="120" height="34" rx="17"/><text x="580" y="149">PDA Simulator</text></a>
+  <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="690" y="188" width="110" height="34" rx="17"/><text x="745" y="205">LR Parser</text></a>
+  <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="640" y="244" width="120" height="34" rx="17"/><text x="700" y="261">LL(1) Parser</text></a>
+  <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="262" y="344" width="150" height="34" rx="17"/><text x="337" y="361">NFA Simulator</text></a>
+  <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="430" y="344" width="190" height="34" rx="17"/><text x="525" y="361">Regular Expressions</text></a>
+
+  <defs><marker id="needs-arrow" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path class="needs-head" d="M0,0 L9,4 L0,8 z"/></marker></defs>
+  <g id="needs-layer"></g>
+</svg>
+<div id="info"><span id="info-body"></span></div>
+</section>
+
+<!-- List view: the same tools, grouped by language class and ordered by prerequisite -->
+<section id="view-list" aria-label="List of the tools"><div class="index-card" id="list-card"></div></section>
+
 <div class="footer">
-    <p>Developed by <em>August Ernstsson</em>, largely with the assistance of <em>Claude Code</em>.</p>
-    <p><b>These tools are experimental. Their correctness with respect to the course material is not guaranteed, and they should be used as a complement to, not a substitute for, the course literature.</b></p>
+  <p>Developed by <em>August Ernstsson</em>, largely with the assistance of <em>Claude Code</em>.</p>
+  <p><b>These tools are experimental. Their correctness with respect to the course material is not guaranteed, and they should be used as a complement to, not a substitute for, the course literature.</b></p>
 </div>
+
+<script>
+(function () {
+  // Every tool once: its page, a description, and what it builds on (`needs` are the arrows on the map).
+  const TOOLS = {
+    nfa: { href: "tools/nfa/", title: "NFA Simulator", group: "Regular languages", needs: [],
+      desc: "Nondeterministic finite automata with ε-transitions — transition table and state graph, and the computation tree of a nondeterministic run.",
+      builds: "the idea of a finite automaton (states, transitions, DFAs)" },
+    regex: { href: "tools/regex/", title: "Regular Expressions", group: "Regular languages", needs: ["nfa"],
+      desc: "Thompson's construction, subset construction and DFA minimisation — the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition.",
+      builds: "NFA Simulator" },
+    derivation: { href: "tools/derivation/", title: "Grammar Derivations", group: "Context-free languages", needs: [],
+      desc: "Derivations in grammars of types 0, 1 and 2 — construct a derivation by choosing a production and the substring it rewrites, or sample one at random.",
+      builds: "context-free grammars" },
+    rewrite: { href: "tools/grammar-rewrite/", title: "Grammar Transformations", group: "Context-free languages", needs: [],
+      desc: "Normalisation of context-free grammars — removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form.",
+      builds: "context-free grammars" },
+    pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages", needs: ["nfa", "derivation"],
+      desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
+      builds: "NFA Simulator, Grammar Derivations" },
+    ll1: { href: "tools/ll1/", title: "LL(1) Parser", group: "Context-free languages", needs: ["derivation", "rewrite"],
+      desc: "Top-down predictive parsing — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
+      builds: "Grammar Derivations; Grammar Transformations removes the left recursion LL(1) cannot handle" },
+    lr: { href: "tools/lr/", title: "LR Parser", group: "Context-free languages", needs: ["ll1", "nfa"],
+      desc: "Bottom-up shift–reduce parsing — LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree.",
+      builds: "LL(1) Parser, NFA Simulator (the automaton of items)" },
+    tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages", needs: ["pda"],
+      desc: "Deterministic single-tape Turing machines — transition function, tape and head, and stepwise execution of the computation.",
+      builds: "PDA Simulator" },
+  };
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+  // ── List view, built from TOOLS in prerequisite order ──
+  const card = document.getElementById("list-card");
+  let lastGroup = null, links = null;
+  for (const t of Object.values(TOOLS)) {
+    if (t.group !== lastGroup) {
+      const g = el("div", "tool-group");
+      g.appendChild(el("div", "group-label", t.group));
+      links = el("div", "tool-links");
+      g.appendChild(links);
+      card.appendChild(g);
+      lastGroup = t.group;
+    }
+    const a = el("a", "tool-link");
+    a.href = t.href;
+    a.append(el("span", "tl-title", t.title), el("span", "tl-desc", t.desc), el("span", "tl-needs", "Builds on: " + t.builds));
+    links.appendChild(a);
+  }
+
+  // ── Map: hover or focus a tool for its description and arrows from what it builds on ──
+  const SVG = "http://www.w3.org/2000/svg";
+  const layer = document.getElementById("needs-layer");
+  const body = document.getElementById("info-body");
+  const DEFAULT = "Each ring is a class of languages, each containing the ones inside it. Solid outlines are Chomsky's classes; dashed ones are subclasses of the context-free languages. A tool sits where the languages it works with live. Hover or focus a tool for details.";
+  body.textContent = DEFAULT;
+  const pill = (id) => document.getElementById("t-" + id);
+  const box = (a) => { const b = a.querySelector("rect").getBBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height }; };
+
+  function show(id) {
+    const t = TOOLS[id], to = pill(id);
+    body.innerHTML = "<b></b> — <span></span>" + (t.builds ? '<span class="needs-line"></span>' : "");
+    body.querySelector("b").textContent = t.title;
+    body.querySelector("span").textContent = t.desc;
+    if (t.builds) body.querySelector(".needs-line").textContent = "Builds on: " + t.builds;
+    layer.innerHTML = "";
+    for (const n of t.needs) {
+      const f = box(pill(n)), d = box(to);
+      let x1, y1, x2, y2, bend = 0;
+      if (Math.abs(f.y - d.y) < 20) {            // same band: edge to edge
+        const dir = d.x > f.x ? 1 : -1;
+        x1 = f.x + dir * f.w / 2; y1 = f.y; x2 = d.x - dir * d.w / 2; y2 = d.y; bend = -26;
+      } else if (f.y > d.y) {                    // from an inner ring, outwards to the pill
+        x1 = f.x; y1 = f.y - f.h / 2; x2 = d.x; y2 = d.y + d.h / 2;
+      } else {
+        x1 = f.x; y1 = f.y + f.h / 2; x2 = d.x; y2 = d.y - d.h / 2;
+      }
+      const path = document.createElementNS(SVG, "path");
+      path.setAttribute("class", "needs");
+      path.setAttribute("marker-end", "url(#needs-arrow)");
+      path.setAttribute("d", `M${x1},${y1} Q${(x1 + x2) / 2 + (bend ? 0 : 40)},${(y1 + y2) / 2 + bend} ${x2},${y2}`);
+      layer.appendChild(path);
+    }
+  }
+  function clear() { body.textContent = DEFAULT; layer.innerHTML = ""; }
+  for (const id of Object.keys(TOOLS)) {
+    const a = pill(id);
+    a.addEventListener("mouseenter", () => show(id));
+    a.addEventListener("focus", () => show(id));
+    a.addEventListener("mouseleave", clear);
+    a.addEventListener("blur", clear);
+  }
+
+  // ── Switching views; the choice is remembered, and a narrow window always gets the list ──
+  const toList = document.getElementById("to-list"), toMap = document.getElementById("to-map");
+  function setView(v, remember) {
+    document.body.dataset.view = v;
+    toList.hidden = v === "list";
+    toMap.hidden = v === "map";
+    if (remember) { try { localStorage.setItem("index-view", v); } catch (e) { /* private mode */ } }
+  }
+  let saved = null;
+  try { saved = localStorage.getItem("index-view"); } catch (e) { /* private mode */ }
+  setView(location.hash === "#list" ? "list" : location.hash === "#map" ? "map" : saved === "list" ? "list" : "map");
+  toList.addEventListener("click", (e) => { e.preventDefault(); setView("list", true); });
+  toMap.addEventListener("click", (e) => { e.preventDefault(); setView("map", true); });
+})();
+</script>
 </body>
 </html>

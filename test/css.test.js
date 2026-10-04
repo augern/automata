@@ -15,7 +15,7 @@ const stripComments = (c) => c.replace(/\/\*[\s\S]*?\*\//g, "");
 const stripStyle = (h) => h.replace(/<style>[\s\S]*?<\/style>/g, "");
 
 // Everything that can mention a class or id: page markup (without <style>) and all scripts.
-const pages = ["index.html", "map.html", "ui-kit.html", ...toolPages()];
+const pages = ["index.html", "ui-kit.html", ...toolPages()];
 const scripts = [...list("shared", ".js"), ...list("shared/algo", ".js")];
 const markupAndScripts = pages.map((p) => stripStyle(read(p))).concat(scripts.map((s) => read(s))).join("\n");
 

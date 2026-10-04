@@ -27,8 +27,7 @@ step-by-step algorithm visualisation with Back/Forward controls.
 
 ```
 parser-tools/
-├── index.html                          ← landing page
-├── map.html                            ← alternate front page: the tools placed on the Chomsky hierarchy (prototype)
+├── index.html                          ← landing page: the tools on a map of the Chomsky hierarchy, with a list view (the narrow-window fallback)
 ├── ui-kit.html                         ← living gallery of every shared UI component
 ├── tools/                              ← one directory per tool; everything exclusive to a tool lives in it
 │   ├── regex/                          ← regular expression → NFA → DFA → minimal DFA
