@@ -70,6 +70,7 @@ parser-tools/
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
 │   ├── view-menu.js                    ← the top bar's View menu (share, theme, layout presets)
+│   ├── guide.js                        ← the top bar's Guide button: per-tool "what it does / how to use it / notation / colours" pop-up (texts live in this file)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (parse tree,

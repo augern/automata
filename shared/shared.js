@@ -384,6 +384,7 @@ function _installKeyFocus() {
     if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (document.querySelector(".ui-menu")) return;
     if (typeof isAlgoModalOpen === "function" && isAlgoModalOpen()) return;
+    if (document.querySelector("#guide-overlay:not(.hidden)")) return;
     const action = stepperKeyAction(e);
     if (!action) return;
     e.preventDefault();
