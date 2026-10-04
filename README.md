@@ -67,7 +67,7 @@ parser-tools/
 │   ├── theme.js                        ← light/dark theme (system default, remembered toggle)
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
 │   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
-│   ├── automaton-graph.js              ← dagre/d3 state-diagram rendering for NFA/PDA/TM
+│   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
 │   ├── view-menu.js                    ← the top bar's View menu (share, theme, layout presets)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations

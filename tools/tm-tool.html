@@ -7,7 +7,7 @@
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../shared/shared.css?v=4957a13c" />
     <script src="../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../shared/ui.css?v=a9154cf7" />
+    <link rel="stylesheet" href="../shared/ui.css?v=87377938" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 460; --pmin: 340px; }
@@ -547,7 +547,7 @@ ${kw("loop")}:
           const isAccept = i === tmAcceptIdx;
           const isReject = i === tmRejectIdx;
           const isHalt = isAccept || isReject;
-          h += `<tr${isHalt ? ' class="is-muted"' : ""}>`;
+          h += `<tr data-si="${i}"${isHalt ? ' class="is-muted"' : ""}>`;
           h += T.rm(`removeState(${i})`, "Remove state");
           h += T.marker(`<input type="radio" name="tm-start" ${i === tmStartIdx ? "checked" : ""} onchange="setStart(${i})">`);
           h += T.marker(`<input type="radio" class="ui-radio--accept" name="tm-accept" ${isAccept ? "checked" : ""} onchange="setAccept(${i})">`);
@@ -980,12 +980,14 @@ ${kw("loop")}:
             if (ti === -1) continue;
             const label = tmEdgeLabel(sym, t.write, t.dir);
             if (fi === ti) {
-              if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [] });
+              if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], ids: [] });
               loopMap.get(fi).labels.push(label);
+              loopMap.get(fi).ids.push(tmStates[fi] + "|" + sym);
             } else {
               const k = `${fi}-${ti}`;
-              if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [] });
+              if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], ids: [] });
               edgeMap.get(k).labels.push(label);
+              edgeMap.get(k).ids.push(tmStates[fi] + "|" + sym);
             }
           }
         }
@@ -996,8 +998,28 @@ ${kw("loop")}:
           loops: [...loopMap.values()],
           radius: TM_R,
           ranksep: 64,
+          onHover: tmHoverEdges,
+          onNodeHover: tmHoverState,
         });
       }
+
+      // Hovering links the graph and the definition table: an edge or label <-> the table
+      // cell(s) of that transition, a node <-> its state cell.
+      function tmHoverEdges(ids) {
+        setGraphHot("tm", ids);
+        const want = new Set(ids || []);
+        for (const inp of document.querySelectorAll("#def-table-scroll input[data-sym]")) {
+          inp.closest("td").classList.toggle("is-hot", want.has(inp.dataset.state + "|" + (inp.dataset.sym === "_blank_" ? BLANK : inp.dataset.sym)));
+        }
+      }
+      function tmHoverState(i) {
+        setGraphNodeHot("tm", i);
+        for (const tr of document.querySelectorAll("#def-table-scroll tr[data-si]")) {
+          tr.querySelector(".ui-td--state").classList.toggle("is-hot", +tr.dataset.si === i);
+        }
+      }
+      UI.hoverItems("def-table-scroll", "input[data-sym]", (inp) => [inp.dataset.state + "|" + (inp.dataset.sym === "_blank_" ? BLANK : inp.dataset.sym)], tmHoverEdges);
+      UI.hoverItems("def-table-scroll", "td.ui-td--state", (td) => +td.parentElement.dataset.si, tmHoverState);
 
       function tmHighlightState(stateName) {
         const idx = tmStates.indexOf(stateName);

@@ -390,7 +390,9 @@
 
 /* A table row (or cell) linked to a hovered graph element; see UI.hoverItems */
 .ui-table tr.is-hot > td,
-.ui-table tr.is-hot .ui-cell:not(:focus) { background: var(--hot-bg); }
+.ui-table td.is-hot,
+.ui-table tr.is-hot .ui-cell:not(:focus),
+.ui-table td.is-hot .ui-cell:not(:focus) { background: var(--hot-bg); }
 
 /* Input cell: borderless input that fills the cell */
 .ui-cell {

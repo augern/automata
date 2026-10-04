@@ -7,7 +7,7 @@
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../shared/shared.css?v=4957a13c" />
     <script src="../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../shared/ui.css?v=a9154cf7" />
+    <link rel="stylesheet" href="../shared/ui.css?v=87377938" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 360; --pmin: 280px; }
@@ -344,7 +344,7 @@ else: ${kw("reject")}`
           const sn = nfaStates[i];
           const isStart = i === nfaStartIdx;
           const isAccept = nfaAccepts.has(i);
-          h += "<tr>";
+          h += `<tr data-si="${i}">`;
           h += T.rm(`removeState(${i})`, "Remove state");
           h += T.marker(`<input type="radio" name="nfa-start" ${isStart ? "checked" : ""} onchange="setStart(${i})">`);
           h += T.marker(`<input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)">`);
@@ -397,14 +397,15 @@ else: ${kw("reject")}`
               const isEps = sym === "ε";
               let e;
               if (fi === ti) {
-                if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], eps: true });
+                if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], ids: [], eps: true });
                 e = loopMap.get(fi);
               } else {
                 const k = fi + "-" + ti;
-                if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], eps: true });
+                if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], ids: [], eps: true });
                 e = edgeMap.get(k);
               }
               e.labels.push(sym);
+              e.ids.push(sn + "|" + sym);
               if (!isEps) e.eps = false;
             }
           }
@@ -417,8 +418,28 @@ else: ${kw("reject")}`
           radius: NFA_R,
           ranksep: 64,
           joinLabels: true,
+          onHover: nfaHoverEdges,
+          onNodeHover: nfaHoverState,
         });
       }
+
+      // Hovering links the graph and the definition table: an edge or label <-> the table
+      // cell(s) of that transition, a node <-> its state cell.
+      function nfaHoverEdges(ids) {
+        setGraphHot("nfa", ids);
+        const want = new Set(ids || []);
+        for (const inp of document.querySelectorAll("#def-table-scroll input[data-sym]")) {
+          inp.closest("td").classList.toggle("is-hot", want.has(inp.dataset.state + "|" + inp.dataset.sym));
+        }
+      }
+      function nfaHoverState(i) {
+        setGraphNodeHot("nfa", i);
+        for (const tr of document.querySelectorAll("#def-table-scroll tr[data-si]")) {
+          tr.querySelector(".ui-td--state").classList.toggle("is-hot", +tr.dataset.si === i);
+        }
+      }
+      UI.hoverItems("def-table-scroll", "input[data-sym]", (inp) => [inp.dataset.state + "|" + inp.dataset.sym], nfaHoverEdges);
+      UI.hoverItems("def-table-scroll", "td.ui-td--state", (td) => +td.parentElement.dataset.si, nfaHoverState);
 
       function nfaHighlightStates(activeSet, deadSet) {
         highlightAutomatonStates("nfa", activeSet, deadSet);
