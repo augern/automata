@@ -388,8 +388,7 @@
             </div>
             <div id="tc-log-bar" class="ui-logbar"></div>
           </div>
-          <div id="nfa-empty" class="ui-empty">Enter a regular expression and press Build.</div>
-          <div id="nfa-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
+          <div id="nfa-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden">
             <div class="nfa-summary" id="nfa-summary"></div>
             <div id="nfa-table-wrap"></div>
           </div>
@@ -675,15 +674,18 @@
       // DISPLAY
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // Table columns of a Thompson NFA: ε, then the input symbols in order.
+      function nfaColumns(trans) {
+        return [EPS, ...[...new Set(trans.filter((t) => t.sym !== EPS).map((t) => t.sym))].sort()];
+      }
+
       function renderNFA(nfa) {
         const { start, accept, trans } = nfa;
         const numStates = _nextState;
 
         // Collect input alphabet (symbols other than ε)
-        const alphabet = new Set();
-        for (const t of trans) if (t.sym !== EPS) alphabet.add(t.sym);
-        const alphaSorted = [...alphabet].sort();
-        const cols = [EPS, ...alphaSorted];
+        const cols = nfaColumns(trans);
+        const alphaSorted = cols.slice(1);
 
         // Build transition map: state → symbol → [target states]
         const tmap = {};
@@ -770,22 +772,33 @@
       function nfaBack() { nfaStepper.prev(); }
       function nfaRunAll() { nfaStepper.end(); }
       let _nfaFinal = null; // { start, accept, numStates } for "done" rendering
+      document.addEventListener("DOMContentLoaded", () => nfaRenderStep()); // header row from the start
 
       function nfaRenderStep() {
         const logEl = document.getElementById("tc-log-bar");
         const wrap = document.getElementById("nfa-table-wrap");
         const sumEl = document.getElementById("nfa-summary");
 
-        if (nfaStepper.pos < 0) {
+        // The header row is always complete: ε and every symbol of the finished NFA.
+        const finalCols = nfaColumns(_nfaFinal ? _nfaFinal.trans : []);
+        const header = () => {
+          const tbl = document.createElement("table");
+          tbl.className = "parse-table";
+          tbl.innerHTML = '<thead><tr><th class="state-col">State</th>' + finalCols.map((c) => "<th>" + esc(c) + "</th>").join("") + "</tr></thead>";
+          return tbl;
+        };
+
+        if (!_nfaSteps || nfaStepper.pos < 0) {
+          // Not started: the header only; states are added as they are created.
           logEl.innerHTML = "";
-          document.getElementById("nfa-content").style.display = "none";
-          document.getElementById("nfa-empty").style.display = "";
+          sumEl.innerHTML = _nfaSteps ? sumItem("states", "0 / " + _nextState) + sumItem("start (i)", "—") + sumItem("accept (f)", "—") + sumItem("transitions", 0) : "";
+          wrap.innerHTML = "";
+          const tbl = header();
+          tbl.appendChild(document.createElement("tbody"));
+          wrap.appendChild(tbl);
           nfaSetBtns();
           return;
         }
-
-        document.getElementById("nfa-empty").style.display = "none";
-        document.getElementById("nfa-content").style.display = "flex";
 
         const step = _nfaSteps[nfaStepper.pos];
         const isDone = nfaStepper.pos === _nfaSteps.length - 1;
@@ -811,10 +824,7 @@
         }
         const visSorted = [...visSet].sort((a, b) => a - b);
 
-        // Collect alphabet symbols so far
-        const alphabet = new Set();
-        for (const t of snapshot) if (t.sym !== EPS) alphabet.add(t.sym);
-        const cols = [EPS, ...[...alphabet].sort()];
+        const cols = finalCols;
 
         // Build transition map
         const tmap = {};
@@ -829,11 +839,7 @@
 
         // Transition table
         wrap.innerHTML = "";
-        const tbl = document.createElement("table");
-        tbl.className = "parse-table";
-        let hdr = '<thead><tr><th class="state-col">State</th>';
-        for (const c of cols) hdr += "<th>" + esc(c) + "</th>";
-        tbl.innerHTML = hdr + "</tr></thead>";
+        const tbl = header();
 
         const tb = document.createElement("tbody");
         for (const i of visSorted) {
@@ -1160,8 +1166,11 @@
           ({ nfa, steps } = buildNFAWithSteps(raw));
         } catch (e) {
           setError(e.message);
-          document.getElementById("nfa-empty").style.display = "";
-          document.getElementById("nfa-content").style.display = "none";
+          _nfaSteps = null;
+          _nfaFinal = null;
+          nfaStepper.pos = -1;
+          document.getElementById("tc-log-bar").innerHTML = "";
+          nfaRenderStep();
           return;
         }
 
@@ -1169,10 +1178,7 @@
         _nfaFinal = nfa;
         _nfaSteps = steps;
         nfaStepper.pos = -1;
-        document.getElementById("tc-log-bar").innerHTML = "";
-        document.getElementById("nfa-empty").style.display = "";
-        document.getElementById("nfa-content").style.display = "none";
-        nfaSetBtns();
+        nfaRenderStep();
 
         // Pre-compute DFA steps and reset the DFA stepper
         _scData = withSubsetHtml(subsetConstruct(nfa));
