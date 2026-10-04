@@ -12,7 +12,7 @@ const crypto = require("node:crypto");
 
 const root = path.join(__dirname, "..");
 const toolDirs = fs.readdirSync(path.join(root, "tools"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
-const pages = ["index.html", "ui-kit.html", ...toolDirs.map((d) => `tools/${d}/index.html`)];
+const pages = ["index.html", "map.html", "ui-kit.html", ...toolDirs.map((d) => `tools/${d}/index.html`)];
 
 function hashOf(file) {
   return crypto.createHash("sha1").update(fs.readFileSync(file)).digest("hex").slice(0, 8);
