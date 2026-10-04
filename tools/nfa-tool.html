@@ -525,8 +525,10 @@ else: ${kw("reject")}`
 
       // Clicking a node selects it and explains that configuration in #tree-info.
       let _selNode = null; // id of the selected node, or null
+      let _selPos = null;  // simulation step it was selected at: stepping or editing closes the explanation
       function selectConfig(id) {
         _selNode = _selNode === id ? null : id;
+        _selPos = sim.pos;
         simRender();
       }
       d3.select("#sim-tree-svg").on("click", () => { if (_selNode !== null) selectConfig(_selNode); });
@@ -561,6 +563,7 @@ else: ${kw("reject")}`
       UI.hoverItems("tree-info", "[data-cell]", (el) => [el.dataset.cell], nfaHoverEdges);
 
       function renderSimTree(vRoot, revealDepth, inputChars) {
+        if (_selNode !== null && sim.pos !== _selPos) _selNode = null;
         const svg  = document.getElementById("sim-tree-svg");
         const root = d3.select("#sim-tree-root");
         root.selectAll("*").remove();
