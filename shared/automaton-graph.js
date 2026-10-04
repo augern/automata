@@ -46,11 +46,11 @@ function createGraphView(prefix, { hasNodes = () => true, fallbackWidth = 340 } 
 function ensureArrowMarkers(svgSel, prefix) {
   if (!svgSel.select("defs").empty() && !svgSel.select("#" + prefix + "-arrow").empty()) return;
   const defs = svgSel.select("defs").empty() ? svgSel.insert("defs", ":first-child") : svgSel.select("defs");
-  for (const eps of [false, true]) {
+  for (const eps of [false, true, "hot"]) {
     defs.append("marker")
-      .attr("id", prefix + (eps ? "-arrow-eps" : "-arrow"))
+      .attr("id", prefix + (eps === "hot" ? "-arrow-hot" : eps ? "-arrow-eps" : "-arrow"))
       .attr("markerWidth", 8).attr("markerHeight", 8).attr("refX", 7).attr("refY", 3).attr("orient", "auto")
-      .append("path").attr("d", "M0,0 L0,6 L8,3 z").attr("class", "ag-arrowhead" + (eps ? " ag-arrowhead--eps" : ""));
+      .append("path").attr("d", "M0,0 L0,6 L8,3 z").attr("class", "ag-arrowhead" + (eps === "hot" ? " ag-arrowhead--hot" : eps ? " ag-arrowhead--eps" : ""));
   }
 }
 
@@ -64,12 +64,17 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 // Lay out and draw the graph described by spec:
 //   nodes: [{ label, accepting?, rejecting? }]   (node i has id "P-state-i")
 //   start: index of the start state
-//   edges: [{ from, to, labels: string[], eps?: boolean }]   non-self edges, one per (from, to)
-//   loops: [{ node, labels: string[], eps?: boolean }]       self-loops
+//   edges: [{ from, to, labels: string[], eps?: boolean, ids?: any[] }]   non-self edges, one per (from, to)
+//   loops: [{ node, labels: string[], eps?: boolean, ids?: any[] }]       self-loops
+//   onHover: (ids | null) => void   makes edges hoverable. `ids` is parallel to `labels`
+//     (one id per label, e.g. a rule number): hovering a label reports [its id], hovering
+//     the edge itself reports all of the edge's ids, leaving reports null. Show the
+//     result with setGraphHot(prefix, ids), which redraws the matching edges and labels
+//     on top, highlighted.
 //   radius (16), ranksep (64)
 //   joinLabels: true → one line "a, b, c"; false → one stacked line per label
 function drawAutomatonGraph(prefix, view, spec) {
-  const { nodes, start, edges, loops = [], radius: R = 16, ranksep = 64, joinLabels = false } = spec;
+  const { nodes, start, edges, loops = [], radius: R = 16, ranksep = 64, joinLabels = false, onHover } = spec;
   const root = d3.select("#" + prefix + "-graph-root");
   root.selectAll("*").remove();
 
@@ -88,16 +93,27 @@ function drawAutomatonGraph(prefix, view, spec) {
   const arrowFor = (eps) => "url(#" + prefix + (eps ? "-arrow-eps" : "-arrow") + ")";
   const edgeClass = (eps) => "ag-edge" + (eps ? " ag-edge--eps" : "");
 
-  // Label text: joined on one line, or stacked tspans centred on (x, y).
-  function addLabel(g, labels, x, y) {
+  // Label text: joined on one line, or one <text> per label stacked and centred on (x, y).
+  // With ids, each stacked label remembers its id and the edge group reports hovers.
+  function addLabel(g, labels, x, y, ids) {
     if (joinLabels) {
       g.append("text").attr("x", x).attr("y", y).attr("text-anchor", "middle").text(labels.join(", "));
       return;
     }
-    const textEl = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("text-anchor", "middle");
     labels.forEach((lbl, li) => {
-      textEl.append("tspan").attr("x", x).attr("dy", li === 0 ? 0 : "1.1em").text(lbl);
+      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", "middle").text(lbl);
+      if (ids) t.attr("data-k", li);
     });
+  }
+  // Make an edge group hoverable: a wide invisible path to hit, and the hover reports.
+  function makeHoverable(g, d, ids) {
+    if (!ids || !onHover) return;
+    g.node().__ids = ids;
+    g.insert("path", ":first-child").attr("class", "ag-hit").attr("d", d);
+    g.on("mouseover", (ev) => {
+      const t = ev.target.closest && ev.target.closest("[data-k]");
+      onHover(t ? [ids[+t.dataset.k]] : ids);
+    }).on("mouseleave", () => onHover(null));
   }
 
   const pathLine = d3.line().x((p) => p.x).y((p) => p.y).curve(d3.curveCatmullRom);
@@ -109,13 +125,14 @@ function drawAutomatonGraph(prefix, view, spec) {
     const mid = pts[Math.floor(pts.length / 2)];
     const eg = root.append("g").attr("class", edgeClass(e.eps)).attr("data-edge", e.from + "-" + e.to);
     eg.append("path").attr("d", pathLine(pts));
+    makeHoverable(eg, pathLine(pts), e.ids);
     if (pts.length >= 2) {
       const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
       eg.append("line")
         .attr("x1", p0.x).attr("y1", p0.y).attr("x2", p1.x).attr("y2", p1.y)
         .attr("stroke", "none").attr("marker-end", arrowFor(e.eps));
     }
-    addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4));
+    addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4), e.ids);
   }
 
   // Nodes paint over the ends of the ordinary edges.
@@ -149,11 +166,41 @@ function drawAutomatonGraph(prefix, view, spec) {
     const a = Math.PI / 5; // 36° either side of straight up
     const dx = R * Math.sin(a), y0 = dn.y - R * Math.cos(a), cx = dn.x;
     const eg = root.append("g").attr("class", edgeClass(lp.eps)).attr("data-self", lp.node);
-    eg.append("path")
-      .attr("d", `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`)
-      .attr("marker-end", arrowFor(lp.eps));
-    addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40));
+    const d = `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`;
+    eg.append("path").attr("d", d).attr("marker-end", arrowFor(lp.eps));
+    makeHoverable(eg, d, lp.ids);
+    addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40), lp.ids);
   }
 
   view.fit();
+}
+
+// Highlight graph edges and labels by id (see onHover in drawAutomatonGraph): copies of the
+// matching edge paths and labels are drawn in a top layer, so a highlighted label stays
+// readable where labels overlap. Pass null (or []) to clear.
+function setGraphHot(prefix, ids) {
+  const root = document.getElementById(prefix + "-graph-root");
+  if (!root) return;
+  const old = root.querySelector(":scope > .ag-hot");
+  if (old) old.remove();
+  if (!ids || !ids.length) return;
+  const want = new Set(ids);
+  const layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  layer.setAttribute("class", "ag-hot");
+  for (const g of root.querySelectorAll(".ag-edge")) {
+    const edgeIds = g.__ids;
+    if (!edgeIds || !edgeIds.some((id) => want.has(id))) continue;
+    for (const el of g.children) {
+      if (el.classList.contains("ag-hit")) continue;
+      if (el.tagName === "text") {
+        const k = el.dataset.k;
+        if (k !== undefined && !want.has(edgeIds[+k])) continue;
+      }
+      const c = el.cloneNode(true);
+      c.classList.add(el.tagName === "text" ? "ag-hot-label" : "ag-hot-path");
+      if (c.hasAttribute("marker-end")) c.setAttribute("marker-end", "url(#" + prefix + "-arrow-hot)");
+      layer.appendChild(c);
+    }
+  }
+  root.appendChild(layer);
 }

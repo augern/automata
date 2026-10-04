@@ -7,7 +7,7 @@
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../shared/shared.css?v=5dc913f7" />
     <script src="../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../shared/ui.css?v=4cccb336" />
+    <link rel="stylesheet" href="../shared/ui.css?v=2e9072dd" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 400; --pmin: 300px; }
@@ -190,7 +190,7 @@
     <script src="../shared/ui.js?v=598bdf1e"></script>
     <script src="../shared/view-menu.js?v=d1c37b50"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../shared/automaton-graph.js?v=adb3296f"></script>
+    <script src="../shared/automaton-graph.js?v=76ba70ff"></script>
     <script>
       initResize("rh-1", "p-def", +1);
       initResize("rh-2", "p-tree", -1);
@@ -364,7 +364,7 @@ else: ${kw("reject")}`
           const toValid   = pdaStates.includes(r.to)   || r.to   === "";
           const stateAttrs = ` data-trans-type="states" oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"`;
           const plainAttrs = ` oninput="onRuleFieldInput(this)"`;
-          h += "<tr>";
+          h += `<tr data-rule="${i}">`;
           h += T.rm(`removeRule(${i})`, "Remove rule");
           h += field(i, "from",  r.from,  stateAttrs, { invalid: !fromValid });
           h += field(i, "input", r.input, plainAttrs, { muted: true, size: "narrow" });
@@ -410,20 +410,22 @@ else: ${kw("reject")}`
         // One edge per (from, to) pair with one stacked label per rule; self-loops separately.
         const edgeMap = new Map(); // "fi-ti" → { from, to, labels[], eps }
         const loopMap = new Map(); // stateIdx → { node, labels[], eps }
-        for (const r of pdaRules) {
+        for (let ri = 0; ri < pdaRules.length; ri++) {
+          const r = pdaRules[ri];
           const fi = pdaStates.indexOf(r.from);
           const ti = pdaStates.indexOf(r.to);
           if (fi === -1 || ti === -1) continue;
           let e;
           if (fi === ti) {
-            if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], eps: true });
+            if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], ids: [], eps: true });
             e = loopMap.get(fi);
           } else {
             const k = fi + "-" + ti;
-            if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], eps: true });
+            if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], ids: [], eps: true });
             e = edgeMap.get(k);
           }
           e.labels.push(ruleLabel(r));
+          e.ids.push(ri);
           if (r.input !== "") e.eps = false;
         }
         drawAutomatonGraph("pda", pdaGraph, {
@@ -433,7 +435,35 @@ else: ${kw("reject")}`
           loops: [...loopMap.values()],
           radius: PDA_R,
           ranksep: 70,
+          onHover: pdaHover,
         });
+      }
+
+      // Hovering a rule anywhere highlights it everywhere: its edge and label in the graph,
+      // its row in the definition table, and the edges of the configuration tree it produced.
+      // `rules` is a list of rule indices, or null.
+      function pdaHover(rules) {
+        const set = new Set(rules || []);
+        setGraphHot("pda", rules);
+        for (const tr of document.querySelectorAll("#rules-table-wrap tr[data-rule]")) tr.classList.toggle("is-hot", set.has(+tr.dataset.rule));
+        for (const el of document.querySelectorAll("#tree-root [data-rules]")) el.classList.toggle("is-hot", el.dataset.rules.split(",").some((i) => set.has(+i)));
+      }
+      (function bindRuleRowHover() {
+        const wrap = document.getElementById("rules-table-wrap");
+        const rowRule = (e) => { const tr = e.target.closest && e.target.closest("tr[data-rule]"); return tr ? [+tr.dataset.rule] : null; };
+        wrap.addEventListener("mouseover", (e) => pdaHover(rowRule(e)));
+        wrap.addEventListener("mouseleave", () => pdaHover(null));
+        wrap.addEventListener("focusin", (e) => pdaHover(rowRule(e)));
+        wrap.addEventListener("focusout", () => pdaHover(null));
+      })();
+
+      // Rule indices that explain a configuration-tree edge (the rule moving parent to child).
+      function treeEdgeRules(parent, child) {
+        const out = [];
+        pdaRules.forEach((r, i) => {
+          if (r.from === parent.state && r.to === child.state && r.input === child.edgeInput && r.pop === child.edgePop && r.push === child.edgePush) out.push(i);
+        });
+        return out;
       }
 
       function pdaHighlightStates(activeSet) {
@@ -662,9 +692,14 @@ else: ${kw("reject")}`
           else if (st === "accept")               pc += " is-accept";
           else if (st === "dead" || st === "reject") pc += " is-dead";
 
+          const curve = `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+          const rules = treeEdgeRules(lnk.source.data, pd).join(",");
+          const hover = (sel) => { if (rules) sel.attr("data-rules", rules).on("mouseenter", () => pdaHover(rules.split(",").map(Number))).on("mouseleave", () => pdaHover(null)); return sel; };
           svgRoot.append("path")
             .attr("class", pc)
-            .attr("d", `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`);
+            .attr("d", curve)
+            .call(hover);
+          svgRoot.append("path").attr("class", "ct-hit").attr("d", curve).call(hover);
 
           const lbl = treeEdgeLabelStr(pd);
           if (lbl) {
@@ -677,6 +712,7 @@ else: ${kw("reject")}`
               .attr("class", lc)
               .attr("x", mx + 5).attr("y", my - 3)
               .attr("text-anchor", "start")
+              .call(hover)
               .text(lbl);
           }
         }
