@@ -769,7 +769,7 @@ else: ${kw("reject")}`
             Math.min((vw - pad) / (bb.width  + pad),
                      (vh - pad) / (bb.height + pad)));
           const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = pad;
+          const ty = pad / 2 - bb.y * sc; // top of the drawing (the entry arrow) sits pad/2 below the top edge
           d3.select("#tree-svg")
             .call(_pdaTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
         } catch (e) {}
