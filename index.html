@@ -84,20 +84,21 @@ body {
 <body>
 <div class="index-card">
   <h1>Automata and Parsing Tools</h1>
-  <p>Interactive visualisations for teaching formal language theory and parsing.
-     Step through automaton and table construction, simulate string recognition,
-     and grow parse trees.</p>
+  <p>Interactive companions for the study of formal languages, automata and parsing.
+     Each tool exposes the stages of a classical construction or algorithm for
+     inspection and stepwise execution, and lets the reader test recognition of
+     input strings and examine the resulting derivations and parse trees.</p>
 
   <div class="tool-group">
     <div class="group-label">Regular languages</div>
     <div class="tool-links">
       <a class="tool-link" href="tools/regex-tool.html">
         <span class="tl-title">Regular Expressions</span>
-        <span class="tl-desc">Thompson's construction &nbsp;—&nbsp; RE → NFA → DFA, step-by-step, string simulation</span>
+        <span class="tl-desc">Thompson's construction, subset construction and DFA minimisation &nbsp;—&nbsp; the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition</span>
       </a>
       <a class="tool-link" href="tools/nfa-tool.html">
         <span class="tl-title">NFA Simulator</span>
-        <span class="tl-desc">ε-NFA &nbsp;—&nbsp; editable transition table, NFA graph, nondeterministic simulation tree</span>
+        <span class="tl-desc">Nondeterministic finite automata with ε-transitions &nbsp;—&nbsp; transition table and state graph, and the computation tree of a nondeterministic run</span>
       </a>
     </div>
   </div>
@@ -107,23 +108,23 @@ body {
     <div class="tool-links">
       <a class="tool-link" href="tools/grammar-rewrite-tool.html">
         <span class="tl-title">Grammar Transformations</span>
-        <span class="tl-desc">Cleanup · ε-elimination · unit elimination · Chomsky Normal Form · left-recursion elimination</span>
+        <span class="tl-desc">Normalisation of context-free grammars &nbsp;—&nbsp; removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form</span>
       </a>
       <a class="tool-link" href="tools/derivation-tool.html">
         <span class="tl-title">Grammar Derivations</span>
-        <span class="tl-desc">Manual derivations &nbsp;—&nbsp; CFG · CSG · Type 0 &nbsp;—&nbsp; select a range, choose a rule, build the sentential form step by step</span>
+        <span class="tl-desc">Derivations in grammars of types 0, 1 and 2 &nbsp;—&nbsp; construct a derivation by choosing a production and the substring it rewrites, or sample one at random</span>
       </a>
       <a class="tool-link" href="tools/pda-tool.html">
         <span class="tl-title">PDA Simulator</span>
-        <span class="tl-desc">Nondeterministic PDA · ε-PDA &nbsp;—&nbsp; transition rule list, automaton graph, configuration-set simulation</span>
+        <span class="tl-desc">Nondeterministic pushdown automata &nbsp;—&nbsp; transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations</span>
       </a>
       <a class="tool-link" href="tools/ll1-tool.html">
         <span class="tl-title">LL(1) Parser</span>
-        <span class="tl-desc">Predictive parsing &nbsp;—&nbsp; FIRST/FOLLOW sets, predictive table, derivation steps, string simulation, parse tree</span>
+        <span class="tl-desc">Top-down predictive parsing &nbsp;—&nbsp; computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree</span>
       </a>
       <a class="tool-link" href="tools/lr-tool.html">
         <span class="tl-title">LR Parser</span>
-        <span class="tl-desc">LR(0) · SLR(1) · LALR(1) · LR(1) &nbsp;—&nbsp; characteristic automaton, ACTION/GOTO tables, string simulation, parse tree</span>
+        <span class="tl-desc">Bottom-up shift–reduce parsing &nbsp;—&nbsp; LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree</span>
       </a>
     </div>
   </div>
@@ -133,14 +134,14 @@ body {
     <div class="tool-links">
       <a class="tool-link" href="tools/tm-tool.html">
         <span class="tl-title">Turing Machine</span>
-        <span class="tl-desc">Deterministic TM &nbsp;—&nbsp; editable transition table, tape simulation, step-by-step execution</span>
+        <span class="tl-desc">Deterministic single-tape Turing machines &nbsp;—&nbsp; transition function, tape and head, and stepwise execution of the computation</span>
       </a>
     </div>
   </div>
 </div>
 <div class="footer">
-    <p>Made by <em>August Ernstsson</em> in large part using <em>Claude Code</em>.</p>
-    <p><b>These tools are experimental and not guaranteed to be correct representations of course theory material.</b></p>
+    <p>Developed by <em>August Ernstsson</em>, largely with the assistance of <em>Claude Code</em>.</p>
+    <p><b>These tools are experimental. Their correctness with respect to the course material is not guaranteed, and they should be used as a complement to, not a substitute for, the course literature.</b></p>
 </div>
 </body>
 </html>
