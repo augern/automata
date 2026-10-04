@@ -137,6 +137,20 @@
             "T' -> * F T' | eps",
             "F -> ( E ) | id"
           ]
+        },
+        {
+          "label": "Balanced parentheses",
+          "text": [
+            "// Terminals inside longer rules and a nullable start symbol",
+            "S -> ( S ) | S S | eps"
+          ]
+        },
+        {
+          "label": "Palindromes",
+          "text": [
+            "// Short and long rules mixed; ε and single terminals as alternatives",
+            "S -> a S a | b S b | a | b | eps"
+          ]
         }
       ]
     },

@@ -75,6 +75,114 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Counting",
+      "examples": [
+        {
+          "label": "aⁿb²ⁿ — push two symbols per a",
+          "states": ["q0", "q1", "q2"],
+          "start": "q0",
+          "accepts": ["q2"],
+          "initStack": "⊥",
+          "acceptMode": "final-state",
+          "strings": ["", "abb", "aabbbb", "ab", "abbb", "aabb"],
+          "rules": [
+            {"from": "q0", "input": "a", "pop": "⊥", "to": "q0", "push": "AA⊥"},
+            {"from": "q0", "input": "a", "pop": "A", "to": "q0", "push": "AAA"},
+            {"from": "q0", "input": "", "pop": "⊥", "to": "q2", "push": "⊥"},
+            {"from": "q0", "input": "b", "pop": "A", "to": "q1", "push": ""},
+            {"from": "q1", "input": "b", "pop": "A", "to": "q1", "push": ""},
+            {"from": "q1", "input": "", "pop": "⊥", "to": "q2", "push": "⊥"}
+          ]
+        },
+        {
+          "label": "Equal numbers of a's and b's, any order",
+          "states": ["q0", "q1"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "initStack": "⊥",
+          "acceptMode": "final-state",
+          "strings": ["", "ab", "ba", "abba", "aabb", "baab", "a", "aab", "abb"],
+          "rules": [
+            {"from": "q0", "input": "a", "pop": "⊥", "to": "q0", "push": "A⊥"},
+            {"from": "q0", "input": "a", "pop": "A", "to": "q0", "push": "AA"},
+            {"from": "q0", "input": "a", "pop": "B", "to": "q0", "push": ""},
+            {"from": "q0", "input": "b", "pop": "⊥", "to": "q0", "push": "B⊥"},
+            {"from": "q0", "input": "b", "pop": "B", "to": "q0", "push": "BB"},
+            {"from": "q0", "input": "b", "pop": "A", "to": "q0", "push": ""},
+            {"from": "q0", "input": "", "pop": "⊥", "to": "q1", "push": "⊥"}
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Determinism",
+      "examples": [
+        {
+          "label": "wcwᴿ — deterministic (compare palindromes)",
+          "states": ["q0", "q1", "q2"],
+          "start": "q0",
+          "accepts": ["q2"],
+          "initStack": "⊥",
+          "acceptMode": "final-state",
+          "strings": ["c", "aca", "abcba", "abbcbba", "abcab", "ab", "acb"],
+          "rules": [
+            {"from": "q0", "input": "a", "pop": "⊥", "to": "q0", "push": "A⊥"},
+            {"from": "q0", "input": "b", "pop": "⊥", "to": "q0", "push": "B⊥"},
+            {"from": "q0", "input": "a", "pop": "A", "to": "q0", "push": "AA"},
+            {"from": "q0", "input": "a", "pop": "B", "to": "q0", "push": "AB"},
+            {"from": "q0", "input": "b", "pop": "A", "to": "q0", "push": "BA"},
+            {"from": "q0", "input": "b", "pop": "B", "to": "q0", "push": "BB"},
+            {"from": "q0", "input": "c", "pop": "⊥", "to": "q1", "push": "⊥"},
+            {"from": "q0", "input": "c", "pop": "A", "to": "q1", "push": "A"},
+            {"from": "q0", "input": "c", "pop": "B", "to": "q1", "push": "B"},
+            {"from": "q1", "input": "a", "pop": "A", "to": "q1", "push": ""},
+            {"from": "q1", "input": "b", "pop": "B", "to": "q1", "push": ""},
+            {"from": "q1", "input": "", "pop": "⊥", "to": "q2", "push": "⊥"}
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Nesting",
+      "examples": [
+        {
+          "label": "Two kinds of brackets",
+          "states": ["q0", "q1"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "initStack": "⊥",
+          "acceptMode": "final-state",
+          "strings": ["", "()", "[]", "([])", "[()]", "([)]", "(()", "())", "()[]"],
+          "rules": [
+            {"from": "q0", "input": "(", "pop": "⊥", "to": "q0", "push": "P⊥"},
+            {"from": "q0", "input": "(", "pop": "P", "to": "q0", "push": "PP"},
+            {"from": "q0", "input": "(", "pop": "S", "to": "q0", "push": "PS"},
+            {"from": "q0", "input": "[", "pop": "⊥", "to": "q0", "push": "S⊥"},
+            {"from": "q0", "input": "[", "pop": "S", "to": "q0", "push": "SS"},
+            {"from": "q0", "input": "[", "pop": "P", "to": "q0", "push": "SP"},
+            {"from": "q0", "input": ")", "pop": "P", "to": "q0", "push": ""},
+            {"from": "q0", "input": "]", "pop": "S", "to": "q0", "push": ""},
+            {"from": "q0", "input": "", "pop": "⊥", "to": "q1", "push": "⊥"}
+          ]
+        },
+        {
+          "label": "Balanced parentheses — accept by empty stack",
+          "states": ["q0"],
+          "start": "q0",
+          "accepts": [],
+          "initStack": "⊥",
+          "acceptMode": "empty-stack",
+          "strings": ["", "()", "(())", "()()", "(", "())", ")("],
+          "rules": [
+            {"from": "q0", "input": "(", "pop": "⊥", "to": "q0", "push": "P⊥"},
+            {"from": "q0", "input": "(", "pop": "P", "to": "q0", "push": "PP"},
+            {"from": "q0", "input": ")", "pop": "P", "to": "q0", "push": ""},
+            {"from": "q0", "input": "", "pop": "⊥", "to": "q0", "push": ""}
+          ]
+        }
+      ]
     }
   ]
 }

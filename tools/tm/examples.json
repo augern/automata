@@ -23,6 +23,21 @@
             "qA": {},
             "qR": {}
           }
+        },
+        {
+          "label": "Even number of 1s",
+          "states": ["q0", "q1", "qA", "qR"],
+          "alphabet": ["0", "1"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "1", "11", "0110", "1011", "111"],
+          "trans": {
+            "q0": {"0": {"next": "q0", "write": "0", "dir": "R"}, "1": {"next": "q1", "write": "1", "dir": "R"}, "□": {"next": "qA", "write": "□", "dir": "R"}},
+            "q1": {"0": {"next": "q1", "write": "0", "dir": "R"}, "1": {"next": "q0", "write": "1", "dir": "R"}, "□": {"next": "qR", "write": "□", "dir": "R"}},
+            "qA": {},
+            "qR": {}
+          }
         }
       ]
     },
@@ -214,6 +229,41 @@
             "q2": {
               "1":  { "next": "qA", "write": "□",  "dir": "R" }
             },
+            "qA": {},
+            "qR": {}
+          }
+        },
+        {
+          "label": "Bit complement (flips every bit)",
+          "states": ["q0", "qA", "qR"],
+          "alphabet": ["0", "1"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "0", "1", "0110", "1010"],
+          "trans": {
+            "q0": {"0": {"next": "q0", "write": "1", "dir": "R"}, "1": {"next": "q0", "write": "0", "dir": "R"}, "□": {"next": "qA", "write": "□", "dir": "R"}},
+            "qA": {},
+            "qR": {}
+          }
+        }
+      ]
+    },
+    {
+      "label": "Halting",
+      "examples": [
+        {
+          "label": "Loops forever on odd length",
+          "states": ["q0", "q1", "qA", "qR"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accept": "qA",
+          "reject": "qR",
+          "strings": ["", "aa", "aaaa", "a", "aaa"],
+          "loops": ["a", "aaa"],
+          "trans": {
+            "q0": {"a": {"next": "q1", "write": "a", "dir": "R"}, "□": {"next": "qA", "write": "□", "dir": "R"}},
+            "q1": {"a": {"next": "q0", "write": "a", "dir": "R"}, "□": {"next": "q1", "write": "□", "dir": "R"}},
             "qA": {},
             "qR": {}
           }

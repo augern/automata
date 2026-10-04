@@ -60,6 +60,22 @@
             "E -> E + T | T",
             "T -> id"
           ]
+        },
+        {
+          "label": "Common prefix (needs left factoring)",
+          "text": [
+            "// Two alternatives begin with the same symbol: one symbol of lookahead cannot choose",
+            "// Fix: factor out the common beginning",
+            "S -> a b | a c"
+          ]
+        },
+        {
+          "label": "Dangling else (ambiguous)",
+          "text": [
+            "// The classic ambiguity: both alternatives of S begin with 'if E then S'",
+            "S -> if E then S | if E then S else S | other",
+            "E -> b"
+          ]
         }
       ]
     },
@@ -82,6 +98,40 @@
             "Term -> Factor Term'",
             "Term' -> * Factor Term' | eps",
             "Factor -> ( Expr ) | id | num"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Nullable symbols",
+      "examples": [
+        {
+          "label": "FIRST/FOLLOW with ε (nullable chain)",
+          "text": [
+            "// Every nonterminal after S can vanish: practice FIRST and FOLLOW with nullable symbols",
+            "S -> A B C",
+            "A -> a | eps",
+            "B -> b | eps",
+            "C -> c | eps"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Practical",
+      "examples": [
+        {
+          "label": "JSON-like values",
+          "text": [
+            "// Tokens are separated by spaces: { \"k\" : 1 , \"l\" : [ 1 , 2 ] }",
+            "value -> obj | arr | str | num | true | false | null",
+            "obj -> { pairs }",
+            "pairs -> pair pairs' | eps",
+            "pairs' -> , pair pairs' | eps",
+            "pair -> str : value",
+            "arr -> [ elems ]",
+            "elems -> value elems' | eps",
+            "elems' -> , value elems' | eps"
           ]
         }
       ]

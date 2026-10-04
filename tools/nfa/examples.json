@@ -1,6 +1,23 @@
 {
   "groups": [
     {
+      "label": "Basics",
+      "examples": [
+        {
+          "label": "Even number of a's — a deterministic automaton is an NFA too",
+          "states": ["q0", "q1"],
+          "alphabet": ["a", "b"],
+          "start": "q0",
+          "accepts": ["q0"],
+          "strings": ["", "b", "aa", "abab", "a", "aba", "bab"],
+          "trans": {
+            "q0": {"a": ["q1"], "b": ["q0"], "ε": []},
+            "q1": {"a": ["q0"], "b": ["q1"], "ε": []}
+          }
+        }
+      ]
+    },
+    {
       "label": "Nondeterminism",
       "examples": [
         {
@@ -92,6 +109,40 @@
             "q2": { "a": ["q2"],  "b": [],      "ε": ["q1"] },
             "q3": { "a": [],      "b": ["q4"],  "ε": [] },
             "q4": { "a": [],      "b": ["q4"],  "ε": ["q3"] }
+          }
+        }
+      ]
+    },
+    {
+      "label": "Several paths",
+      "examples": [
+        {
+          "label": "Many accepting paths for one string",
+          "states": ["q0", "q1"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accepts": ["q0", "q1"],
+          "strings": ["", "a", "aa", "aaa"],
+          "trans": {
+            "q0": {"a": ["q0", "q1"], "ε": []},
+            "q1": {"a": ["q1"], "ε": []}
+          }
+        }
+      ]
+    },
+    {
+      "label": "Concatenation via ε",
+      "examples": [
+        {
+          "label": "a*b* — concatenation via ε",
+          "states": ["q0", "q1"],
+          "alphabet": ["a", "b"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "strings": ["", "a", "b", "aabb", "ba", "aba"],
+          "trans": {
+            "q0": {"a": ["q0"], "b": [], "ε": ["q1"]},
+            "q1": {"a": [], "b": ["q1"], "ε": []}
           }
         }
       ]

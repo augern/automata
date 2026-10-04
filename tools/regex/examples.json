@@ -18,6 +18,21 @@
         { "label": "a(b|c)*d",           "text": "a(b|c)*d" },
         { "label": "(0|1|...|9)+",       "text": "(0|1|2|3|4|5|6|7|8|9)+" }
       ]
+    },
+    {
+      "label": "Properties",
+      "examples": [
+        {"label": "3rd from last is a — DFA blow-up", "text": "(a|b)*a(a|b)(a|b)"},
+        {"label": "(a*b*)* — same language as (a|b)*", "text": "(a*b*)*"},
+        {"label": "Even number of a's", "text": "b*(ab*ab*)*"}
+      ]
+    },
+    {
+      "label": "Practical",
+      "examples": [
+        {"label": "Signed binary number", "text": "(\\+|-)?(0|1)+"},
+        {"label": "Identifier (letters a, b; digits 0, 1)", "text": "(a|b)(a|b|0|1)*"}
+      ]
     }
   ]
 }

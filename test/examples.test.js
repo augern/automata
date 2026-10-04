@@ -99,12 +99,25 @@ test("PDA examples: every sample string runs", () => {
   }
 });
 
-test("TM examples: sample strings halt within the step limit", () => {
+test("TM examples: sample strings halt within the step limit, except those an example lists in `loops`", () => {
   for (const ex of examples("tm")) {
     const tm = { states: ex.states, start: ex.states.indexOf(ex.start), accept: ex.states.indexOf(ex.accept), reject: ex.states.indexOf(ex.reject), trans: ex.trans };
+    const loops = new Set(ex.loops || []);
     for (const s of ex.strings || []) {
       const res = A.tmRun(tm, s);
-      assert.notEqual(res.outcome, "limit", `${ex.label} did not halt on "${s}"`);
+      if (loops.has(s)) assert.equal(res.outcome, "limit", `${ex.label} should loop on "${s}"`);
+      else assert.notEqual(res.outcome, "limit", `${ex.label} did not halt on "${s}"`);
     }
+    for (const s of loops) assert.ok((ex.strings || []).includes(s), `${ex.label}: loops lists "${s}", which is not a sample string`);
+  }
+});
+
+test("new example kinds: every sample string of a PDA/NFA example gets a boolean verdict, and conflict examples conflict", () => {
+  const ll = examples("ll1").filter((e) => e.group === "Non-LL(1)");
+  assert.ok(ll.length >= 3);
+  for (const ex of ll) {
+    const g = A.parseBNF(textOf(ex));
+    const first = A.computeFirst(g);
+    assert.ok(A.buildLL1Table(g, first, A.computeFollow(g, first)).conflicts.length > 0, `${ex.label} should not be LL(1)`);
   }
 });

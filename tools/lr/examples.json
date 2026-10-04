@@ -159,6 +159,31 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Recursion",
+      "examples": [
+        {
+          "label": "Right-recursive list (stack grows)",
+          "text": [
+            "// Compare with the left-recursive comma-separated list: here the stack holds the whole list",
+            "S -> L",
+            "L -> x , L | x"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Beyond LR",
+      "examples": [
+        {
+          "label": "Even palindromes (not deterministic)",
+          "text": [
+            "// No LR(k) grammar exists: a PDA needs to guess the middle (see the PDA tool)",
+            "S -> a S a | b S b | eps"
+          ]
+        }
+      ]
     }
   ]
 }
