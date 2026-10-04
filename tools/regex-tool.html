@@ -1030,10 +1030,12 @@
       function mcBack() { mcStepper.prev(); }
       function mcRunAll() { mcStepper.end(); }
       let _minEnabled = true;  // when false, skip min and use raw _scData
+      let _minDone = false;    // the minimization stepper has reached its result
 
-      // Returns whichever scData should drive graph + simulation.
+      // Returns whichever scData should drive graph + simulation: the subset-construction DFA
+      // until minimization has actually been carried out (and unless it is skipped).
       function activeScData() {
-        return (_minEnabled && _minData) ? _minData : _scData;
+        return (_minEnabled && _minData && _minDone) ? _minData : _scData;
       }
 
       // Renders the triangular pair table into #min-table-wrap.
@@ -1091,6 +1093,8 @@
 
       function mcRenderStep() {
         if (!_minData) { mcSetBtns(); return; }
+        const done = mcStepper.pos === _minData.steps.length - 1;
+        if (done !== _minDone) { _minDone = done; refreshActiveDFA(); }
         const { steps, n, origN, DEAD, groups: finalGroups, alreadyMinimal } = _minData;
         const step = mcStepper.pos >= 0 ? steps[mcStepper.pos] : null;
 
@@ -1127,7 +1131,7 @@
             const item  = document.createElement("div");
             item.className = "min-group-item";
             item.innerHTML =
-              '<span class="lg-state">D' + newSt + "</span>" +
+              '<span class="lg-state">M' + newSt + "</span>" +
               (isAcc ? ' <span class="lg-new">*</span>' : "") +
               "  ← {" + g.map(s => "D" + s).join(", ") + "}";
             groupsEl.appendChild(item);
@@ -1144,6 +1148,11 @@
         btn.textContent = _minEnabled ? "Apply ✓" : "Skip ○";
         btn.classList.toggle("active",   _minEnabled);
         btn.classList.toggle("inactive", !_minEnabled);
+        refreshActiveDFA();
+      }
+
+      // The graph, example strings and simulation follow whichever DFA is active.
+      function refreshActiveDFA() {
         if (!_scData) return;
         const d = activeScData();
         renderDFA(d);
@@ -1188,6 +1197,7 @@
 
         // Compute minimization and reset the min stepper
         _minData = withMinHtml(minimizeDFA(_scData));
+        _minDone = false;
         mcStepper.pos = -1;
         document.getElementById("mc-log-bar").innerHTML = "";
         mcRenderStep(); // shows blank pair table at pos = -1
@@ -1233,7 +1243,7 @@
           e.ids.push(t.from + "|" + t.sym);
         }
         drawAutomatonGraph("dfa", dfaGraph, {
-          nodes: dfaStates.map((_, i) => ({ label: "D" + i, accepting: dfaAccepts.has(i) })),
+          nodes: dfaStates.map((_, i) => ({ label: simName(i), accepting: dfaAccepts.has(i) })),
           start: 0,
           edges: [...edgeMap.values()],
           loops: [...loopMap.values()],
@@ -1247,7 +1257,10 @@
       // Hovering links the DFA graph and the subset-construction table. The graph shows the
       // minimal DFA when minimisation is applied, whose states are groups of the table's
       // states; these map between the two numberings.
-      const dfaMinimised = () => _minEnabled && _minData;
+      const dfaMinimised = () => _minEnabled && _minData && _minDone;
+      // The states of the automaton the graph and simulation use: D0, D1, … from subset construction,
+      // M0, M1, … for the minimal DFA, so the two numberings are never confused.
+      const simName = (i) => (dfaMinimised() ? "M" : "D") + i;
       function graphStateOf(o) {
         if (!dfaMinimised()) return o;
         const gi = _minData.groups.findIndex((g) => g.includes(o));
@@ -1356,7 +1369,7 @@
           pos: 0,
           sym: null,
           prevState: null,
-          logHtml: '<span class="lg-op">Start</span>  state <span class="lg-state">D0</span>' + '  input <span class="lg-sym">' + (chars.length === 0 ? "ε" : escHtml(input)) + "</span>",
+          logHtml: '<span class="lg-op">Start</span>  state <span class="lg-state">' + simName(0) + '</span>' + '  input <span class="lg-sym">' + (chars.length === 0 ? "ε" : escHtml(input)) + "</span>",
         });
 
         let state = 0;
@@ -1370,7 +1383,7 @@
               pos: i + 1,
               sym: a,
               prevState: prev,
-              logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>" + "  D" + prev + ' &#8594; <span style="color:var(--red)">dead</span>' + '  <span class="lg-dim">(no transition on ' + escHtml(a) + ")</span>",
+              logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>" + "  " + simName(prev) + ' &#8594; <span style="color:var(--red)">dead</span>' + '  <span class="lg-dim">(no transition on ' + escHtml(a) + ")</span>",
             });
             state = -1;
             break;
@@ -1381,7 +1394,7 @@
             pos: i + 1,
             sym: a,
             prevState: prev,
-            logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>" + "  D" + prev + ' &#8594; <span class="lg-state">D' + state + "</span>",
+            logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>" + "  " + simName(prev) + ' &#8594; <span class="lg-state">' + simName(state) + "</span>",
           });
         }
 
@@ -1394,7 +1407,7 @@
           prevState: null,
           final: true,
           accepted,
-          logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>' + "  &#8212; D" + state + " is an accepting state" : '<span style="color:var(--red);font-weight:bold">REJECT</span>' + "  &#8212; " + (state === -1 ? "no transition (dead)" : "D" + state + " is not an accepting state"),
+          logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>' + "  &#8212; " + simName(state) + " is an accepting state" : '<span style="color:var(--red);font-weight:bold">REJECT</span>' + "  &#8212; " + (state === -1 ? "no transition (dead)" : simName(state) + " is not an accepting state"),
         });
 
         return { steps, chars };
@@ -1419,7 +1432,7 @@
         // State badge
         const badge = document.getElementById("sim-state-badge");
         badge.className = "ui-badge ui-badge--lg ui-badge--" + (step.final ? (step.accepted ? "accept" : "reject") : "active");
-        badge.textContent = step.state === -1 ? "∅" : "D" + step.state;
+        badge.textContent = step.state === -1 ? "∅" : simName(step.state);
 
         // Tape
         const tape = document.getElementById("sim-tape");

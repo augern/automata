@@ -115,13 +115,13 @@
   <!-- 2. Step log -->
   <div class="panel" id="p-main" data-priority="3">
     <div class="panel-header">
-      <span class="panel-title" id="main-title">ε-Production Elimination</span>
+      <span class="panel-title" id="main-title">Grammar Cleanup</span>
       <button class="algo-btn" id="btn-algo" onclick="openAlgoModal()" title="Algorithm for the current sub-tool">Algorithm</button>
       <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-main');">&#8250;</button>
     </div>
     <div class="panel-body" style="display:flex;flex-direction:column;overflow:hidden;">
       <div id="step-area">
-        <div id="step-empty" class="ui-empty">Build a grammar, then step through the algorithm.</div>
+        <div id="step-empty" class="ui-empty"></div>
         <div id="step-log"></div>
       </div>
       <div id="step-controls" class="ui-controlbar">
@@ -223,8 +223,18 @@ const MODE_TITLES = {
   lre:   'Left-Recursion Elimination',
 };
 
+// What each transformation does, shown until the first step is taken.
+const MODE_INTRO = {
+  clean: 'Removes symbols that can never take part in deriving a word: first the unproductive nonterminals (those that derive no terminal string), then the unreachable ones (those not reachable from the start symbol). Press Step to begin.',
+  eps:   'Removes ε-productions (A → ε) without changing the language: it finds the nullable nonterminals, then adds a copy of each rule for every way of leaving nullable symbols out. Press Step to begin.',
+  unit:  'Removes unit productions (A → B): it finds which nonterminals each one can reach through chains of unit rules, then gives it all the non-unit rules of those. Press Step to begin.',
+  cnf:   'Converts the grammar to Chomsky normal form, where every rule is A → B C or A → a. It first runs cleanup, ε-elimination and unit elimination, then replaces terminals inside longer rules by new nonterminals and splits long right-hand sides. Press Step to begin.',
+  lre:   'Removes left recursion (A → A α), which top-down parsers such as LL(1) cannot handle: indirect recursion is first made direct, then each directly recursive nonterminal is rewritten with a new helper nonterminal. Press Step to begin.',
+};
+
 function setMode(m) {
   currentMode = m;
+  document.getElementById('step-empty').textContent = MODE_INTRO[m];
   ['clean','eps','unit','cnf','lre'].forEach(mm => {
     document.getElementById('btn-mode-' + mm).classList.toggle('active', mm === m);
   });
@@ -609,7 +619,9 @@ window.onerror = function(msg, src, line, col, err) {
 window.addEventListener('load', () => {
   loadPanelState();
   initAlgoModal();
-  try { const m = localStorage.getItem(MODE_KEY); if (m && MODE_TITLES[m]) setMode(m); } catch(e) {}
+  let startMode = 'clean';
+  try { const m = localStorage.getItem(MODE_KEY); if (m && MODE_TITLES[m]) startMode = m; } catch(e) {}
+  setMode(startMode); // also sets the panel title and intro text, so they always match the active button
   applyShareState();
   loadExamplesInto('../examples/examples-grammar-rewrite.json', 'examples-select', EXAMPLES, () => {
     if (!document.getElementById('grammar-input').value.trim()) {

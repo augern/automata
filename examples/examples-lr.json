@@ -1,36 +1,6 @@
 {
   "groups": [
     {
-      "label": "Expressions",
-      "examples": [
-        {
-          "label": "Arithmetic",
-          "text": [
-            "// Classic arithmetic — LR(0) parseable",
-            "E -> E + T | T",
-            "T -> T * F | F",
-            "F -> id"
-          ]
-        },
-        {
-          "label": "Arithmetic + parens",
-          "text": [
-            "// Arithmetic with parentheses",
-            "E -> E + T | T",
-            "T -> T * F | F",
-            "F -> ( E ) | id"
-          ]
-        },
-        {
-          "label": "Balanced parentheses",
-          "text": [
-            "// Balanced parentheses",
-            "S -> ( S ) S | eps"
-          ]
-        }
-      ]
-    },
-    {
       "label": "Structures",
       "examples": [
         {
@@ -57,6 +27,36 @@
             "D -> T id ;",
             "D -> T id [ num ] ;",
             "T -> int | float | bool"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Expressions",
+      "examples": [
+        {
+          "label": "Arithmetic",
+          "text": [
+            "// Classic arithmetic — LR(0) parseable",
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> id"
+          ]
+        },
+        {
+          "label": "Arithmetic + parens",
+          "text": [
+            "// Arithmetic with parentheses",
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> ( E ) | id"
+          ]
+        },
+        {
+          "label": "Balanced parentheses",
+          "text": [
+            "// Balanced parentheses",
+            "S -> ( S ) S | eps"
           ]
         }
       ]

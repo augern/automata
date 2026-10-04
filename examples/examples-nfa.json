@@ -1,35 +1,6 @@
 {
   "groups": [
     {
-      "label": "ε-moves",
-      "examples": [
-        {
-          "label": "ε* (ε-loop)",
-          "states": ["q0", "q1"],
-          "alphabet": ["a"],
-          "start": "q0",
-          "accepts": ["q1"],
-          "strings": ["", "a", "aa"],
-          "trans": {
-            "q0": { "a": [], "ε": ["q1"] },
-            "q1": { "a": [], "ε": ["q0"] }
-          }
-        },
-        {
-          "label": "a? (zero or one a)",
-          "states": ["q0", "q1"],
-          "alphabet": ["a"],
-          "start": "q0",
-          "accepts": ["q1"],
-          "strings": ["", "a", "aa", "aaa"],
-          "trans": {
-            "q0": { "a": ["q1"], "ε": ["q1"] },
-            "q1": { "a": [],     "ε": [] }
-          }
-        }
-      ]
-    },
-    {
       "label": "Nondeterminism",
       "examples": [
         {
@@ -72,6 +43,35 @@
             "q2": { "a": ["q3"],       "b": ["q3"], "ε": [] },
             "q3": { "a": ["q4"],       "b": ["q4"], "ε": [] },
             "q4": { "a": [],           "b": [],     "ε": [] }
+          }
+        }
+      ]
+    },
+    {
+      "label": "ε-moves",
+      "examples": [
+        {
+          "label": "ε* (ε-loop)",
+          "states": ["q0", "q1"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "strings": ["", "a", "aa"],
+          "trans": {
+            "q0": { "a": [], "ε": ["q1"] },
+            "q1": { "a": [], "ε": ["q0"] }
+          }
+        },
+        {
+          "label": "a? (zero or one a)",
+          "states": ["q0", "q1"],
+          "alphabet": ["a"],
+          "start": "q0",
+          "accepts": ["q1"],
+          "strings": ["", "a", "aa", "aaa"],
+          "trans": {
+            "q0": { "a": ["q1"], "ε": ["q1"] },
+            "q1": { "a": [],     "ε": [] }
           }
         }
       ]
