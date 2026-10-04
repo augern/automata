@@ -188,7 +188,7 @@
     <script src="../shared/algo/pda.js?v=f367700e"></script>
     <script src="../shared/shared.js?v=583a8d75"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
-    <script src="../shared/ui.js?v=0ba49cea"></script>
+    <script src="../shared/ui.js?v=dd81c4e8"></script>
     <script src="../shared/view-menu.js?v=d1c37b50"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../shared/automaton-graph.js?v=c6dd1ec4"></script>
@@ -657,8 +657,7 @@ else: ${kw("reject")}`
       const cfgTriple = (e) => `(${e.state}, ${e.remaining || "ε"}, ${e.stack.join("") || "ε"})`;
 
       function renderTreeInfo(pd, ctx) {
-        const box = document.getElementById("tree-info");
-        if (!pd) { box.hidden = true; box.innerHTML = ""; return; }
+        if (!pd) { UI.explain("tree-info", null); return; }
         const e = pdaExplainConfig(currentPDA(), _simChars, pd, ctx);
         const stateIdx = pdaStates.indexOf(e.state);
         const tags = (stateIdx === pdaStartIdx ? " <span class=\"ui-explain__tag\">start state</span>" : "") +
@@ -675,18 +674,16 @@ else: ${kw("reject")}`
           const acts = [a.input === "" ? "no input symbol read (an ε-move)" : `read ${esc(a.input)}`, a.pop === "" ? "popped nothing" : `popped ${esc(a.pop)}`, a.push === "" ? "pushed nothing" : `pushed ${esc(a.push)}`];
           arrival = `From <b>${esc(cfgTriple({ state: a.fromState, remaining: _simChars.slice(pd.parent.symDepth).join(""), stack: a.fromStack }))}</b> by${link}: ${acts.join(", ")}.`;
         }
-        box.innerHTML =
-          `<div class="ui-explain__head"><span class="ui-explain__title">Configuration ${esc(cfgTriple(e))}</span>` +
-          `<button class="ui-explain__close" onclick="selectConfig(${pd.id})" title="Close" aria-label="Close explanation">×</button></div>` +
-          `<dl class="ui-explain__facts">` +
-          `<dt>State</dt><dd>${esc(e.state)}${tags}</dd>` +
-          `<dt>Input</dt><dd><span class="ui-explain__done">${esc(e.consumed)}</span><span class="ui-explain__cursor">▏</span>${e.remaining ? esc(e.remaining) : "<i>all read</i>"}</dd>` +
-          `<dt>Stack</dt><dd>${e.stack.length ? esc(e.stack.join(" ")) : "<i>empty</i>"} <span class="ui-explain__hint">(top at left)</span></dd>` +
-          `</dl>` +
-          `<p class="ui-explain__line">${arrival}</p>` +
-          `<p class="ui-explain__line"><span class="ui-explain__role ui-explain__role--${e.role}">${roleLabel}:</span> ${esc(e.why)}` +
-          (e.onAcceptPath && e.role !== "accepted" ? " It lies on an accepting path." : "") + `</p>`;
-        box.hidden = false;
+        UI.explain("tree-info", {
+          title: "Configuration " + cfgTriple(e),
+          onClose: () => selectConfig(pd.id),
+          facts: [
+            ["State", esc(e.state) + tags],
+            ["Input", `<span class="ui-explain__done">${esc(e.consumed)}</span><span class="ui-explain__cursor">▏</span>${e.remaining ? esc(e.remaining) : "<i>all read</i>"}`],
+            ["Stack", `${e.stack.length ? esc(e.stack.join(" ")) : "<i>empty</i>"} <span class="ui-explain__hint">(top at left)</span>`],
+          ],
+          lines: [arrival, UI.explainRole(e.role, roleLabel) + " " + esc(e.why) + (e.onAcceptPath && e.role !== "accepted" ? " It lies on an accepting path." : "")],
+        });
       }
       UI.hoverItems("tree-info", "[data-rule]", (el) => [+el.dataset.rule], pdaHover);
 

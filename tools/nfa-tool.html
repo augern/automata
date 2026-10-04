@@ -149,6 +149,7 @@
             </svg>
             <div id="sim-tree-empty" class="ui-canvas__empty">Define an NFA and enter a string to simulate.</div>
           </div>
+          <div id="tree-info" class="ui-explain" hidden></div>
         </div>
       </div>
     </div>
@@ -171,10 +172,10 @@
     <script src="../shared/algo/share.js?v=e00a0058"></script>
     <script src="../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../shared/algo/states.js?v=107884d8"></script>
-    <script src="../shared/algo/nfa.js?v=e70e7b8a"></script>
+    <script src="../shared/algo/nfa.js?v=7110a99c"></script>
     <script src="../shared/shared.js?v=583a8d75"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
-    <script src="../shared/ui.js?v=0ba49cea"></script>
+    <script src="../shared/ui.js?v=dd81c4e8"></script>
     <script src="../shared/view-menu.js?v=d1c37b50"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../shared/automaton-graph.js?v=c6dd1ec4"></script>
@@ -522,6 +523,43 @@ else: ${kw("reject")}`
         return posMap;
       }
 
+      // Clicking a node selects it and explains that configuration in #tree-info.
+      let _selNode = null; // id of the selected node, or null
+      function selectConfig(id) {
+        _selNode = _selNode === id ? null : id;
+        simRender();
+      }
+      d3.select("#sim-tree-svg").on("click", () => { if (_selNode !== null) selectConfig(_selNode); });
+
+      function renderTreeInfo(node, ctx) {
+        if (!node) { UI.explain("tree-info", null); return; }
+        const e = nfaExplainConfig(currentNFA(), _simChars, node, ctx);
+        const idx = nfaStates.indexOf(e.state);
+        const tags = (idx === nfaStartIdx ? ' <span class="ui-explain__tag">start state</span>' : "") + (nfaAccepts.has(idx) ? ' <span class="ui-explain__tag">accepting state</span>' : "");
+        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Dead end", live: "Alive", expanded: "Expanded" }[e.role];
+        let arrival = "The start state. Before any symbol is read, the NFA may already be in any state of its ε-closure; the first symbol is read from all of them.";
+        if (node.depth > 0) {
+          const a = e.arrival;
+          const hop = (from, to, n) => (n > 0 ? `${esc(from)} →ε ${esc(to)}, ` : "");
+          arrival = a
+            ? `From <b>${esc(a.fromState)}</b>: ${hop(a.fromState, a.via, a.epsBefore)}reading ${esc(a.sym)} by the transition ` +
+              `<span class="ui-explain__rule" data-cell="${esc(a.via)}|${esc(a.sym)}">${esc(a.via)} –${esc(a.sym)}→ ${esc(a.to)}</span>` +
+              (a.epsAfter > 0 ? `, then following ε-moves to ${esc(e.state)}` : "") + "."
+            : `From <b>${esc(node.parent.state)}</b> by reading ${esc(_simChars[node.depth - 1])}.`;
+        }
+        UI.explain("tree-info", {
+          title: `Configuration (${e.state}, ${e.remaining || "ε"})`,
+          onClose: () => selectConfig(node.id),
+          facts: [
+            ["State", esc(e.state) + tags],
+            ["Input", `<span class="ui-explain__done">${esc(e.consumed)}</span><span class="ui-explain__cursor">▏</span>${e.remaining ? esc(e.remaining) : "<i>all read</i>"}`],
+            ["ε-closure", esc("{" + e.closure.join(", ") + "}")],
+          ],
+          lines: [arrival, UI.explainRole(e.role, roleLabel) + " " + esc(e.why) + (e.onAcceptPath && e.role !== "accepted" ? " It lies on an accepting path." : "")],
+        });
+      }
+      UI.hoverItems("tree-info", "[data-cell]", (el) => [el.dataset.cell], nfaHoverEdges);
+
       function renderSimTree(vRoot, revealDepth, inputChars) {
         const svg  = document.getElementById("sim-tree-svg");
         const root = d3.select("#sim-tree-root");
@@ -530,7 +568,7 @@ else: ${kw("reject")}`
         const { nodes, edges } = collectVisible(vRoot, revealDepth);
         document.getElementById("sim-tree-empty").style.display =
           nodes.length === 0 ? "" : "none";
-        if (nodes.length === 0) return;
+        if (nodes.length === 0) { renderTreeInfo(null); return; }
 
         const posMap = layoutTree(vRoot, revealDepth);
 
@@ -605,9 +643,12 @@ else: ${kw("reject")}`
           else if (node.rejected) cls += " is-reject";
           else if (node.depth === revealDepth) cls += " is-active";
 
+          if (node.id === _selNode) cls += " is-selected";
           const ng = root.append("g")
             .attr("class", cls)
-            .attr("transform", `translate(${pos.x},${pos.y})`);
+            .attr("transform", `translate(${pos.x},${pos.y})`)
+            .on("click", (ev) => { ev.stopPropagation(); selectConfig(node.id); });
+          ng.append("title").text("Click to explain this configuration");
           ng.append("circle").attr("r", TREE_R);
           if (node.accepted) {
             ng.append("circle").attr("class", "ct-ring").attr("r", TREE_R - 3);
@@ -626,6 +667,11 @@ else: ${kw("reject")}`
               .text("✗");
           }
         }
+
+        // The explanation follows the selection, as long as that node is currently drawn.
+        const sel = nodes.find((n) => n.id === _selNode);
+        if (!sel) _selNode = null;
+        renderTreeInfo(sel || null, sel ? { active: sel.depth === revealDepth && !sel.dead, onAcceptPath: acceptPathIds.has(sel.id) } : null);
 
         // Compute centering transform from layout positions (avoids getBBox/clientWidth on SVG)
         fitSimTreeFromLayout(posMap, vRoot, revealDepth);
@@ -707,6 +753,7 @@ else: ${kw("reject")}`
         const input = document.getElementById("sim-string-input").value;
         _simChars = [...input];
         _simTree  = buildSimTree(input);
+        _selNode  = null;
         sim.pos   = 0;  // start at depth 0 (initial states visible immediately)
 
         verdict.hide();

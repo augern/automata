@@ -88,3 +88,37 @@ test("tree growth is capped and reported", () => {
   const t = nfaBuildSimTree(n, "a".repeat(30), 64);
   assert.equal(t.truncated, true);
 });
+
+// ── nfaExplainConfig ──────────────────────────────────────────────────
+(function () {
+  const { nfaExplainConfig } = load("nfa.js");
+  // q0 -ε-> q1, q1 -a-> q2 (accepting), q0 -b-> q0
+  const nfa = { states: ["q0", "q1", "q2"], start: 0, accepts: new Set([2]),
+    trans: { q0: { ε: ["q1"], b: ["q0"] }, q1: { a: ["q2"] }, q2: {} } };
+  const walk = (n, out = []) => { out.push(n); n.children.forEach((c) => walk(c, out)); return out; };
+
+  test("nfaExplainConfig: arrival names the ε-hop and the transition actually used", () => {
+    const chars = [..."a"];
+    const t = nfaBuildSimTree(nfa, "a");
+    const nodes = walk(t.vRoot.children[0]);
+    const q2 = nodes.find((n) => n.state === "q2");
+    const e = nfaExplainConfig(nfa, chars, q2, { active: true });
+    assert.equal(e.role, "accepted");
+    assert.equal(e.arrival.via, "q1");
+    assert.equal(e.arrival.to, "q2");
+    assert.equal(e.arrival.epsBefore, 1);
+    assert.equal(e.consumed, "a");
+    assert.equal(nfaExplainConfig(nfa, chars, nodes[0]).role, "initial");
+    assert.deepEqual([...nfaExplainConfig(nfa, chars, nodes[0]).closure], ["q0", "q1"]);
+  });
+
+  test("nfaExplainConfig: dead ends and rejections explain themselves", () => {
+    const t = nfaBuildSimTree(nfa, "bb");
+    const nodes = walk(t.vRoot.children[0]);
+    const dead = nodes.find((n) => n.dead);
+    assert.match(nfaExplainConfig(nfa, [..."bb"], dead).why, /no state of the ε-closure .* has a transition on/);
+    const t2 = nfaBuildSimTree(nfa, "b");
+    const rej = walk(t2.vRoot.children[0]).find((n) => n.rejected);
+    assert.match(nfaExplainConfig(nfa, ["b"], rej).why, /not an accepting state/);
+  });
+})();

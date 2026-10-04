@@ -259,6 +259,33 @@ const UI = (() => {
       c.addEventListener("focusout", () => onChange(null));
     },
 
+    // Fill an explanation box (a <div class="ui-explain" hidden>) or hide it with null.
+    //   UI.explain("tree-info", {
+    //     title: "Configuration (q0, ab, ⊥)",              // plain text
+    //     facts: [["State", "q0"], ["Stack", "A ⊥"]],      // label (text), value (HTML)
+    //     lines: ["From …", UI.explainRole("dead", "Dead end") + " no rule …"],  // HTML paragraphs
+    //     onClose: () => …,                                // shows the × button
+    //   })
+    // Callers escape whatever they put into HTML strings.
+    explain(target, spec) {
+      const box = el(target);
+      if (!spec) { box.hidden = true; box.innerHTML = ""; return; }
+      const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      box.innerHTML =
+        '<div class="ui-explain__head"><span class="ui-explain__title">' + esc(spec.title) + "</span>" +
+        (spec.onClose ? '<button type="button" class="ui-explain__close" title="Close" aria-label="Close explanation">×</button>' : "") + "</div>" +
+        (spec.facts && spec.facts.length ? '<dl class="ui-explain__facts">' + spec.facts.map((f) => "<dt>" + esc(f[0]) + "</dt><dd>" + f[1] + "</dd>").join("") + "</dl>" : "") +
+        (spec.lines || []).map((l) => '<p class="ui-explain__line">' + l + "</p>").join("");
+      const close = box.querySelector(".ui-explain__close");
+      if (close) close.addEventListener("click", spec.onClose);
+      box.hidden = false;
+    },
+    // The coloured lead word of an explanation line; kind is initial | live | accepted |
+    // rejected | dead | expanded.
+    explainRole(kind, label) {
+      return '<span class="ui-explain__role ui-explain__role--' + kind + '">' + label + ":</span>";
+    },
+
     // A short message at the bottom of the window that fades after ~2 seconds.
     toast(message) {
       const t = document.createElement("div");

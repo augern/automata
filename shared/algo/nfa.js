@@ -143,3 +143,70 @@ function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES) {
   // not from the (possibly cut-off) frontier.
   return { vRoot, maxDepth: chars.length, accepted: nfaAcceptsString(nfa, inputStr), truncated: nodeId > maxNodes };
 }
+
+// ── Explaining a configuration ────────────────────────────────────────
+// Plain data describing one node of the simulation tree (a state together with how much
+// input has been read), for the explanation shown when a node is selected. ctx =
+// { active, onAcceptPath }: whether the node is on the current frontier of the stepped
+// simulation, and whether it lies on an accepting path. Fields:
+//   state, closure (ε-closure of the state, sorted), consumed, remaining
+//   arrival: null for the start state, else { fromState, sym, via, to, epsBefore, epsAfter }
+//     read as: fromState --ε×epsBefore--> via --sym--> to --ε×epsAfter--> state
+//   role: "initial" | "accepted" | "rejected" | "dead" | "live" | "expanded"; why: a sentence
+function nfaExplainConfig(nfa, chars, node, ctx = {}) {
+  const closure = [...nfaEpsClosure(nfa, [node.state])].sort();
+  const next = chars[node.depth];
+  const rest = node.depth < chars.length;
+  const isAcc = (s) => nfa.accepts.has(nfa.states.indexOf(s));
+  const set = (xs) => "{" + xs.join(", ") + "}";
+
+  let role, why;
+  if (node.accepted) {
+    role = "accepted";
+    why = node.depth === 0
+      ? `the input is empty and the ε-closure ${set(closure)} of the start state contains an accepting state, so the string is accepted.`
+      : `all input is read and ${node.state} is an accepting state, so the string is accepted.`;
+  } else if (node.rejected) {
+    role = "rejected";
+    why = node.depth === 0
+      ? `the input is empty, but no state of the ε-closure ${set(closure)} is accepting.`
+      : `all input is read, but ${node.state} is not an accepting state.`;
+  } else if (node.dead) {
+    role = "dead";
+    const canMove = closure.some((s) => (nfa.trans[s]?.[next] || []).length > 0);
+    why = canMove
+      ? "the simulation stopped growing here (the tree size limit was reached)."
+      : `no state of the ε-closure ${set(closure)} has a transition on ${next}, so this branch ends here.`;
+  } else if (ctx.active) {
+    role = "live";
+    why = rest
+      ? `one of the states the NFA may be in after reading ${node.depth} of ${chars.length} symbols; the next symbol is ${next}.`
+      : "one of the states the NFA may be in after reading all input.";
+  } else {
+    role = "expanded";
+    why = `the NFA has moved on from here, to ${node.children.length} successor${node.children.length === 1 ? "" : "s"} (nondeterministic choices are shown as siblings).`;
+  }
+  const isRoot = !node.parent || node.parent.state === null;
+  if (isRoot && role !== "accepted" && role !== "rejected" && role !== "dead") role = "initial";
+
+  let arrival = null;
+  if (!isRoot) {
+    const sym = chars[node.depth - 1];
+    const from = node.parent.state;
+    let best = null;
+    for (const r of nfaEpsClosure(nfa, [from])) {
+      for (const t of nfa.trans[r]?.[sym] || []) {
+        if (!nfaEpsClosure(nfa, [t]).has(node.state)) continue;
+        const n1 = nfaEpsDistance(nfa, from, r), n2 = nfaEpsDistance(nfa, t, node.state);
+        if (!best || n1 < best.epsBefore || (n1 === best.epsBefore && n2 < best.epsAfter)) best = { fromState: from, sym, via: r, to: t, epsBefore: n1, epsAfter: n2 };
+      }
+    }
+    arrival = best;
+  }
+
+  return {
+    state: node.state, closure,
+    consumed: chars.slice(0, node.depth).join(""), remaining: chars.slice(node.depth).join(""),
+    arrival, role, why, successors: node.children.length, onAcceptPath: !!ctx.onAcceptPath,
+  };
+}
