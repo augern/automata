@@ -7,7 +7,7 @@
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../shared/shared.css?v=4957a13c" />
     <script src="../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../shared/ui.css?v=5c823f4d" />
+    <link rel="stylesheet" href="../shared/ui.css?v=16c2ba2c" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 400; --pmin: 300px; }
@@ -162,6 +162,7 @@
             </svg>
             <div id="tree-empty" class="ui-canvas__empty">Enter a PDA and a string to see the configuration tree.</div>
           </div>
+          <div id="tree-info" class="ui-explain" hidden></div>
         </div>
       </div>
     </div><!-- #panels -->
@@ -184,7 +185,7 @@
     <script src="../shared/algo/share.js?v=e00a0058"></script>
     <script src="../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../shared/algo/states.js?v=107884d8"></script>
-    <script src="../shared/algo/pda.js?v=c6c2e029"></script>
+    <script src="../shared/algo/pda.js?v=f367700e"></script>
     <script src="../shared/shared.js?v=583a8d75"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
     <script src="../shared/ui.js?v=0ba49cea"></script>
@@ -643,16 +644,62 @@ else: ${kw("reject")}`
         return "normal";
       }
 
+      // Clicking a node selects it and explains that configuration in #tree-info.
+      let _selNode = null;   // id of the selected configuration, or null
+      let _treeNodes = new Map(); // id → node, for the nodes currently drawn
+      function selectConfig(id) {
+        _selNode = _selNode === id ? null : id;
+        renderTree();
+      }
+      d3.select("#tree-svg").on("click", () => { if (_selNode !== null) selectConfig(_selNode); });
+
+      // "(q1, bb, A ⊥)": the textbook triple, stack top first.
+      const cfgTriple = (e) => `(${e.state}, ${e.remaining || "ε"}, ${e.stack.join("") || "ε"})`;
+
+      function renderTreeInfo(pd, ctx) {
+        const box = document.getElementById("tree-info");
+        if (!pd) { box.hidden = true; box.innerHTML = ""; return; }
+        const e = pdaExplainConfig(currentPDA(), _simChars, pd, ctx);
+        const stateIdx = pdaStates.indexOf(e.state);
+        const tags = (stateIdx === pdaStartIdx ? " <span class=\"ui-explain__tag\">start state</span>" : "") +
+          (pdaAccepts.has(stateIdx) ? " <span class=\"ui-explain__tag\">accepting state</span>" : "");
+        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Dead end", live: "Alive", expanded: "Expanded" }[e.role];
+        let arrival = "The configuration the simulation starts from: the start state, all input unread, and the initial stack symbol.";
+        if (e.arrival) {
+          const a = e.arrival;
+          const rules = treeEdgeRules(pd.parent, pd);
+          const rl = (x) => (x === "" ? "ε" : x);
+          const link = rules.length
+            ? ` the rule <span class="ui-explain__rule" data-rule="${rules[0]}">${esc(a.fromState)}, ${rl(a.input)}, ${rl(a.pop)} → ${esc(pd.state)}, ${rl(a.push)}</span>`
+            : " an ε/stack rule";
+          const acts = [a.input === "" ? "no input symbol read (an ε-move)" : `read ${esc(a.input)}`, a.pop === "" ? "popped nothing" : `popped ${esc(a.pop)}`, a.push === "" ? "pushed nothing" : `pushed ${esc(a.push)}`];
+          arrival = `From <b>${esc(cfgTriple({ state: a.fromState, remaining: _simChars.slice(pd.parent.symDepth).join(""), stack: a.fromStack }))}</b> by${link}: ${acts.join(", ")}.`;
+        }
+        box.innerHTML =
+          `<div class="ui-explain__head"><span class="ui-explain__title">Configuration ${esc(cfgTriple(e))}</span>` +
+          `<button class="ui-explain__close" onclick="selectConfig(${pd.id})" title="Close" aria-label="Close explanation">×</button></div>` +
+          `<dl class="ui-explain__facts">` +
+          `<dt>State</dt><dd>${esc(e.state)}${tags}</dd>` +
+          `<dt>Input</dt><dd><span class="ui-explain__done">${esc(e.consumed)}</span><span class="ui-explain__cursor">▏</span>${e.remaining ? esc(e.remaining) : "<i>all read</i>"}</dd>` +
+          `<dt>Stack</dt><dd>${e.stack.length ? esc(e.stack.join(" ")) : "<i>empty</i>"} <span class="ui-explain__hint">(top at left)</span></dd>` +
+          `</dl>` +
+          `<p class="ui-explain__line">${arrival}</p>` +
+          `<p class="ui-explain__line"><span class="ui-explain__role ui-explain__role--${e.role}">${roleLabel}:</span> ${esc(e.why)}` +
+          (e.onAcceptPath && e.role !== "accepted" ? " It lies on an accepting path." : "") + `</p>`;
+        box.hidden = false;
+      }
+      UI.hoverItems("tree-info", "[data-rule]", (el) => [+el.dataset.rule], pdaHover);
+
       function renderTree() {
         const svgRoot = d3.select("#tree-root");
         svgRoot.selectAll("*").remove();
 
         const emptyEl = document.getElementById("tree-empty");
-        if (!_simTree) { emptyEl.style.display = ""; return; }
+        if (!_simTree) { emptyEl.style.display = ""; renderTreeInfo(null); return; }
         emptyEl.style.display = "none";
 
         const realRoot = _simTree.vRoot.children[0];
-        if (!realRoot) { emptyEl.style.display = ""; return; }
+        if (!realRoot) { emptyEl.style.display = ""; renderTreeInfo(null); return; }
 
         const revealDepth = sim.pos;
         const activeFront = sim.pos < _treeFrontiers.length ? _treeFrontiers[sim.pos] : [];
@@ -731,7 +778,9 @@ else: ${kw("reject")}`
           const pd = dn.data;
           const st = treeNodeStatus(pd, activeIds);
           const g  = svgRoot.append("g")
-            .attr("class", "ct-node" + (st !== "normal" ? " is-" + st : ""))
+            .attr("class", "ct-node" + (st !== "normal" ? " is-" + st : "") + (pd.id === _selNode ? " is-selected" : ""))
+            .on("click", (ev) => { ev.stopPropagation(); selectConfig(pd.id); })
+            .call((g) => g.append("title").text("Click to explain this configuration"))
             .attr("data-state", pdaStates.indexOf(pd.state))
             .on("mouseenter", () => pdaHoverState(pdaStates.indexOf(pd.state)))
             .on("mouseleave", () => pdaHoverState(null))
@@ -752,6 +801,11 @@ else: ${kw("reject")}`
               .text("✗");
           }
         });
+
+        // The explanation follows the selection, as long as that node is currently drawn.
+        const sel = hier.descendants().find((d) => d.data.id === _selNode);
+        if (!sel) _selNode = null;
+        renderTreeInfo(sel ? sel.data : null, sel ? { active: activeIds.has(_selNode), onAcceptPath: acceptPathIds.has(_selNode) } : null);
 
         fitSimTree();
       }

@@ -98,3 +98,57 @@ test("rules to unknown states are ignored", () => {
   const m = pda(["s"], "s", ["s"], [r("s", "a", "", "ghost", "")]);
   assert.equal(accepts(m, "a"), false);
 });
+
+// ── pdaExplainConfig ───────────────────────────────────────────────────
+const { pdaExplainConfig } = load("pda.js");
+(function () {
+  const anbn = {
+    states: ["q0", "q1", "q2"], start: 0, accepts: new Set([2]), initStack: "⊥", acceptMode: "final-state",
+    rules: [
+      { from: "q0", input: "a", pop: "⊥", to: "q0", push: "A⊥" },
+      { from: "q0", input: "a", pop: "A", to: "q0", push: "AA" },
+      { from: "q0", input: "", pop: "⊥", to: "q2", push: "⊥" },
+      { from: "q0", input: "b", pop: "A", to: "q1", push: "" },
+      { from: "q1", input: "b", pop: "A", to: "q1", push: "" },
+      { from: "q1", input: "", pop: "⊥", to: "q2", push: "⊥" },
+    ],
+  };
+  const walk = (node, out = []) => { out.push(node); node.children.forEach((c) => walk(c, out)); return out; };
+
+  test("pdaExplainConfig: start configuration, arrival and roles on a run that accepts", () => {
+    const chars = [..."ab"];
+    const t = pdaBuildSimTree(anbn, chars);
+    const nodes = walk(t.vRoot.children[0]);
+    const root = pdaExplainConfig(anbn, chars, nodes[0], { active: false });
+    assert.equal(root.arrival, null);
+    assert.equal(root.state, "q0");
+    assert.equal(root.remaining, "ab");
+    assert.deepEqual([...root.stack], ["⊥"]);
+    const acc = nodes.find((n) => n.accepted);
+    const e = pdaExplainConfig(anbn, chars, acc, { active: true, onAcceptPath: true });
+    assert.equal(e.role, "accepted");
+    assert.match(e.why, /accepting state/);
+    assert.equal(e.consumed, "ab");
+    assert.equal(e.remaining, "");
+    assert.ok(e.arrival && e.arrival.fromState);
+    assert.equal(e.onAcceptPath, true);
+  });
+
+  test("pdaExplainConfig: dead ends say which rule lookup failed; rejection says why", () => {
+    const chars = [..."ba"];
+    const t = pdaBuildSimTree(anbn, chars);
+    const nodes = walk(t.vRoot.children[0]);
+    const dead = nodes.find((n) => n.dead);
+    const e = pdaExplainConfig(anbn, chars, dead, {});
+    assert.equal(e.role, "dead");
+    assert.match(e.why, /no rule applies in q\d when reading b with/);
+    const chars2 = [..."a"];
+    const t2 = pdaBuildSimTree(anbn, chars2);
+    const rej = walk(t2.vRoot.children[0]).find((n) => n.rejected);
+    assert.match(pdaExplainConfig(anbn, chars2, rej, {}).why, /not an accepting state/);
+    const stackMode = { ...anbn, acceptMode: "empty-stack" };
+    const t3 = pdaBuildSimTree(stackMode, chars2);
+    const rej3 = walk(t3.vRoot.children[0]).find((n) => n.rejected);
+    assert.match(pdaExplainConfig(stackMode, chars2, rej3, {}).why, /stack still holds/);
+  });
+})();

@@ -180,3 +180,66 @@ function pdaBuildSimTree(pda, chars, maxNodes = PDA_MAX_TREE_NODES) {
 
   return { vRoot, symDepth: chars.length, frontiers, history, truncated: nextId >= maxNodes };
 }
+
+// ── Explaining a configuration ────────────────────────────────────────
+// Plain data describing one node of the simulation tree, for the explanation shown
+// when a node is selected. `chars` is the input as symbols; ctx = { active, onAcceptPath }
+// says whether the node is on the current frontier of the stepped simulation and
+// whether it lies on a path that accepts. Fields:
+//   state, consumed, remaining, stack (top first)
+//   arrival: null for the start configuration, else { fromState, fromStack, input, pop, push }
+//   role: "initial" | "accepted" | "rejected" | "dead" | "live" | "expanded"
+//   why: a sentence on that role; successors: number of children
+function pdaExplainConfig(pda, chars, node, ctx = {}) {
+  const topFirst = (stack) => [...stack].reverse();
+  const stack = topFirst(node.stack);
+  const next = chars[node.symDepth];
+  const rest = node.symDepth < chars.length;
+  const holds = stack.length ? stack.join(" ") : "nothing";
+  const emptyStackMode = pda.acceptMode === "empty-stack";
+
+  let role, why;
+  if (node.accepted) {
+    role = "accepted";
+    why = emptyStackMode
+      ? "all input is read and the stack is empty, so the string is accepted."
+      : `all input is read and ${node.state} is an accepting state, so the string is accepted.`;
+  } else if (node.rejected) {
+    role = "rejected";
+    why = emptyStackMode
+      ? `all input is read, but the stack still holds ${holds}.`
+      : `all input is read, but ${node.state} is not an accepting state.`;
+  } else if (node.dead) {
+    role = "dead";
+    const top = stack.length ? `${stack[0]} on top of the stack` : "an empty stack";
+    why = rest
+      ? `no rule applies in ${node.state} when reading ${next} with ${top}, so this branch ends here.` +
+        (node.children.length ? " Its ε-moves lead on as separate configurations." : "")
+      : "the simulation stopped growing here (the tree size limit was reached).";
+  } else if (ctx.active) {
+    role = "live";
+    why = rest
+      ? `one of the configurations the PDA may be in after reading ${node.symDepth} of ${chars.length} symbols; the next symbol is ${next}.`
+      : "one of the configurations the PDA may be in after reading all input.";
+  } else {
+    role = "expanded";
+    why = `the PDA has moved on from here, to ${node.children.length} successor${node.children.length === 1 ? "" : "s"} (nondeterministic choices are shown as siblings).`;
+  }
+  const isRoot = node.parent && node.parent.state === null;
+  if (isRoot && role !== "accepted" && role !== "rejected") role = role === "dead" ? "dead" : "initial";
+
+  return {
+    state: node.state,
+    consumed: chars.slice(0, node.symDepth).join(""),
+    remaining: chars.slice(node.symDepth).join(""),
+    stack,
+    arrival: isRoot || node.edgeInput === null ? null : {
+      fromState: node.parent.state, fromStack: topFirst(node.parent.stack),
+      input: node.edgeInput, pop: node.edgePop, push: node.edgePush,
+    },
+    role,
+    why,
+    successors: node.children.length,
+    onAcceptPath: !!ctx.onAcceptPath,
+  };
+}
