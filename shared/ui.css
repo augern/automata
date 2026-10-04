@@ -436,3 +436,92 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ct-edge-label.is-accept-path { fill: var(--st-accept); font-weight: bold; }
 .ct-edge-label.is-dead { fill: var(--st-dead); }
 .ct-depth { font-family: var(--font-serif); font-size: 9px; font-style: italic; fill: var(--text-dim); }
+
+/* ── Log markup tokens ─────────────────────────────────── */
+/* Inline spans inside step logs, log bars and derivation entries:
+   <span class="lg-op">closure</span> added <span class="lg-new">A → .a</span> */
+.lg-op { color: var(--st-active); }
+.lg-state { color: var(--text); font-weight: 600; }
+.lg-item { color: var(--text); }
+.lg-dim { color: var(--text-dim); }
+.lg-sym { color: var(--st-warn); font-weight: 600; }
+.lg-new { color: var(--st-accept); }
+.lg-del { color: var(--st-reject); text-decoration: line-through; }
+.lg-conf { color: var(--st-reject); }
+.lg-goto { color: var(--purple); }
+.lg-hl { color: var(--st-active); font-weight: bold; }
+.lg-seen { color: var(--text-dim); font-style: italic; }
+.lg-done { color: var(--text); font-weight: bold; }
+
+/* ── Control bar (step buttons under a log) ────────────── */
+.ui-controlbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1.5px solid var(--border-hi);
+  background: var(--bg-panel);
+}
+
+/* ── Stepped parse/transition tables ───────────────────── */
+/* While a table is built step by step, untouched cells fade, filled cells
+   dim, and the cell being written pops in the warning colour.
+   <table class="parse-table is-stepping"> with td.is-filled / is-active /
+   is-active-goto / is-conflict, and (regex DFA) td.is-row-hi / th.is-col-hi. */
+@keyframes ui-cell-pop {
+  from { transform: scale(1.12); }
+  to { transform: scale(1); }
+}
+.parse-table.is-stepping td { opacity: 0.22; transition: opacity var(--dur) var(--ease); }
+.parse-table.is-stepping th { opacity: 0.5; }
+.parse-table.is-stepping td.is-filled { opacity: 0.7; }
+.parse-table.is-stepping td.is-row-hi { opacity: 1; }
+.parse-table.is-stepping th.is-col-hi { opacity: 1; color: var(--st-warn); }
+.parse-table.is-stepping td.is-conflict { opacity: 1; }
+.parse-table.is-stepping td.is-active {
+  opacity: 1;
+  outline: 2px solid var(--st-warn);
+  outline-offset: -1px;
+  background: var(--st-warn-bg);
+  color: var(--st-warn);
+  animation: ui-cell-pop 0.2s ease-out;
+}
+.parse-table.is-stepping td.is-active-goto {
+  opacity: 1;
+  outline: 2px solid var(--st-active);
+  outline-offset: -1px;
+  background: var(--st-active-bg);
+  color: var(--st-active);
+  animation: ui-cell-pop 0.2s ease-out;
+}
+
+/* ── Input tape (string being read) ────────────────────── */
+/* <div class="ui-tape"><div class="ui-tape__cell is-consumed">a</div>… */
+.ui-tape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.ui-tape__cell {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+.ui-tape__cell.is-consumed { opacity: 0.28; border-color: var(--border-lo); }
+.ui-tape__cell.is-current {
+  border-color: var(--st-warn);
+  background: var(--st-warn-bg);
+  color: var(--st-warn);
+  font-weight: bold;
+}
+.ui-tape__end { color: var(--text-dim); margin-left: var(--sp-2); }

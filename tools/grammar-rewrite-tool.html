@@ -6,6 +6,7 @@
 <meta name="description" content="Interactive grammar transformation tool — ε-elimination, unit production elimination, Chomsky Normal Form, and left-recursion elimination with step-by-step visualisation.">
 <title>Grammar Transformations | Parser Tools</title>
 <link rel="stylesheet" href="../shared/shared.css">
+<link rel="stylesheet" href="../shared/ui.css">
 <script src="../shared/theme.js"></script>
 <style>
 /* Override p-tables width for result panel */
@@ -16,13 +17,6 @@
   flex: 1; overflow-y: auto;
   padding: var(--sp-5) var(--sp-6);
   background: var(--bg);
-}
-#step-empty {
-  color: var(--text-lo);
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: var(--fs-md);
-  padding-top: var(--sp-2);
 }
 
 .step-entry {
@@ -48,32 +42,7 @@
   background: var(--accent-bg);
   border-left: 2px solid var(--accent);
   padding-left: var(--sp-4); margin-left: -10px;
-}
-.step-entry .hl  { color: var(--accent); font-weight: bold; }
-.step-entry .add { color: var(--green); }
-.step-entry .del { color: var(--red); text-decoration: line-through; }
-.step-entry .dim { color: var(--text-lo); }
-
-/* Symbol badges */
-.nb { /* nullable */
-  display: inline-block;
-  border: 1px solid var(--green); color: var(--green); background: var(--green-bg);
-  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 var(--sp-2); margin: 0 1px;
-}
-.ub { /* unit pair */
-  display: inline-block;
-  border: 1px solid var(--accent); color: var(--accent); background: var(--accent-bg);
-  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 var(--sp-2); margin: 0 1px;
-}
-
-/* Step controls */
-#step-controls {
-  flex-shrink: 0;
-  border-top: 1.5px solid var(--border-hi);
-  background: var(--bg-panel);
-  padding: var(--sp-3) var(--sp-5);
-  display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
-}
+}/* Symbol badges *//* Step controls */
 
 /* Grammar result panel */
 #grammar-display {
@@ -148,10 +117,10 @@
     </div>
     <div class="panel-body" style="display:flex;flex-direction:column;overflow:hidden;">
       <div id="step-area">
-        <div id="step-empty">Build a grammar, then step through the algorithm.</div>
+        <div id="step-empty" class="ui-empty">Build a grammar, then step through the algorithm.</div>
         <div id="step-log"></div>
       </div>
-      <div id="step-controls">
+      <div id="step-controls" class="ui-controlbar">
         <div class="step-group">
           <button class="btn icon-restart" id="btn-reset" onclick="resetSim()" title="Restart" disabled></button>
           <button class="btn" id="btn-back"  onclick="stepBack()"  disabled>&#8249; Back</button>
@@ -172,9 +141,7 @@
     </div>
     <div class="panel-body">
       <div id="grammar-display">
-        <span style="color:var(--text-lo);font-family:var(--font-serif);font-style:italic;font-size:var(--fs-md)">
-          Build a grammar to see it here.
-        </span>
+        <div class="ui-empty">Build a grammar to see it here.</div>
       </div>
     </div>
   </div>
@@ -338,7 +305,7 @@ function renderGrammarDisplay(rules, newIndices, activeIndices) {
   const el = document.getElementById('grammar-display');
   el.innerHTML = '';
   if (!rules.length) {
-    el.innerHTML = '<span style="color:var(--text-lo);font-style:italic">Empty grammar</span>';
+    el.innerHTML = '<div class="ui-empty">Empty grammar</div>';
     return;
   }
 
