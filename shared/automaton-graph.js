@@ -121,12 +121,15 @@ function drawAutomatonGraph(prefix, view, spec) {
   for (const lp of loops) {
     const dn = dg.node(lp.node);
     if (!dn) continue;
-    const cx = dn.x, top = dn.y - R - 2;
+    // Both ends sit exactly on the node's circle, symmetric about its top, so the
+    // loop is attached to the node and the arrowhead touches it.
+    const a = Math.PI / 5; // 36° either side of straight up
+    const dx = R * Math.sin(a), y0 = dn.y - R * Math.cos(a), cx = dn.x;
     const eg = root.append("g").attr("class", edgeClass(lp.eps)).attr("data-self", lp.node);
     eg.append("path")
-      .attr("d", `M${cx - 9},${top} C${cx - 28},${top - 36} ${cx + 28},${top - 36} ${cx + 9},${top}`)
+      .attr("d", `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`)
       .attr("marker-end", arrowFor(lp.eps));
-    addLabel(eg, lp.labels, cx, top - (joinLabels ? 38 : 40));
+    addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40));
   }
 
   // Nodes last so they paint over edge ends.
