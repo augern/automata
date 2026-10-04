@@ -7,6 +7,7 @@
     <title>LL(1) Parser | Parser Tools</title>
     <script src="../vendor/d3.min.js"></script>
     <link rel="stylesheet" href="../shared/shared.css" />
+    <link rel="stylesheet" href="../shared/ui.css" />
     <script src="../shared/theme.js"></script>
     <style>
       #p-main {
@@ -117,40 +118,16 @@
       /* LL(1) table rule cells */
       .parse-table td.rule-cell {
         color: var(--purple);
-      }
-
-      /* ── Table construction simulation ── */
-      /* Only the predictive table dims; FIRST/FOLLOW table is untouched */
-      #ll1-table.t-stepping td {
-        opacity: 0.22;
-        transition: opacity 0.15s;
-      }
-      #ll1-table.t-stepping th {
-        opacity: 0.5;
-      }
-      #ll1-table.t-stepping td.t-filled {
-        opacity: 0.7;
-      }
-      #ll1-table.t-stepping td.t-active {
-        opacity: 1 !important;
-        outline: 2px solid var(--amber);
-        outline-offset: -1px;
-        background: var(--amber-bg) !important;
-        color: var(--amber) !important;
-        animation: cell-pop 0.2s ease-out;
-      }
-      #ll1-table.t-stepping td.t-conflict {
-        opacity: 1 !important;
-      }
+      }/* ── Table construction simulation ── *//* Only the predictive table dims; FIRST/FOLLOW table is untouched */
       #tstep-controls .btn {
         height: 18px;
         font-size: var(--fs-2xs);
         padding: 0 var(--sp-3);
         line-height: 1;
       }
-      #tstep-log-bar .tl-op   { color: var(--accent); }
-      #tstep-log-bar .tl-reason { color: var(--text-lo); font-style: italic; }
-      #tstep-log-bar .tl-conf { color: var(--red); }
+      #tstep-log-bar .lg-op   { color: var(--accent); }
+      #tstep-log-bar .lg-seen { color: var(--text-lo); font-style: italic; }
+      #tstep-log-bar .lg-conf { color: var(--red); }
     </style>
   </head>
   <body>
@@ -376,8 +353,8 @@
             steps.push({
               type: "conflict",
               nt, term, key,
-              html: '<span class="tl-conf">conflict</span> M[<b>' + esc(nt) + '</b>, <b>' + esc(term) + '</b>]: rules ' + cur + ' and ' + ruleIdx +
-                    ' <span class="tl-reason">— grammar is not LL(1)</span>',
+              html: '<span class="lg-conf">conflict</span> M[<b>' + esc(nt) + '</b>, <b>' + esc(term) + '</b>]: rules ' + cur + ' and ' + ruleIdx +
+                    ' <span class="lg-seen">— grammar is not LL(1)</span>',
             });
           }
         }
@@ -392,8 +369,8 @@
           for (const a of [...fa].sort()) {
             if (a === EPSILON) continue;
             addStep(lhs, a, i,
-              '<span class="tl-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(a) + '</b>] = ' + i +
-              ' <span class="tl-reason">' + esc(lhs) + ' → ' + esc(rhsStr) +
+              '<span class="lg-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(a) + '</b>] = ' + i +
+              ' <span class="lg-seen">' + esc(lhs) + ' → ' + esc(rhsStr) +
               ' — ' + esc(a) + ' ∈ FIRST(' + esc(rhsStr) + ')</span>');
           }
 
@@ -401,8 +378,8 @@
           if (fa.has(EPSILON)) {
             for (const b of [...(follow[lhs] || [])].sort()) {
               addStep(lhs, b, i,
-                '<span class="tl-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(b) + '</b>] = ' + i +
-                ' <span class="tl-reason">' + esc(lhs) + ' → ' + esc(rhsStr) +
+                '<span class="lg-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(b) + '</b>] = ' + i +
+                ' <span class="lg-seen">' + esc(lhs) + ' → ' + esc(rhsStr) +
                 ' — ε ∈ FIRST(' + esc(rhsStr) + '), ' + esc(b) + ' ∈ FOLLOW(' + esc(lhs) + ')</span>');
             }
           }
@@ -412,7 +389,7 @@
         const nConflicts = steps.filter((s) => s.type === "conflict").length;
         steps.push({
           type: "table-done",
-          html: '<span class="tl-op">✓ Table complete</span> — ' + nEntries + ' entries' +
+          html: '<span class="lg-op">✓ Table complete</span> — ' + nEntries + ' entries' +
                 (nConflicts ? ', ' + nConflicts + ' conflict(s)' : ''),
         });
         return steps;
@@ -428,15 +405,15 @@
         }
         const tbl = document.getElementById("ll1-table");
         if (!tbl) return;
-        tbl.classList.add("t-stepping");
+        tbl.classList.add("is-stepping");
         tbl.querySelectorAll("td[data-nt]").forEach((td) => {
           const key = td.dataset.nt + ":" + td.dataset.term;
-          td.classList.remove("t-filled", "t-active");
+          td.classList.remove("is-filled", "is-active");
           if (key === activeKey) {
-            td.classList.add("t-active");
+            td.classList.add("is-active");
             td.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
           } else if (tFilled.has(key)) {
-            td.classList.add("t-filled");
+            td.classList.add("is-filled");
           }
         });
       }
@@ -445,8 +422,8 @@
         tFilled = new Set();
         const tbl = document.getElementById("ll1-table");
         if (!tbl) return;
-        tbl.classList.remove("t-stepping");
-        tbl.querySelectorAll("td").forEach((td) => td.classList.remove("t-filled", "t-active"));
+        tbl.classList.remove("is-stepping");
+        tbl.querySelectorAll("td").forEach((td) => td.classList.remove("is-filled", "is-active"));
       }
 
       // tSetLog, tSetBtns, tStep, tBack, tRunAll, tReset — defined in shared.js

@@ -686,7 +686,7 @@ function tSetBtns() {
 function tStep() {
   if (tStepIdx >= tSteps.length - 1) return;
   if (tStepIdx === -1) {
-    document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("t-stepping"));
+    document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("is-stepping"));
   }
   tStepIdx++;
   tApplySteps(tStepIdx);
@@ -718,7 +718,7 @@ function tReset() {
   if (tSteps.length === 0) return;
   tStepIdx = -1;
   tClearStepping();
-  document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("t-stepping"));
+  document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("is-stepping"));
   tSetLog("Press Table Step ► to begin filling entries.");
   tSetBtns();
 }

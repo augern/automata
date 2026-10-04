@@ -8,6 +8,7 @@
     <script src="../vendor/d3.min.js"></script>
     <script src="../vendor/dagre.min.js"></script>
     <link rel="stylesheet" href="../shared/shared.css" />
+    <link rel="stylesheet" href="../shared/ui.css" />
     <script src="../shared/theme.js"></script>
     <style>
       /* ── Automaton panel + container ── */
@@ -235,23 +236,23 @@
       }
       #cstep-log:empty,
       #error-msg:empty { display: none; }
-      #cstep-log .cl-op {
+      #cstep-log .lg-op {
         color: var(--accent);
       }
-      #cstep-log .cl-item {
+      #cstep-log .lg-item {
         color: var(--text);
       }
-      #cstep-log .cl-reason {
+      #cstep-log .lg-seen {
         color: var(--text-lo);
         font-style: italic;
       }
-      #cstep-log .cl-goto {
+      #cstep-log .lg-goto {
         color: var(--purple);
       }
-      #cstep-log .cl-new {
+      #cstep-log .lg-new {
         color: var(--green);
       }
-      #cstep-log .cl-done {
+      #cstep-log .lg-done {
         color: var(--text);
         font-weight: bold;
       }
@@ -309,50 +310,18 @@
       }
       .edge.c-active .arrowhead {
         fill: var(--accent) !important;
-      }
-
-      /* ── Table construction simulation ── */
-      /* All table cells dimmed during stepping, active cell highlighted */
-      .parse-table.t-stepping td {
-        opacity: 0.22;
-        transition: opacity 0.15s;
-      }
-      .parse-table.t-stepping th {
-        opacity: 0.5;
-      }
-      .parse-table.t-stepping td.t-filled {
-        opacity: 0.7;
-      }
-      .parse-table.t-stepping td.t-active {
-        opacity: 1 !important;
-        outline: 2px solid var(--amber);
-        outline-offset: -1px;
-        background: var(--amber-bg) !important;
-        color: var(--amber) !important;
-        animation: cell-pop 0.2s ease-out;
-      }
-      .parse-table.t-stepping td.t-active-goto {
-        opacity: 1 !important;
-        outline: 2px solid var(--accent);
-        outline-offset: -1px;
-        background: var(--accent-bg) !important;
-        color: var(--accent) !important;
-        animation: cell-pop 0.2s ease-out;
-      }
-      .parse-table.t-stepping td.t-conflict {
-        opacity: 1 !important;
-      }
+      }/* ── Table construction simulation ── *//* All table cells dimmed during stepping, active cell highlighted */
       #tstep-controls .btn {
         line-height: 1;
       }
-      #tstep-log-bar .tl-op {
+      #tstep-log-bar .lg-op {
         color: var(--accent);
       }
-      #tstep-log-bar .tl-reason {
+      #tstep-log-bar .lg-seen {
         color: var(--text-lo);
         font-style: italic;
       }
-      #tstep-log-bar .tl-conf {
+      #tstep-log-bar .lg-conf {
         color: var(--red);
       }
 
@@ -1648,7 +1617,7 @@
           type: "state-appear",
           stateId: id0,
           items: kernel0,
-          label: '<span class="cl-op">new state</span> <b>I0</b> — initial kernel',
+          label: '<span class="lg-op">new state</span> <b>I0</b> — initial kernel',
         });
         // Fine: kernel item
         for (const fs of fine0) {
@@ -1658,14 +1627,14 @@
               stateId: id0,
               items: fs.items,
               isKernel: true,
-              label: '<span class="cl-op">kernel</span> ' + fs.items.map((i) => '<span class="cl-item">' + ils_(i) + "</span>").join(", "),
+              label: '<span class="lg-op">kernel</span> ' + fs.items.map((i) => '<span class="lg-item">' + ils_(i) + "</span>").join(", "),
             });
           } else {
             steps.push({
               type: "closure-item",
               stateId: id0,
               items: allStates[id0].items.slice(0, allStates[id0].items.indexOf(fs.item) + 1),
-              label: '<span class="cl-op">closure</span> added <span class="cl-item">' + ils_(fs.item) + "</span>" + (fs.trigger ? ' <span class="cl-reason">via ' + ils_(fs.trigger) + "</span>" : ""),
+              label: '<span class="lg-op">closure</span> added <span class="lg-item">' + ils_(fs.item) + "</span>" + (fs.trigger ? ' <span class="lg-seen">via ' + ils_(fs.trigger) + "</span>" : ""),
             });
           }
         }
@@ -1673,7 +1642,7 @@
           type: "closure-done",
           stateId: id0,
           items: items0,
-          label: '<span class="cl-op">closure(I0)</span> complete — ' + items0.length + " item" + (items0.length !== 1 ? "s" : ""),
+          label: '<span class="lg-op">closure(I0)</span> complete — ' + items0.length + " item" + (items0.length !== 1 ? "s" : ""),
         });
 
         // Process queue
@@ -1687,7 +1656,7 @@
               type: "state-appear",
               stateId: state.id,
               items: kernel,
-              label: '<span class="cl-op">new state</span> <b>I' + state.id + "</b>",
+              label: '<span class="lg-op">new state</span> <b>I' + state.id + "</b>",
             });
             const { items: fullItems, fineSteps: fineI } = closureWithSteps(kernel);
             // Update state items
@@ -1700,14 +1669,14 @@
                   stateId: state.id,
                   items: fs.items,
                   isKernel: true,
-                  label: '<span class="cl-op">kernel</span> ' + fs.items.map((i) => '<span class="cl-item">' + ils_(i) + "</span>").join(", "),
+                  label: '<span class="lg-op">kernel</span> ' + fs.items.map((i) => '<span class="lg-item">' + ils_(i) + "</span>").join(", "),
                 });
               } else {
                 steps.push({
                   type: "closure-item",
                   stateId: state.id,
                   items: fullItems.slice(0, fullItems.indexOf(fs.item) + 1),
-                  label: '<span class="cl-op">closure</span> added <span class="cl-item">' + ils_(fs.item) + "</span>" + (fs.trigger ? ' <span class="cl-reason">via ' + ils_(fs.trigger) + "</span>" : ""),
+                  label: '<span class="lg-op">closure</span> added <span class="lg-item">' + ils_(fs.item) + "</span>" + (fs.trigger ? ' <span class="lg-seen">via ' + ils_(fs.trigger) + "</span>" : ""),
                 });
               }
             }
@@ -1715,7 +1684,7 @@
               type: "closure-done",
               stateId: state.id,
               items: fullItems,
-              label: '<span class="cl-op">closure(I' + state.id + ")</span> complete — " + fullItems.length + " item" + (fullItems.length !== 1 ? "s" : ""),
+              label: '<span class="lg-op">closure(I' + state.id + ")</span> complete — " + fullItems.length + " item" + (fullItems.length !== 1 ? "s" : ""),
             });
           }
 
@@ -1740,18 +1709,18 @@
               label: sym,
               edgeIdx,
               isNew,
-              label2: '<span class="cl-goto">goto</span>(I' + state.id + ", <b>" + esc(sym) + "</b>) = I" + tid + (isNew ? ' <span class="cl-new">[new]</span>' : ' <span class="cl-done">[existing]</span>'),
+              label2: '<span class="lg-goto">goto</span>(I' + state.id + ", <b>" + esc(sym) + "</b>) = I" + tid + (isNew ? ' <span class="lg-new">[new]</span>' : ' <span class="lg-done">[existing]</span>'),
             };
             steps.push(lastGotoStep);
           }
 
           // Mark the last goto step for this state as complete (only if there were any gotos)
-          if (lastGotoStep) lastGotoStep.label3 = ' — <span class="cl-done">I' + state.id + " complete!</span>";
+          if (lastGotoStep) lastGotoStep.label3 = ' — <span class="lg-done">I' + state.id + " complete!</span>";
         }
 
         steps.push({
           type: "build-done",
-          label: '<span class="cl-new">\u2713 Construction complete</span> — ' + allStates.length + " states, " + allEdges.length + " transitions",
+          label: '<span class="lg-new">\u2713 Construction complete</span> — ' + allStates.length + " states, " + allEdges.length + " transitions",
         });
 
         return { steps, states: allStates, edges: allEdges };
@@ -2011,7 +1980,7 @@
               entry,
               existing: cur,
               key,
-              html: '<span class="tl-conf">conflict</span> ' + (isGoto ? "goto" : "action") + "[" + state + ", <b>" + sym + "</b>]: " + cur + " vs " + entry + ' <span class="tl-reason">— grammar is not ' + (mode === "LR0" ? "LR(0)" : mode === "SLR1" ? "SLR(1)" : "LR(1)") + "</span>",
+              html: '<span class="lg-conf">conflict</span> ' + (isGoto ? "goto" : "action") + "[" + state + ", <b>" + sym + "</b>]: " + cur + " vs " + entry + ' <span class="lg-seen">— grammar is not ' + (mode === "LR0" ? "LR(0)" : mode === "SLR1" ? "SLR(1)" : "LR(1)") + "</span>",
               isGoto: !!isGoto,
             });
           }
@@ -2021,10 +1990,10 @@
         for (const { s, t, label } of edges) {
           if (nts.has(label)) {
             // Goto entry
-            addStep(s, label, t, '<span class="tl-op">goto</span>[I' + s + ", <b>" + esc(label) + "</b>] = I" + t + ' <span class="tl-reason">edge I' + s + " \u2192 I" + t + " on " + esc(label) + "</span>", true);
+            addStep(s, label, t, '<span class="lg-op">goto</span>[I' + s + ", <b>" + esc(label) + "</b>] = I" + t + ' <span class="lg-seen">edge I' + s + " \u2192 I" + t + " on " + esc(label) + "</span>", true);
           } else {
             // Shift entry
-            addStep(s, label, "s" + t, '<span class="tl-op">shift</span> action[I' + s + ", <b>" + esc(label) + "</b>] = s" + t + ' <span class="tl-reason">edge I' + s + " \u2192 I" + t + " on \u201c" + esc(label) + "\u201d</span>", false);
+            addStep(s, label, "s" + t, '<span class="lg-op">shift</span> action[I' + s + ", <b>" + esc(label) + "</b>] = s" + t + ' <span class="lg-seen">edge I' + s + " \u2192 I" + t + " on \u201c" + esc(label) + "\u201d</span>", false);
           }
         }
 
@@ -2036,23 +2005,23 @@
 
             if (rule.lhs === start) {
               // Accept
-              addStep(state.id, "$", "acc", '<span class="tl-op">accept</span> action[I' + state.id + ", $] = acc" + ' <span class="tl-reason">' + ils_(item) + " — start production complete</span>", false);
+              addStep(state.id, "$", "acc", '<span class="lg-op">accept</span> action[I' + state.id + ", $] = acc" + ' <span class="lg-seen">' + ils_(item) + " — start production complete</span>", false);
             } else {
               const ri = item.rule;
               if (mode === "LR1") {
                 // Reduce on each lookahead
                 for (const la of item.lookahead.split(",").map((s) => s.trim())) {
-                  addStep(state.id, la, "r" + ri, '<span class="tl-op">reduce</span> action[I' + state.id + ", <b>" + esc(la) + "</b>] = r" + ri + ' <span class="tl-reason">' + ils_(item) + "</span>", false);
+                  addStep(state.id, la, "r" + ri, '<span class="lg-op">reduce</span> action[I' + state.id + ", <b>" + esc(la) + "</b>] = r" + ri + ' <span class="lg-seen">' + ils_(item) + "</span>", false);
                 }
               } else if (mode === "SLR1") {
                 // Reduce on FOLLOW(lhs)
                 for (const t of follow[rule.lhs] || new Set()) {
-                  addStep(state.id, t, "r" + ri, '<span class="tl-op">reduce</span> action[I' + state.id + ", <b>" + esc(t) + "</b>] = r" + ri + ' <span class="tl-reason">' + ils_(item) + " — " + esc(t) + " ∈ FOLLOW(" + esc(rule.lhs) + ")</span>", false);
+                  addStep(state.id, t, "r" + ri, '<span class="lg-op">reduce</span> action[I' + state.id + ", <b>" + esc(t) + "</b>] = r" + ri + ' <span class="lg-seen">' + ils_(item) + " — " + esc(t) + " ∈ FOLLOW(" + esc(rule.lhs) + ")</span>", false);
                 }
               } else {
                 // LR(0): reduce on all terminals
                 for (const t of terms) {
-                  addStep(state.id, t, "r" + ri, '<span class="tl-op">reduce</span> action[I' + state.id + ", <b>" + esc(t) + "</b>] = r" + ri + ' <span class="tl-reason">' + ils_(item) + "</span>", false);
+                  addStep(state.id, t, "r" + ri, '<span class="lg-op">reduce</span> action[I' + state.id + ", <b>" + esc(t) + "</b>] = r" + ri + ' <span class="lg-seen">' + ils_(item) + "</span>", false);
                 }
               }
             }
@@ -2061,7 +2030,7 @@
 
         steps.push({
           type: "table-done",
-          html: '<span class="tl-op">\u2713 Tables complete</span> — ' + steps.filter((s) => !s.type.startsWith("conflict")).length + " entries" + (steps.filter((s) => s.type === "conflict").length ? ", " + steps.filter((s) => s.type === "conflict").length + " conflict(s)" : ""),
+          html: '<span class="lg-op">\u2713 Tables complete</span> — ' + steps.filter((s) => !s.type.startsWith("conflict")).length + " entries" + (steps.filter((s) => s.type === "conflict").length ? ", " + steps.filter((s) => s.type === "conflict").length + " conflict(s)" : ""),
         });
         return steps;
       }
@@ -2096,16 +2065,16 @@
 
         // Apply classes to all parse tables
         document.querySelectorAll(".parse-table").forEach((tbl) => {
-          tbl.classList.add("t-stepping");
+          tbl.classList.add("is-stepping");
           tbl.querySelectorAll("td[data-state]").forEach((td) => {
             const key = td.dataset.state + ":" + td.dataset.sym;
-            td.classList.remove("t-filled", "t-active", "t-active-goto");
+            td.classList.remove("is-filled", "is-active", "is-active-goto");
             if (key === activeKey) {
               const cur = tSteps[upToIdx];
-              td.classList.add(cur && cur.isGoto ? "t-active-goto" : "t-active");
+              td.classList.add(cur && cur.isGoto ? "is-active-goto" : "is-active");
               td.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
             } else if (tFilled.has(key)) {
-              td.classList.add("t-filled");
+              td.classList.add("is-filled");
             }
           });
         });
@@ -2115,8 +2084,8 @@
       function tClearStepping() {
         tFilled = new Set();
         document.querySelectorAll(".parse-table").forEach((tbl) => {
-          tbl.classList.remove("t-stepping");
-          tbl.querySelectorAll("td").forEach((td) => td.classList.remove("t-filled", "t-active", "t-active-goto"));
+          tbl.classList.remove("is-stepping");
+          tbl.querySelectorAll("td").forEach((td) => td.classList.remove("is-filled", "is-active", "is-active-goto"));
         });
         tClearAutoHi();
       }
