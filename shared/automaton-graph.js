@@ -118,21 +118,7 @@ function drawAutomatonGraph(prefix, view, spec) {
     addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4));
   }
 
-  for (const lp of loops) {
-    const dn = dg.node(lp.node);
-    if (!dn) continue;
-    // Both ends sit exactly on the node's circle, symmetric about its top, so the
-    // loop is attached to the node and the arrowhead touches it.
-    const a = Math.PI / 5; // 36° either side of straight up
-    const dx = R * Math.sin(a), y0 = dn.y - R * Math.cos(a), cx = dn.x;
-    const eg = root.append("g").attr("class", edgeClass(lp.eps)).attr("data-self", lp.node);
-    eg.append("path")
-      .attr("d", `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`)
-      .attr("marker-end", arrowFor(lp.eps));
-    addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40));
-  }
-
-  // Nodes last so they paint over edge ends.
+  // Nodes paint over the ends of the ordinary edges.
   for (let i = 0; i < n; i++) {
     const dn = dg.node(i);
     if (!dn) continue;
@@ -151,6 +137,22 @@ function drawAutomatonGraph(prefix, view, spec) {
         .attr("x1", dn.x - R - 18).attr("y1", dn.y).attr("x2", dn.x - R - 1).attr("y2", dn.y)
         .attr("marker-end", "url(#" + prefix + "-arrow)");
     }
+  }
+
+  // Self-loops are drawn after the nodes so their arrowheads sit on top of the node outline,
+  // like the start arrow.
+  for (const lp of loops) {
+    const dn = dg.node(lp.node);
+    if (!dn) continue;
+    // Both ends sit exactly on the node's circle, symmetric about its top, so the
+    // loop is attached to the node and the arrowhead touches it.
+    const a = Math.PI / 5; // 36° either side of straight up
+    const dx = R * Math.sin(a), y0 = dn.y - R * Math.cos(a), cx = dn.x;
+    const eg = root.append("g").attr("class", edgeClass(lp.eps)).attr("data-self", lp.node);
+    eg.append("path")
+      .attr("d", `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`)
+      .attr("marker-end", arrowFor(lp.eps));
+    addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40));
   }
 
   view.fit();
