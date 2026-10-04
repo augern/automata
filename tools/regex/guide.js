@@ -6,6 +6,7 @@ window.TOOL_GUIDE = {
   use: [
     "Type an expression on the left. Operators: `|` union, `*` star, `+` one or more, `?` optional, `( )` grouping, `.` any symbol.",
     "Step through each stage with Step ›, or press ▶| to finish it at once. The tables fill in as you go.",
+    "In the Thompson stage, the expression highlights what each step builds (the operator boxed, the operands tinted), and the diagram under the table shows the fragments being combined, with the new states in amber.",
     "Run a string in the Simulation panel: type one, use the dice for a random accepted string, or pick from ▾.",
     "The Apply / Skip switch in the Minimization panel decides whether the graph and the simulation use the minimal DFA.",
     "The DFA graph appears once subset construction is complete. Hover a state or edge of it to see the matching row or cell of the subset-construction table.",
@@ -15,7 +16,7 @@ window.TOOL_GUIDE = {
     ["D0, D1, …", "states of the DFA from subset construction; each stands for a set of NFA states"],
     ["M0, M1, …", "states of the minimal DFA; each stands for a group of D states that behave the same (shown once minimization has been carried out)"],
     ["ε", "the empty string, or a move that reads no input"],
-    ["i, f", "in the Thompson table: the start and accept state of the fragment being built"],
+    ["i, f", "the start and accept state of the fragment being built (Thompson table and diagram)"],
     ["→  *", "start state, accepting state"],
     ["∅", "no transition: the move leads to the empty set"],
     ["✗  ≡", "in the minimization table: a pair of states that can be told apart / that are equivalent"],

@@ -157,3 +157,31 @@ test("generateExamples lists shortest accepted strings first and respects the li
   assert.equal(generateExamples(dfa, 7, 2).length, 2);
   assert.deepEqual([...generateExamples(subsetConstruct(regexToNFA("a*")), 2, 10)], ["", "a", "aa"]);
 });
+
+// ── step spans (which characters of the expression each step builds) ───
+(function () {
+  const { regexToNFA } = load("grammar.js", "regex.js");
+  const steps = (re) => { const out = []; regexToNFA(re, (st) => out.push(st)); return out; };
+  test("construction steps report the characters they build and the fragments they combine", () => {
+    const st = steps("(a|b)*abb");
+    assert.deepEqual([...st[0].span], [1, 2]);          // a
+    assert.equal(st[0].operands.length, 0);
+    const union = st.find((s) => s.op === "union");
+    assert.deepEqual([...union.span], [1, 4]);           // a|b
+    assert.equal(union.opAt, 2);
+    assert.deepEqual([...union.operands.map((o) => [...o.span])], [[1, 2], [3, 4]]);
+    const star = st.find((s) => s.op === "star");
+    assert.deepEqual([...star.span], [0, 6]);            // (a|b)* — parentheses and operator included
+    assert.equal(star.opAt, 5);
+    assert.deepEqual([...star.operands[0].span], [0, 5]); // the parenthesised operand
+    const last = st[st.length - 1];
+    assert.deepEqual([...last.span], [0, 9]);            // the whole expression
+    assert.equal(last.op, "concat");
+  });
+  test("escapes and ε count as one atom with the right span", () => {
+    const st = steps("a\\*ε");
+    assert.deepEqual([...st[1].span], [1, 3]);
+    const eps = st.find((x) => x.op === "eps");
+    assert.deepEqual([...eps.span], [3, 4]);
+  });
+})();

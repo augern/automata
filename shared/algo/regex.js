@@ -17,7 +17,10 @@
 // onStep, if given, is called after every construction step with
 //   { op: "symbol"|"eps"|"union"|"concat"|"star"|"plus"|"opt", ch (symbol only),
 //     frag: { start, accept }, newStates: int[], newTrans: [...],
-//     snapshot: every transition created so far }
+//     snapshot: every transition created so far,
+//     span: [lo, hi)       the part of the expression this step builds (its characters),
+//     opAt: index of the operator character (| * + ?), or null for symbols and concatenation,
+//     operands: [{ start, accept, span }]   the fragments being combined (none for symbols) }
 function regexToNFA(str, onStep) {
   let next = 0;
   const fresh = () => next++;
@@ -37,13 +40,15 @@ function regexToNFA(str, onStep) {
     return frag;
   }
 
-  function symbol(ch, op = "symbol") {
+  const operand = (f) => ({ start: f.start, accept: f.accept, span: [...f.span] });
+
+  function symbol(ch, op, span) {
     const s = fresh(), t = fresh();
     const newT = [{ from: s, sym: ch, to: t }];
-    return done(op, { start: s, accept: t, trans: newT }, [s, t], newT, op === "symbol" ? { ch } : {});
+    return done(op, { start: s, accept: t, trans: newT, span }, [s, t], newT, { ...(op === "symbol" ? { ch } : {}), span: [...span], opAt: null, operands: [] });
   }
 
-  function union(a, b) {
+  function union(a, b, opAt) {
     const s = fresh(), t = fresh();
     const newT = [
       { from: s, sym: EPSILON, to: a.start },
@@ -51,15 +56,17 @@ function regexToNFA(str, onStep) {
       { from: a.accept, sym: EPSILON, to: t },
       { from: b.accept, sym: EPSILON, to: t },
     ];
-    return done("union", { start: s, accept: t, trans: [...a.trans, ...b.trans, ...newT] }, [s, t], newT);
+    const span = [a.span[0], b.span[1]];
+    return done("union", { start: s, accept: t, trans: [...a.trans, ...b.trans, ...newT], span }, [s, t], newT, { span: [...span], opAt, operands: [operand(a), operand(b)] });
   }
 
   function concat(a, b) {
     const newT = [{ from: a.accept, sym: EPSILON, to: b.start }];
-    return done("concat", { start: a.start, accept: b.accept, trans: [...a.trans, ...b.trans, ...newT] }, [], newT);
+    const span = [a.span[0], b.span[1]];
+    return done("concat", { start: a.start, accept: b.accept, trans: [...a.trans, ...b.trans, ...newT], span }, [], newT, { span: [...span], opAt: null, operands: [operand(a), operand(b)] });
   }
 
-  function star(a) {
+  function star(a, opAt) {
     const s = fresh(), t = fresh();
     const newT = [
       { from: s, sym: EPSILON, to: a.start }, // enter loop
@@ -67,27 +74,30 @@ function regexToNFA(str, onStep) {
       { from: a.accept, sym: EPSILON, to: a.start }, // repeat
       { from: a.accept, sym: EPSILON, to: t }, // exit loop
     ];
-    return done("star", { start: s, accept: t, trans: [...a.trans, ...newT] }, [s, t], newT);
+    const span = [a.span[0], opAt + 1];
+    return done("star", { start: s, accept: t, trans: [...a.trans, ...newT], span }, [s, t], newT, { span: [...span], opAt, operands: [operand(a)] });
   }
 
-  function plus(a) {
+  function plus(a, opAt) {
     const s = fresh(), t = fresh();
     const newT = [
       { from: s, sym: EPSILON, to: a.start }, // must pass through at least once
       { from: a.accept, sym: EPSILON, to: a.start }, // repeat
       { from: a.accept, sym: EPSILON, to: t }, // exit
     ];
-    return done("plus", { start: s, accept: t, trans: [...a.trans, ...newT] }, [s, t], newT);
+    const span = [a.span[0], opAt + 1];
+    return done("plus", { start: s, accept: t, trans: [...a.trans, ...newT], span }, [s, t], newT, { span: [...span], opAt, operands: [operand(a)] });
   }
 
-  function opt(a) {
+  function opt(a, opAt) {
     const s = fresh(), t = fresh();
     const newT = [
       { from: s, sym: EPSILON, to: a.start }, // take r
       { from: s, sym: EPSILON, to: t }, // skip r
       { from: a.accept, sym: EPSILON, to: t },
     ];
-    return done("opt", { start: s, accept: t, trans: [...a.trans, ...newT] }, [s, t], newT);
+    const span = [a.span[0], opAt + 1];
+    return done("opt", { start: s, accept: t, trans: [...a.trans, ...newT], span }, [s, t], newT, { span: [...span], opAt, operands: [operand(a)] });
   }
 
   // ── Recursive-descent parser ──
@@ -97,8 +107,8 @@ function regexToNFA(str, onStep) {
   function parseExpr() {
     let node = parseConcat();
     while (peek() === "|") {
-      pos++;
-      node = union(node, parseConcat());
+      const opAt = pos++;
+      node = union(node, parseConcat(), opAt);
     }
     return node;
   }
@@ -112,8 +122,8 @@ function regexToNFA(str, onStep) {
   function parseUnary() {
     let node = parseAtom();
     while (peek() === "*" || peek() === "+" || peek() === "?") {
-      const op = str[pos++];
-      node = op === "*" ? star(node) : op === "+" ? plus(node) : opt(node);
+      const opAt = pos, op = str[pos++];
+      node = op === "*" ? star(node, opAt) : op === "+" ? plus(node, opAt) : opt(node, opAt);
     }
     return node;
   }
@@ -122,22 +132,23 @@ function regexToNFA(str, onStep) {
     const ch = peek();
     if (ch === null) throw new Error("Unexpected end of expression");
     if (ch === "(") {
-      pos++;
+      const lo = pos++;
       const inner = parseExpr();
       if (peek() !== ")") throw new Error("Unmatched ( — missing )");
       pos++;
+      inner.span = [lo, pos]; // later steps treat the parentheses as part of the operand
       return inner;
     }
     if (ch === ")") throw new Error("Unmatched )");
     if (ch === "|" || ch === "*" || ch === "+" || ch === "?") throw new Error("Unexpected operator '" + ch + "' at position " + pos);
     if (ch === "\\") {
       // Escape: treat next character as a literal symbol
-      pos++;
+      const lo = pos++;
       if (peek() === null) throw new Error("Trailing \\");
-      return symbol(str[pos++]);
+      return symbol(str[pos++], "symbol", [lo, pos]);
     }
-    pos++;
-    return ch === EPSILON ? symbol(EPSILON, "eps") : symbol(ch);
+    const lo = pos++;
+    return ch === EPSILON ? symbol(EPSILON, "eps", [lo, pos]) : symbol(ch, "symbol", [lo, pos]);
   }
 
   if (!str.trim()) throw new Error("Empty expression");

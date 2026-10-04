@@ -31,17 +31,38 @@
         color: var(--text-dim);
         margin-bottom: var(--sp-2);
       }
-      #regex-input {
+      /* The expression is highlighted by a copy of its text behind the (transparent) input */
+      #regex-field { position: relative; background: var(--bg-input); }
+      #regex-input,
+      #regex-hl {
+        box-sizing: border-box;
         width: 100%;
-        background: var(--bg-input);
-        color: var(--text);
-        border: 1px solid var(--border);
         font-family: var(--font-mono);
         font-size: var(--fs-md);
-        padding: var(--sp-2) var(--sp-4);
-        outline: none;
+        line-height: 1.4;
         letter-spacing: 0.04em;
+        padding: var(--sp-2) var(--sp-4);
+        border: 1px solid var(--border);
       }
+      #regex-input {
+        position: relative;
+        background: transparent;
+        color: var(--text);
+        outline: none;
+      }
+      #regex-hl {
+        position: absolute;
+        inset: 0;
+        border-color: transparent;
+        color: transparent;
+        white-space: pre;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      #regex-hl .rx-span { box-shadow: inset 0 -2px 0 var(--amber); }
+      #regex-hl .rx-operand { background: var(--amber-bg); }
+      #regex-hl .rx-operand2 { background: var(--bg-hover); }
+      #regex-hl .rx-op { background: var(--amber-bg); outline: 1px solid var(--amber); }
       #regex-input:focus {
         border-color: var(--accent);
         outline: 1px solid var(--accent);
@@ -98,6 +119,28 @@
         overflow: auto;
         padding: var(--sp-5) var(--sp-5);
       }
+      /* The fragments being combined in the current step */
+      #tc-frag {
+        flex-shrink: 0;
+        border-top: 1px solid var(--border-lo);
+        padding: var(--sp-3) var(--sp-5);
+        background: var(--bg-panel);
+      }
+      #tc-frag[hidden] { display: none; }
+      #tc-frag svg { display: block; width: 100%; max-height: 150px; }
+      .tcf-node circle { fill: var(--bg); stroke: var(--text-dim); stroke-width: 1.2; }
+      .tcf-node text { font-family: var(--font-mono); font-size: 9px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; }
+      .tcf-new circle { stroke: var(--amber); fill: var(--amber-bg); stroke-width: 1.6; }
+      .tcf-new text { fill: var(--amber); font-weight: bold; }
+      .tcf-box { fill: var(--bg-cell); stroke: var(--border-hi); stroke-width: 1.2; }
+      .tcf-box-label { font-family: var(--font-mono); font-size: 11px; fill: var(--text); text-anchor: middle; dominant-baseline: central; }
+      .tcf-edge { fill: none; stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 4 3; }
+      .tcf-edge--sym { stroke-dasharray: none; stroke: var(--text); }
+      .tcf-edge-label { font-family: var(--font-mono); font-size: 10px; font-style: italic; fill: var(--text-dim); text-anchor: middle; }
+      .tcf-tag { font-family: var(--font-serif); font-size: 10px; font-style: italic; font-weight: bold; text-anchor: middle; }
+      .tcf-tag-i { fill: var(--accent); }
+      .tcf-tag-f { fill: var(--green); }
+      .tcf-arrowhead { fill: var(--text-dim); }
 
       /* State column markers */
       .parse-table td.state-start {
@@ -354,7 +397,10 @@
           </div>
           <div id="regex-input-wrap">
             <div class="input-sublabel">Regular expression</div>
-            <input id="regex-input" type="text" spellcheck="false" placeholder="e.g. (a|b)*abb" />
+            <div id="regex-field">
+              <div id="regex-hl" aria-hidden="true"></div>
+              <input id="regex-input" type="text" spellcheck="false" placeholder="e.g. (a|b)*abb" />
+            </div>
           </div>
           <div id="regex-footer">
             <div id="error-msg"></div>
@@ -391,6 +437,7 @@
           <div id="nfa-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden">
             <div class="nfa-summary" id="nfa-summary"></div>
             <div id="nfa-table-wrap"></div>
+            <div id="tc-frag" hidden></div>
           </div>
         </div>
       </div>
@@ -522,12 +569,12 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/regex.js?v=209c3c07"></script>
+    <script src="../../shared/algo/regex.js?v=311ec5b3"></script>
     <script src="../../shared/shared.js?v=98590a79"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=4dfea734"></script>
+    <script src="guide.js?v=5013bc25"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
@@ -583,6 +630,8 @@
           .join(", ") +
         "}";
 
+      // The sub-expression a step builds, as written in the input
+      const sub = (st) => '<span class="lg-sym">' + esc(_nfaSrc.slice(st.span[0], st.span[1])) + "</span>";
       function formatNfaStep(st) {
         const s = st.frag.start,
           t = st.frag.accept;
@@ -594,23 +643,30 @@
           case "eps":
             return '<span class="lg-op">Base</span> ε' + frag + added("");
           case "union":
-            return '<span class="lg-op">Union</span> r₁ | r₂' + frag + added("  +4 ε");
+            return '<span class="lg-op">Union</span> ' + sub(st) + frag + added("  +4 ε");
           case "concat":
-            return '<span class="lg-op">Concat</span> r₁ r₂' + frag + '  <span class="lg-new">ε-link q' + st.newTrans[0].from + " → q" + st.newTrans[0].to + "</span>";
+            return '<span class="lg-op">Concat</span> ' + sub(st) + frag + '  <span class="lg-new">ε-link q' + st.newTrans[0].from + " → q" + st.newTrans[0].to + "</span>";
           case "star":
-            return '<span class="lg-op">Star</span> r₁*' + frag + added("  +4 ε");
+            return '<span class="lg-op">Star</span> ' + sub(st) + frag + added("  +4 ε");
           case "plus":
-            return '<span class="lg-op">Plus</span> r₁+' + frag + added("  +3 ε");
+            return '<span class="lg-op">Plus</span> ' + sub(st) + frag + added("  +3 ε");
           case "opt":
-            return '<span class="lg-op">Optional</span> r₁?' + frag + added("  +3 ε");
+            return '<span class="lg-op">Optional</span> ' + sub(st) + frag + added("  +3 ε");
         }
       }
 
+      let _nfaSrc = ""; // the expression the Thompson steps were built from
       function buildNFAWithSteps(str) {
+        _nfaSrc = str;
         const steps = [];
         const nfa = regexToNFA(str, (st) =>
           steps.push({
             logHtml: formatNfaStep(st),
+            op: st.op,
+            ch: st.ch,
+            span: st.span,
+            opAt: st.opAt,
+            operands: st.operands,
             fragStart: st.frag.start,
             fragAccept: st.frag.accept,
             newStates: st.newStates,
@@ -776,6 +832,80 @@
       let _nfaFinal = null; // { start, accept, numStates } for "done" rendering
       document.addEventListener("DOMContentLoaded", () => nfaRenderStep()); // header row from the start
 
+      // ── Showing what the current step builds ───────────────────────
+      // The characters of the expression it covers (operands tinted, the operator boxed, the
+      // whole sub-expression underlined), and a small diagram of the fragments being combined.
+      function rxHighlight(step) {
+        const hl = document.getElementById("regex-hl");
+        const input = document.getElementById("regex-input");
+        const text = input.value;
+        if (!step || text !== _nfaSrc) { hl.innerHTML = ""; return; }
+        const [lo, hi] = step.span;
+        const operandAt = (i) => (step.operands || []).findIndex((o) => i >= o.span[0] && i < o.span[1]);
+        let h = "";
+        for (let i = 0; i < text.length; i++) {
+          const ch = esc(text[i]);
+          if (i < lo || i >= hi) h += ch;
+          else {
+            const k = operandAt(i);
+            const cls = i === step.opAt ? "rx-span rx-op" : k === 0 ? "rx-span rx-operand" : k === 1 ? "rx-span rx-operand2" : "rx-span";
+            h += '<span class="' + cls + '">' + ch + "</span>";
+          }
+        }
+        hl.innerHTML = h;
+        hl.scrollLeft = input.scrollLeft;
+      }
+      (function keepHighlightScrolled() {
+        const input = document.getElementById("regex-input");
+        const sync = () => { document.getElementById("regex-hl").scrollLeft = input.scrollLeft; };
+        for (const ev of ["input", "keyup", "keydown", "mouseup", "scroll", "focus"]) input.addEventListener(ev, sync);
+      })();
+
+      function drawFragment(step) {
+        const box = document.getElementById("tc-frag");
+        if (!step) { box.hidden = true; box.innerHTML = ""; return; }
+        const R = 11;
+        const label = (o) => {
+          const t = _nfaSrc.slice(o.span[0], o.span[1]);
+          return t.length > 14 ? t.slice(0, 6) + "…" + t.slice(-5) : t;
+        };
+        const node = (x, y, q, cls) => `<g class="tcf-node ${cls}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y}">q${q}</text></g>`;
+        const edge = (d, lx, ly, text, sym) => `<path class="tcf-edge${sym ? " tcf-edge--sym" : ""}" d="${d}" marker-end="url(#tcf-arrow)"/>` + `<text class="tcf-edge-label" x="${lx}" y="${ly}">${esc(text)}</text>`;
+        const line = (x1, y1, x2, y2, text, sym) => edge(`M${x1 + (x2 > x1 ? R : -R)},${y1} L${x2 + (x2 > x1 ? -R : R)},${y2}`, (x1 + x2) / 2, Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 4, text, sym);
+        const arc = (x1, y1, x2, y2, up, text) => {
+          const cy = up ? Math.min(y1, y2) - 52 : Math.max(y1, y2) + 52;
+          return edge(`M${x1},${y1 + (up ? -R : R)} Q${(x1 + x2) / 2},${cy} ${x2},${y2 + (up ? -R : R)}`, (x1 + x2) / 2, up ? cy + 16 : cy - 8, text);
+        };
+        const tags = (i, f) => `<text class="tcf-tag tcf-tag-i" x="${i[0]}" y="${i[1] - R - 3}">i</text><text class="tcf-tag tcf-tag-f" x="${f[0]}" y="${f[1] - R - 3}">f</text>`;
+        const operandBox = (o, x, y, w, h) =>
+          `<rect class="tcf-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><text class="tcf-box-label" x="${x + w / 2}" y="${y + h / 2}">${esc(label(o))}</text>` +
+          node(x, y + h / 2, o.start, "") + node(x + w, y + h / 2, o.accept, "");
+        const [A, B] = step.operands || [];
+        const [ns, nt] = step.newStates || [];
+        let g = "", iPos, fPos;
+        if (step.op === "symbol" || step.op === "eps") {
+          g = node(90, 65, ns, "tcf-new") + node(230, 65, nt, "tcf-new") + line(90, 65, 230, 65, step.op === "eps" ? "ε" : step.ch, step.op === "symbol");
+          iPos = [90, 65]; fPos = [230, 65];
+        } else if (step.op === "concat") {
+          g = operandBox(A, 20, 45, 100, 40) + operandBox(B, 200, 45, 100, 40) + line(120, 65, 200, 65, "ε");
+          iPos = [20, 65]; fPos = [300, 65];
+        } else if (step.op === "union") {
+          g = operandBox(A, 85, 14, 150, 34) + operandBox(B, 85, 82, 150, 34) + node(25, 65, ns, "tcf-new") + node(295, 65, nt, "tcf-new") +
+            line(25, 65, 85, 31, "ε") + line(25, 65, 85, 99, "ε") + line(235, 31, 295, 65, "ε") + line(235, 99, 295, 65, "ε");
+          iPos = [25, 65]; fPos = [295, 65];
+        } else {
+          // star, plus, optional: the operand between a new start and a new accept state
+          g = operandBox(A, 95, 48, 130, 34) + node(25, 65, ns, "tcf-new") + node(295, 65, nt, "tcf-new") + line(25, 65, 95, 65, "ε") + line(225, 65, 295, 65, "ε");
+          if (step.op !== "plus") g += arc(25, 65, 295, 65, true, "ε");      // skip the operand
+          if (step.op !== "opt") g += arc(225, 65, 95, 65, false, "ε");      // repeat it
+          iPos = [25, 65]; fPos = [295, 65];
+        }
+        box.innerHTML =
+          `<svg viewBox="0 0 320 130" role="img" aria-label="The fragments combined in this step"><defs><marker id="tcf-arrow" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="6" refX="6.3" refY="2.7" orient="auto"><path class="tcf-arrowhead" d="M0,0 L0,5.4 L7.2,2.7 z"/></marker></defs>` +
+          g + tags(iPos, fPos) + "</svg>";
+        box.hidden = false;
+      }
+
       function nfaRenderStep() {
         const logEl = document.getElementById("tc-log-bar");
         const wrap = document.getElementById("nfa-table-wrap");
@@ -789,6 +919,10 @@
           tbl.innerHTML = '<thead><tr><th class="state-col">State</th>' + finalCols.map((c) => "<th>" + esc(c) + "</th>").join("") + "</tr></thead>";
           return tbl;
         };
+
+        const current = _nfaSteps && nfaStepper.pos >= 0 ? _nfaSteps[nfaStepper.pos] : null;
+        rxHighlight(current);
+        drawFragment(current);
 
         if (!_nfaSteps || nfaStepper.pos < 0) {
           // Not started: the header only; states are added as they are created.
