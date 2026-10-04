@@ -7,7 +7,7 @@
     <title>LR Parser | Parser Tools</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=4fc3d1b2" />
+    <link rel="stylesheet" href="../shared/shared.css?v=367e2c99" />
     <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -336,18 +336,6 @@
         padding: 0 1px;
       }
 
-      /* ── Arrow-key target selector ── */
-      #key-nav {
-        margin-left: auto;
-        display: flex;
-        align-items: center;
-        gap: var(--sp-3);
-      }
-      #key-nav-label {
-        font-family: var(--font-mono);
-        font-size: var(--fs-sm);
-        color: var(--text-dim);
-      }
     </style>
   </head>
   <body>
@@ -365,14 +353,6 @@
         <input type="checkbox" id="augment-cb" checked onchange="if (currentGrammar) build();" />
         Augment grammar
       </label>
-      <div id="key-nav">
-        <span id="key-nav-label">Arrow Keys</span>
-        <select id="key-select" class="ui-select" onchange="keyTarget = this.value" title="Arrow keys control which simulator">
-          <option value="automaton">Automaton</option>
-          <option value="tables">Tables</option>
-          <option value="parsing">Parsing</option>
-        </select>
-      </div>
     </div>
     <div id="panels">
       <!-- 1. Grammar -->
@@ -543,13 +523,13 @@
     </div>
 
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
-    <script src="../shared/algo/panels.js?v=c3d7045f"></script>
+    <script src="../shared/algo/panels.js?v=2bf15852"></script>
     <script src="../shared/algo/share.js?v=5bc06f8f"></script>
     <script src="../shared/algo/lr.js?v=ff1c748a"></script>
-    <script src="../shared/shared.js?v=cd9af51a"></script>
+    <script src="../shared/shared.js?v=67020697"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
     <script src="../shared/ui.js?v=35102e64"></script>
-    <script src="../shared/view-menu.js?v=0e8c4666"></script>
+    <script src="../shared/view-menu.js?v=57be241c"></script>
     <script>
       // Global error catcher — shows errors visibly on mobile
       window.onerror = function (msg, src, line, col, err) {
@@ -2384,29 +2364,12 @@ ${kw("loop")}
         if (e.key === "Escape") closeAlgoModal();
       });
 
-      let keyTarget = "automaton";
 
-      const keyTargets = ["automaton", "tables", "parsing"];
-      document.addEventListener("keydown", (e) => {
-        if (isAlgoModalOpen()) return;
-        if (e.target.matches("input,textarea,select")) return;
-        if (e.key === "t") {
-          keyTarget = keyTargets[(keyTargets.indexOf(keyTarget) + 1) % keyTargets.length];
-          document.getElementById("key-select").value = keyTarget;
-          return;
-        }
-        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-        e.preventDefault();
-        if (e.key === "ArrowRight") {
-          if (keyTarget === "automaton") cStep();
-          else if (keyTarget === "tables") tStep();
-          else simStep();
-        } else {
-          if (keyTarget === "automaton") cBack();
-          else if (keyTarget === "tables") tBack();
-          else simBack();
-        }
-      });
+      // Arrow-key stepping comes from shared.js (registerStepper): the panel with key focus
+      // (tinted header) steps; click a panel or press T to move it.
+      registerStepper("p-automaton", { step: cStep, back: cBack, reset: cReset, end: cRunAll }, { primary: true });
+      registerStepper("p-tables", { step: tStep, back: tBack, reset: tReset, end: tRunAll });
+      registerStepper("p-tree", { step: simStep, back: simBack, reset: simReset, end: simRunAll });
 
       window.addEventListener("load", () => {
         loadPanelState();

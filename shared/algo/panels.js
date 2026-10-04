@@ -70,3 +70,30 @@ function fitPanels(panels, available, collapsedW = PANEL_COLLAPSED_W) {
   }
   return { collapse, expand };
 }
+
+// ── Keyboard stepping ─────────────────────────────────────────────────
+// Which stepper action a key press means, or null. Callers skip key presses
+// that are typing into a field or arrive while a menu/modal is open.
+//   ←/→ or ,/.  step back / forward      Home  reset      End  run to the end
+//   t / T       move key focus to the next / previous stepping panel
+function stepperKeyAction({ key, ctrlKey = false, metaKey = false, altKey = false }) {
+  if (ctrlKey || metaKey || altKey) return null;
+  switch (key) {
+    case "ArrowRight": case ".": return "step";
+    case "ArrowLeft": case ",": return "back";
+    case "Home": return "reset";
+    case "End": return "end";
+    case "t": return "next-panel";
+    case "T": return "prev-panel";
+    default: return null;
+  }
+}
+
+// The panel id after `current` in `ids` (wrapping); dir is 1 or -1.
+// An unknown current starts from the first id.
+function nextKeyPanel(ids, current, dir = 1) {
+  if (!ids.length) return null;
+  const i = ids.indexOf(current);
+  if (i < 0) return ids[0];
+  return ids[(i + dir + ids.length) % ids.length];
+}

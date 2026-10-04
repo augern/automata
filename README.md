@@ -188,6 +188,16 @@ Every tool is a row of resizable panels (`#panels`). The row behaves like this:
   strip highlights on hover, and clicking it (or Enter/Space) opens it. Dragging a
   handle well past a panel's minimum collapses that panel, and dragging back
   reopens it. The panel with keyboard focus gets an accent rule under its header.
+- **Keyboard stepping and key focus.** Each panel with a stepper (Back / Step /
+  Reset / Run all) registers it with `registerStepper(panelId, {step, back, reset,
+  end})`. One such panel at a time has *key focus*: its header is tinted blue with a
+  `← →` hint after the title, and the keys act on it. `←`/`→` (or `,`/`.`) step back
+  and forward, `Home` resets, `End` runs to the end, and `T` / `Shift+T` move key
+  focus to the next/previous stepping panel. Clicking or tabbing into a stepping
+  panel moves key focus there; the View menu lists the panels too. The keys are
+  ignored while you type in a field or while a menu or dialog is open. This
+  replaces the old per-tool handlers, LR's "Arrow Keys" selector and LL(1)'s
+  Shift+arrow, and gives the regex tool (four steppers) keyboard stepping.
 - **Panel menus.** Each header has a `⋯` menu holding the panel's secondary
   actions (Algorithm, view toggles) plus "Focus on this panel" and "Collapse
   panel", which keeps headers uncluttered. The buttons themselves stay in the

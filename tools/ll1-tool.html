@@ -6,7 +6,7 @@
     <meta name="description" content="Interactive LL(1) parser — compute FIRST/FOLLOW sets, build predictive tables, and step through string simulation with a live parse tree." />
     <title>LL(1) Parser | Parser Tools</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=4fc3d1b2" />
+    <link rel="stylesheet" href="../shared/shared.css?v=367e2c99" />
     <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -269,13 +269,13 @@
     </div>
 
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
-    <script src="../shared/algo/panels.js?v=c3d7045f"></script>
+    <script src="../shared/algo/panels.js?v=2bf15852"></script>
     <script src="../shared/algo/share.js?v=5bc06f8f"></script>
     <script src="../shared/algo/ll1.js?v=40eb47b3"></script>
-    <script src="../shared/shared.js?v=cd9af51a"></script>
+    <script src="../shared/shared.js?v=67020697"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
     <script src="../shared/ui.js?v=35102e64"></script>
-    <script src="../shared/view-menu.js?v=0e8c4666"></script>
+    <script src="../shared/view-menu.js?v=57be241c"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
       initResize("rh-1", "p-grammar", +1);
@@ -885,18 +885,12 @@ ${kw("loop")}
       // closeAlgoModal — defined in shared.js
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") { closeAlgoModal(); return; }
-        if (isAlgoModalOpen()) return;
-        if (e.target.matches("input,textarea,select")) return;
-        // Shift+arrow → table stepper; plain arrow → parsing simulation
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          if (e.shiftKey) tStep(); else simStep();
-        } else if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          if (e.shiftKey) tBack(); else simBack();
-        }
+        if (e.key === "Escape") closeAlgoModal();
       });
+      // Arrow-key stepping comes from shared.js (registerStepper): the panel with key focus
+      // (tinted header) steps; click a panel or press T to move it.
+      registerStepper("p-tables", { step: tStep, back: tBack, reset: tReset, end: tRunAll });
+      registerStepper("p-tree", { step: simStep, back: simBack, reset: simReset, end: simRunAll }, { primary: true });
 
       // Global error handler — shows errors in the grammar panel
       window.onerror = function (msg, src, line, col, err) {

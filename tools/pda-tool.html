@@ -5,7 +5,7 @@
     <title>PDA Simulator</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=4fc3d1b2" />
+    <link rel="stylesheet" href="../shared/shared.css?v=367e2c99" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
     <style>
@@ -185,14 +185,14 @@
     </div>
 
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
-    <script src="../shared/algo/panels.js?v=c3d7045f"></script>
+    <script src="../shared/algo/panels.js?v=2bf15852"></script>
     <script src="../shared/algo/share.js?v=5bc06f8f"></script>
     <script src="../shared/algo/states.js?v=107884d8"></script>
     <script src="../shared/algo/pda.js?v=c6c2e029"></script>
-    <script src="../shared/shared.js?v=cd9af51a"></script>
+    <script src="../shared/shared.js?v=67020697"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
     <script src="../shared/ui.js?v=35102e64"></script>
-    <script src="../shared/view-menu.js?v=0e8c4666"></script>
+    <script src="../shared/view-menu.js?v=57be241c"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../shared/automaton-graph.js?v=38a5e408"></script>
     <script>
@@ -779,15 +779,9 @@ else: ${kw("reject")}`
       // KEYBOARD SHORTCUTS
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      document.addEventListener("keydown", e => {
-        if (isAlgoModalOpen()) return;
-        const tag = document.activeElement?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        if (e.key === "ArrowRight" || e.key === ".") { e.preventDefault(); simStepFwd(); }
-        if (e.key === "ArrowLeft"  || e.key === ",") { e.preventDefault(); simBack(); }
-        if (e.key === "Home") { e.preventDefault(); simReset(); }
-        if (e.key === "End")  { e.preventDefault(); simRunAll(); }
-      });
+      // Arrow-key stepping comes from shared.js (registerStepper): the Simulation panel
+      // has key focus, shown by its tinted header.
+      registerStepper("p-sim", { step: simStepFwd, back: simBack, reset: simReset, end: simRunAll });
 
       document.getElementById("sim-string-input").addEventListener("keydown", e => {
         if (e.key === "Enter") { e.preventDefault(); simRun(); }

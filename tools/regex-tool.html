@@ -5,7 +5,7 @@
     <title>Regular Expression Tool</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=4fc3d1b2" />
+    <link rel="stylesheet" href="../shared/shared.css?v=367e2c99" />
     <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -619,13 +619,13 @@
     </div>
 
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
-    <script src="../shared/algo/panels.js?v=c3d7045f"></script>
+    <script src="../shared/algo/panels.js?v=2bf15852"></script>
     <script src="../shared/algo/share.js?v=5bc06f8f"></script>
     <script src="../shared/algo/regex.js?v=209c3c07"></script>
-    <script src="../shared/shared.js?v=cd9af51a"></script>
+    <script src="../shared/shared.js?v=67020697"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
     <script src="../shared/ui.js?v=35102e64"></script>
-    <script src="../shared/view-menu.js?v=0e8c4666"></script>
+    <script src="../shared/view-menu.js?v=57be241c"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
@@ -1956,6 +1956,11 @@ ${kw("return")} D′`,
       }
 
       window.addEventListener("load", () => {
+        // Each pipeline stage has its own stepper; the arrow keys act on the panel with key focus.
+        registerStepper("p-nfa", { step: nfaStepFwd, back: nfaBack, reset: nfaReset, end: nfaRunAll });
+        registerStepper("p-dfa", { step: scStepFwd, back: scBack, reset: scReset, end: scRunAll });
+        registerStepper("p-min", { step: mcStepFwd, back: mcBack, reset: mcReset, end: mcRunAll });
+        registerStepper("p-sim", { step: simStepFwd, back: simBack, reset: simReset, end: simRunAll }, { primary: true });
         initPanelStorage("regex-tool-v1", ["p-regex", "p-nfa", "p-dfa", "p-min", "p-sim"]);
         loadPanelState();
         loadExamplesInto("../examples/examples-regex.json", "examples-select", EXAMPLES);

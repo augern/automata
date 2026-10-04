@@ -81,3 +81,35 @@ test("fitPanels never re-expands a panel the user collapsed", () => {
   const panels = [P(200, 3), P(200, 2, { collapsed: true, auto: false, locked: true })];
   assert.deepEqual(arr(fitPanels(panels, 2000, 22).expand), []);
 });
+
+const { stepperKeyAction, nextKeyPanel } = load("panels.js");
+
+test("stepperKeyAction maps arrows, comma/period, Home/End and t/T", () => {
+  const act = (key, extra = {}) => stepperKeyAction({ key, ...extra });
+  assert.equal(act("ArrowRight"), "step");
+  assert.equal(act("."), "step");
+  assert.equal(act("ArrowLeft"), "back");
+  assert.equal(act(","), "back");
+  assert.equal(act("Home"), "reset");
+  assert.equal(act("End"), "end");
+  assert.equal(act("t"), "next-panel");
+  assert.equal(act("T", { shiftKey: true }), "prev-panel");
+  assert.equal(act("x"), null);
+  assert.equal(act("Enter"), null);
+});
+
+test("stepperKeyAction ignores shortcuts with Ctrl, Meta or Alt", () => {
+  for (const mod of ["ctrlKey", "metaKey", "altKey"]) assert.equal(stepperKeyAction({ key: "ArrowRight", [mod]: true }), null, mod);
+  // Shift alone is fine (Shift+arrow used to step the LL(1) table; now it steps the focused panel)
+  assert.equal(stepperKeyAction({ key: "ArrowRight", shiftKey: true }), "step");
+});
+
+test("nextKeyPanel cycles in both directions and recovers from an unknown panel", () => {
+  const ids = ["p-a", "p-b", "p-c"];
+  assert.equal(nextKeyPanel(ids, "p-a", 1), "p-b");
+  assert.equal(nextKeyPanel(ids, "p-c", 1), "p-a");
+  assert.equal(nextKeyPanel(ids, "p-a", -1), "p-c");
+  assert.equal(nextKeyPanel(ids, "gone", 1), "p-a");
+  assert.equal(nextKeyPanel(["only"], "only", 1), "only");
+  assert.equal(nextKeyPanel([], "x", 1), null);
+});

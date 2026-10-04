@@ -15,6 +15,15 @@
       },
       { label: themeIsDark() ? "Switch to light theme" : "Switch to dark theme", onSelect: themeToggle },
     ];
+    const steppers = typeof keyPanelSummaries === "function" ? keyPanelSummaries() : [];
+    if (steppers.length > 1) {
+      list.push(
+        { separator: true },
+        { heading: "Arrow keys step" },
+        ...steppers.map((p) => ({ label: p.title, checked: p.keyFocus, onSelect: () => setKeyPanel(p.id) })),
+        { label: "Next stepping panel", hint: "T", onSelect: () => setKeyPanel(nextKeyPanel(steppers.map((p) => p.id), (steppers.find((p) => p.keyFocus) || {}).id, 1)) }
+      );
+    }
     if (document.getElementById("panels") && typeof panelsResetLayout === "function") {
       list.push(
         { separator: true },

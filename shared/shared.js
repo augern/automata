@@ -236,6 +236,63 @@ function installPanelMenus() {
   });
 }
 
+// ── Key focus: which panel the arrow keys step ───────────────────────────
+// Every panel that has a stepper (Back / Step / Reset / Run-all) registers it:
+//   registerStepper("p-sim", { step: simStepFwd, back: simBack, reset: simReset, end: simRunAll });
+// Exactly one registered panel has "key focus" at a time: its header is tinted and
+// the keys act on it (see stepperKeyAction in algo/panels.js). Focus moves when you
+// click or Tab into another stepping panel, or press T. A tool with one stepper
+// never needs to think about any of this.
+const _steppers = new Map();
+var _keyPanelId = null;
+var _keyFocusInstalled = false;
+
+function registerStepper(panelId, actions, opts) {
+  _steppers.set(panelId, actions);
+  _installKeyFocus();
+  if (_keyPanelId === null || (opts && opts.primary)) setKeyPanel(panelId, true);
+}
+
+function _stepperPanelIds() {
+  return _panels().map((el) => el.id).filter((id) => _steppers.has(id));
+}
+
+function setKeyPanel(id, force) {
+  if (!_steppers.has(id) || (_keyPanelId === id && !force)) return;
+  _keyPanelId = id;
+  _panels().forEach((el) => el.classList.toggle("has-key-focus", el.id === id));
+}
+
+function keyPanelSummaries() {
+  return _stepperPanelIds().map((id) => ({ id, title: _panelName(document.getElementById(id)), keyFocus: id === _keyPanelId }));
+}
+
+function _installKeyFocus() {
+  if (_keyFocusInstalled) return;
+  _keyFocusInstalled = true;
+  const claim = (e) => {
+    const panel = e.target.closest && e.target.closest("#panels > .panel");
+    if (panel) setKeyPanel(panel.id);
+  };
+  document.addEventListener("pointerdown", claim, true);
+  document.addEventListener("focusin", claim);
+  document.addEventListener("keydown", (e) => {
+    if (e.defaultPrevented) return; // e.g. a resize handle took the arrow key
+    if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (document.querySelector(".ui-menu")) return;
+    if (typeof isAlgoModalOpen === "function" && isAlgoModalOpen()) return;
+    const action = stepperKeyAction(e);
+    if (!action) return;
+    e.preventDefault();
+    if (action === "next-panel" || action === "prev-panel") {
+      setKeyPanel(nextKeyPanel(_stepperPanelIds(), _keyPanelId, action === "next-panel" ? 1 : -1));
+      return;
+    }
+    const stepper = _steppers.get(_keyPanelId);
+    if (stepper && stepper[action]) stepper[action]();
+  });
+}
+
 // Charts that draw into a sized container re-render after the layout moves.
 function _panelsChanged() {
   if (typeof renderTree === "function" && document.getElementById("p-tree")) renderTree();
