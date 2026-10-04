@@ -57,6 +57,7 @@ parser-tools/
 │   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
+│   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
 │   │   ├── nfa.js                      ← pure: ε-closure, NFA simulation tree, exact acceptance
 │   │   ├── pda.js                      ← pure: PDA configurations, simulation tree, exact acceptance
 │   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimization
@@ -158,6 +159,31 @@ unique to that tool (the TM tape, the PDA stack chips, panel widths).
 All eight tools now use the shared components. What remains in each tool's own
 CSS is specific to it: the LR item-set diagram and parse tables, the derivation
 chips, the TM tape and trace table, the regex DFA graph and pair table.
+
+---
+
+## Panel layout
+
+Every tool is a row of resizable panels (`#panels`). The row behaves like this:
+
+- **Proportional.** Each panel has a weight (`--pw`, its pixel width at a ~1400px
+  window) and a minimum (`--pmin`). Panels share the row in proportion to their
+  weights, so growing or shrinking the window scales every panel together.
+  Weights, not pixels, are saved, so a layout restores sensibly at any window size.
+- **Split-pane handles.** A handle moves the boundary between the panels on
+  either side and leaves the others alone. Drag it, nudge it with the arrow keys
+  (Shift for bigger steps), or double-click to restore the designed proportions.
+- **Nothing is hidden by accident.** If the minimums don't fit, the panels with
+  the lowest `data-priority` collapse to a labelled strip and return when there
+  is room. Opening a strip in a cramped window makes room by collapsing the next
+  lowest panel. Panels you collapse yourself stay collapsed. If even that isn't
+  enough the row scrolls sideways.
+- **Collapse controls.** The chevron collapses a panel; clicking its strip
+  opens it. The panel with keyboard focus gets an accent rule under its header.
+
+To add a panel: give it `data-priority`, and in the tool CSS set `--pw` and
+`--pmin`. The layout logic is `shared/algo/panels.js` (tested) and the panel
+section of `shared/shared.js`.
 
 ---
 

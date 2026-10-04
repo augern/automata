@@ -9,13 +9,15 @@
     <script src="../shared/theme.js"></script>
     <link rel="stylesheet" href="../shared/ui.css" />
     <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-def { --pw: 400; --pmin: 300px; }
+      #p-sim { --pw: 660; --pmin: 280px; }
+      #p-tree { --pw: 340; --pmin: 200px; }
+
       /* ── Panel widths ── */
       /* The PDA definition stacks several sections with a gap; its graph sits under a rule. */
       #def-scroll { display: flex; flex-direction: column; gap: var(--sp-5); }
-      #pda-graph-wrap { border-top: 1px solid var(--border-lo); }
-      #p-def { width: 400px; }
-      #p-sim { flex: 1; min-width: 280px; }
-      #p-tree { width: 340px; }/* ── Definition panel ── *//* Section headers inside def panel *//* ── States mini-table ── *//* Remove buttons *//* Initial stack symbol row *//* ── Rules table ── *//* Acceptance mode toggle *//* Definition footer *//* ── PDA graph (inside sim panel) ── *//* PDA graph nodes *//* PDA graph edges *//* Simulation highlighting *//* ── Simulation panel ── *//* Result banner */
+      #pda-graph-wrap { border-top: 1px solid var(--border-lo); }/* ── Definition panel ── *//* Section headers inside def panel *//* ── States mini-table ── *//* Remove buttons *//* Initial stack symbol row *//* ── Rules table ── *//* Acceptance mode toggle *//* Definition footer *//* ── PDA graph (inside sim panel) ── *//* PDA graph nodes *//* PDA graph edges *//* Simulation highlighting *//* ── Simulation panel ── *//* Result banner */
 
       /* Configurations bar */
       #sim-configs-bar {
@@ -42,8 +44,8 @@
 
     <div id="panels">
       <!-- 1. PDA Definition -->
-      <div class="panel" id="p-def">
-        <div class="panel-header" onclick="toggleCollapse('p-def')">
+      <div class="panel" id="p-def" data-priority="2">
+        <div class="panel-header">
           <span class="panel-title">PDA Definition</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
         </div>
@@ -104,8 +106,8 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Simulation + Graph -->
-      <div class="panel" id="p-sim">
-        <div class="panel-header" onclick="toggleCollapse('p-sim')">
+      <div class="panel" id="p-sim" data-priority="3">
+        <div class="panel-header">
           <span class="panel-title">Simulation</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('pda-sim');" title="PDA simulation algorithm">Algorithm</button>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
@@ -146,8 +148,8 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Configuration tree -->
-      <div class="panel" id="p-tree">
-        <div class="panel-header" onclick="toggleCollapse('p-tree')">
+      <div class="panel" id="p-tree" data-priority="1">
+        <div class="panel-header">
           <span class="panel-title">Configuration Tree</span>
           <button class="collapse-btn"
                   onclick="event.stopPropagation(); toggleCollapse('p-tree');">&#8250;</button>
@@ -183,6 +185,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/panels.js"></script>
     <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/states.js"></script>
     <script src="../shared/algo/pda.js"></script>

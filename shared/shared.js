@@ -15,51 +15,102 @@ requestAnimationFrame(function () {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:PANEL-LAYOUT
+// Panels share #panels in proportion to their weight (CSS --pw, with a minimum
+// --pmin), so the whole row scales uniformly with the window. A resize handle
+// moves the boundary between its two neighbours. If the minimums don't fit,
+// the lowest-priority panels (data-priority) auto-collapse to a strip and come
+// back when there is room; the pure logic is in algo/panels.js.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const STORAGE_KEY = "parser-tools-v1";
 
-// Default panel list for tools that use the shared key (ll1, lr).
-// Tools with different panel IDs call initPanelStorage() before loadPanelState().
 var _panelStorageKey = STORAGE_KEY;
-var _panelIds = ["p-grammar", "p-main", "p-automaton", "p-tables", "p-tree"];
 
+// Tools with their own storage key call this before loadPanelState(). The panel
+// list is read from the DOM, so `ids` is accepted only for compatibility.
 function initPanelStorage(key, ids) {
   _panelStorageKey = key;
-  _panelIds = ids;
+}
+
+// "-w" = weights; older versions stored pixel widths, which no longer apply.
+function _panelKey() {
+  return _panelStorageKey + "-w";
+}
+
+function _panels() {
+  return Array.from(document.querySelectorAll("#panels > .panel"));
+}
+
+function _panelWeight(el) {
+  const v = parseFloat(getComputedStyle(el).getPropertyValue("--pw"));
+  return isNaN(v) ? 300 : v;
+}
+
+function _panelMin(el) {
+  const v = parseFloat(getComputedStyle(el).getPropertyValue("--pmin"));
+  return isNaN(v) ? 180 : v;
+}
+
+function _setWeight(el, w) {
+  el.style.setProperty("--pw", String(Math.round(w * 100) / 100));
+}
+
+// Make every open panel's weight equal its current pixel width, so changing one
+// pair afterwards leaves all the others exactly where they are.
+function _normaliseWeights() {
+  _panels().forEach((el) => {
+    if (!el.classList.contains("collapsed")) _setWeight(el, el.getBoundingClientRect().width);
+  });
 }
 
 function savePanelState() {
   try {
     const s = {};
-    _panelIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) s[id] = { width: el.style.width, collapsed: el.classList.contains("collapsed") };
+    _panels().forEach((el) => {
+      if (!el.id) return;
+      s[el.id] = {
+        w: _panelWeight(el),
+        collapsed: el.classList.contains("collapsed") && el.dataset.auto !== "1",
+      };
     });
-    localStorage.setItem(_panelStorageKey, JSON.stringify(s));
+    localStorage.setItem(_panelKey(), JSON.stringify(s));
   } catch (e) {}
 }
 
 function loadPanelState() {
   try {
-    const s = JSON.parse(localStorage.getItem(_panelStorageKey) || "{}");
-    _panelIds.forEach((id) => {
-      if (!s[id]) return;
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (s[id].width) el.style.width = s[id].width;
-      if (s[id].collapsed) {
+    const s = JSON.parse(localStorage.getItem(_panelKey()) || "{}");
+    _panels().forEach((el) => {
+      const st = s[el.id];
+      if (!st) return;
+      if (st.w > 0) _setWeight(el, st.w);
+      if (st.collapsed) {
         el.classList.add("collapsed");
-        updateCollapseBtn(id, true);
+        el.dataset.locked = "1";
+        updateCollapseBtn(el.id, true);
       }
     });
   } catch (e) {}
+  startPanelLayout();
 }
 
+// The user's collapse/expand. Collapsing is remembered; expanding makes room by
+// collapsing lower-priority panels if the row would otherwise overflow.
 function toggleCollapse(id) {
   const el = document.getElementById(id);
-  const c = el.classList.toggle("collapsed");
-  updateCollapseBtn(id, c);
+  const collapsing = !el.classList.contains("collapsed");
+  el.classList.toggle("collapsed", collapsing);
+  delete el.dataset.auto;
+  if (collapsing) {
+    el.dataset.locked = "1";
+    delete el.dataset.protect;
+  } else {
+    delete el.dataset.locked;
+    el.dataset.protect = "1"; // don't auto-collapse what the user just opened
+  }
+  updateCollapseBtn(id, collapsing);
+  fitPanelLayout();
   savePanelState();
+  _panelsChanged();
 }
 
 function updateCollapseBtn(id, collapsed) {
@@ -68,73 +119,140 @@ function updateCollapseBtn(id, collapsed) {
   const el = document.getElementById(id);
   const isLeft = el && el.dataset.collapse === "left";
   btn.innerHTML = isLeft ? (collapsed ? "&#8250;" : "&#8249;") : collapsed ? "&#8249;" : "&#8250;";
+  btn.title = collapsed ? "Expand panel" : "Collapse panel";
+  btn.setAttribute("aria-label", btn.title);
 }
 
-function initResize(hid, panelId, sign) {
-  sign = sign || 1;
-  var handle = document.getElementById(hid);
-  var panelEl = document.getElementById(panelId);
-  function startDrag(startX, startW) {
+// Charts that draw into a sized container re-render after the layout moves.
+function _panelsChanged() {
+  if (typeof renderTree === "function" && document.getElementById("p-tree")) renderTree();
+}
+
+// Collapse or re-expand panels automatically so that every open panel keeps
+// its minimum width (see fitPanels in algo/panels.js).
+function fitPanelLayout() {
+  const row = document.getElementById("panels");
+  if (!row) return false;
+  const panels = _panels();
+  const handles = Array.from(row.querySelectorAll(".resize-handle")).reduce((n, h) => n + h.offsetWidth, 0);
+  const info = panels.map((el) => ({
+    min: _panelMin(el),
+    collapsed: el.classList.contains("collapsed"),
+    auto: el.dataset.auto === "1",
+    locked: el.dataset.locked === "1" || el.dataset.protect === "1",
+    priority: parseFloat(el.dataset.priority) || 0,
+  }));
+  const r = fitPanels(info, row.clientWidth - handles);
+  r.collapse.forEach((i) => {
+    panels[i].classList.add("collapsed");
+    panels[i].dataset.auto = "1";
+    updateCollapseBtn(panels[i].id, true);
+  });
+  r.expand.forEach((i) => {
+    panels[i].classList.remove("collapsed");
+    delete panels[i].dataset.auto;
+    updateCollapseBtn(panels[i].id, false);
+  });
+  return r.collapse.length + r.expand.length > 0;
+}
+
+var _panelObserver = null;
+function startPanelLayout() {
+  const row = document.getElementById("panels");
+  if (!row || _panelObserver) return;
+  // A click on a collapsed strip opens it.
+  row.addEventListener("click", (e) => {
+    const head = e.target.closest(".panel.collapsed > .panel-header");
+    if (head && head.parentElement.parentElement === row) toggleCollapse(head.parentElement.id);
+  });
+  if (typeof ResizeObserver !== "undefined") {
+    let raf = null;
+    _panelObserver = new ResizeObserver(() => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        if (fitPanelLayout()) _panelsChanged();
+      });
+    });
+    _panelObserver.observe(row);
+  }
+  fitPanelLayout();
+}
+
+// Wire a resize handle. The handle moves the boundary between the panel before
+// it and the panel after it (panelId and sign are accepted for compatibility).
+function initResize(hid) {
+  const handle = document.getElementById(hid);
+  if (!handle) return;
+  const left = handle.previousElementSibling;
+  const right = handle.nextElementSibling;
+  handle.setAttribute("role", "separator");
+  handle.setAttribute("aria-orientation", "vertical");
+  handle.setAttribute("aria-label", "Resize panels");
+  handle.setAttribute("title", "Drag to resize · double-click to reset");
+  handle.tabIndex = 0;
+  // Remember the designed weights for double-click reset.
+  [left, right].forEach((el) => { if (!el.dataset.pw0) el.dataset.pw0 = String(_panelWeight(el)); });
+
+  // Set up a drag/keyboard session: returns start widths and minimums. A
+  // collapsed neighbour is opened at its minimum width first.
+  function begin() {
+    [left, right].forEach((el) => {
+      if (!el.classList.contains("collapsed")) return;
+      el.classList.remove("collapsed");
+      delete el.dataset.auto;
+      delete el.dataset.locked;
+      el.dataset.protect = "1";
+      updateCollapseBtn(el.id, false);
+    });
+    _normaliseWeights();
+    const wL = left.getBoundingClientRect().width;
+    const wR = right.getBoundingClientRect().width;
+    const sess = { widthL: wL, widthR: wR, minL: _panelMin(left), minR: _panelMin(right) };
+    // If a panel was just opened it may be thin; start it at its minimum.
+    if (sess.widthL < sess.minL) { sess.widthR -= sess.minL - sess.widthL; sess.widthL = sess.minL; }
+    if (sess.widthR < sess.minR) { sess.widthL -= sess.minR - sess.widthR; sess.widthR = sess.minR; }
+    return sess;
+  }
+  function apply(sess, dx) {
+    const r = panelDrag({ ...sess, dx });
+    _setWeight(left, r.left);
+    _setWeight(right, r.right);
+  }
+  function finish() {
+    savePanelState();
+    _panelsChanged();
+  }
+
+  function startDrag(startX) {
+    const sess = begin();
+    const row = handle.parentElement;
     handle.classList.add("dragging");
-    panelEl.classList.add("resizing");
+    row.classList.add("resizing");
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-    panelEl.style.willChange = "width";
-    // Snapshot geometry once at drag-start so onMove never re-queries the DOM.
-    // Flex-fill panels (flex-grow:1, e.g. p-automaton / p-main) absorb the
-    // squeeze — their CSS min-width is the hard floor.
-    // Rigid panels (flex-shrink:0) won't move at all — their current rendered
-    // width is the space they permanently occupy.
-    var container = panelEl.parentElement;
-    var allHandles = Array.from(container.querySelectorAll(".resize-handle"));
-    var handlesTotalW = allHandles.reduce(function (s, h) { return s + h.offsetWidth; }, 0);
-    var available = container.offsetWidth - handlesTotalW;
-    var siblings = Array.from(container.querySelectorAll(".panel")).filter(function (p) { return p !== panelEl; });
-    var minOthers = siblings.reduce(function (s, p) {
-      if (p.classList.contains("collapsed")) return s + 22;
-      var isFlex = getComputedStyle(p).flexGrow === "1";
-      if (isFlex) {
-        // Use CSS min-width as the floor (defaults to 60 if unset/auto).
-        var cssMin = parseFloat(getComputedStyle(p).minWidth);
-        return s + (isNaN(cssMin) || cssMin < 60 ? 60 : cssMin);
-      } else {
-        // Rigid panel: occupies its full current rendered width regardless.
-        return s + Math.max(60, p.getBoundingClientRect().width);
-      }
-    }, 0);
-    var maxW = Math.max(60, available - minOthers);
-    var pendingW = null;
-    var rafId = null;
+    let pendingDx = 0;
+    let rafId = null;
     function onMove(cx) {
-      pendingW = Math.min(maxW, Math.max(60, startW + sign * (cx - startX)));
+      pendingDx = cx - startX;
       if (rafId) return;
-      rafId = requestAnimationFrame(function () {
-        rafId = null;
-        panelEl.style.width = pendingW + "px";
-        if (panelEl.classList.contains("collapsed")) {
-          panelEl.classList.remove("collapsed");
-          updateCollapseBtn(panelId, false);
-        }
-      });
+      rafId = requestAnimationFrame(() => { rafId = null; apply(sess, pendingDx); });
     }
     function onEnd() {
       if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-      if (pendingW !== null) panelEl.style.width = pendingW + "px";
+      apply(sess, pendingDx);
       handle.classList.remove("dragging");
-      panelEl.classList.remove("resizing");
+      row.classList.remove("resizing");
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      panelEl.style.willChange = "";
-      savePanelState();
-      if (typeof renderTree === "function" && document.getElementById("p-tree")) renderTree();
+      finish();
     }
-    return { onMove: onMove, onEnd: onEnd };
+    return { onMove, onEnd };
   }
+
   handle.addEventListener("mousedown", function (e) {
-    var d = startDrag(e.clientX, panelEl.getBoundingClientRect().width);
-    function mm(e) {
-      d.onMove(e.clientX);
-    }
+    const d = startDrag(e.clientX);
+    function mm(ev) { d.onMove(ev.clientX); }
     function mu() {
       d.onEnd();
       document.removeEventListener("mousemove", mm);
@@ -143,27 +261,39 @@ function initResize(hid, panelId, sign) {
     document.addEventListener("mousemove", mm);
     document.addEventListener("mouseup", mu);
     e.preventDefault();
+    handle.focus();
   });
-  handle.addEventListener(
-    "touchstart",
-    function (e) {
-      var d = startDrag(e.touches[0].clientX, panelEl.getBoundingClientRect().width);
-      function tm(e) {
-        d.onMove(e.touches[0].clientX);
-        e.preventDefault();
-      }
-      function tu() {
-        d.onEnd();
-        handle.removeEventListener("touchmove", tm);
-        handle.removeEventListener("touchend", tu);
-      }
-      handle.addEventListener("touchmove", tm, { passive: false });
-      handle.addEventListener("touchend", tu);
-    },
-    { passive: true },
-  );
+  handle.addEventListener("touchstart", function (e) {
+    const d = startDrag(e.touches[0].clientX);
+    function tm(ev) { d.onMove(ev.touches[0].clientX); ev.preventDefault(); }
+    function tu() {
+      d.onEnd();
+      handle.removeEventListener("touchmove", tm);
+      handle.removeEventListener("touchend", tu);
+    }
+    handle.addEventListener("touchmove", tm, { passive: false });
+    handle.addEventListener("touchend", tu);
+  }, { passive: true });
+
+  // Arrow keys nudge the boundary (Shift = larger steps).
+  handle.addEventListener("keydown", function (e) {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const step = (e.shiftKey ? 96 : 24) * (e.key === "ArrowLeft" ? -1 : 1);
+    apply(begin(), step);
+    finish();
+  });
+
+  // Double-click: give the two panels back their designed proportions.
+  handle.addEventListener("dblclick", function () {
+    const sess = begin();
+    const d0L = parseFloat(left.dataset.pw0), d0R = parseFloat(right.dataset.pw0);
+    const total = sess.widthL + sess.widthR;
+    apply(sess, (total * d0L) / (d0L + d0R) - sess.widthL);
+    finish();
+  });
 }
-// Each tool calls initResize with correct panel IDs and sign after including shared.js
+// Each tool calls initResize(handleId) for every .resize-handle after including shared.js
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:PARSE-TREE

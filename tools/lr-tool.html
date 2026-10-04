@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="../shared/ui.css" />
     <script src="../shared/theme.js"></script>
     <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-automaton { --pw: 520; --pmin: 200px; }
+
       /* ── Automaton panel + container ── */
       #p-automaton {
       }
@@ -373,8 +376,8 @@
     </div>
     <div id="panels">
       <!-- 1. Grammar -->
-      <div class="panel" id="p-grammar" data-collapse="left">
-        <div class="panel-header" onclick="toggleCollapse('p-grammar')">
+      <div class="panel" id="p-grammar" data-priority="3" data-collapse="left">
+        <div class="panel-header">
           <span class="panel-title">Grammar</span>
           <button
             class="collapse-btn"
@@ -397,7 +400,7 @@
       </div>
       <div class="resize-handle" id="rh-1"></div>
       <!-- 2. Automaton -->
-      <div class="panel" id="p-automaton">
+      <div class="panel" id="p-automaton" data-priority="2">
         <div class="panel-header">
           <span class="panel-title">Characteristic Automaton</span>
           <button class="algo-btn" onclick="openAlgoModal('construction')" title="Closure, Goto &amp; Items construction algorithm">Algorithm</button>
@@ -438,8 +441,8 @@
       </div>
       <div class="resize-handle" id="rh-2"></div>
       <!-- 3. Tables -->
-      <div class="panel" id="p-tables">
-        <div class="panel-header" onclick="toggleCollapse('p-tables')">
+      <div class="panel" id="p-tables" data-priority="4">
+        <div class="panel-header">
           <span class="panel-title">Parsing Tables</span>
           <button
             class="algo-btn"
@@ -469,8 +472,8 @@
       </div>
       <div class="resize-handle" id="rh-3"></div>
       <!-- 4. Parse Tree -->
-      <div class="panel" id="p-tree">
-        <div class="panel-header" onclick="toggleCollapse('p-tree')">
+      <div class="panel" id="p-tree" data-priority="1">
+        <div class="panel-header">
           <span class="panel-title">Parse Tree</span>
           <button
             class="collapse-btn"
@@ -539,6 +542,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/panels.js"></script>
     <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/lr.js"></script>
     <script src="../shared/shared.js"></script>

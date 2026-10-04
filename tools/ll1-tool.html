@@ -10,8 +10,9 @@
     <link rel="stylesheet" href="../shared/ui.css" />
     <script src="../shared/theme.js"></script>
     <style>
-      #p-main {
-      }
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-main { --pw: 520; --pmin: 220px; }
+
       .main-body {
         flex: 1;
         display: flex;
@@ -105,8 +106,8 @@
 
     <div id="panels">
       <!-- 1. Grammar -->
-      <div class="panel" id="p-grammar" data-collapse="left">
-        <div class="panel-header" onclick="toggleCollapse('p-grammar')">
+      <div class="panel" id="p-grammar" data-priority="3" data-collapse="left">
+        <div class="panel-header">
           <span class="panel-title">Grammar</span>
           <button
             class="collapse-btn"
@@ -134,8 +135,8 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Parsing tables -->
-      <div class="panel" id="p-tables" data-collapse="left">
-        <div class="panel-header" onclick="toggleCollapse('p-tables')">
+      <div class="panel" id="p-tables" data-priority="2" data-collapse="left">
+        <div class="panel-header">
           <span class="panel-title">Parsing Tables</span>
           <button
             class="algo-btn"
@@ -177,8 +178,8 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Derivation steps -->
-      <div class="panel" id="p-main" data-collapse="left">
-        <div class="panel-header" onclick="toggleCollapse('p-main')">
+      <div class="panel" id="p-main" data-priority="4" data-collapse="left">
+        <div class="panel-header">
           <span class="panel-title">Derivation Steps</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-main')">&#8249;</button>
         </div>
@@ -198,8 +199,8 @@
       <div class="resize-handle" id="rh-3"></div>
 
       <!-- 4. Parse tree + simulation -->
-      <div class="panel" id="p-tree">
-        <div class="panel-header" onclick="toggleCollapse('p-tree')">
+      <div class="panel" id="p-tree" data-priority="1">
+        <div class="panel-header">
           <span class="panel-title">Parse Tree</span>
           <button
             class="collapse-btn"
@@ -268,6 +269,7 @@
     </div>
 
     <script src="../shared/algo/grammar.js"></script>
+    <script src="../shared/algo/panels.js"></script>
     <script src="../shared/algo/share.js"></script>
     <script src="../shared/algo/ll1.js"></script>
     <script src="../shared/shared.js"></script>
