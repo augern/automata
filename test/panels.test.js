@@ -113,3 +113,12 @@ test("nextKeyPanel cycles in both directions and recovers from an unknown panel"
   assert.equal(nextKeyPanel(["only"], "only", 1), "only");
   assert.equal(nextKeyPanel([], "x", 1), null);
 });
+
+const { soleOpenPanel } = load("panels.js");
+
+test("soleOpenPanel returns the one open panel's id, else null", () => {
+  assert.equal(soleOpenPanel([{ id: "a", collapsed: true }, { id: "b", collapsed: false }, { id: "c", collapsed: true }]), "b");
+  assert.equal(soleOpenPanel([{ id: "a", collapsed: false }, { id: "b", collapsed: false }]), null);
+  assert.equal(soleOpenPanel([{ id: "a", collapsed: true }]), null);
+  assert.equal(soleOpenPanel([]), null);
+});

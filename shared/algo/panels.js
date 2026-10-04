@@ -97,3 +97,10 @@ function nextKeyPanel(ids, current, dir = 1) {
   if (i < 0) return ids[0];
   return ids[(i + dir + ids.length) % ids.length];
 }
+
+// The id of the only open panel, or null when zero or several are open. A layout in
+// which exactly one panel is open is "focused" (see panelFocus in shared.js).
+function soleOpenPanel(panels) {
+  const open = panels.filter((p) => !p.collapsed);
+  return open.length === 1 ? open[0].id : null;
+}

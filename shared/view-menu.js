@@ -28,12 +28,13 @@
       list.push(
         { separator: true },
         { heading: "Layout" },
+        ...(panelFocusedId() ? [{ label: "Restore layout before focus", title: "Undo Focus: bring back the panels as they were", onSelect: panelRestoreFocus }] : []),
         { label: "Restore default layout", onSelect: panelsResetLayout },
         { label: "Equal panel widths", onSelect: panelsEqualWidths },
         { label: "Expand all panels", onSelect: panelsExpandAll },
         { separator: true },
         { heading: "Focus on" },
-        ...panelSummaries().map((p) => ({ label: p.title, onSelect: () => panelFocus(p.id) }))
+        ...panelSummaries().map((p) => ({ label: p.title, checked: p.focused ? true : undefined, onSelect: () => (p.focused ? panelRestoreFocus() : panelFocus(p.id)) }))
       );
     }
     return list;

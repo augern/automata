@@ -90,6 +90,11 @@ function loadPanelState() {
       }
     });
   } catch (e) {}
+  try {
+    _focusUndo = JSON.parse(localStorage.getItem(_undoKey()) || "null"); // validated lazily by panelFocusedId()
+  } catch (e) {
+    _focusUndo = null;
+  }
   startPanelLayout();
 }
 
@@ -176,6 +181,8 @@ function _layoutChanged() {
 // ── Layout presets (also offered in each tool's View menu) ──
 // The panels' designed proportions; everything open.
 function panelsResetLayout() {
+  _focusUndo = null;
+  _saveUndo();
   _panels().forEach((el) => {
     _setWeight(el, parseFloat(el.dataset.pw0) || 300);
     el.classList.remove("collapsed");
@@ -186,21 +193,84 @@ function panelsResetLayout() {
 }
 // Every open panel the same width.
 function panelsEqualWidths() {
+  _focusUndo = null;
+  _saveUndo();
   _panels().forEach((el) => { if (!el.classList.contains("collapsed")) _setWeight(el, 100); });
   _layoutChanged();
 }
 // Open every panel (the row scrolls if they don't all fit).
 function panelsExpandAll() {
+  _focusUndo = null;
+  _saveUndo();
   _panels().forEach((el) => { if (el.classList.contains("collapsed")) _expandNow(el); else el.dataset.protect = "1"; });
   _layoutChanged();
 }
+// ── Focus on a panel, and undo it ──
+// "Focus" collapses every other panel, which is a lot to undo by hand, so the layout
+// from before the first focus is remembered (and kept across reloads). While exactly
+// that one panel is open, its menu offers "Restore layout" instead of "Focus on this
+// panel"; any other change to the layout ends the focused state.
+var _focusUndo = null; // { focusId, snapshot: [{ id, w, collapsed, locked, auto, protect }] }
+
+function _undoKey() {
+  return _panelKey() + "-undo";
+}
+function _saveUndo() {
+  try {
+    if (_focusUndo) localStorage.setItem(_undoKey(), JSON.stringify(_focusUndo));
+    else localStorage.removeItem(_undoKey());
+  } catch (e) {}
+}
+function _snapshotLayout() {
+  return _panels().map((el) => ({
+    id: el.id,
+    w: _panelWeight(el),
+    collapsed: el.classList.contains("collapsed"),
+    locked: el.dataset.locked === "1",
+    auto: el.dataset.auto === "1",
+    protect: el.dataset.protect === "1",
+  }));
+}
+function _applySnapshot(snapshot) {
+  snapshot.forEach((st) => {
+    const el = document.getElementById(st.id);
+    if (!el) return;
+    _setWeight(el, st.w);
+    el.classList.toggle("collapsed", st.collapsed);
+    ["locked", "auto", "protect"].forEach((k) => { if (st[k]) el.dataset[k] = "1"; else delete el.dataset[k]; });
+    updateCollapseBtn(el.id, st.collapsed);
+  });
+}
+
+// The focused panel's id while the layout is still the focused one, else null.
+function panelFocusedId() {
+  if (!_focusUndo) return null;
+  const sole = soleOpenPanel(_panels().map((el) => ({ id: el.id, collapsed: el.classList.contains("collapsed") })));
+  if (sole && sole === _focusUndo.focusId) return sole;
+  _focusUndo = null; // the layout was changed by hand: nothing left to undo
+  _saveUndo();
+  return null;
+}
+
 // Show one panel at full width; the rest become strips you can click to reopen.
 function panelFocus(id) {
+  if (!panelFocusedId()) _focusUndo = { focusId: id, snapshot: _snapshotLayout() };
+  else _focusUndo.focusId = id; // refocusing keeps the original layout to return to
+  _saveUndo();
   _panels().forEach((el) => { if (el.id === id) { if (el.classList.contains("collapsed")) _expandNow(el); else el.dataset.protect = "1"; } else if (!el.classList.contains("collapsed")) _collapseNow(el); });
   _layoutChanged();
 }
+// Undo panelFocus: the panels exactly as they were before.
+function panelRestoreFocus() {
+  if (!panelFocusedId()) return;
+  _applySnapshot(_focusUndo.snapshot);
+  _focusUndo = null;
+  _saveUndo();
+  _layoutChanged();
+}
 function panelSummaries() {
-  return _panels().map((el) => ({ id: el.id, title: _panelName(el), collapsed: el.classList.contains("collapsed") }));
+  const focused = panelFocusedId();
+  return _panels().map((el) => ({ id: el.id, title: _panelName(el), collapsed: el.classList.contains("collapsed"), focused: el.id === focused }));
 }
 
 // Each panel header's secondary buttons (Algorithm, view toggles...) move into
@@ -229,7 +299,11 @@ function installPanelMenus() {
         onSelect: () => b.click(),
       }));
       if (items.length) items.push({ separator: true });
-      items.push({ label: "Focus on this panel", onSelect: () => panelFocus(el.id) });
+      if (panelFocusedId() === el.id) {
+        items.push({ label: "Restore layout", title: "Undo \"Focus on this panel\": bring back the panels as they were", onSelect: panelRestoreFocus });
+      } else {
+        items.push({ label: "Focus on this panel", title: "Show only this panel; Restore layout undoes it", onSelect: () => panelFocus(el.id) });
+      }
       if (el.querySelector(".collapse-btn")) items.push({ label: "Collapse panel", onSelect: () => toggleCollapse(el.id) });
       return items;
     });

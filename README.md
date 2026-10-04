@@ -200,7 +200,10 @@ Every tool is a row of resizable panels (`#panels`). The row behaves like this:
   Shift+arrow, and gives the regex tool (four steppers) keyboard stepping.
 - **Panel menus.** Each header has a `⋯` menu holding the panel's secondary
   actions (Algorithm, view toggles) plus "Focus on this panel" and "Collapse
-  panel", which keeps headers uncluttered. The buttons themselves stay in the
+  panel", which keeps headers uncluttered. "Focus on this panel" is undoable: it
+  remembers the layout from before, and while that panel is the only one open its
+  menu item becomes **Restore layout** (the View menu has the same item). Changing
+  the layout by hand, or using another layout preset, ends the focused state. The buttons themselves stay in the
   markup (hidden) and are triggered from the menu.
 - **View menu.** The top bar's right-hand **View** menu has Copy link, the
   light/dark theme switch, and layout presets: *Restore default layout*, *Equal
