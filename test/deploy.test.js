@@ -38,13 +38,6 @@ test("every tool has its own examples.json and guide.js, and loads them", () => 
   }
 });
 
-test("old tool addresses redirect to the new directories", () => {
-  for (const d of toolDirs) {
-    const stub = fs.readFileSync(path.join(root, "tools", `${d}-tool.html`), "utf8");
-    assert.ok(stub.includes(`location.replace("${d}/"`), `${d}-tool.html does not redirect`);
-  }
-});
-
 test("the Pages job copies every directory the pages load from", () => {
   const ci = fs.readFileSync(path.join(root, ".gitlab-ci.yml"), "utf8");
   const dirs = new Set(["tools"]);

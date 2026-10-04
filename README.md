@@ -37,11 +37,10 @@ parser-tools/
 │   ├── pda/                            ← PDA simulator
 │   ├── ll1/                            ← LL(1) parser
 │   ├── lr/                             ← LR parser
-│   ├── tm/                             ← Turing machine simulator
-│   │       each contains:  index.html    the page (its own layout, CSS and logic)
-│   │                       guide.js      the text of its Guide pop-up
-│   │                       examples.json its example menu
-│   └── *-tool.html                     ← one-line redirects from the tools' old addresses (safe to delete)
+│   └── tm/                             ← Turing machine simulator
+│                                       each holds:  index.html     the page (its own layout, CSS and logic)
+│                                                    guide.js       the text of its Guide pop-up
+│                                                    examples.json  its example menu
 ├── vendor/
 │   ├── d3.min.js                       ← D3 7.9.0 (ISC), bundled so the tools work offline
 │   ├── dagre.min.js                    ← Dagre 0.8.5 (MIT)
