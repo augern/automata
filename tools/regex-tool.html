@@ -271,7 +271,7 @@
       }
       .pair-table td.pair-blocked {
         background: var(--bg-panel);
-        border-color: transparent;
+        border-style: none; /* under border-collapse a transparent border would hide its live neighbours' borders */
       }
       .pair-table td.pair-marked {
         color: var(--red);
