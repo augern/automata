@@ -60,13 +60,14 @@
         line-height: 1.6;
       }
       .deriv-gutter {
-        width: 3.6em;
+        width: 4.6em;
         flex-shrink: 0;
         display: flex;
         justify-content: flex-end;
         padding-right: 0.7em;
         align-items: center;
       }
+      .deriv-rule { font-size: var(--fs-2xs); color: var(--text-lo); margin-right: var(--sp-1); }
       .deriv-gutter-label { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-2xs); color: var(--text-lo); }
 
       /* ⇒ with CSS tooltip */
@@ -174,8 +175,6 @@
 
       /* ── Rule picker bar ── */
       #deriv-toolbar { background: var(--bg-panel); flex-wrap: wrap; }
-      .seed-group { display: flex; align-items: center; gap: var(--sp-2); }
-      #seed-input { width: 104px; }
       /* Hidden until a range is selected; the bar itself is .ui-controlbar */
       #rule-picker {
         display: none;
@@ -275,11 +274,7 @@
               <button class="btn primary" id="btn-step" onclick="derivRandomStep()" title="Apply one randomly chosen rule at a randomly chosen place" disabled>Random choice &#8250;</button>
               <button class="btn icon-run-all" id="btn-run" onclick="derivRunRandom()" title="Keep making random choices until the derivation ends (at most 200 steps)" disabled></button>
             </div>
-            <div class="seed-group" title="Random choices are determined by this seed, so the same seed gives the same derivation">
-              <label class="ui-label" for="seed-input">seed</label>
-              <input class="ui-input" id="seed-input" type="number" min="0" max="4294967295" step="1" onchange="derivSetSeed(this.value)" />
-              <button class="btn" id="btn-reseed" onclick="derivReseed()" title="Pick a new random seed">&#8635; Reseed</button>
-            </div>
+            <button class="btn" id="btn-reseed" onclick="derivReseed()" title="Pick a new random seed and start over">&#8635; Reseed</button>
             <span id="deriv-status"></span>
             <span id="step-count"></span>
           </div>
@@ -526,14 +521,10 @@
       // ── Random derivation ───────────────────────────────────────
       // Each choice depends only on (seed, step number, current form), so Back then
       // "Random choice" replays the same step, and a seed always gives the same derivation.
-      function derivSetSeed(value) {
-        const n = Math.floor(Number(value));
-        if (Number.isFinite(n) && n >= 0 && n <= 4294967295) _seed = n;
-        document.getElementById("seed-input").value = _seed;
-        saveShare();
-      }
       function derivReseed() {
-        derivSetSeed(freshSeed());
+        _seed = freshSeed();
+        saveShare();
+        derivNew();
       }
       // One random step; returns false when no rule applies (or there is no derivation).
       function pushRandomStep() {
@@ -611,7 +602,6 @@
         document.getElementById("btn-back").disabled = _steps.length <= 1;
         document.getElementById("btn-step").disabled = outcome !== null;
         document.getElementById("btn-run").disabled = outcome !== null;
-        document.getElementById("seed-input").value = _seed;
 
         let h = "";
         for (let i = 0; i < _steps.length; i++) {
@@ -648,7 +638,7 @@
           const lhsStr = rule.lhs.join(" ");
           const rhsStr = rule.rhs.length > 0 ? rule.rhs.join(" ") : "ε";
           const tip    = `rule ${step.ruleIdx}: ${lhsStr} → ${rhsStr}`;
-          gutterHTML   = `<span class="deriv-arrow" data-tip="${esc(tip)}">⇒</span>`;
+          gutterHTML   = `<span class="deriv-arrow" data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx}</span>⇒</span>`;
         }
 
         const formHTML = isCurrent
