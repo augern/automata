@@ -168,10 +168,14 @@
         color: var(--green);
       }
       .deriv-done .done-word { font-family: var(--font-mono); font-style: normal; color: var(--text); }
+      .deriv-done.is-stuck { color: var(--st-reject); }
+      .deriv-done.is-capped { color: var(--st-warn); }
       .deriv-done .done-eps  { font-family: var(--font-mono); font-style: italic; color: var(--text-lo); }
 
       /* ── Rule picker bar ── */
-      #deriv-toolbar { background: var(--bg-panel); }
+      #deriv-toolbar { background: var(--bg-panel); flex-wrap: wrap; }
+      .seed-group { display: flex; align-items: center; gap: var(--sp-2); }
+      #seed-input { width: 104px; }
       /* Hidden until a range is selected; the bar itself is .ui-controlbar */
       #rule-picker {
         display: none;
@@ -265,8 +269,17 @@
         </div>
         <div class="panel-body">
           <div id="deriv-toolbar" class="ui-bar">
-            <button class="btn" id="btn-new"  onclick="derivNew()"  disabled>New Derivation</button>
-            <button class="btn" id="btn-undo" onclick="derivUndo()" disabled>&#8592; Undo</button>
+            <div class="step-group">
+              <button class="btn icon-restart" id="btn-reset" onclick="derivNew()" title="Start over from the start symbol" disabled></button>
+              <button class="btn" id="btn-back" onclick="derivUndo()" title="Undo the last step" disabled>&#8249; Back</button>
+              <button class="btn primary" id="btn-step" onclick="derivRandomStep()" title="Apply one randomly chosen rule at a randomly chosen place" disabled>Random choice &#8250;</button>
+              <button class="btn icon-run-all" id="btn-run" onclick="derivRunRandom()" title="Keep making random choices until the derivation ends (at most 200 steps)" disabled></button>
+            </div>
+            <div class="seed-group" title="Random choices are determined by this seed, so the same seed gives the same derivation">
+              <label class="ui-label" for="seed-input">seed</label>
+              <input class="ui-input" id="seed-input" type="number" min="0" max="4294967295" step="1" onchange="derivSetSeed(this.value)" />
+              <button class="btn" id="btn-reseed" onclick="derivReseed()" title="Pick a new random seed">&#8635; Reseed</button>
+            </div>
             <span id="deriv-status"></span>
             <span id="step-count"></span>
           </div>
@@ -281,8 +294,8 @@
 
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
     <script src="../shared/algo/panels.js?v=23a37100"></script>
-    <script src="../shared/algo/share.js?v=5bc06f8f"></script>
-    <script src="../shared/algo/derivation.js?v=adbea172"></script>
+    <script src="../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../shared/algo/derivation.js?v=7f3f2a6d"></script>
     <script src="../shared/shared.js?v=cfcb7ddf"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
     <script src="../shared/ui.js?v=35102e64"></script>
@@ -305,6 +318,15 @@
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       let _grammar = null;
+      let _seed = freshSeed(); // chosen when the tool opens; shared links carry it
+      let _capNote = false;    // "Run" stopped at the step cap while a rule still applied
+      const DERIV_RUN_CAP = 200;
+
+      function freshSeed() {
+        const a = new Uint32Array(1);
+        (window.crypto || { getRandomValues: (x) => { x[0] = Math.random() * 4294967296; } }).getRandomValues(a);
+        return a[0];
+      }
 
       function setError(msg) {
         document.getElementById("error-msg").textContent = msg || "";
@@ -325,13 +347,14 @@
       }
 
       // ── Shareable link ──────────────────────────────────────────
-      const saveShare = createShareSaver(() => ({ g: document.getElementById("grammar-input").value }));
+      const saveShare = createShareSaver(() => ({ g: document.getElementById("grammar-input").value, sd: _seed }));
       let sharedStateApplied = false;
       function applyShareState() {
         const st = shareValidateTextState(readShareState(), "g");
         if (!st) return;
         sharedStateApplied = true;
         document.getElementById("grammar-input").value = st.g;
+        if (st.sd !== undefined) _seed = st.sd;
       }
 
       function loadExample(k) {
@@ -484,6 +507,7 @@
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
       function derivNew() {
+        _capNote = false;
         _steps = [];
         clearSelection();
         if (!_grammar) { renderDeriv(); return; }
@@ -492,16 +516,55 @@
       }
 
       function derivUndo() {
+        _capNote = false;
         if (_steps.length <= 1) return;
         _steps.pop();
         clearSelection();
         renderDeriv();
       }
 
+      // ── Random derivation ───────────────────────────────────────
+      // Each choice depends only on (seed, step number, current form), so Back then
+      // "Random choice" replays the same step, and a seed always gives the same derivation.
+      function derivSetSeed(value) {
+        const n = Math.floor(Number(value));
+        if (Number.isFinite(n) && n >= 0 && n <= 4294967295) _seed = n;
+        document.getElementById("seed-input").value = _seed;
+        saveShare();
+      }
+      function derivReseed() {
+        derivSetSeed(freshSeed());
+      }
+      // One random step; returns false when no rule applies (or there is no derivation).
+      function pushRandomStep() {
+        if (!_grammar || _steps.length === 0) return false;
+        const form = _steps[_steps.length - 1].form;
+        const move = derivRandomMove(_grammar, form, _seed, _steps.length - 1);
+        if (!move) return false;
+        _steps.push({ form: derivApply(form, move.lo, move.hi, _grammar.rules[move.ruleIdx]), ruleIdx: move.ruleIdx, matchStart: move.lo, matchEnd: move.hi });
+        return true;
+      }
+      function derivRandomStep() {
+        _capNote = false;
+        clearSelection();
+        if (pushRandomStep()) { renderDeriv(); renderProductions(); }
+      }
+      // Keep going until the derivation ends, or DERIV_RUN_CAP steps.
+      function derivRunRandom() {
+        _capNote = false;
+        clearSelection();
+        let n = 0;
+        while (n < DERIV_RUN_CAP && pushRandomStep()) n++;
+        _capNote = derivOutcome(_grammar, _steps[_steps.length - 1].form) === null;
+        renderDeriv();
+        renderProductions();
+      }
+
       function applyRule(ruleIdx) {
         if (!_grammar || !hasCommittedRange() || _steps.length === 0) return;
         const rule = _grammar.rules[ruleIdx];
         if (!matchesRange(rule.lhs)) return;
+        _capNote = false;
 
         const lo   = selLo();
         const hi   = selHi();
@@ -534,8 +597,7 @@
           stepsEl.innerHTML = "";
           statusEl.innerHTML = "";
           countEl.textContent = "";
-          document.getElementById("btn-new").disabled  = !_grammar;
-          document.getElementById("btn-undo").disabled = true;
+          for (const id of ["btn-reset", "btn-back", "btn-step", "btn-run"]) document.getElementById(id).disabled = true;
           return;
         }
 
@@ -544,8 +606,12 @@
         const n = _steps.length - 1;
         statusEl.innerHTML = `Start: <span class="ds-start">${esc(_grammar.start)}</span>`;
         countEl.textContent = n === 0 ? "" : n === 1 ? "1 step" : n + " steps";
-        document.getElementById("btn-new").disabled  = false;
-        document.getElementById("btn-undo").disabled = _steps.length <= 1;
+        const outcome = derivOutcome(_grammar, _steps[_steps.length - 1].form);
+        document.getElementById("btn-reset").disabled = _steps.length <= 1;
+        document.getElementById("btn-back").disabled = _steps.length <= 1;
+        document.getElementById("btn-step").disabled = outcome !== null;
+        document.getElementById("btn-run").disabled = outcome !== null;
+        document.getElementById("seed-input").value = _seed;
 
         let h = "";
         for (let i = 0; i < _steps.length; i++) {
@@ -557,12 +623,12 @@
         }
 
         const lastForm = _steps[_steps.length - 1].form;
-        if (isDone(lastForm)) {
-          const wordHTML = lastForm.length === 0
-            ? `<span class="done-eps">ε</span>`
-            : `<span class="done-word">${lastForm.map(esc).join(" ")}</span>`;
-          h += `<div class="deriv-done">✓ derived ${wordHTML}</div>`;
-        }
+        const wordHTML = lastForm.length === 0
+          ? `<span class="done-eps">ε</span>`
+          : `<span class="done-word">${lastForm.map(esc).join(" ")}</span>`;
+        if (outcome === "terminal") h += `<div class="deriv-done">✓ derived ${wordHTML}</div>`;
+        else if (outcome === "stuck") h += `<div class="deriv-done is-stuck">✗ dead end: no rule applies to ${wordHTML}, but it still contains nonterminals (Back to try another choice)</div>`;
+        else if (_capNote) h += `<div class="deriv-done is-capped">⚠ stopped after ${DERIV_RUN_CAP} steps; the derivation is not finished (press Run again to continue)</div>`;
 
         stepsEl.innerHTML = h;
 
@@ -674,6 +740,9 @@
           e.preventDefault(); derivUndo();
         }
       });
+
+      // ←/→ (or ,/.) step, Home restarts, End runs; the Derivation panel has key focus.
+      registerStepper("p-deriv", { step: derivRandomStep, back: derivUndo, reset: derivNew, end: derivRunRandom }, { primary: true });
 
       document.getElementById("grammar-input").addEventListener("input", () => build());
 

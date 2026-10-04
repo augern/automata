@@ -70,3 +70,51 @@ function derivIsDone(grammar, form) {
   }
   return true;
 }
+
+// ── Random derivation ─────────────────────────────────────────────────
+// A random step is a pure function of (seed, step number, current form): no hidden
+// generator state, so going Back and then forward again replays the same choice,
+// and the same seed always yields the same derivation.
+
+// Every (rule, position) at which a rule's LHS occurs in the form: [{ ruleIdx, lo, hi }].
+function derivMoves(grammar, form) {
+  const moves = [];
+  grammar.rules.forEach((rule, ruleIdx) => {
+    const n = rule.lhs.length;
+    for (let lo = 0; lo + n <= form.length; lo++) {
+      if (derivMatchesRange(form, lo, lo + n - 1, rule.lhs)) moves.push({ ruleIdx, lo, hi: lo + n - 1 });
+    }
+  });
+  return moves;
+}
+
+// 32-bit mix of a seed and a step number (a murmur-style finaliser).
+function derivHash(seed, index) {
+  let h = (seed >>> 0) ^ Math.imul(index + 1, 0x9e3779b1);
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// Uniform in [0, 1) from a 32-bit state (mulberry32, first output).
+function derivUnit(state) {
+  let t = (state + 0x6d2b79f5) >>> 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// The randomly chosen next move at step `index`, or null when no rule applies.
+function derivRandomMove(grammar, form, seed, index) {
+  const moves = derivMoves(grammar, form);
+  if (!moves.length) return null;
+  return moves[Math.floor(derivUnit(derivHash(seed, index)) * moves.length)];
+}
+
+// How a derivation ended: "terminal" (only terminals left: a word of the language),
+// "stuck" (no rule applies but nonterminals remain: a dead end, possible in
+// context-sensitive grammars), or null while a rule still applies.
+function derivOutcome(grammar, form) {
+  if (derivMoves(grammar, form).length) return null;
+  return form.some((s) => grammar.nonterminals.has(s)) ? "stuck" : "terminal";
+}

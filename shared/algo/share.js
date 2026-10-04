@@ -124,7 +124,7 @@ function shareSimInput(s) {
 
 // ── Per-tool state ────────────────────────────────────────────────────
 
-// Grammar-based tools and the regex tool: { g | re, m?, s? } -> normalised copy.
+// Grammar-based tools and the regex tool: { g | re, m?, s?, sd? } -> normalised copy.
 function shareValidateTextState(obj, field, modes) {
   if (!shareIsPlain(obj)) return null;
   const t = shareText(obj[field], SHARE_MAX_TEXT);
@@ -134,6 +134,11 @@ function shareValidateTextState(obj, field, modes) {
   if (obj.m !== undefined) {
     if (!shareIsStr(obj.m) || (modes && !modes.includes(obj.m))) return null;
     out.m = obj.m;
+  }
+  // Optional random seed (the derivation tool's random choices): a 32-bit unsigned integer.
+  if (obj.sd !== undefined) {
+    if (!Number.isInteger(obj.sd) || obj.sd < 0 || obj.sd > 4294967295) return null;
+    out.sd = obj.sd;
   }
   return out;
 }

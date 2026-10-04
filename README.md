@@ -8,7 +8,7 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **Regular Expression Tool** | Thompson's NFA construction — RE → NFA (step-by-step), NFA → DFA (subset construction, step-by-step), DFA string simulation |
 | **NFA Simulator** | ε-NFA — editable transition table, NFA graph, nondeterministic simulation tree |
 | **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination |
-| **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step |
+| **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step, or let a seeded "Random choice" stepper derive for you (Back/forward, Reseed, ←/→ keys, seed kept in share links) |
 | **PDA Simulator** | Nondeterministic PDA / ε-PDA — transition rule list, automaton graph, configuration-set simulation |
 | **LL(1) Parser Tool** | Predictive parsing — FIRST/FOLLOW sets, predictive table M[A,a], derivation steps, string simulation, parse tree |
 | **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
@@ -54,7 +54,7 @@ parser-tools/
 ├── shared/
 │   ├── algo/
 │   │   ├── grammar.js                  ← pure: BNF parser, FIRST/FOLLOW, esc() (no DOM)
-│   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check
+│   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check, seeded random moves
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting

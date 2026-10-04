@@ -58,6 +58,14 @@ test("text state: grammar with mode and simulation input", () => {
   assert.deepEqual(plain(S.shareValidateTextState({ re: "(a|b)*" }, "re")), { re: "(a|b)*", s: "" });
 });
 
+test("text state: optional random seed must be a 32-bit unsigned integer", () => {
+  assert.equal(S.shareValidateTextState({ g: "S -> a", sd: 12345 }, "g").sd, 12345);
+  assert.equal(S.shareValidateTextState({ g: "S -> a", sd: 0 }, "g").sd, 0);
+  assert.equal(S.shareValidateTextState({ g: "S -> a", sd: 4294967295 }, "g").sd, 4294967295);
+  assert.equal("sd" in S.shareValidateTextState({ g: "S -> a" }, "g"), false);
+  for (const bad of [-1, 1.5, 4294967296, "7", null, NaN, Infinity]) assert.equal(S.shareValidateTextState({ g: "S -> a", sd: bad }, "g"), null, String(bad));
+});
+
 test("text state: rejects wrong types, unknown modes and oversize fields", () => {
   assert.equal(S.shareValidateTextState({ g: 5 }, "g"), null);
   assert.equal(S.shareValidateTextState({}, "g"), null);
