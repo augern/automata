@@ -74,6 +74,9 @@ parser-tools/
 │   └── shared.js                       ← common logic (parse tree,
 │                                          panel layout, example loader, modal behaviour,
 │                                          automata simulation helpers)
+├── scripts/
+│   ├── stamp.js                        ← writes the ?v= cache-busting stamps (npm run stamp)
+│   └── serve.py                        ← no-cache local dev server
 ├── test/                               ← node:test suites for shared/algo/ (npm test)
 ├── package.json                        ← test script only; no runtime dependencies
 ├── LICENSE                             ← MIT
@@ -236,9 +239,12 @@ The modules are plain classic scripts, so the browser loads them unchanged;
 ### Python (no install required)
 
 ```bash
-python3 -m http.server 8080
+python3 scripts/serve.py 8080     # or: npm run serve
 ```
-Then open **http://localhost:8080** in your browser.
+Then open **http://localhost:8080** in your browser. `scripts/serve.py` is
+`python3 -m http.server` plus a no-cache header, so edits to `shared/*.js` and
+`shared/*.css` show up on a normal reload (the plain server lets browsers cache
+them, which can leave a new page running an old script).
 
 ### Node.js
 
@@ -249,6 +255,20 @@ npx serve .
 ### VS Code
 
 Install the **Live Server** extension, right-click `index.html` → *Open with Live Server*.
+
+### Cache-busting stamps
+
+Every `<script src>` and `<link href>` into `shared/` or `vendor/` carries
+`?v=<hash of the file>`, so a browser can never combine a new page with a stale
+cached script (the symptom is an error such as `UI.menu is not a function`). After
+editing anything under `shared/` or `vendor/`, run:
+
+```bash
+npm run stamp
+```
+
+`npm test` fails (`test/stamps.test.js`) until the stamps match, so a forgotten
+stamp is caught before it ships.
 
 ---
 

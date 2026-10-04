@@ -102,6 +102,20 @@ function toggleCollapse(id) {
   _layoutChanged();
 }
 
+// Collapse = a chevron pointing at a vertical bar (the panel edge it folds into);
+// expand = a double chevron pointing the way the panel will open. Drawn as SVG so
+// they look the same in every font; the left-pointing form is mirrored for the other side.
+const _ICON_COLLAPSE = '<path d="M3 3v10M12 3.5 7 8l5 4.5"/>';
+const _ICON_EXPAND = '<path d="M3.5 3.5 8 8l-4.5 4.5M8.5 3.5 13 8l-4.5 4.5"/>';
+function _collapseIcon(collapsed, pointsLeft) {
+  // The collapse icon points toward the edge the panel folds into; the expand icon
+  // points the opposite way (which way the panel opens). Both are drawn pointing
+  // left for collapse and right for expand, and mirrored when needed.
+  const flip = collapsed ? pointsLeft : !pointsLeft;
+  return '<span class="collapse-btn__glyph"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"' +
+    (flip ? ' style="transform: scaleX(-1)"' : "") + ">" + (collapsed ? _ICON_EXPAND : _ICON_COLLAPSE) + "</svg></span>";
+}
+
 function updateCollapseBtn(id, collapsed) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -110,9 +124,10 @@ function updateCollapseBtn(id, collapsed) {
   const btn = el.querySelector(".collapse-btn");
   if (btn) {
     const isLeft = el.dataset.collapse === "left";
-    // The glyph points the way the panel moves when you click.
+    // Which way the icon points: a left panel folds left, so collapsing points left and
+    // expanding (opening) points right; a right panel is the mirror image.
     const pointsLeft = isLeft ? !collapsed : collapsed;
-    btn.innerHTML = '<span class="collapse-btn__glyph">' + (pointsLeft ? "&#8249;" : "&#8250;") + "</span>";
+    btn.innerHTML = _collapseIcon(collapsed, pointsLeft);
     btn.style.setProperty("--dir", pointsLeft ? -1 : 1);
     btn.title = label;
     btn.setAttribute("aria-label", label);

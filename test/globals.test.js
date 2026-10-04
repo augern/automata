@@ -39,7 +39,7 @@ test("shared/algo files and shared.js declare no duplicate top-level names", () 
 for (const tool of toolFiles) {
   test(`${tool} does not clash with shared scripts`, () => {
     const src = read("tools", tool);
-    const loaded = [...src.matchAll(/<script src="\.\.\/shared\/([\w/.]+\.js)"/g)].map((m) => m[1]);
+    const loaded = [...src.matchAll(/<script src="\.\.\/shared\/([\w/.]+\.js)(?:\?[^"]*)?"/g)].map((m) => m[1]);
     // name -> { file, kind } for everything this tool loads
     const shared = new Map();
     for (const f of loaded) for (const d of topLevel(read("shared", f), 0)) shared.set(d.name, { file: f, kind: d.kind });

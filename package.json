@@ -4,6 +4,8 @@
   "description": "Interactive teaching tools for automata and parsing theory",
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "stamp": "node scripts/stamp.js",
+    "serve": "python3 scripts/serve.py"
   }
 }

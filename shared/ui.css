@@ -587,20 +587,18 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  padding: 0;
   background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  border: none;
   color: var(--text-dim);
   cursor: pointer;
   font-size: var(--fs-lg);
   line-height: 1;
-  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  transition: color var(--dur) var(--ease);
 }
 .ui-menu-btn:hover,
 .ui-menu-btn[aria-expanded="true"] {
   color: var(--accent);
-  background: var(--accent-bg);
-  border-color: var(--accent);
 }
 
 .ui-toast {
