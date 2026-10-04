@@ -134,13 +134,15 @@
       .tcf-new text { fill: var(--amber); font-weight: bold; }
       .tcf-box { fill: var(--bg-cell); stroke: var(--border-hi); stroke-width: 1.2; }
       .tcf-box-label { font-family: var(--font-mono); font-size: 11px; fill: var(--text); text-anchor: middle; dominant-baseline: central; }
-      .tcf-edge { fill: none; stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 4 3; }
-      .tcf-edge--sym { stroke-dasharray: none; stroke: var(--text); }
-      .tcf-edge-label { font-family: var(--font-mono); font-size: 10px; font-style: italic; fill: var(--text-dim); text-anchor: middle; }
+      .tcf-edge { fill: none; stroke: var(--amber); stroke-width: 1.2; stroke-dasharray: 4 3; }
+      .tcf-edge--sym { stroke-dasharray: none; }
+      .tcf-edge-label { font-family: var(--font-mono); font-size: 10px; font-style: italic; fill: var(--amber); text-anchor: middle; }
+      .tcf-key { margin: var(--sp-2) 0 0; font-size: var(--fs-2xs); font-style: italic; color: var(--text-dim); line-height: 1.4; }
+      .tcf-key b { color: var(--amber); font-style: normal; }
       .tcf-tag { font-family: var(--font-serif); font-size: 10px; font-style: italic; font-weight: bold; text-anchor: middle; }
       .tcf-tag-i { fill: var(--accent); }
       .tcf-tag-f { fill: var(--green); }
-      .tcf-arrowhead { fill: var(--text-dim); }
+      .tcf-arrowhead { fill: var(--amber); }
 
       /* State column markers */
       .parse-table td.state-start {
@@ -902,7 +904,8 @@
         }
         box.innerHTML =
           `<svg viewBox="0 0 320 130" role="img" aria-label="The fragments combined in this step"><defs><marker id="tcf-arrow" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="6" refX="6.3" refY="2.7" orient="auto"><path class="tcf-arrowhead" d="M0,0 L0,5.4 L7.2,2.7 z"/></marker></defs>` +
-          g + tags(iPos, fPos) + "</svg>";
+          g + tags(iPos, fPos) + "</svg>" +
+          '<p class="tcf-key"><b>Amber</b>: what this step adds, in the diagram and in the table. Grey: parts built in earlier steps. <b style="color:var(--accent)">i</b> and <b style="color:var(--green)">f</b>: start and accept state of the new fragment.</p>';
         box.hidden = false;
       }
 
