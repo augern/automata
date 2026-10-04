@@ -203,6 +203,13 @@
   font-size: var(--fs-xs);
   white-space: nowrap;
 }
+.ui-badge--lg {
+  height: auto;
+  padding: var(--sp-2) var(--sp-5);
+  border-width: 1.5px;
+  font-size: var(--fs-md);
+  font-weight: bold;
+}
 .ui-badge__em { color: var(--st-active); }
 .ui-badge--accept .ui-badge__em { color: inherit; }
 .ui-badge--active { color: var(--st-active); background: var(--st-active-bg); border-color: var(--st-active); }
