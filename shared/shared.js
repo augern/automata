@@ -808,6 +808,12 @@ function initTreeZoom() {
   document.getElementById("tree-svg").addEventListener("dblclick", function () {
     fitTree();
   });
+  // The panel may only get its real size after the first drawing (or change size later): fit again.
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(function () {
+      if (typeof treeRoot !== "undefined" && treeRoot) fitTree();
+    }).observe(document.getElementById("tree-svg").parentElement);
+  }
 }
 
 function fitTree() {
