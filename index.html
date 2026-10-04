@@ -32,7 +32,7 @@ body[data-view="list"] #view-map { display: none; }
 }
 
 /* ── Map ── */
-#view-map { width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-5); }
+#view-map { width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
 #map { width: 100%; height: auto; }
 .ring { stroke: var(--border-hi); stroke-width: 1.2; }
 /* Chomsky's four classes have solid outlines; the other classes inside them are dashed */
@@ -53,16 +53,21 @@ body[data-view="list"] #view-map { display: none; }
 .pill:focus { outline: none; }
 .pill:focus rect { stroke-width: 2.4; }
 .pill { cursor: pointer; }
-.needs { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 5 4; pointer-events: none; }
-.needs-head { fill: var(--accent); stroke: none; }
+.hint { margin: 0; font-size: var(--fs-xs); font-style: italic; color: var(--text-lo); }
+.ring-name { pointer-events: none; }
 
-#info {
-  width: 100%; max-width: 720px; min-height: 5.2em; box-sizing: border-box;
-  padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border); background: var(--bg-panel);
-  font-size: var(--fs-md); line-height: 1.45; color: var(--text-dim);
+/* Tooltip for rings and tools: fixed, so showing it never moves anything */
+#tip {
+  position: fixed; z-index: 10; max-width: 340px; box-sizing: border-box;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg); border: 1px solid var(--border-hi); border-radius: var(--radius);
+  box-shadow: 0 4px 16px var(--shadow);
+  font-size: var(--fs-sm); line-height: 1.4; color: var(--text-dim);
+  pointer-events: none;
 }
-#info b { font-weight: normal; font-style: italic; font-size: var(--fs-lg); color: var(--accent); }
-#info .needs-line { display: block; margin-top: var(--sp-2); font-style: italic; font-size: var(--fs-sm); color: var(--text-lo); }
+#tip[hidden] { display: none; }
+#tip b { display: block; font-weight: normal; font-style: italic; font-size: var(--fs-md); color: var(--accent); margin-bottom: 2px; }
+#tip .tip-builds { display: block; margin-top: var(--sp-2); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); }
 
 /* ── List ── */
 .index-card {
@@ -114,22 +119,22 @@ body[data-view="list"] #view-map { display: none; }
 <section id="view-map" aria-label="Map of the tools">
 <svg id="map" viewBox="0 0 1000 540" role="group" aria-label="The tools placed on the Chomsky hierarchy">
   <!-- Rings, outermost first. Solid: Chomsky's classes; dashed: subclasses of the context-free languages. -->
-  <rect class="ring ring-0" x="10"  y="10"  width="980" height="520" rx="64"/>
-  <rect class="ring ring-1" x="56"  y="66"  width="888" height="438" rx="54"/>
-  <rect class="ring ring-2" x="102" y="122" width="796" height="356" rx="46"/>
-  <rect class="ring ring-3 ring-sub" x="148" y="178" width="704" height="274" rx="38"/>
-  <rect class="ring ring-4 ring-sub" x="194" y="234" width="612" height="192" rx="30"/>
-  <rect class="ring ring-5" x="240" y="290" width="520" height="110" rx="22"/>
+  <rect class="ring ring-0" data-ring="re" x="10"  y="10"  width="980" height="520" rx="64"/>
+  <rect class="ring ring-1" data-ring="cs" x="56"  y="66"  width="888" height="438" rx="54"/>
+  <rect class="ring ring-2" data-ring="cf" x="102" y="122" width="796" height="356" rx="46"/>
+  <rect class="ring ring-3 ring-sub" data-ring="dcf" x="148" y="178" width="704" height="274" rx="38"/>
+  <rect class="ring ring-4 ring-sub" data-ring="ll1" x="194" y="234" width="612" height="192" rx="30"/>
+  <rect class="ring ring-5" data-ring="reg" x="240" y="290" width="520" height="110" rx="22"/>
 
-  <!-- Ring names, each with an example language that belongs to it but not to the ring inside -->
-  <text x="40"  y="44"><tspan class="ring-name">Recursively enumerable · Type 0</tspan><tspan class="ring-eg" dx="12">e.g. the halting problem</tspan></text>
-  <text x="86"  y="100"><tspan class="ring-name">Context-sensitive · Type 1</tspan><tspan class="ring-eg" dx="12">e.g. aⁿbⁿcⁿ</tspan></text>
-  <text x="132" y="156"><tspan class="ring-name">Context-free · Type 2</tspan><tspan class="ring-eg" dx="12">e.g. palindromes wwᴿ</tspan></text>
-  <text x="178" y="212"><tspan class="ring-name">Deterministic context-free = LR(1)</tspan></text>
-  <text x="224" y="268"><tspan class="ring-name">LL(1)</tspan><tspan class="ring-eg" dx="12">e.g. aⁿbⁿ</tspan></text>
-  <text x="266" y="322"><tspan class="ring-name">Regular · Type 3</tspan><tspan class="ring-eg" dx="12">e.g. (a|b)*abb</tspan></text>
+  <!-- Ring names; hover a ring for its Chomsky type, what accepts it, and an example language -->
+  <text x="40"  y="44"  class="ring-name">Recursively enumerable</text>
+  <text x="86"  y="100" class="ring-name">Context-sensitive</text>
+  <text x="132" y="156" class="ring-name">Context-free</text>
+  <text x="178" y="212" class="ring-name">Deterministic context-free</text>
+  <text x="224" y="268" class="ring-name">LL(1)</text>
+  <text x="266" y="322" class="ring-name">Regular</text>
 
-  <!-- Tools: placed by the languages they work with; text and prerequisites come from TOOLS below -->
+  <!-- Tools: placed by the languages they work with; their text comes from TOOLS below -->
   <a class="pill" id="t-tm" href="tools/tm/" tabindex="0"><rect x="790" y="19" width="170" height="34" rx="17"/><text x="875" y="36">Turing Machine</text></a>
   <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="700" y="76" width="210" height="34" rx="17"/><text x="805" y="93">Grammar Derivations</text></a>
   <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="652" y="132" width="214" height="34" rx="17"/><text x="759" y="149">Grammar Transformations</text></a>
@@ -139,10 +144,9 @@ body[data-view="list"] #view-map { display: none; }
   <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="262" y="344" width="150" height="34" rx="17"/><text x="337" y="361">NFA Simulator</text></a>
   <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="430" y="344" width="190" height="34" rx="17"/><text x="525" y="361">Regular Expressions</text></a>
 
-  <defs><marker id="needs-arrow" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path class="needs-head" d="M0,0 L9,4 L0,8 z"/></marker></defs>
-  <g id="needs-layer"></g>
 </svg>
-<div id="info"><span id="info-body"></span></div>
+<p class="hint">Hover a ring or a tool for details.</p>
+<div id="tip" role="tooltip" hidden></div>
 </section>
 
 <!-- List view: the same tools, grouped by language class and ordered by prerequisite -->
@@ -155,30 +159,30 @@ body[data-view="list"] #view-map { display: none; }
 
 <script>
 (function () {
-  // Every tool once: its page, a description, and what it builds on (`needs` are the arrows on the map).
+  // Every tool once: its page, a description, and what it builds on.
   const TOOLS = {
-    nfa: { href: "tools/nfa/", title: "NFA Simulator", group: "Regular languages", needs: [],
+    nfa: { href: "tools/nfa/", title: "NFA Simulator", group: "Regular languages",
       desc: "Nondeterministic finite automata with ε-transitions — transition table and state graph, and the computation tree of a nondeterministic run.",
       builds: "the idea of a finite automaton (states, transitions, DFAs)" },
-    regex: { href: "tools/regex/", title: "Regular Expressions", group: "Regular languages", needs: ["nfa"],
+    regex: { href: "tools/regex/", title: "Regular Expressions", group: "Regular languages",
       desc: "Thompson's construction, subset construction and DFA minimisation — the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition.",
       builds: "NFA Simulator" },
-    derivation: { href: "tools/derivation/", title: "Grammar Derivations", group: "Context-free languages", needs: [],
+    derivation: { href: "tools/derivation/", title: "Grammar Derivations", group: "Context-free languages",
       desc: "Derivations in grammars of types 0, 1 and 2 — construct a derivation by choosing a production and the substring it rewrites, or sample one at random.",
       builds: "context-free grammars" },
-    rewrite: { href: "tools/grammar-rewrite/", title: "Grammar Transformations", group: "Context-free languages", needs: [],
+    rewrite: { href: "tools/grammar-rewrite/", title: "Grammar Transformations", group: "Context-free languages",
       desc: "Normalisation of context-free grammars — removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form.",
       builds: "context-free grammars" },
-    pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages", needs: ["nfa", "derivation"],
+    pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages",
       desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
       builds: "NFA Simulator, Grammar Derivations" },
-    ll1: { href: "tools/ll1/", title: "LL(1) Parser", group: "Context-free languages", needs: ["derivation", "rewrite"],
+    ll1: { href: "tools/ll1/", title: "LL(1) Parser", group: "Context-free languages",
       desc: "Top-down predictive parsing — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
       builds: "Grammar Derivations; Grammar Transformations removes the left recursion LL(1) cannot handle" },
-    lr: { href: "tools/lr/", title: "LR Parser", group: "Context-free languages", needs: ["ll1", "nfa"],
+    lr: { href: "tools/lr/", title: "LR Parser", group: "Context-free languages",
       desc: "Bottom-up shift–reduce parsing — LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree.",
       builds: "LL(1) Parser, NFA Simulator (the automaton of items)" },
-    tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages", needs: ["pda"],
+    tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages",
       desc: "Deterministic single-tape Turing machines — transition function, tape and head, and stepwise execution of the computation.",
       builds: "PDA Simulator" },
   };
@@ -202,48 +206,37 @@ body[data-view="list"] #view-map { display: none; }
     links.appendChild(a);
   }
 
-  // ── Map: hover or focus a tool for its description and arrows from what it builds on ──
-  const SVG = "http://www.w3.org/2000/svg";
-  const layer = document.getElementById("needs-layer");
-  const body = document.getElementById("info-body");
-  const DEFAULT = "Each ring is a class of languages, each containing the ones inside it. Solid outlines are Chomsky's classes; dashed ones are subclasses of the context-free languages. A tool sits where the languages it works with live. Hover or focus a tool for details.";
-  body.textContent = DEFAULT;
-  const pill = (id) => document.getElementById("t-" + id);
-  const box = (a) => { const b = a.querySelector("rect").getBBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height }; };
-
-  function show(id) {
-    const t = TOOLS[id], to = pill(id);
-    body.innerHTML = "<b></b> — <span></span>" + (t.builds ? '<span class="needs-line"></span>' : "");
-    body.querySelector("b").textContent = t.title;
-    body.querySelector("span").textContent = t.desc;
-    if (t.builds) body.querySelector(".needs-line").textContent = "Builds on: " + t.builds;
-    layer.innerHTML = "";
-    for (const n of t.needs) {
-      const f = box(pill(n)), d = box(to);
-      let x1, y1, x2, y2, bend = 0;
-      if (Math.abs(f.y - d.y) < 20) {            // same band: edge to edge
-        const dir = d.x > f.x ? 1 : -1;
-        x1 = f.x + dir * f.w / 2; y1 = f.y; x2 = d.x - dir * d.w / 2; y2 = d.y; bend = -26;
-      } else if (f.y > d.y) {                    // from an inner ring, outwards to the pill
-        x1 = f.x; y1 = f.y - f.h / 2; x2 = d.x; y2 = d.y + d.h / 2;
-      } else {
-        x1 = f.x; y1 = f.y + f.h / 2; x2 = d.x; y2 = d.y - d.h / 2;
-      }
-      const path = document.createElementNS(SVG, "path");
-      path.setAttribute("class", "needs");
-      path.setAttribute("marker-end", "url(#needs-arrow)");
-      path.setAttribute("d", `M${x1},${y1} Q${(x1 + x2) / 2 + (bend ? 0 : 40)},${(y1 + y2) / 2 + bend} ${x2},${y2}`);
-      layer.appendChild(path);
-    }
+  // ── Map tooltips: tools show their description; rings their Chomsky type, what accepts them, an example ──
+  const RINGS = {
+    re:  ["Recursively enumerable · Type 0", "Languages accepted by Turing machines. Example: the halting problem."],
+    cs:  ["Context-sensitive · Type 1", "Generated by grammars whose rules never shrink the string. Example: aⁿbⁿcⁿ."],
+    cf:  ["Context-free · Type 2", "Generated by context-free grammars and accepted by pushdown automata. Example: palindromes wwᴿ."],
+    dcf: ["Deterministic context-free = LR(1)", "Accepted by deterministic pushdown automata; exactly the languages with an LR(1) grammar. A subclass of the context-free languages, not one of Chomsky's four."],
+    ll1: ["LL(1)", "Languages with a grammar that can be parsed top-down with one symbol of lookahead. A subclass of the deterministic context-free languages, not one of Chomsky's four. Example: aⁿbⁿ."],
+    reg: ["Regular · Type 3", "Accepted by finite automata and described by regular expressions. Example: (a|b)*abb."],
+  };
+  const tip = document.getElementById("tip"), map = document.getElementById("map");
+  function fill(title, text, builds) {
+    tip.replaceChildren(el("b", "", title), document.createTextNode(text));
+    if (builds) tip.appendChild(el("span", "tip-builds", "Builds on: " + builds));
   }
-  function clear() { body.textContent = DEFAULT; layer.innerHTML = ""; }
-  for (const id of Object.keys(TOOLS)) {
-    const a = pill(id);
-    a.addEventListener("mouseenter", () => show(id));
-    a.addEventListener("focus", () => show(id));
-    a.addEventListener("mouseleave", clear);
-    a.addEventListener("blur", clear);
+  function place(x, y) {                       // near (x, y), kept inside the window
+    tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + "px";
+    tip.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + "px";
   }
+  function tipFor(target) {
+    const a = target.closest && target.closest(".pill");
+    if (a) { const t = TOOLS[a.id.slice(2)]; fill(t.title, t.desc, t.builds); return true; }
+    const ring = target.dataset && target.dataset.ring;
+    if (ring) { fill(RINGS[ring][0], RINGS[ring][1]); return true; }
+    return false;
+  }
+  map.addEventListener("mousemove", (e) => { if (tipFor(e.target)) place(e.clientX + 14, e.clientY + 18); else tip.hidden = true; });
+  map.addEventListener("mouseleave", () => { tip.hidden = true; });
+  map.addEventListener("focusin", (e) => { if (tipFor(e.target)) { const r = e.target.getBoundingClientRect(); place(r.left, r.bottom + 8); } });
+  map.addEventListener("focusout", () => { tip.hidden = true; });
 
   // ── Switching views; the choice is remembered, and a narrow window always gets the list ──
   const toList = document.getElementById("to-list"), toMap = document.getElementById("to-map");
