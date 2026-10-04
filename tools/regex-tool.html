@@ -6,7 +6,7 @@
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../shared/shared.css?v=4957a13c" />
-    <link rel="stylesheet" href="../shared/ui.css?v=87377938" />
+    <link rel="stylesheet" href="../shared/ui.css?v=5c823f4d" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -332,93 +332,6 @@
         color: var(--text-lo);
         pointer-events: none;
       }
-      /* Nodes */
-      .dfa-node rect {
-        fill: var(--bg);
-        stroke: var(--text);
-        stroke-width: 1.2;
-        transition:
-          fill 0.2s,
-          stroke 0.2s,
-          stroke-width 0.2s;
-      }
-      .dfa-node .accept-border {
-        fill: none;
-        stroke-width: 1 !important;
-      }
-      .dfa-node .state-label {
-        font-size: 11px;
-        font-weight: bold;
-        fill: var(--text);
-        font-family: var(--font-mono);
-      }
-      .dfa-node.accepting .state-label {
-        fill: var(--green);
-      }
-      .dfa-node.accepting rect {
-        stroke: var(--green);
-      }
-      /* Edges */
-      .dfa-edge path {
-        fill: none;
-        stroke: var(--text);
-        stroke-width: 0.9;
-        transition:
-          stroke 0.2s,
-          stroke-width 0.2s;
-      }
-      .dfa-edge line {
-        stroke: none;
-      }
-      .dfa-edge text {
-        font-size: 10px;
-        fill: var(--text-dim);
-        font-family: var(--font-mono);
-        font-style: italic;
-      }
-      .dfa-arrowhead {
-        fill: var(--text);
-        transition: fill 0.2s;
-      }
-      .start-arrow {
-        stroke: var(--text-dim);
-        stroke-width: 1;
-      }
-      /* Active state highlight (simulation) */
-      .dfa-node.sim-active rect {
-        fill: var(--accent-bg) !important;
-        stroke: var(--accent) !important;
-        stroke-width: 2 !important;
-      }
-      .dfa-node.sim-active .state-label {
-        fill: var(--accent) !important;
-      }
-      .dfa-node.accepting.sim-active rect {
-        fill: var(--green-bg) !important;
-        stroke: var(--green) !important;
-      }
-      .dfa-node.accepting.sim-active .state-label {
-        fill: var(--green) !important;
-      }
-      .dfa-node.sim-reject rect {
-        fill: var(--red-bg) !important;
-        stroke: var(--red) !important;
-        stroke-width: 2 !important;
-      }
-      .dfa-node.sim-reject .state-label {
-        fill: var(--red) !important;
-      }
-      /* Active edge highlight (simulation) */
-      .dfa-edge.sim-active path {
-        stroke: var(--accent) !important;
-        stroke-width: 1.8 !important;
-      }
-      .dfa-edge.sim-active text {
-        fill: var(--accent) !important;
-      }
-      .dfa-edge.sim-active .dfa-arrowhead {
-        fill: var(--accent) !important;
-      }
     </style>
   </head>
   <body>
@@ -559,11 +472,6 @@
             <!-- DFA graph -->
             <div class="dfa-graph-wrap">
               <svg id="dfa-svg">
-                <defs>
-                  <marker id="dfa-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" class="dfa-arrowhead" />
-                  </marker>
-                </defs>
                 <g id="dfa-graph-root"></g>
               </svg>
               <div id="dfa-graph-empty">Build an NFA to see the DFA graph.</div>
@@ -621,6 +529,7 @@
     <script src="../shared/ui.js?v=0ba49cea"></script>
     <script src="../shared/view-menu.js?v=d1c37b50"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../shared/automaton-graph.js?v=c6dd1ec4"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
       function renderTree() {}
@@ -980,19 +889,11 @@
 
       // ── Subset construction stepper state ──────────────────────────
       let _scData = null; // result of subsetConstruct()
-      // Back to "not started": empty DFA panel
-      function scShowNotStarted() {
-        document.getElementById("sc-log-bar").innerHTML = "";
-        document.getElementById("dfa-table-wrap").innerHTML = "";
-        document.getElementById("dfa-table-wrap").style.display = "none";
-        document.getElementById("dfa-empty").style.display = "";
-      }
-
       const scStepper = createStepper({
         buttons: { reset: "btn-sc-reset", back: "btn-sc-back", step: "btn-sc-step", all: "btn-sc-all" },
         min: -1,
         last: () => (_scData ? _scData.steps.length - 1 : null),
-        onChange: (pos) => (pos < 0 ? scShowNotStarted() : scRenderStep()),
+        onChange: () => scRenderStep(),
       });
       function scSetBtns() { scStepper.refresh(); }
       function scReset() { scStepper.reset(); }
@@ -1000,6 +901,8 @@
       function scBack() { scStepper.prev(); }
       function scRunAll() { scStepper.end(); }
 
+      // The table always has its full shape (a row per DFA state, a column per symbol);
+      // stepping fills it in. A row's state name stays faint until the state is discovered.
       function scRenderStep() {
         if (!_scData) return;
         const { dfaStates, dfaAccepts, dfaTrans, alpha, steps } = _scData;
@@ -1012,7 +915,7 @@
 
         // Reconstruct what has been revealed by replaying 0..pos
         const revStates = new Set(); // dfaIdx introduced so far
-        const revTrans = {}; // dfaIdx → sym → toIdx
+        const revTrans = {}; // dfaIdx → sym → toIdx, or "" for a move to the empty set
         let activeCell = null; // { dfaIdx, sym }
         let activeRow = -1;
 
@@ -1035,6 +938,8 @@
             activeCell = { dfaIdx: s.dfaIdx, sym: s.sym };
           }
           if (s.type === "empty") {
+            if (!revTrans[s.dfaIdx]) revTrans[s.dfaIdx] = {};
+            revTrans[s.dfaIdx][s.sym] = "";
             activeRow = s.dfaIdx;
             activeCell = { dfaIdx: s.dfaIdx, sym: s.sym };
           }
@@ -1044,7 +949,6 @@
           }
         }
 
-        // Render DFA table
         const wrap = document.getElementById("dfa-table-wrap");
         wrap.innerHTML = "";
         const tbl = document.createElement("table");
@@ -1056,56 +960,43 @@
 
         const tb = document.createElement("tbody");
         for (let i = 0; i < dfaStates.length; i++) {
-          if (!isDone && !revStates.has(i)) continue; // hide undiscovered states
+          const found = isDone || revStates.has(i);
           const isStart = i === 0;
           const isAccept = dfaAccepts.has(i);
           const isActive = i === activeRow;
 
           const tr = document.createElement("tr");
 
-          // State cell
+          // State cell: the name is always there; the → and * markers appear with the state
           const sc = document.createElement("td");
-          if (isStart && isAccept) {
-            sc.className = "dfa-both";
-            sc.textContent = "→* D" + i;
-          } else if (isStart) {
-            sc.className = "dfa-start";
-            sc.textContent = "→  D" + i;
-          } else if (isAccept) {
-            sc.className = "dfa-accept";
-            sc.textContent = "*  D" + i;
-          } else {
-            sc.className = "dfa-plain";
-            sc.textContent = "   D" + i;
-          }
+          sc.dataset.s = i;
+          const mark = !found ? "   " : isStart && isAccept ? "→* " : isStart ? "→  " : isAccept ? "*  " : "   ";
+          sc.className = "dfa-state-cell " + (!found ? "dfa-plain is-label-pending" : isStart && isAccept ? "dfa-both" : isStart ? "dfa-start" : isAccept ? "dfa-accept" : "dfa-plain");
+          sc.textContent = mark + "D" + i;
           if (isActive) sc.classList.add("is-row-hi");
-          if (!isDone) sc.classList.add("is-filled");
+          if (found && !isDone) sc.classList.add("is-filled");
           tr.appendChild(sc);
 
           // NFA states cell
           const nc = document.createElement("td");
-          nc.className = "dfa-set-cell" + (isActive ? " is-row-hi" : "") + (!isDone ? " is-filled" : "");
-          nc.textContent = [...dfaStates[i]]
-            .sort((a, b) => a - b)
-            .map((s) => "q" + s)
-            .join(", ");
+          nc.className = "dfa-set-cell" + (isActive ? " is-row-hi" : "") + (found && !isDone ? " is-filled" : "");
+          if (found) nc.textContent = [...dfaStates[i]].sort((a, b) => a - b).map((s) => "q" + s).join(", ");
           tr.appendChild(nc);
 
           // Transition cells
           for (const sym of alpha) {
             const td = document.createElement("td");
-            const toIdx = revTrans[i] && revTrans[i][sym] !== undefined ? revTrans[i][sym] : undefined;
-            const isAct = activeCell && activeCell.dfaIdx === i && activeCell.sym === sym;
-
+            td.dataset.s = i;
+            td.dataset.sym = sym;
+            const rev = revTrans[i] && revTrans[i][sym];
             if (isDone) {
-              // Full table: look up from dfaTrans
               const tx = dfaTrans.find((t) => t.from === i && t.sym === sym);
-              if (tx !== undefined) td.textContent = "D" + tx.to;
-            } else if (toIdx !== undefined) {
-              td.textContent = "D" + toIdx;
+              td.textContent = tx !== undefined ? "D" + tx.to : "∅";
+            } else if (rev !== undefined) {
+              td.textContent = rev === "" ? "∅" : "D" + rev;
               td.classList.add("is-filled");
             }
-            if (isAct) td.classList.add("is-active");
+            if (activeCell && activeCell.dfaIdx === i && activeCell.sym === sym) td.classList.add("is-active");
             tr.appendChild(td);
           }
           tb.appendChild(tr);
@@ -1286,10 +1177,7 @@
         // Pre-compute DFA steps and reset the DFA stepper
         _scData = withSubsetHtml(subsetConstruct(nfa));
         scStepper.pos = -1;
-        document.getElementById("sc-log-bar").innerHTML = "";
-        document.getElementById("dfa-table-wrap").innerHTML = "";
-        document.getElementById("dfa-table-wrap").style.display = "none";
-        document.getElementById("dfa-empty").style.display = "";
+        scRenderStep();
         scSetBtns();
 
         // Compute minimization and reset the min stepper
@@ -1317,166 +1205,73 @@
       // DFA GRAPH RENDERER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      const DFA_W = 52,
-        DFA_H = 30; // node dimensions
-
-      const _dfaZoom = d3
-        .zoom()
-        .scaleExtent([0.1, 8])
-        .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", (e) => d3.select("#dfa-graph-root").attr("transform", e.transform));
-      d3.select("#dfa-svg").call(_dfaZoom).on("dblclick.zoom", null);
-      document.getElementById("dfa-svg").addEventListener("dblclick", () => fitDFA());
-
-      function fitDFA() {
-        try {
-          const rootEl = document.getElementById("dfa-graph-root");
-          if (!rootEl) return;
-          const bb = rootEl.getBBox();
-          const svgEl = document.getElementById("dfa-svg");
-          const vw = svgEl.clientWidth || svgEl.parentElement.clientWidth || 400;
-          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 200;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const sc = Math.min(0.95, Math.min(vw / (bb.width + 60), vh / (bb.height + 40)));
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-          d3.select("#dfa-svg").call(_dfaZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch (e) {
-          /* ignore during layout */
-        }
-      }
-
-      // Refit on panel resize
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => {
-          if (_scData) fitDFA();
-        }).observe(document.getElementById("dfa-svg").parentElement);
-      }
+      const dfaGraph = createGraphView("dfa", { hasNodes: () => !!_scData, fallbackWidth: 400 });
+      function fitDFA() { dfaGraph.fit(); }
 
       function renderDFA(scData) {
-        const { dfaStates, dfaAccepts, dfaTrans, alpha } = scData;
-        const n = dfaStates.length;
-        const root = d3.select("#dfa-graph-root");
-        root.selectAll("*").remove();
-
-        document.getElementById("dfa-graph-empty").style.display = n === 0 ? "" : "none";
-        if (n === 0) return;
-
-        // Group non-self transitions by (from, to); collect self-loops separately
-        const edgeMap = new Map(); // "f-t" → { from, to, syms[] }
-        const selfLoops = new Map(); // stateIdx → syms[]
+        const { dfaStates, dfaAccepts, dfaTrans } = scData;
+        // One edge per (from, to) pair, labelled with all its symbols; self-loops separately.
+        const edgeMap = new Map(); // "f-t" → { from, to, labels[], ids[] }
+        const loopMap = new Map(); // stateIdx → { node, labels[], ids[] }
         for (const t of dfaTrans) {
+          let e;
           if (t.from === t.to) {
-            if (!selfLoops.has(t.from)) selfLoops.set(t.from, []);
-            selfLoops.get(t.from).push(t.sym);
+            if (!loopMap.has(t.from)) loopMap.set(t.from, { node: t.from, labels: [], ids: [] });
+            e = loopMap.get(t.from);
           } else {
             const k = t.from + "-" + t.to;
-            if (!edgeMap.has(k)) edgeMap.set(k, { from: t.from, to: t.to, syms: [] });
-            edgeMap.get(k).syms.push(t.sym);
+            if (!edgeMap.has(k)) edgeMap.set(k, { from: t.from, to: t.to, labels: [], ids: [] });
+            e = edgeMap.get(k);
           }
+          e.labels.push(t.sym);
+          e.ids.push(t.from + "|" + t.sym);
         }
-
-        // Dagre layout (non-self edges only)
-        const dg = new dagre.graphlib.Graph();
-        dg.setGraph({ rankdir: "LR", nodesep: 30, ranksep: 54, marginx: 40, marginy: 30 });
-        dg.setDefaultEdgeLabel(() => ({}));
-        for (let i = 0; i < n; i++) dg.setNode(i, { width: DFA_W, height: DFA_H });
-        for (const [k, e] of edgeMap) dg.setEdge(e.from, e.to, {});
-        dagre.layout(dg);
-
-        const pathLine = d3
-          .line()
-          .x((p) => p.x)
-          .y((p) => p.y)
-          .curve(d3.curveCatmullRom);
-
-        // Draw non-self edges
-        for (const [k, e] of edgeMap) {
-          const ed = dg.edge(e.from, e.to);
-          if (!ed) continue;
-          const pts = ed.points;
-          const mid = pts[Math.floor(pts.length / 2)];
-          const eg = root.append("g").attr("class", "dfa-edge").attr("data-edge", k);
-          eg.append("path").attr("d", pathLine(pts));
-          if (pts.length >= 2) {
-            const p0 = pts[pts.length - 2],
-              p1 = pts[pts.length - 1];
-            eg.append("line").attr("x1", p0.x).attr("y1", p0.y).attr("x2", p1.x).attr("y2", p1.y).attr("stroke", "none").attr("marker-end", "url(#dfa-arrow)");
-          }
-          eg.append("text")
-            .attr("x", mid.x)
-            .attr("y", mid.y - 5)
-            .attr("text-anchor", "middle")
-            .text(e.syms.join(", "));
-        }
-
-        // Draw self-loops as arcs above each node
-        for (const [si, syms] of selfLoops) {
-          const dn = dg.node(si);
-          if (!dn) continue;
-          const cx = dn.x,
-            top = dn.y - DFA_H / 2;
-          const eg = root.append("g").attr("class", "dfa-edge").attr("data-self", si);
-          // Cubic bezier that loops above the node
-          eg.append("path")
-            .attr("d", `M${cx - 9},${top} C${cx - 26},${top - 34} ${cx + 26},${top - 34} ${cx + 9},${top}`)
-            .attr("marker-end", "url(#dfa-arrow)");
-          eg.append("text")
-            .attr("x", cx)
-            .attr("y", top - 36)
-            .attr("text-anchor", "middle")
-            .text(syms.join(", "));
-        }
-
-        // Draw nodes (on top of edges)
-        for (let i = 0; i < n; i++) {
-          const dn = dg.node(i);
-          if (!dn) continue;
-          const tx = dn.x - DFA_W / 2,
-            ty = dn.y - DFA_H / 2;
-          const isAccept = dfaAccepts.has(i);
-          const ng = root
-            .append("g")
-            .attr("class", "dfa-node" + (isAccept ? " accepting" : ""))
-            .attr("id", "dfa-state-" + i)
-            .attr("transform", `translate(${tx},${ty})`);
-          ng.append("rect").attr("width", DFA_W).attr("height", DFA_H).attr("rx", 4);
-          if (isAccept) {
-            ng.append("rect")
-              .attr("class", "accept-border")
-              .attr("x", 3)
-              .attr("y", 3)
-              .attr("width", DFA_W - 6)
-              .attr("height", DFA_H - 6)
-              .attr("rx", 2);
-          }
-          // State label "D0"
-          ng.append("text")
-            .attr("class", "state-label")
-            .attr("x", DFA_W / 2)
-            .attr("y", DFA_H / 2)
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .text("D" + i);
-          // Entry arrow for start state
-          if (i === 0) {
-            root
-              .append("line")
-              .attr("class", "start-arrow")
-              .attr("x1", tx - 16)
-              .attr("y1", dn.y)
-              .attr("x2", tx - 1)
-              .attr("y2", dn.y)
-              .attr("marker-end", "url(#dfa-arrow)");
-          }
-        }
-
-        fitDFA();
+        drawAutomatonGraph("dfa", dfaGraph, {
+          nodes: dfaStates.map((_, i) => ({ label: "D" + i, accepting: dfaAccepts.has(i) })),
+          start: 0,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          ranksep: 54,
+          joinLabels: true,
+          onHover: dfaHoverEdges,
+          onNodeHover: dfaHoverState,
+        });
       }
 
+      // Hovering links the DFA graph and the subset-construction table. The graph shows the
+      // minimal DFA when minimisation is applied, whose states are groups of the table's
+      // states; these map between the two numberings.
+      const dfaMinimised = () => _minEnabled && _minData;
+      function graphStateOf(o) {
+        if (!dfaMinimised()) return o;
+        const gi = _minData.groups.findIndex((g) => g.includes(o));
+        return gi < 0 ? null : _minData.renumMap[gi];
+      }
+      function tableStatesOf(j) {
+        if (!dfaMinimised()) return [j];
+        const gi = _minData.renumMap.indexOf(j);
+        return gi < 0 ? [] : _minData.groups[gi];
+      }
+      function dfaHoverEdges(ids) {
+        setGraphHot("dfa", ids);
+        const want = new Set();
+        for (const id of ids || []) {
+          const [j, sym] = id.split("|");
+          for (const o of tableStatesOf(+j)) want.add(o + "|" + sym);
+        }
+        for (const td of document.querySelectorAll("#dfa-table-wrap td[data-sym]")) td.classList.toggle("is-hot", want.has(td.dataset.s + "|" + td.dataset.sym));
+      }
+      function dfaHoverState(j) {
+        setGraphNodeHot("dfa", j);
+        const rows = new Set(j === null ? [] : tableStatesOf(j));
+        for (const td of document.querySelectorAll("#dfa-table-wrap td.dfa-state-cell")) td.classList.toggle("is-hot", rows.has(+td.dataset.s));
+      }
+      UI.hoverItems("dfa-table-wrap", "td[data-sym]", (td) => (td.textContent ? [graphStateOf(+td.dataset.s) + "|" + td.dataset.sym] : null), dfaHoverEdges);
+      UI.hoverItems("dfa-table-wrap", "td.dfa-state-cell", (td) => (td.classList.contains("is-label-pending") ? null : graphStateOf(+td.dataset.s)), dfaHoverState);
+
       function dfaHighlight(step) {
-        d3.selectAll(".dfa-node").classed("sim-active sim-reject", false);
-        d3.selectAll(".dfa-edge").classed("sim-active", false);
+        d3.selectAll("#dfa-graph-root .ag-node").classed("is-active", false).classed("is-rejecting", false);
+        d3.selectAll("#dfa-graph-root .ag-edge").classed("is-active", false);
 
         if (!step || step.state === undefined) return;
 
@@ -1484,14 +1279,14 @@
           // Dead — highlight last real state as rejected if we have it
           // (prevState was the last real state before dead)
           if (step.prevState !== null && step.prevState !== undefined) {
-            d3.select("#dfa-state-" + step.prevState).classed("sim-reject", true);
+            d3.select("#dfa-state-" + step.prevState).classed("is-active", true).classed("is-rejecting", true);
           }
         } else {
           const isFinal = step.final === true;
           const isReject = isFinal && !step.accepted;
           d3.select("#dfa-state-" + step.state)
-            .classed("sim-active", !isReject)
-            .classed("sim-reject", isReject);
+            .classed("is-active", true)
+            .classed("is-rejecting", isReject);
         }
 
         // Highlight the edge just taken
@@ -1499,9 +1294,9 @@
           const from = step.prevState,
             to = step.state;
           if (from === to) {
-            d3.select('[data-self="' + from + '"]').classed("sim-active", true);
+            d3.select('#dfa-graph-root [data-self="' + from + '"]').classed("is-active", true);
           } else {
-            d3.select('[data-edge="' + from + "-" + to + '"]').classed("sim-active", true);
+            d3.select('#dfa-graph-root [data-edge="' + from + "-" + to + '"]').classed("is-active", true);
           }
         }
       }
