@@ -114,13 +114,35 @@ function toggleCollapse(id) {
 }
 
 function updateCollapseBtn(id, collapsed) {
-  const btn = document.querySelector("#" + id + " .collapse-btn");
-  if (!btn) return;
   const el = document.getElementById(id);
-  const isLeft = el && el.dataset.collapse === "left";
-  btn.innerHTML = isLeft ? (collapsed ? "&#8250;" : "&#8249;") : collapsed ? "&#8249;" : "&#8250;";
-  btn.title = collapsed ? "Expand panel" : "Collapse panel";
-  btn.setAttribute("aria-label", btn.title);
+  if (!el) return;
+  const name = ((el.querySelector(".panel-title") || {}).textContent || "panel").trim();
+  const label = (collapsed ? "Expand " : "Collapse ") + name;
+  const btn = el.querySelector(".collapse-btn");
+  if (btn) {
+    const isLeft = el.dataset.collapse === "left";
+    // The glyph points the way the panel moves when you click.
+    const pointsLeft = isLeft ? !collapsed : collapsed;
+    btn.innerHTML = '<span class="collapse-btn__glyph">' + (pointsLeft ? "&#8249;" : "&#8250;") + "</span>";
+    btn.style.setProperty("--dir", pointsLeft ? -1 : 1);
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+  }
+  // A collapsed strip is itself a button.
+  const head = el.querySelector(":scope > .panel-header");
+  if (head) {
+    if (collapsed) {
+      head.tabIndex = 0;
+      head.setAttribute("role", "button");
+      head.setAttribute("aria-label", label);
+      head.title = label;
+    } else {
+      head.removeAttribute("tabindex");
+      head.removeAttribute("role");
+      head.removeAttribute("aria-label");
+      head.removeAttribute("title");
+    }
+  }
 }
 
 // Charts that draw into a sized container re-render after the layout moves.
@@ -160,11 +182,19 @@ var _panelObserver = null;
 function startPanelLayout() {
   const row = document.getElementById("panels");
   if (!row || _panelObserver) return;
-  // A click on a collapsed strip opens it.
-  row.addEventListener("click", (e) => {
+  // A click, or Enter/Space, on a collapsed strip opens it.
+  const openStrip = (e) => {
     const head = e.target.closest(".panel.collapsed > .panel-header");
-    if (head && head.parentElement.parentElement === row) toggleCollapse(head.parentElement.id);
+    if (head && head.parentElement.parentElement === row) {
+      e.preventDefault();
+      toggleCollapse(head.parentElement.id);
+    }
+  };
+  row.addEventListener("click", openStrip);
+  row.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches(".panel.collapsed > .panel-header")) openStrip(e);
   });
+  _panels().forEach((el) => updateCollapseBtn(el.id, el.classList.contains("collapsed")));
   if (typeof ResizeObserver !== "undefined") {
     let raf = null;
     _panelObserver = new ResizeObserver(() => {

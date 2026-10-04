@@ -5,7 +5,7 @@
 // between its two neighbours; when the row is too narrow for every panel's
 // minimum, the lowest-priority panels collapse to a thin strip.
 
-const PANEL_COLLAPSED_W = 22;
+const PANEL_COLLAPSED_W = 36;
 
 // New widths for the two panels either side of a handle dragged by dx pixels.
 // The pair keeps its combined width; neither goes below its minimum.

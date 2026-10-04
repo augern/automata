@@ -363,8 +363,8 @@ body {
   transition: none !important;
 }
 .panel.collapsed {
-  flex: 0 0 22px;
-  min-width: 22px;
+  flex: 0 0 36px;
+  min-width: 36px;
 }
 
 /* Panel header — thin ruled, label in small-caps serif */
@@ -396,48 +396,93 @@ body {
   text-overflow: ellipsis; /* ...and show an ellipsis, so header buttons never clip */
   letter-spacing: 0.01em;
 }
+/* Collapse / expand chevron: a 24px target; on hover the glyph leans the way
+   the panel will move, and the tooltip names the action. */
 .collapse-btn {
-  background: none;
-  border: none;
-  color: var(--text-lo);
-  cursor: pointer;
-  font-size: var(--fs-md);
-  padding: 1px var(--sp-2);
-  line-height: 1;
-  transition: color 0.12s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: var(--fs-lg);
+  line-height: 1;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.collapse-btn__glyph {
+  display: inline-block;
+  transition: transform var(--dur) var(--ease);
 }
 .collapse-btn:hover {
-  color: var(--text);
-  background: var(--bg-hover);
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
 }
-.collapse-btn {
-  border-radius: var(--radius);
+.collapse-btn:hover .collapse-btn__glyph {
+  transform: translateX(calc(var(--dir, 1) * 3px));
 }
 
-/* Collapsed panel: rotated label */
+/* Collapsed panel: a 36px strip with an expand button and a rotated label.
+   The whole strip is the click target. */
 .panel.collapsed .panel-header {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: var(--sp-4);
   height: 100%;
-  width: 22px;
-  justify-content: flex-end;
-  padding: var(--sp-5) 0;
+  width: 36px;
+  padding: var(--sp-4) 0;
   cursor: pointer;
   border-bottom: none;
+  border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
+  transition: background var(--dur) var(--ease);
+}
+.panel.collapsed .collapse-btn {
+  width: 28px;
+  height: 28px;
+  order: -1;
+  background: var(--bg);
+  border-color: var(--border);
 }
 .panel.collapsed .panel-title {
-  font-size: var(--fs-2xs);
+  flex: 0 1 auto;
+  min-height: 0;
+  writing-mode: vertical-rl;
   transform: rotate(180deg);
-  text-align: right;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--text-dim);
+  transition: color var(--dur) var(--ease);
 }
-.panel.collapsed .panel-header:hover {
-  background: var(--bg-hover);
+.panel.collapsed .panel-header:hover,
+.panel.collapsed .panel-header:focus-visible {
+  background: var(--accent-bg);
 }
-.panel.collapsed .collapse-btn,
+.panel.collapsed .panel-header:hover .panel-title,
+.panel.collapsed .panel-header:focus-visible .panel-title {
+  color: var(--accent);
+}
+.panel.collapsed .panel-header:hover .collapse-btn,
+.panel.collapsed .panel-header:focus-visible .collapse-btn {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.panel.collapsed .panel-header:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
 .panel.collapsed .algo-btn,
+.panel.collapsed .panel-menu,
 .panel.collapsed .panel-body {
+  display: none;
+}
+
+.panel-body {
   display: none;
 }
 
