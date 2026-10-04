@@ -85,35 +85,7 @@
       }
       .deriv-step.accepted .ds-form {
         color: var(--green);
-      }
-
-      /* LL stack items */
-      .stk-sym-item {
-        font-size: var(--fs-xs);
-        padding: 0 var(--sp-4);
-        background: var(--bg-cell);
-        border: 1px solid var(--border);
-        color: var(--text);
-        font-family: var(--font-mono);
-        transition: all 0.2s;
-        flex-shrink: 0;
-      }
-      .stk-sym-item.top {
-        border-color: var(--accent);
-        color: var(--accent);
-        background: var(--accent-bg);
-        font-weight: bold;
-      }
-      .stk-sym-item.terminal {
-        border-color: var(--green);
-        color: var(--green);
-        background: var(--green-bg);
-      }
-      .stk-sym-item.dollar {
-        color: var(--text-lo);
-        font-style: italic;
-        border-style: dashed;
-      }
+      }/* LL stack items */
 
       /* LL(1) table rule cells */
       .parse-table td.rule-cell {
@@ -556,7 +528,7 @@
           const b = document.createElement("span");
           const isTop = i === 0;
           const isTerm = currentGrammar && !currentGrammar.nonterminals.has(sym);
-          b.className = "stk-sym-item" + (isTop ? " top" : "") + (isTerm ? " terminal" : "") + (sym === "$" ? " dollar" : "");
+          b.className = "ui-badge" + (sym === "$" ? " ui-badge--dead" : isTop ? " ui-badge--active" : isTerm ? " ui-badge--accept" : "");
           b.textContent = sym;
           el.appendChild(b);
         });

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grammar Derivations</title>
     <link rel="stylesheet" href="../shared/shared.css" />
+    <link rel="stylesheet" href="../shared/ui.css" />
     <script src="../shared/theme.js"></script>
     <style>
       #p-grammar     { width: 240px; }
@@ -18,13 +19,6 @@
         flex: 1;
         overflow-y: auto;
         padding: var(--sp-4) var(--sp-5) var(--sp-6);
-      }
-.prod-empty {
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: var(--fs-sm);
-        color: var(--text-lo);
-        padding: var(--sp-2) var(--sp-1);
       }
       .prod-rule {
         display: flex;
@@ -44,18 +38,7 @@
       .prod-arrow    { color: var(--text-lo); }
       .prod-sym-nt   { color: var(--accent); }
       .prod-sym-t    { color: var(--text-dim); }
-      .prod-sym-eps  { color: var(--text-lo); font-style: italic; }
-
-      /* ── Derivation toolbar ── */
-      #deriv-toolbar {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        gap: var(--sp-3);
-        padding: var(--sp-3) var(--sp-5);
-        border-bottom: 1px solid var(--border-lo);
-        background: var(--bg-panel);
-      }
+      .prod-sym-eps  { color: var(--text-lo); font-style: italic; }/* ── Derivation toolbar ── */
       #deriv-status { flex: 1; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-dim); }
       #deriv-status .ds-start { color: var(--accent); font-weight: bold; }
       #step-count { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); white-space: nowrap; }
@@ -66,12 +49,6 @@
         overflow-y: auto;
         padding: var(--sp-6) 20px var(--sp-6);
         background: var(--bg);
-      }
-      #deriv-empty {
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: var(--fs-md);
-        color: var(--text-lo);
       }
 
       /* One derivation row */
@@ -195,15 +172,10 @@
       .deriv-done .done-eps  { font-family: var(--font-mono); font-style: italic; color: var(--text-lo); }
 
       /* ── Rule picker bar ── */
+      #deriv-toolbar { background: var(--bg-panel); }
+      /* Hidden until a range is selected; the bar itself is .ui-controlbar */
       #rule-picker {
-        flex-shrink: 0;
         display: none;
-        align-items: center;
-        gap: var(--sp-3) var(--sp-4);
-        padding: var(--sp-3) var(--sp-5);
-        border-top: 1.5px solid var(--border-hi);
-        background: var(--bg-panel);
-        flex-wrap: wrap;
         min-height: 36px;
       }
       #rule-picker.visible { display: flex; }
@@ -236,8 +208,6 @@
       button.rp-rule:hover .rp-sym-nt,
       button.rp-rule:hover .rp-sym-t,
       button.rp-rule:hover .rp-sym-eps { color: inherit; }
-      .rp-hint { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); }
-      .rp-no-match { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); }
     </style>
   </head>
   <body>
@@ -280,7 +250,7 @@
         <div class="panel-body">
           <div id="productions-wrap">
             <div id="productions-content">
-              <div class="prod-empty">Enter a grammar above.</div>
+              <div class="ui-empty">Enter a grammar above.</div>
             </div>
           </div>
         </div>
@@ -296,17 +266,17 @@
                   onclick="event.stopPropagation(); toggleCollapse('p-deriv');">&#8250;</button>
         </div>
         <div class="panel-body">
-          <div id="deriv-toolbar">
+          <div id="deriv-toolbar" class="ui-bar">
             <button class="btn" id="btn-new"  onclick="derivNew()"  disabled>New Derivation</button>
             <button class="btn" id="btn-undo" onclick="derivUndo()" disabled>&#8592; Undo</button>
             <span id="deriv-status"></span>
             <span id="step-count"></span>
           </div>
           <div id="deriv-scroll">
-            <div id="deriv-empty">Enter a grammar to start deriving.</div>
+            <div id="deriv-empty" class="ui-empty">Enter a grammar to start deriving.</div>
             <div id="deriv-steps"></div>
           </div>
-          <div id="rule-picker"></div>
+          <div id="rule-picker" class="ui-controlbar"></div>
         </div>
       </div>
     </div>
@@ -316,6 +286,7 @@
     <script src="../shared/algo/derivation.js"></script>
     <script src="../shared/shared.js"></script>
     <script src="../shared/share-link.js"></script>
+    <script src="../shared/ui.js"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
       initResize("rh-2", "p-productions", +1);
@@ -379,7 +350,7 @@
       function renderProductions() {
         const wrap = document.getElementById("productions-content");
         if (!_grammar) {
-          wrap.innerHTML = '<div class="prod-empty">Enter a grammar above.</div>';
+          wrap.innerHTML = '<div class="ui-empty">Enter a grammar above.</div>';
           return;
         }
         const { rules, nonterminals: nts } = _grammar;
@@ -679,7 +650,7 @@
         h += `<span class="rp-lhs-sep"> →</span></span>`;
 
         if (matching.length === 0) {
-          h += `<span class="rp-no-match">no matching rule</span>`;
+          h += `<span class="ui-label">no matching rule</span>`;
         } else {
           for (const { r, i } of matching) {
             h += `<button class="rp-rule" onclick="applyRule(${i})">`;
