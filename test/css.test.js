@@ -22,6 +22,7 @@ const DYNAMIC = new Set([
   "is-start", "is-accept", "is-reject", "is-both", // UI.table.state / refreshStates
   "ui-th--accept", "ui-th--reject", // UI.table.th tone
   "ui-cell--narrow", "ui-cell--wide", // UI.table.input size
+  "ag-arrowhead--eps", "ag-arrowhead--hot", // arrow marker kinds built in ensureArrowMarkers
 ]);
 
 const TOKEN = /[.#]([A-Za-z_][\w-]*)/g;

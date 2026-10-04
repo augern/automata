@@ -49,6 +49,7 @@ const PAIRS = [
   ["--text-dim", "--bg", 4.5], ["--text-dim", "--bg-panel", 4.5], ["--text-dim", "--bg-cell", 4.5],
   ["--text-lo", "--bg", 4.5], ["--text-lo", "--bg-panel", 4.5],
   ["--accent", "--bg", 4.5], ["--accent", "--accent-bg", 4.5], ["--accent", "--bg-panel", 4.5],
+  ["--hot", "--bg", 4.5], ["--hot", "--hot-bg", 4.5], ["--hot", "--bg-panel", 4.5],
   ["--green", "--bg", 4.5], ["--green", "--green-bg", 4.5], ["--green", "--bg-panel", 4.5],
   ["--red", "--bg", 4.5], ["--red", "--red-bg", 4.5], ["--red", "--bg-panel", 4.5],
   ["--amber", "--bg", 4.5], ["--amber", "--amber-bg", 4.5],

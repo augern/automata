@@ -5,9 +5,9 @@
     <title>PDA Simulator</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=5dc913f7" />
+    <link rel="stylesheet" href="../shared/shared.css?v=4957a13c" />
     <script src="../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../shared/ui.css?v=2e9072dd" />
+    <link rel="stylesheet" href="../shared/ui.css?v=a9154cf7" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 400; --pmin: 300px; }
@@ -187,10 +187,10 @@
     <script src="../shared/algo/pda.js?v=c6c2e029"></script>
     <script src="../shared/shared.js?v=583a8d75"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
-    <script src="../shared/ui.js?v=598bdf1e"></script>
+    <script src="../shared/ui.js?v=0ba49cea"></script>
     <script src="../shared/view-menu.js?v=d1c37b50"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../shared/automaton-graph.js?v=76ba70ff"></script>
+    <script src="../shared/automaton-graph.js?v=c6dd1ec4"></script>
     <script>
       initResize("rh-1", "p-def", +1);
       initResize("rh-2", "p-tree", -1);
@@ -335,7 +335,7 @@ else: ${kw("reject")}`
         for (let i = 0; i < pdaStates.length; i++) {
           const isStart = i === pdaStartIdx;
           const isAccept = pdaAccepts.has(i);
-          h += "<tr>";
+          h += `<tr data-state="${i}">`;
           h += T.rm(`removeState(${i})`, "Remove state");
           h += T.marker(`<input type="radio" name="pda-start" ${isStart ? "checked" : ""} onchange="setStart(${i})">`);
           h += T.marker(`<input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)">`);
@@ -436,6 +436,7 @@ else: ${kw("reject")}`
           radius: PDA_R,
           ranksep: 70,
           onHover: pdaHover,
+          onNodeHover: pdaHoverState,
         });
       }
 
@@ -448,14 +449,15 @@ else: ${kw("reject")}`
         for (const tr of document.querySelectorAll("#rules-table-wrap tr[data-rule]")) tr.classList.toggle("is-hot", set.has(+tr.dataset.rule));
         for (const el of document.querySelectorAll("#tree-root [data-rules]")) el.classList.toggle("is-hot", el.dataset.rules.split(",").some((i) => set.has(+i)));
       }
-      (function bindRuleRowHover() {
-        const wrap = document.getElementById("rules-table-wrap");
-        const rowRule = (e) => { const tr = e.target.closest && e.target.closest("tr[data-rule]"); return tr ? [+tr.dataset.rule] : null; };
-        wrap.addEventListener("mouseover", (e) => pdaHover(rowRule(e)));
-        wrap.addEventListener("mouseleave", () => pdaHover(null));
-        wrap.addEventListener("focusin", (e) => pdaHover(rowRule(e)));
-        wrap.addEventListener("focusout", () => pdaHover(null));
-      })();
+      UI.hoverItems("rules-table-wrap", "tr[data-rule]", (tr) => [+tr.dataset.rule], pdaHover);
+
+      // Hovering a state (graph node, state row, configuration-tree node) highlights it in all three.
+      function pdaHoverState(i) {
+        setGraphNodeHot("pda", i);
+        for (const tr of document.querySelectorAll("#states-table-wrap tr[data-state]")) tr.classList.toggle("is-hot", +tr.dataset.state === i);
+        for (const el of document.querySelectorAll("#tree-root .ct-node[data-state]")) el.classList.toggle("is-hot", +el.dataset.state === i);
+      }
+      UI.hoverItems("states-table-wrap", "tr[data-state]", (tr) => +tr.dataset.state, pdaHoverState);
 
       // Rule indices that explain a configuration-tree edge (the rule moving parent to child).
       function treeEdgeRules(parent, child) {
@@ -730,6 +732,9 @@ else: ${kw("reject")}`
           const st = treeNodeStatus(pd, activeIds);
           const g  = svgRoot.append("g")
             .attr("class", "ct-node" + (st !== "normal" ? " is-" + st : ""))
+            .attr("data-state", pdaStates.indexOf(pd.state))
+            .on("mouseenter", () => pdaHoverState(pdaStates.indexOf(pd.state)))
+            .on("mouseleave", () => pdaHoverState(null))
             .attr("transform", `translate(${dn.x - TREE_NW / 2},${dn.y - TREE_NH / 2})`);
           g.append("rect").attr("width", TREE_NW).attr("height", TREE_NH).attr("rx", 3);
           g.append("text").attr("class", "ct-label")

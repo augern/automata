@@ -242,6 +242,23 @@ const UI = (() => {
       return { input };
     },
 
+    // Report which item of a container the pointer (or keyboard focus) is on, so that table
+    // rows, cells and graph elements can highlight each other.
+    //   UI.hoverItems("rules-table-wrap", "tr[data-rule]", (el) => +el.dataset.rule, (id) => ...)
+    // `onChange` gets the item's id, or null when the pointer leaves it. Delegated, so it
+    // survives the container's contents being re-rendered.
+    hoverItems(container, selector, idOf, onChange) {
+      const c = el(container);
+      const at = (e) => {
+        const item = e.target.closest && e.target.closest(selector);
+        return item && c.contains(item) ? idOf(item) : null;
+      };
+      c.addEventListener("mouseover", (e) => onChange(at(e)));
+      c.addEventListener("mouseleave", () => onChange(null));
+      c.addEventListener("focusin", (e) => onChange(at(e)));
+      c.addEventListener("focusout", () => onChange(null));
+    },
+
     // A short message at the bottom of the window that fades after ~2 seconds.
     toast(message) {
       const t = document.createElement("div");

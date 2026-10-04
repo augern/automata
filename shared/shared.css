@@ -28,6 +28,8 @@
   --accent: #1a4fa8; /* deep PDF-hyperlink blue: active state, current node */
   --accent-bg: #eef3fc;
   --accent-bd: #1a4fa8;
+  --hot: #a85200; /* dark orange: whatever is hovered, shown across graph, tables and trees */
+  --hot-bg: #fdebd8;
   --green: #1a6e3c; /* accept / match */
   --green-bg: #edf7f1;
   --amber: #8a5c00; /* highlighted table cell */
@@ -114,6 +116,8 @@
   --accent: #7aa8ff;
   --accent-bg: #1c2a44;
   --accent-bd: #7aa8ff;
+  --hot: #ffa24d;
+  --hot-bg: #3a2410;
   --green: #62d08c;
   --green-bg: #15281d;
   --amber: #e2b44e;

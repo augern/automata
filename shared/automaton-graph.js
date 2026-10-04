@@ -46,11 +46,14 @@ function createGraphView(prefix, { hasNodes = () => true, fallbackWidth = 340 } 
 function ensureArrowMarkers(svgSel, prefix) {
   if (!svgSel.select("defs").empty() && !svgSel.select("#" + prefix + "-arrow").empty()) return;
   const defs = svgSel.select("defs").empty() ? svgSel.insert("defs", ":first-child") : svgSel.select("defs");
-  for (const eps of [false, true, "hot"]) {
+  // userSpaceOnUse: the arrowhead keeps its size however thick its edge is drawn
+  // (a highlighted edge must not get a bigger head).
+  for (const kind of ["", "eps", "hot"]) {
     defs.append("marker")
-      .attr("id", prefix + (eps === "hot" ? "-arrow-hot" : eps ? "-arrow-eps" : "-arrow"))
-      .attr("markerWidth", 8).attr("markerHeight", 8).attr("refX", 7).attr("refY", 3).attr("orient", "auto")
-      .append("path").attr("d", "M0,0 L0,6 L8,3 z").attr("class", "ag-arrowhead" + (eps === "hot" ? " ag-arrowhead--hot" : eps ? " ag-arrowhead--eps" : ""));
+      .attr("id", prefix + "-arrow" + (kind ? "-" + kind : ""))
+      .attr("markerUnits", "userSpaceOnUse")
+      .attr("markerWidth", 8).attr("markerHeight", 6).attr("refX", 6.3).attr("refY", 2.7).attr("orient", "auto")
+      .append("path").attr("d", "M0,0 L0,5.4 L7.2,2.7 z").attr("class", "ag-arrowhead" + (kind ? " ag-arrowhead--" + kind : ""));
   }
 }
 
@@ -66,6 +69,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 //   start: index of the start state
 //   edges: [{ from, to, labels: string[], eps?: boolean, ids?: any[] }]   non-self edges, one per (from, to)
 //   loops: [{ node, labels: string[], eps?: boolean, ids?: any[] }]       self-loops
+//   onNodeHover: (stateIndex | null) => void   makes states hoverable (see setGraphNodeHot)
 //   onHover: (ids | null) => void   makes edges hoverable. `ids` is parallel to `labels`
 //     (one id per label, e.g. a rule number): hovering a label reports [its id], hovering
 //     the edge itself reports all of the edge's ids, leaving reports null. Show the
@@ -74,7 +78,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 //   radius (16), ranksep (64)
 //   joinLabels: true → one line "a, b, c"; false → one stacked line per label
 function drawAutomatonGraph(prefix, view, spec) {
-  const { nodes, start, edges, loops = [], radius: R = 16, ranksep = 64, joinLabels = false, onHover } = spec;
+  const { nodes, start, edges, loops = [], radius: R = 16, ranksep = 64, joinLabels = false, onHover, onNodeHover } = spec;
   const root = d3.select("#" + prefix + "-graph-root");
   root.selectAll("*").remove();
 
@@ -105,15 +109,18 @@ function drawAutomatonGraph(prefix, view, spec) {
       if (ids) t.attr("data-k", li);
     });
   }
-  // Make an edge group hoverable: a wide invisible path to hit, and the hover reports.
+  // Hit targets for edges live in one layer under the nodes, so a generous hit area never
+  // steals the pointer from a node. Each edge reports all its ids; each stacked label
+  // reports its own.
+  const hitLayer = root.insert("g", ":first-child").attr("class", "ag-hits");
   function makeHoverable(g, d, ids) {
     if (!ids || !onHover) return;
     g.node().__ids = ids;
-    g.insert("path", ":first-child").attr("class", "ag-hit").attr("d", d);
-    g.on("mouseover", (ev) => {
-      const t = ev.target.closest && ev.target.closest("[data-k]");
-      onHover(t ? [ids[+t.dataset.k]] : ids);
-    }).on("mouseleave", () => onHover(null));
+    hitLayer.append("path").attr("class", "ag-hit").attr("d", d)
+      .on("mouseenter", () => onHover(ids)).on("mouseleave", () => onHover(null));
+    g.selectAll("text[data-k]")
+      .on("mouseenter", function () { onHover([ids[+this.dataset.k]]); })
+      .on("mouseleave", () => onHover(null));
   }
 
   const pathLine = d3.line().x((p) => p.x).y((p) => p.y).curve(d3.curveCatmullRom);
@@ -125,7 +132,6 @@ function drawAutomatonGraph(prefix, view, spec) {
     const mid = pts[Math.floor(pts.length / 2)];
     const eg = root.append("g").attr("class", edgeClass(e.eps)).attr("data-edge", e.from + "-" + e.to);
     eg.append("path").attr("d", pathLine(pts));
-    makeHoverable(eg, pathLine(pts), e.ids);
     if (pts.length >= 2) {
       const p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
       eg.append("line")
@@ -133,6 +139,7 @@ function drawAutomatonGraph(prefix, view, spec) {
         .attr("stroke", "none").attr("marker-end", arrowFor(e.eps));
     }
     addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4), e.ids);
+    makeHoverable(eg, pathLine(pts), e.ids);
   }
 
   // Nodes paint over the ends of the ordinary edges.
@@ -144,6 +151,7 @@ function drawAutomatonGraph(prefix, view, spec) {
     if (nd.accepting) cls += " is-accepting";
     if (nd.rejecting) cls += " is-rejecting";
     const ng = root.append("g").attr("class", cls).attr("id", prefix + "-state-" + i).attr("transform", `translate(${dn.x},${dn.y})`);
+    if (onNodeHover) ng.on("mouseenter", () => onNodeHover(i)).on("mouseleave", () => onNodeHover(null));
     ng.append("circle").attr("r", R);
     if (nd.accepting) ng.append("circle").attr("class", "ag-ring").attr("r", R - 3);
     if (nd.rejecting) ng.append("circle").attr("class", "ag-ring").attr("r", R - 3);
@@ -168,8 +176,8 @@ function drawAutomatonGraph(prefix, view, spec) {
     const eg = root.append("g").attr("class", edgeClass(lp.eps)).attr("data-self", lp.node);
     const d = `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`;
     eg.append("path").attr("d", d).attr("marker-end", arrowFor(lp.eps));
-    makeHoverable(eg, d, lp.ids);
     addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40), lp.ids);
+    makeHoverable(eg, d, lp.ids);
   }
 
   view.fit();
@@ -203,4 +211,10 @@ function setGraphHot(prefix, ids) {
     }
   }
   root.appendChild(layer);
+}
+
+// Highlight one state of the graph (or none: null); see onNodeHover in drawAutomatonGraph.
+function setGraphNodeHot(prefix, index) {
+  d3.selectAll("#" + prefix + "-graph-root .ag-node").classed("is-hot", false);
+  if (index !== null && index !== undefined) d3.select("#" + prefix + "-state-" + index).classed("is-hot", true);
 }

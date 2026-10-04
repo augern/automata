@@ -296,6 +296,7 @@
   stroke: var(--text);
   stroke-width: 0.9;
   transition: stroke var(--dur-slow), stroke-width var(--dur-slow);
+  pointer-events: none; /* the .ag-hit path under the nodes takes the pointer */
 }
 .ag-edge line { stroke: none; }
 .ag-edge text {
@@ -305,15 +306,16 @@
   font-family: var(--font-mono);
   pointer-events: none;
 }
-.ag-edge text[data-k] { pointer-events: all; }
+.ag-edge text[data-k] { pointer-events: bounding-box; }
 .ag-edge--eps path { stroke: var(--text-dim); stroke-dasharray: 4 3; }
 /* Hoverable edges (onHover in drawAutomatonGraph): a wide invisible hit path, and the
    highlighted copies setGraphHot draws above the nodes. */
-.ag-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
+/* The hit path is 24 screen pixels wide at any zoom; labels hit on their whole box. */
+.ag-hit { fill: none; stroke: transparent; stroke-width: 24px; vector-effect: non-scaling-stroke; pointer-events: stroke; }
 .ag-hot path,
 .ag-hot-path {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--hot);
   stroke-width: 2.2;
   stroke-dasharray: none;
   pointer-events: none;
@@ -324,7 +326,7 @@
   font-family: var(--font-mono);
   font-style: italic;
   font-weight: bold;
-  fill: var(--accent);
+  fill: var(--hot);
   stroke: var(--bg);
   stroke-width: 3px;
   paint-order: stroke;
@@ -334,7 +336,9 @@
 
 .ag-arrowhead { fill: var(--text); }
 .ag-arrowhead--eps { fill: var(--text-dim); }
-.ag-arrowhead--hot { fill: var(--accent); }
+.ag-arrowhead--hot { fill: var(--hot); }
+.ag-node.is-hot circle { fill: var(--hot-bg); stroke: var(--hot); stroke-width: 2.6; }
+.ag-node.is-hot .ag-ring { stroke: var(--hot); }
 .ag-start { stroke: var(--text-dim); stroke-width: 1; }
 
 /* ── Editable definition table ─────────────────────────── */
@@ -384,9 +388,9 @@
 .ui-td--state.is-reject { color: var(--st-reject); font-weight: bold; }
 .ui-td--state.is-both { color: var(--st-warn); font-weight: bold; }
 
-/* A row linked to a hovered graph edge (see pdaHover in the PDA tool) */
+/* A table row (or cell) linked to a hovered graph element; see UI.hoverItems */
 .ui-table tr.is-hot > td,
-.ui-table tr.is-hot .ui-cell:not(:focus) { background: var(--accent-bg); }
+.ui-table tr.is-hot .ui-cell:not(:focus) { background: var(--hot-bg); }
 
 /* Input cell: borderless input that fills the cell */
 .ui-cell {
@@ -507,8 +511,9 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ct-edge-label { font-family: var(--font-mono); font-size: 9px; font-style: italic; fill: var(--text-dim); pointer-events: none; }
 .ct-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; }
 .ct-edge-label[data-rules] { pointer-events: all; }
-.ct-edge.is-hot { stroke: var(--accent); stroke-width: 2.4; }
-.ct-edge-label.is-hot { fill: var(--accent); font-weight: bold; }
+.ct-edge.is-hot { stroke: var(--hot); stroke-width: 2.4; }
+.ct-node.is-hot circle, .ct-node.is-hot rect { fill: var(--hot-bg); stroke: var(--hot); stroke-width: 2.4; }
+.ct-edge-label.is-hot { fill: var(--hot); font-weight: bold; }
 .ct-edge-label.is-active { fill: var(--st-active); }
 .ct-edge-label.is-accept { fill: var(--st-accept); }
 .ct-edge-label.is-accept-path { fill: var(--st-accept); font-weight: bold; }
