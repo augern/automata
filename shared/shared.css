@@ -189,18 +189,6 @@ body {
   text-underline-offset: 3px;
 }
 
-.tag {
-  background: transparent;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  padding: 1px var(--sp-4);
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  white-space: nowrap;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 /* ── Mode buttons (LR(0) / LALR(1) / LR(1)) ────────────── */
 .mode-btn {
   background: transparent;
