@@ -588,11 +588,11 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 }
 
 /* ── Guide pop-up body (shared/guide.js; the frame is the .algo-modal) ── */
-.guide-body { font-family: var(--font-serif); font-size: var(--fs-lg); line-height: 1.5; }
+.guide-body { font-family: var(--font-serif); font-size: var(--fs-md); line-height: 1.4; }
 .guide-intro { margin: 0 0 var(--sp-4); }
 .guide-h { margin: var(--sp-5) 0 var(--sp-2); font-family: var(--font-serif); font-style: italic; font-weight: normal; font-size: var(--fs-md); color: var(--text-dim); }
 .guide-list { margin: 0; padding-left: var(--sp-6); }
-.guide-list li { margin: var(--sp-1) 0; }
+.guide-list li { margin: 2px 0; }
 .guide-list code, .guide-terms code, .guide-intro code { font-family: var(--font-mono); font-size: 0.82em; background: var(--bg-cell); padding: 0 var(--sp-1); border-radius: var(--radius); }
 .guide-legend { list-style: none; padding-left: 0; }
 .guide-dot { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 50%; margin-right: var(--sp-3); vertical-align: -0.05em; }
