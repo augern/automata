@@ -7,11 +7,17 @@
 <link rel="stylesheet" href="shared/shared.css">
 <script src="shared/theme.js"></script>
 <style>
+/* The tools are full-viewport apps (shared.css fixes body to 100vh and hides
+   overflow); this page is a normal document that scrolls. The auto margins on
+   the card and footer centre it when it fits and never clip it when it doesn't. */
 body {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; flex-direction: column; gap: 32px;
-  padding: 32px 0;
+  display: flex; align-items: center; flex-direction: column; gap: 32px;
+  height: auto; min-height: 100vh; overflow-y: auto;
+  padding: 32px var(--sp-6);
+  user-select: text;
 }
+.index-card { margin-top: auto; }
+.footer { margin-bottom: auto; }
 .index-card {
   background: var(--bg-panel);
   border: 1px solid var(--border);
