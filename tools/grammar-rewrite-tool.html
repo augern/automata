@@ -14,7 +14,7 @@
 /* Step log */
 #step-area {
   flex: 1; overflow-y: auto;
-  padding: 12px 16px;
+  padding: var(--sp-5) var(--sp-6);
   background: var(--bg);
 }
 #step-empty {
@@ -22,11 +22,11 @@
   font-family: var(--font-serif);
   font-style: italic;
   font-size: var(--fs-md);
-  padding-top: 4px;
+  padding-top: var(--sp-2);
 }
 
 .step-entry {
-  padding: 5px 0 5px 0;
+  padding: var(--sp-3) 0 var(--sp-3) 0;
   border-bottom: 1px solid var(--border-lo);
   font-size: var(--fs-xs);
   line-height: 1.65;
@@ -47,7 +47,7 @@
 .step-entry.current {
   background: var(--accent-bg);
   border-left: 2px solid var(--accent);
-  padding-left: 8px; margin-left: -10px;
+  padding-left: var(--sp-4); margin-left: -10px;
 }
 .step-entry .hl  { color: var(--accent); font-weight: bold; }
 .step-entry .add { color: var(--green); }
@@ -58,12 +58,12 @@
 .nb { /* nullable */
   display: inline-block;
   border: 1px solid var(--green); color: var(--green); background: var(--green-bg);
-  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 4px; margin: 0 1px;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 var(--sp-2); margin: 0 1px;
 }
 .ub { /* unit pair */
   display: inline-block;
   border: 1px solid var(--accent); color: var(--accent); background: var(--accent-bg);
-  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 4px; margin: 0 1px;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); padding: 0 var(--sp-2); margin: 0 1px;
 }
 
 /* Step controls */
@@ -71,14 +71,14 @@
   flex-shrink: 0;
   border-top: 1.5px solid var(--border-hi);
   background: var(--bg-panel);
-  padding: 6px 12px;
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-5);
+  display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
 }
 
 /* Grammar result panel */
 #grammar-display {
   flex: 1; overflow-y: auto;
-  padding: 10px 12px;
+  padding: var(--sp-5) var(--sp-5);
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
 }
@@ -86,14 +86,14 @@
   font-family: var(--font-serif); font-style: italic;
   color: var(--text-dim); font-size: var(--fs-xs);
   border-bottom: 1px solid var(--border-lo);
-  padding-bottom: 2px; margin-bottom: 5px; margin-top: 10px;
+  padding-bottom: var(--sp-1); margin-bottom: var(--sp-3); margin-top: var(--sp-5);
 }
 .gr-section:first-child { margin-top: 0; }
 .gr-rule {
-  display: flex; gap: 6px; align-items: baseline;
+  display: flex; gap: var(--sp-3); align-items: baseline;
   line-height: 1.9; padding: 0 1px;
   border-left: 2px solid transparent;
-  padding-left: 3px;
+  padding-left: var(--sp-2);
 }
 .gr-rule .r-lhs  { color: var(--text);     min-width: 50px; flex-shrink: 0; }
 .gr-rule .r-arr  { color: var(--text-lo); flex-shrink: 0; }

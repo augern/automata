@@ -25,7 +25,7 @@ body {
   font-weight: normal;
   font-style: italic;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-3);
 }
 .index-card > p {
   font-size: var(--fs-sm);
@@ -41,14 +41,14 @@ body {
   color: var(--text-lo);
   letter-spacing: .06em;
   text-transform: uppercase;
-  margin-bottom: 8px;
-  padding-left: 2px;
+  margin-bottom: var(--sp-4);
+  padding-left: var(--sp-1);
 }
-.tool-links { display: flex; flex-direction: column; gap: 6px; }
+.tool-links { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tool-link {
   display: flex; flex-direction: column;
   border: 1px solid var(--border);
-  padding: 11px 14px;
+  padding: var(--sp-5) var(--sp-6);
   text-decoration: none;
   color: var(--text);
   transition: border-color .15s, background .15s;
@@ -59,7 +59,7 @@ body {
   font-style: italic;
   font-size: var(--fs-lg);
   color: var(--accent);
-  margin-bottom: 3px;
+  margin-bottom: var(--sp-2);
 }
 .tool-link .tl-desc {
   font-size: var(--fs-xs);

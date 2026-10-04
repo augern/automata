@@ -43,8 +43,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 14px;
-        padding: 14px 16px 10px;
+        gap: var(--sp-6);
+        padding: var(--sp-6) var(--sp-6) var(--sp-5);
       }
 
       /* Space-time trace table */
@@ -133,8 +133,8 @@
         flex-shrink: 0;
         display: none;
         flex-wrap: wrap;
-        gap: 2px 12px;
-        padding: 5px 10px;
+        gap: var(--sp-1) var(--sp-5);
+        padding: var(--sp-3) var(--sp-5);
         border-top: 1px solid var(--border-lo);
         font-family: var(--font-mono);
         font-size: var(--fs-2xs);
@@ -148,13 +148,13 @@
       #sim-state-row {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: var(--sp-5);
       }
       .state-badge {
         font-family: var(--font-mono);
         font-size: var(--fs-md);
         font-weight: bold;
-        padding: 4px 14px;
+        padding: var(--sp-2) var(--sp-6);
         border: 1.5px solid var(--border);
         color: var(--text);
         background: var(--bg-panel);

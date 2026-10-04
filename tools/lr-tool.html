@@ -190,21 +190,21 @@
       #build-row {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: var(--sp-3);
         flex-wrap: wrap;
         padding-left: 0.5em;
-        padding-top: 2px;
-        padding-bottom: 2px;
+        padding-top: var(--sp-1);
+        padding-bottom: var(--sp-1);
       }
       #build-mode-row {
         display: flex;
-        gap: 10px;
+        gap: var(--sp-5);
       }
       #build-mode-row label {
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 3px;
+        gap: var(--sp-2);
         font-size: var(--fs-2xs);
         color: var(--text-dim);
         white-space: nowrap;
@@ -215,14 +215,14 @@
       }
       #cstep-row {
         display: flex;
-        gap: 4px;
-        padding-left: 6px;
+        gap: var(--sp-2);
+        padding-left: var(--sp-3);
       }
       /* Compact button row inside the tables panel — smaller than standard .btn */
       #tstep-controls .btn {
         height: 18px;
         font-size: var(--fs-2xs);
-        padding: 0 6px;
+        padding: 0 var(--sp-3);
       }
       #cstep-log {
         font-size: var(--fs-2xs);
@@ -230,8 +230,8 @@
         line-height: 1.5;
         font-family: var(--font-mono);
         border-top: 1px solid var(--border-lo);
-        padding-top: 4px;
-        margin-top: 2px;
+        padding-top: var(--sp-2);
+        margin-top: var(--sp-1);
       }
       #cstep-log:empty,
       #error-msg:empty { display: none; }
@@ -424,7 +424,7 @@
         margin-left: auto;
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: var(--sp-3);
       }
       #key-nav-label {
         font-family: var(--font-mono);
@@ -437,7 +437,7 @@
         color: var(--text-dim);
         background: var(--bg-panel);
         border: 1px solid var(--border);
-        padding: 2px 4px;
+        padding: var(--sp-1) var(--sp-2);
         cursor: pointer;
       }
       #key-select:focus {

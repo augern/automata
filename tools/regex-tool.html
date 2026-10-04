@@ -18,7 +18,7 @@
         width: 280px;
       }
       #p-min {
-        width: 240px;
+        width: 300px; /* fits the title and both header buttons */
       }
       #p-sim {
         flex: 1;
@@ -27,7 +27,7 @@
 
       /* Regex text input */
       #regex-input-wrap {
-        padding: 10px 12px 6px;
+        padding: var(--sp-5) var(--sp-5) var(--sp-3);
         flex-shrink: 0;
       }
       .input-sublabel {
@@ -35,7 +35,7 @@
         font-size: var(--fs-xs);
         font-style: italic;
         color: var(--text-dim);
-        margin-bottom: 4px;
+        margin-bottom: var(--sp-2);
       }
       #regex-input {
         width: 100%;
@@ -44,7 +44,7 @@
         border: 1px solid var(--border);
         font-family: var(--font-mono);
         font-size: var(--fs-md);
-        padding: 4px 8px;
+        padding: var(--sp-2) var(--sp-4);
         outline: none;
         letter-spacing: 0.04em;
       }
@@ -54,11 +54,11 @@
       }
 
       #regex-footer {
-        padding: 6px 8px 8px;
+        padding: var(--sp-3) var(--sp-4) var(--sp-4);
         border-top: 1px solid var(--border-lo);
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: var(--sp-3);
         flex-shrink: 0;
       }
       .syntax-hint {
@@ -80,13 +80,13 @@
         font-family: var(--font-serif);
         font-style: italic;
         font-size: var(--fs-md);
-        padding: 16px;
+        padding: var(--sp-6);
       }
       .nfa-summary {
         display: flex;
         flex-wrap: wrap;
         gap: 18px;
-        padding: 7px 12px;
+        padding: var(--sp-4) var(--sp-5);
         border-bottom: 1px solid var(--border-lo);
         flex-shrink: 0;
         background: var(--bg-panel);
@@ -111,7 +111,7 @@
       #nfa-table-wrap {
         flex: 1;
         overflow: auto;
-        padding: 10px 12px;
+        padding: var(--sp-5) var(--sp-5);
       }
 
       /* State column markers */
@@ -181,8 +181,8 @@
       #mc-controls-row {
         display: flex;
         align-items: center;
-        gap: 5px;
-        padding: 4px 10px;
+        gap: var(--sp-3);
+        padding: var(--sp-2) var(--sp-5);
       }
       #tc-log-bar,
       #sc-log-bar,
@@ -190,7 +190,7 @@
         font-size: var(--fs-2xs);
         color: var(--text-dim);
         font-family: var(--font-mono);
-        padding: 3px 10px 4px;
+        padding: var(--sp-2) var(--sp-5) var(--sp-2);
         border-top: 1px solid var(--border-lo);
         min-height: 1.8em;
         line-height: 1.5;
@@ -234,14 +234,14 @@
       #dfa-table-wrap {
         flex: 1;
         overflow: auto;
-        padding: 10px 12px;
+        padding: var(--sp-5) var(--sp-5);
       }
       #dfa-empty {
         color: var(--text-lo);
         font-family: var(--font-serif);
         font-style: italic;
         font-size: var(--fs-md);
-        padding: 16px;
+        padding: var(--sp-6);
       }
 
       /* DFA table stepping — same dimming pattern as LR table construction */
@@ -315,19 +315,19 @@
         font-size: var(--fs-2xs);
         color: var(--text-dim);
         font-family: var(--font-mono);
-        padding: 3px 10px 4px;
+        padding: var(--sp-2) var(--sp-5) var(--sp-2);
         min-height: 1.8em;
         line-height: 1.5;
       }
       /* Regex tool always shows the chips bar; override shared default */
-      #examples-chips { display: flex; padding: 6px 10px; }
+      #examples-chips { display: flex; padding: var(--sp-3) var(--sp-5); }
       /* String input row */
       #sim-input-row {
         flex-shrink: 0;
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
+        gap: var(--sp-3);
+        padding: var(--sp-3) var(--sp-5);
         flex-wrap: wrap;
       }
       #sim-input-row .input-group {
@@ -341,7 +341,7 @@
         border: 1px solid var(--border);
         font-family: var(--font-mono);
         font-size: var(--fs-md);
-        padding: 3px 7px;
+        padding: var(--sp-2) var(--sp-4);
         height: 22px;
         box-sizing: border-box;
         outline: none;
@@ -353,15 +353,15 @@
       /* Tape */
       #sim-tape-wrap {
         flex-shrink: 0;
-        padding: 12px 12px 10px;
+        padding: var(--sp-5) var(--sp-5) var(--sp-5);
         display: flex;
         align-items: flex-start;
-        gap: 14px;
+        gap: var(--sp-6);
         border-bottom: 1px solid var(--border-lo);
       }
       .tape {
         display: flex;
-        gap: 2px;
+        gap: var(--sp-1);
         flex-wrap: wrap;
         align-items: center;
       }
@@ -394,7 +394,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 3px;
+        gap: var(--sp-2);
       }
       .sim-state-label {
         font-family: var(--font-serif);
@@ -409,7 +409,7 @@
         border: 1.5px solid var(--accent);
         background: var(--accent-bg);
         color: var(--accent);
-        padding: 3px 10px;
+        padding: var(--sp-2) var(--sp-5);
         transition: all 0.15s;
         white-space: nowrap;
       }
@@ -426,7 +426,7 @@
       /* Result banner */
       #sim-result {
         flex-shrink: 0;
-        padding: 5px 12px;
+        padding: var(--sp-3) var(--sp-5);
         display: none;
         font-family: var(--font-mono);
         font-size: var(--fs-sm);
@@ -448,7 +448,7 @@
         font-family: var(--font-serif);
         font-style: italic;
         font-size: var(--fs-md);
-        padding: 16px;
+        padding: var(--sp-6);
       }
 
       /* ── Minimization panel ── */
@@ -457,20 +457,20 @@
         font-family: var(--font-serif);
         font-style: italic;
         font-size: var(--fs-md);
-        padding: 16px;
+        padding: var(--sp-6);
       }
       #min-table-wrap {
         flex: 1;
         overflow: auto;
-        padding: 10px 12px;
+        padding: var(--sp-5) var(--sp-5);
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: var(--sp-4);
       }
       /* Toggle button in panel header */
       .min-toggle {
         font-size: var(--fs-2xs);
-        padding: 1px 5px;
+        padding: 1px var(--sp-3);
         transition: color 0.15s, border-color 0.15s;
       }
       .min-toggle.active {
@@ -489,7 +489,7 @@
         font-family: var(--font-mono);
         font-size: var(--fs-xs);
         font-weight: normal;
-        padding: 2px 5px;
+        padding: var(--sp-1) var(--sp-3);
         color: var(--text-dim);
         text-align: center;
       }
@@ -527,8 +527,8 @@
       .min-groups-row {
         display: flex;
         flex-direction: column;
-        gap: 3px;
-        padding: 6px 0 2px;
+        gap: var(--sp-2);
+        padding: var(--sp-3) 0 var(--sp-1);
         border-top: 1px solid var(--border-lo);
         font-family: var(--font-mono);
         font-size: var(--fs-xs);
@@ -537,7 +537,7 @@
       .min-group-item {
         display: flex;
         align-items: baseline;
-        gap: 5px;
+        gap: var(--sp-3);
       }
 
       /* ── DFA graph (inside sim panel) ── */
