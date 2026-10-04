@@ -84,7 +84,7 @@ test("done detection sees a rule LHS anywhere in the form, including the empty f
 });
 
 // ── Random derivation ─────────────────────────────────────────────────
-const { derivMoves, derivHash, derivUnit, derivRandomMove, derivOutcome } = load("derivation.js");
+const { derivTerminalRatio, derivMoves, derivHash, derivUnit, derivRandomMove, derivOutcome } = load("derivation.js");
 
 // Run a whole random derivation; returns { forms, outcome } (forms[0] = start).
 function randomRun(g, seed, cap = 300) {
@@ -190,4 +190,37 @@ test("random derivations of the context-sensitive aⁿbⁿcⁿ grammar can dead-
   }
   assert.ok(outcomes.terminal > 0, JSON.stringify(outcomes));
   assert.ok(outcomes.stuck > 0, "expected some dead ends: " + JSON.stringify(outcomes));
+});
+
+test("terminal ratio: 1 ends a branch, fewer nonterminals rate higher", () => {
+  const g = parseDerivationGrammar("S -> a S | b | S S | eps | a b");
+  const r = g.rules.map((rule) => derivTerminalRatio(g, rule));
+  assert.deepEqual([...r], [1 / 2, 1, 1 / 3, 1, 1]);
+});
+
+test("bias favors nonterminal rules early and terminating rules late", () => {
+  const g = parseDerivationGrammar("S -> S S | a");
+  const count = (index) => {
+    let term = 0;
+    for (let seed = 0; seed < 2000; seed++) if (derivRandomMove(g, [g.start], seed, index).ruleIdx === 1) term++;
+    return term / 2000;
+  };
+  const early = count(0), late = count(60);
+  assert.ok(early > 0.2 && early < 0.5, "early " + early);
+  assert.ok(late > 0.95, "late " + late);
+});
+
+test("random derivations of S -> S S | a | ( S ) usually finish within the run cap", () => {
+  const g = parseDerivationGrammar("S -> S S | a | b");
+  let done = 0;
+  for (let seed = 0; seed < 200; seed++) {
+    let form = [g.start];
+    for (let i = 0; i < 200; i++) {
+      const m = derivRandomMove(g, form, seed, i);
+      if (!m) break;
+      form = derivApply(form, m.lo, m.hi, g.rules[m.ruleIdx]);
+    }
+    if (derivOutcome(g, form) === "terminal") done++;
+  }
+  assert.ok(done >= 195, "finished " + done);
 });

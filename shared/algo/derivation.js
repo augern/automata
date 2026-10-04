@@ -104,11 +104,43 @@ function derivUnit(state) {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
+// How close a rule is to ending its branch, in (0, 1]: 1 for a right-hand side without
+// nonterminals ("a b", ε), 1/2 with one nonterminal, 1/3 with two, and so on.
+// (A plain terminal share would rate E -> E + T above E -> T, although only the
+// latter brings the derivation closer to a word.)
+function derivTerminalRatio(grammar, rule) {
+  return 1 / (1 + rule.rhs.filter((s) => grammar.nonterminals.has(s)).length);
+}
+
+// Bias strength at step `index`: slightly negative at first (prefer rules that keep
+// nonterminals, so words are not trivially short), growing steadily to a strong
+// preference for terminating rules once the derivation is long.
+const DERIV_BIAS_START = -0.4;
+const DERIV_BIAS_END = 6;
+const DERIV_BIAS_RAMP = 24; // steps until the full end bias
+function derivBias(index) {
+  const t = Math.min(1, index / DERIV_BIAS_RAMP);
+  return DERIV_BIAS_START + (DERIV_BIAS_END - DERIV_BIAS_START) * t;
+}
+
+// Weight of a move: exp(bias * (2*ratio - 1)), so ratio 0.5 is always neutral.
+function derivMoveWeight(grammar, move, index) {
+  const ratio = derivTerminalRatio(grammar, grammar.rules[move.ruleIdx]);
+  return Math.exp(derivBias(index) * (2 * ratio - 1));
+}
+
 // The randomly chosen next move at step `index`, or null when no rule applies.
+// Weighted by derivMoveWeight; still a pure function of (grammar, form, seed, index).
 function derivRandomMove(grammar, form, seed, index) {
   const moves = derivMoves(grammar, form);
   if (!moves.length) return null;
-  return moves[Math.floor(derivUnit(derivHash(seed, index)) * moves.length)];
+  const weights = moves.map((m) => derivMoveWeight(grammar, m, index));
+  let x = derivUnit(derivHash(seed, index)) * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < moves.length; i++) {
+    x -= weights[i];
+    if (x < 0) return moves[i];
+  }
+  return moves[moves.length - 1];
 }
 
 // How a derivation ended: "terminal" (only terminals left: a word of the language),
