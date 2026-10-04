@@ -83,3 +83,26 @@ test("epsilon-only language", () => {
   assert.ok(parse(g, table, "").accepted);
   assert.equal(parse(g, table, "a").accepted, false);
 });
+
+// ── ll1ExplainConflict ─────────────────────────────────────────────────
+(function () {
+  const { parseBNF, computeFirst, computeFollow } = load("grammar.js");
+  const { buildLL1Table, ll1ExplainConflict } = load("grammar.js", "ll1.js");
+  const explain = (text) => {
+    const g = parseBNF(text);
+    const first = computeFirst(g), follow = computeFollow(g, first);
+    const { conflicts } = buildLL1Table(g, first, follow);
+    return { conflicts, ex: conflicts.map((c) => ll1ExplainConflict(g, first, c)) };
+  };
+  test("ll1ExplainConflict names left recursion and points to the rewriting tool", () => {
+    const { ex } = explain("E -> E + T | T\nT -> id");
+    assert.ok(ex.length > 0);
+    assert.equal(ex[0].kind, "left-recursion");
+    assert.equal(ex[0].tool, "grammar-rewrite");
+    assert.match(ex[0].text, /left recursive/);
+  });
+  test("ll1ExplainConflict recognises a common prefix and an ε/FOLLOW clash", () => {
+    assert.equal(explain("S -> a b | a c").ex[0].kind, "common-prefix");
+    assert.equal(explain("S -> A a\nA -> a | eps").ex[0].kind, "nullable");
+  });
+})();

@@ -211,3 +211,42 @@ function lrDecode(entry) {
 function lrGoto(tables, state, nonterminal) {
   return tables.goto[state]?.[nonterminal];
 }
+
+// ── Explaining conflicts ──────────────────────────────────────────────
+// conflict = { state, symbol, entries } from buildTables; mode is "LR0" | "SLR1" | "LALR1" | "LR1".
+// Returns { kind: "shift/reduce" | "reduce/reduce", text }.
+function lrExplainConflict(g, mode, conflict) {
+  const { state, symbol, entries } = conflict;
+  const prod = (e) => {
+    const n = +e.slice(1), r = g.rules[n];
+    return `production ${n} (${r.lhs} → ${r.rhs.length ? r.rhs.join(" ") : EPSILON})`;
+  };
+  const shifts = entries.filter((e) => e[0] === "s");
+  const reduces = entries.filter((e) => e[0] === "r");
+  let kind, what;
+  if (shifts.length && reduces.length) {
+    kind = "shift/reduce";
+    what = `In state ${state} with ${symbol} next, the parser can shift ${symbol} or reduce by ${reduces.map(prod).join(" or ")}.`;
+  } else {
+    kind = "reduce/reduce";
+    what = `In state ${state} with ${symbol} next, the parser can reduce by ${reduces.map(prod).join(" or ")}.`;
+  }
+  const why = {
+    LR0: "LR(0) uses no lookahead: it reduces on every symbol, so a state with a complete item and another action always conflicts.",
+    SLR1: `SLR(1) allows a reduction whenever ${symbol} can follow the left-hand side anywhere in the grammar, which is too coarse here.`,
+    LALR1: "LALR(1) merges states with the same core, and merging their lookaheads can create a conflict that full LR(1) avoids.",
+    LR1: "Even with full LR(1) lookahead the two actions cannot be told apart; the grammar is usually ambiguous (like the dangling else).",
+  }[mode];
+  return { kind, text: what + " " + why };
+}
+
+// Number of conflicts each method finds for the grammar: { LR0, SLR1, LALR1, LR1 }.
+function lrCompareMethods(g) {
+  const lr0 = buildLR0(g), lr1 = buildLR1(g), lalr = mergeLR1toLALR(lr1);
+  return {
+    LR0: buildTables(g, lr0, "LR0").conflicts.length,
+    SLR1: buildTables(g, lr0, "SLR1").conflicts.length,
+    LALR1: buildTables(g, lalr, "LR1").conflicts.length,
+    LR1: buildTables(g, lr1, "LR1").conflicts.length,
+  };
+}

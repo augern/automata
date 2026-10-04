@@ -126,3 +126,27 @@ test("S -> a S | a is SLR(1) and parses a+", () => {
   assert.ok(parseTokens(g, tables, "a a a").accepted);
   assert.equal(parseTokens(g, tables, "").accepted, false);
 });
+
+// ── conflict explanations ──────────────────────────────────────────────
+(function () {
+  const { lrExplainConflict, lrCompareMethods } = load("grammar.js", "lr.js");
+  const ARITH = "S -> E\nE -> E + T | T\nT -> id";
+  test("lrExplainConflict describes a shift/reduce conflict and why the method fails", () => {
+    const { g, tables } = lr(ARITH, "LR0");
+    const c = tables.conflicts[0];
+    const e = lrExplainConflict(g, "LR0", c);
+    assert.equal(e.kind, "shift/reduce");
+    assert.match(e.text, /shift \+ or reduce by production/);
+    assert.match(e.text, /LR\(0\) uses no lookahead/);
+  });
+  test("lrCompareMethods counts conflicts per method", () => {
+    const g = lr(ARITH, "LR0").g;
+    const n = lrCompareMethods(g);
+    assert.ok(n.LR0 > 0);
+    assert.equal(n.SLR1, 0);
+    assert.equal(n.LALR1, 0);
+    assert.equal(n.LR1, 0);
+    const dangling = lr("S -> i S | i S e S | a", "LR1").g;
+    assert.ok(lrCompareMethods(dangling).LR1 > 0);
+  });
+})();

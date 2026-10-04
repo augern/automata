@@ -8,7 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=8c6eec2c" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=3d674843" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -525,10 +525,10 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/lr.js?v=ff1c748a"></script>
+    <script src="../../shared/algo/lr.js?v=a528fab7"></script>
     <script src="../../shared/shared.js?v=98590a79"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
-    <script src="../../shared/ui.js?v=dd81c4e8"></script>
+    <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
     <script src="guide.js?v=5e93666e"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
@@ -676,10 +676,20 @@
         if (conflicts.length) {
           const cd = document.createElement("div");
           cd.innerHTML = '<div class="tbl-section-label" style="color:var(--red)">' + conflicts.length + " Conflict(s)</div>";
-          const ul = document.createElement("div");
-          ul.style.cssText = "font-size:var(--fs-2xs);color:var(--red);line-height:1.8";
-          for (const c of conflicts) ul.innerHTML += "<div>State " + c.state + ', "' + esc(c.symbol) + '": ' + esc(c.entries.join(" / ")) + "</div>";
-          cd.appendChild(ul);
+          const list = UI.conflictList(cd, conflicts.map((c) => ({
+            title: 'State ' + c.state + ', "' + c.symbol + '": ' + c.entries.join(" / "),
+            text: lrExplainConflict(g, mode, c).text,
+          })));
+          // How the four methods fare on this grammar, with a way to switch.
+          const n = lrCompareMethods(g);
+          const names = { LR0: "LR(0)", SLR1: "SLR(1)", LALR1: "LALR(1)", LR1: "LR(1)" };
+          const row = document.createElement("div");
+          row.className = "ui-conflicts__methods";
+          row.innerHTML = "Conflicts by method: " + Object.keys(names).map((m) => {
+            const label = names[m] + " " + n[m];
+            return m === mode ? "<b>" + label + "</b>" : '<button type="button" onclick="setMode(\'' + m + '\')">' + label + "</button>";
+          }).join(" · ") + (Object.values(n).every((v) => v > 0) ? ". None of the four methods handles this grammar; it is usually ambiguous." : "");
+          list.appendChild(row);
           wrap.appendChild(cd);
         }
       }

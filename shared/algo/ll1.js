@@ -65,3 +65,53 @@ function ll1Step(g, table, stack, tokens, pos) {
   const ruleIdx = Array.isArray(entry) ? entry[0] : entry;
   return { type: "expand", nt: top, ruleIdx, rule: g.rules[ruleIdx] };
 }
+
+// ── Explaining a conflict ─────────────────────────────────────────────
+// Why table entry M[nt, sym] holds several productions, in plain terms, and what usually
+// fixes it. conflict = { nt, sym, rules: [production numbers] } as returned by
+// buildLL1Table. Returns { kind, text, hint, tool }; `tool` names a sibling tool that can
+// help ("grammar-rewrite") or is null.
+function ll1ExplainConflict(g, first, conflict) {
+  const { nt, sym } = conflict;
+  const rules = conflict.rules.map((i) => ({ i, rule: g.rules[i] }));
+  const show = (r) => `${r.rule.lhs} → ${r.rule.rhs.length ? r.rule.rhs.join(" ") : EPSILON}`;
+  const list = rules.map((r) => `${r.i} (${show(r)})`).join(" and ");
+
+  const leftRec = rules.find((r) => r.rule.rhs[0] === nt);
+  if (leftRec) {
+    return {
+      kind: "left-recursion",
+      text: `${nt} is left recursive (production ${leftRec.i}): to predict ${nt} the parser would have to expand ${nt} again before reading any input, so with ${sym} next it cannot tell ${list} apart.`,
+      hint: "Remove the left recursion first.",
+      tool: "grammar-rewrite",
+    };
+  }
+  for (let a = 0; a < rules.length; a++) {
+    for (let b = a + 1; b < rules.length; b++) {
+      const x = rules[a].rule.rhs[0];
+      if (x !== undefined && x === rules[b].rule.rhs[0]) {
+        return {
+          kind: "common-prefix",
+          text: `Productions ${rules[a].i} and ${rules[b].i} both begin with ${x}, so one symbol of lookahead (${sym}) cannot choose between ${list}.`,
+          hint: "Left factoring helps: move the common beginning into one production and let a new nonterminal carry the differing endings.",
+          tool: null,
+        };
+      }
+    }
+  }
+  const nullable = rules.find((r) => firstOfSeq(r.rule.rhs, first).has(EPSILON));
+  if (nullable) {
+    return {
+      kind: "nullable",
+      text: `Production ${nullable.i} can derive ε, so the parser chooses it when ${sym} is in FOLLOW(${nt}); but ${sym} can also start the other alternative, so ${list} compete.`,
+      hint: "FIRST and FOLLOW overlap here. The grammar needs rewriting (or it is ambiguous, which no LL(1) grammar can be).",
+      tool: null,
+    };
+  }
+  return {
+    kind: "overlap",
+    text: `The alternatives ${list} can all start with ${sym}, so one symbol of lookahead cannot choose between them.`,
+    hint: "The grammar needs rewriting (or it is ambiguous, which no LL(1) grammar can be).",
+    tool: null,
+  };
+}

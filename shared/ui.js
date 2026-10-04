@@ -259,6 +259,25 @@ const UI = (() => {
       c.addEventListener("focusout", () => onChange(null));
     },
 
+    // A list of explained problems (table conflicts) appended to `target`.
+    //   UI.conflictList(el, [{ title: "State 2, \"+\": s5 / r1", text: "…why…", hint: "…what to do…",
+    //                          link: { href: "../grammar-rewrite/", label: "Open Grammar Transformations" } }], { max: 6 })
+    // Text is plain (escaped here); only the optional `after` HTML string is inserted as is.
+    conflictList(target, items, { max = 6, after = "" } = {}) {
+      const box = el(target);
+      const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const list = document.createElement("div");
+      list.className = "ui-conflicts";
+      list.innerHTML = items.slice(0, max).map((c) =>
+        '<div class="ui-conflicts__item"><div class="ui-conflicts__title">' + esc(c.title) + "</div>" +
+        (c.text ? '<div class="ui-conflicts__text">' + esc(c.text) + "</div>" : "") +
+        (c.hint || c.link ? '<div class="ui-conflicts__hint">' + esc(c.hint || "") +
+          (c.link ? ' <a href="' + esc(c.link.href) + '">' + esc(c.link.label) + " →</a>" : "") + "</div>" : "") + "</div>"
+      ).join("") + (items.length > max ? '<div class="ui-conflicts__more">… and ' + (items.length - max) + " more</div>" : "") + after;
+      box.appendChild(list);
+      return list;
+    },
+
     // Fill an explanation box (a <div class="ui-explain" hidden>) or hide it with null.
     //   UI.explain("tree-info", {
     //     title: "Configuration (q0, ab, ⊥)",              // plain text

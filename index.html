@@ -72,6 +72,12 @@ body {
   color: var(--text-dim);
   font-family: var(--font-mono);
 }
+.tool-link .tl-needs {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-2xs);
+  font-style: italic;
+  color: var(--text-lo);
+}
 .footer {
   font-size: var(--fs-2xs);
   color: var(--text-lo);
@@ -92,13 +98,15 @@ body {
   <div class="tool-group">
     <div class="group-label">Regular languages</div>
     <div class="tool-links">
-      <a class="tool-link" href="tools/regex/">
-        <span class="tl-title">Regular Expressions</span>
-        <span class="tl-desc">Thompson's construction, subset construction and DFA minimisation &nbsp;—&nbsp; the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition</span>
-      </a>
       <a class="tool-link" href="tools/nfa/">
         <span class="tl-title">NFA Simulator</span>
         <span class="tl-desc">Nondeterministic finite automata with ε-transitions &nbsp;—&nbsp; transition table and state graph, and the computation tree of a nondeterministic run</span>
+        <span class="tl-needs">Builds on: the idea of a finite automaton (states, transitions, DFAs)</span>
+      </a>
+      <a class="tool-link" href="tools/regex/">
+        <span class="tl-title">Regular Expressions</span>
+        <span class="tl-desc">Thompson's construction, subset construction and DFA minimisation &nbsp;—&nbsp; the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition</span>
+        <span class="tl-needs">Builds on: NFA Simulator</span>
       </a>
     </div>
   </div>
@@ -106,25 +114,30 @@ body {
   <div class="tool-group">
     <div class="group-label">Context-free languages</div>
     <div class="tool-links">
-      <a class="tool-link" href="tools/grammar-rewrite/">
-        <span class="tl-title">Grammar Transformations</span>
-        <span class="tl-desc">Normalisation of context-free grammars &nbsp;—&nbsp; removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form</span>
-      </a>
       <a class="tool-link" href="tools/derivation/">
         <span class="tl-title">Grammar Derivations</span>
         <span class="tl-desc">Derivations in grammars of types 0, 1 and 2 &nbsp;—&nbsp; construct a derivation by choosing a production and the substring it rewrites, or sample one at random</span>
+        <span class="tl-needs">Builds on: context-free grammars</span>
+      </a>
+      <a class="tool-link" href="tools/grammar-rewrite/">
+        <span class="tl-title">Grammar Transformations</span>
+        <span class="tl-desc">Normalisation of context-free grammars &nbsp;—&nbsp; removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form</span>
+        <span class="tl-needs">Builds on: context-free grammars</span>
       </a>
       <a class="tool-link" href="tools/pda/">
         <span class="tl-title">PDA Simulator</span>
         <span class="tl-desc">Nondeterministic pushdown automata &nbsp;—&nbsp; transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations</span>
+        <span class="tl-needs">Builds on: NFA Simulator, Grammar Derivations</span>
       </a>
       <a class="tool-link" href="tools/ll1/">
         <span class="tl-title">LL(1) Parser</span>
         <span class="tl-desc">Top-down predictive parsing &nbsp;—&nbsp; computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree</span>
+        <span class="tl-needs">Builds on: Grammar Derivations; Grammar Transformations removes the left recursion LL(1) cannot handle</span>
       </a>
       <a class="tool-link" href="tools/lr/">
         <span class="tl-title">LR Parser</span>
         <span class="tl-desc">Bottom-up shift–reduce parsing &nbsp;—&nbsp; LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree</span>
+        <span class="tl-needs">Builds on: LL(1) Parser, NFA Simulator (the automaton of items)</span>
       </a>
     </div>
   </div>
@@ -135,6 +148,7 @@ body {
       <a class="tool-link" href="tools/tm/">
         <span class="tl-title">Turing Machine</span>
         <span class="tl-desc">Deterministic single-tape Turing machines &nbsp;—&nbsp; transition function, tape and head, and stepwise execution of the computation</span>
+        <span class="tl-needs">Builds on: PDA Simulator</span>
       </a>
     </div>
   </div>

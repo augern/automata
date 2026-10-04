@@ -600,6 +600,17 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .guide-terms dt { font-family: var(--font-mono); white-space: nowrap; }
 .guide-terms dd { margin: 0; color: var(--text-dim); }
 
+/* ── Conflict list (UI.conflictList): each problem with its explanation and a hint ── */
+.ui-conflicts { font-size: var(--fs-2xs); line-height: 1.5; }
+.ui-conflicts__item { margin: var(--sp-2) 0; padding-left: var(--sp-3); border-left: 2px solid var(--st-reject); }
+.ui-conflicts__title { color: var(--st-reject); font-family: var(--font-mono); }
+.ui-conflicts__text { color: var(--text); }
+.ui-conflicts__hint { color: var(--text-dim); font-style: italic; }
+.ui-conflicts__hint a { color: var(--accent); }
+.ui-conflicts__more { color: var(--text-dim); }
+.ui-conflicts__methods { margin-top: var(--sp-3); color: var(--text-dim); }
+.ui-conflicts__methods button { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }
+
 /* ── Explanation box ───────────────────────────────────── */
 /* Shown under a canvas when an element is selected: <div class="ui-explain"> with
    __head (__title, __close), a __facts <dl>, and __line paragraphs. */
