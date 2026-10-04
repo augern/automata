@@ -5,8 +5,8 @@
     <title>Regular Expression Tool</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=c2c77530" />
-    <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
+    <link rel="stylesheet" href="../shared/shared.css?v=5dc913f7" />
+    <link rel="stylesheet" href="../shared/ui.css?v=4cccb336" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -204,8 +204,7 @@
         color: var(--text-lo);
         font-size: var(--fs-2xs);
       }/* ── Simulation panel ── */
-      /* Regex tool always shows the chips bar; override shared default */
-      #examples-chips { display: flex; padding: var(--sp-3) var(--sp-5); }/* String input row */
+/* String input row */
       /* Tape */
       #sim-tape-wrap {
         flex-shrink: 0;
@@ -569,11 +568,6 @@
               </svg>
               <div id="dfa-graph-empty">Build an NFA to see the DFA graph.</div>
             </div>
-            <!-- Generated example strings -->
-            <div id="examples-chips">
-              <span class="examples-label">Examples:</span>
-              <span id="chips-container"></span>
-            </div>
             <!-- String input + step controls -->
             <div id="sim-header" class="ui-sim">
               <div id="sim-input-row" class="ui-sim__row">
@@ -620,10 +614,11 @@
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
     <script src="../shared/algo/panels.js?v=23a37100"></script>
     <script src="../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../shared/algo/regex.js?v=209c3c07"></script>
-    <script src="../shared/shared.js?v=cfcb7ddf"></script>
+    <script src="../shared/shared.js?v=180ba700"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
-    <script src="../shared/ui.js?v=35102e64"></script>
+    <script src="../shared/ui.js?v=598bdf1e"></script>
     <script src="../shared/view-menu.js?v=84b55cd9"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -1255,7 +1250,7 @@
         if (!_scData) return;
         const d = activeScData();
         renderDFA(d);
-        renderExampleChips(generateExamples(d));
+        _strExamples = generateExamples(d);
         _simSteps = null;
         sim.pos   = -1;
         simRun();
@@ -1306,8 +1301,7 @@
         // Render DFA graph and generate example strings using active data
         const activeData = activeScData();
         renderDFA(activeData);
-        const examples = generateExamples(activeData);
-        renderExampleChips(examples);
+        _strExamples = generateExamples(activeData);
         _simSteps = null;
         sim.pos = -1;
         document.getElementById("sim-empty").style.display = "none";
@@ -1516,30 +1510,19 @@
       // STRING GENERATION
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      // BFS over the DFA to find the shortest accepted strings.
-      // Keyed by (state, length) so cycles are handled: a* yields ε, a, aa, aaa…
-      function renderExampleChips(examples) {
-        const container = document.getElementById("chips-container");
-        container.innerHTML = "";
-        if (examples.length === 0) {
-          const note = document.createElement("span");
-          note.style.cssText = "font-family:var(--font-serif);font-style:italic;font-size:var(--fs-2xs);color:var(--text-lo)";
-          note.textContent = "none found up to length 7";
-          container.appendChild(note);
-          return;
-        }
-        for (const s of examples) {
-          const btn = document.createElement("button");
-          btn.className = "example-chip" + (s === "" ? " eps-chip" : "");
-          btn.textContent = s === "" ? "ε" : s;
-          btn.title = s === "" ? "empty string" : s;
-          btn.onclick = () => {
-            document.getElementById("sim-string-input").value = s;
-            simRun();
-          };
-          container.appendChild(btn);
-        }
-      }
+      // The examples menu lists the shortest accepted strings (generateExamples,
+      // a BFS over the DFA); "random" walks the DFA to an accepting state.
+      let _strExamples = []; // shortest accepted strings, offered in the string input's menu
+      UI.stringInput("sim-string-input", {
+        examples: () => _strExamples,
+        heading: "Shortest accepted strings",
+        onPick: () => simRun(),
+        random() {
+          if (!_scData) return null;
+          const d = activeScData();
+          return strWalkAccepted(d.dfaTrans, 0, d.dfaAccepts, Math.random);
+        },
+      });
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // DFA SIMULATION

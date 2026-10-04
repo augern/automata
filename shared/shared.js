@@ -800,85 +800,20 @@ function fitTree() {
   } catch (e) {}
 }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SHARED:EXAMPLE-GENERATOR
+// SHARED:EXAMPLE-GENERATOR (LL/LR sentence input)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function generateExample() {
-  if (!currentGrammar) return;
-  const { rules, nonterminals: nts } = currentGrammar,
-    base = {};
-  function sh(sym, seen) {
-    if (!nts.has(sym)) return [sym];
-    if (seen.has(sym)) return null;
-    seen.add(sym);
-    let best = null;
-    for (const r of rules.filter((r) => r.lhs === sym)) {
-      let res = [],
-        ok = true;
-      for (const s of r.rhs) {
-        const sub = sh(s, new Set(seen));
-        if (!sub) {
-          ok = false;
-          break;
-        }
-        res = res.concat(sub);
-      }
-      if (ok && (!best || res.length < best.length)) best = res;
-    }
-    return best;
+function randomSentence() {
+  const s = currentGrammar ? grammarRandomSentence(currentGrammar, Math.random, { minTerms: 1 + Math.floor(Math.random() * 5), maxTerms: 10 }) : null;
+  return s ? s.join(" ") : null;
+}
+// A few distinct random sentences for the examples menu.
+function sampleSentences(n) {
+  const seen = new Set();
+  for (let i = 0; i < n * 4 && seen.size < n; i++) {
+    const s = randomSentence();
+    if (s !== null) seen.add(s);
   }
-  for (const nt of nts) base[nt] = sh(nt, new Set()) || [];
-  const rs = currentGrammar.start,
-    TN = 4,
-    TX = 12,
-    MT = 40;
-  function expand() {
-    let form = [rs];
-    for (let step = 0; step < 60; step++) {
-      const np = form.map((s, i) => (nts.has(s) ? i : -1)).filter((i) => i !== -1);
-      if (!np.length) break;
-      const tc = form.filter((s) => !nts.has(s)).length;
-      if (tc >= TX) {
-        form = form.flatMap((s) => (nts.has(s) ? base[s] : [s]));
-        break;
-      }
-      const pos = np[Math.floor(Math.random() * Math.min(2, np.length))],
-        sym = form[pos];
-      const cands = rules.filter((r) => r.lhs === sym);
-      if (!cands.length) break;
-      let chosen;
-      if (tc < TN) {
-        const rec = cands.filter((r) => r.rhs.some((s) => nts.has(s)));
-        chosen = rec.length ? rec[Math.floor(Math.random() * rec.length)] : cands[Math.floor(Math.random() * cands.length)];
-      } else {
-        const b2 = cands.filter((r) => r.rhs.every((s) => !nts.has(s)));
-        chosen = b2.length && Math.random() < 0.55 ? b2[Math.floor(Math.random() * b2.length)] : cands[Math.floor(Math.random() * cands.length)];
-      }
-      form.splice(pos, 1, ...chosen.rhs);
-      if (form.length > TX * 3) {
-        form = form.flatMap((s) => (nts.has(s) ? base[s] : [s]));
-        break;
-      }
-    }
-    return form.flatMap((s) => (nts.has(s) ? base[s] || [] : [s]));
-  }
-  let best = null;
-  for (let t = 0; t < MT; t++) {
-    const cand = expand().filter((s) => s.length);
-    if (!cand.length) continue;
-    if (!best) {
-      best = cand;
-      continue;
-    }
-    const ok = cand.length >= TN && cand.length <= TX,
-      co = best.length >= TN && best.length <= TX;
-    if (ok && (!co || cand.length > best.length)) best = cand;
-  }
-  if (!best || !best.length) {
-    setSimLog("Could not generate example", "error");
-    return;
-  }
-  document.getElementById("sim-input").value = best.join(" ");
-  simReset();
+  return [...seen].sort((a, b) => a.length - b.length);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1171,44 +1106,6 @@ function transInputKeydown(event) {
   input.setSelectionRange(newPos, newPos);
   // Keep validation in sync
   input.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-// Render clickable string chips into #examples-chips / #chips-container.
-// Shows the bar when strings are present, hides it when empty.
-// simFn() is called after the chosen string is written to #sim-string-input.
-function renderExampleChips(strings, simFn) {
-  var bar       = document.getElementById("examples-chips");
-  var container = document.getElementById("chips-container");
-  if (!bar || !container) return;
-  container.innerHTML = "";
-  if (!strings || strings.length === 0) { bar.style.display = "none"; return; }
-  bar.style.display = "flex";
-  var input = document.getElementById("sim-string-input");
-  // The chip whose string is in the input box is shown as selected.
-  function markSelected() {
-    var v = input ? input.value : null;
-    var chips = container.children;
-    for (var k = 0; k < chips.length; k++) chips[k].classList.toggle("is-selected", chips[k].dataset.value === v);
-  }
-  for (var i = 0; i < strings.length; i++) {
-    (function(s) {
-      var btn = document.createElement("button");
-      btn.className   = "example-chip" + (s === "" ? " eps-chip" : "");
-      btn.textContent = s === "" ? "ε" : s;
-      btn.dataset.value = s;
-      btn.onclick = function() {
-        document.getElementById("sim-string-input").value = s;
-        simFn();
-        markSelected();
-      };
-      container.appendChild(btn);
-    })(strings[i]);
-  }
-  if (input && !input.dataset.chipsBound) {
-    input.dataset.chipsBound = "1";
-    input.addEventListener("input", markSelected);
-  }
-  markSelected();
 }
 
 // Fetch a grouped examples JSON, populate a <select>, store each example

@@ -115,7 +115,7 @@
 .ui-empty { position: static; padding: var(--sp-6); }
 
 /* ── Simulation header block ───────────────────────────── */
-/* .ui-sim > .ui-sim__row (input + step group), .ui-chips, .ui-logbar */
+/* .ui-sim > .ui-sim__row (input + step group), .ui-logbar */
 .ui-sim {
   flex-shrink: 0;
   border-bottom: 1.5px solid var(--border-hi);
@@ -136,16 +136,54 @@
   width: 100%;
 }
 
-/* Example strings shown as clickable chips (filled by renderExampleChips) */
-.ui-chips {
-  display: none;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  padding: 0 var(--sp-4) var(--sp-3);
-}
-.ui-chips.is-visible {
+/* String input with its random and examples buttons attached (UI.stringInput) */
+.ui-strin {
   display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+.ui-strin .ui-input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.ui-strin__btn {
+  height: var(--ctl-h);
+  box-sizing: border-box;
+  margin-left: -1px;
+  padding: 0 var(--sp-3);
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.ui-strin__btn:last-child {
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+.ui-strin__btn:hover,
+.ui-strin__btn[aria-expanded="true"] {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--border-hi);
+}
+.ui-strin__btn:focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: 1px solid var(--accent);
+}
+.ui-strin__btn--random {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-md);
 }
 
 /* One-line running commentary under the controls */

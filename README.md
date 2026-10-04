@@ -55,6 +55,7 @@ parser-tools/
 │   ├── algo/
 │   │   ├── grammar.js                  ← pure: BNF parser, FIRST/FOLLOW, esc() (no DOM)
 │   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check, seeded random moves
+│   │   ├── strings.js                  ← pure: random input strings (automaton walks, sampling, grammar sentences)
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
@@ -84,7 +85,7 @@ parser-tools/
 ```
 
 `shared.css`, `shared.js` and `algo/grammar.js` are required by all tools
-(`algo/grammar.js` must be loaded before `shared.js`; `algo/lr.js`, `algo/ll1.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js`, `algo/tm.js` (and `algo/states.js` for the three automata tools) only where needed).
+(`algo/grammar.js` must be loaded before `shared.js`; `algo/strings.js` for the random-string buttons; `algo/lr.js`, `algo/ll1.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js`, `algo/tm.js` (and `algo/states.js` for the three automata tools) only where needed).
 D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in the corresponding

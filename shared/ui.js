@@ -9,6 +9,11 @@
 //   log.set("Read <b>a</b>");  log.clear();
 //
 // Both accept an element or an element id.
+// A die face with five pips, drawn in the current text colour.
+const DIE_SVG =
+  '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/>' +
+  [[4.2, 4.2], [9.8, 4.2], [7, 7], [4.2, 9.8], [9.8, 9.8]].map((p) => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.05" fill="currentColor"/>').join("") + "</svg>";
+
 const UI = (() => {
   const el = (target) => (typeof target === "string" ? document.getElementById(target) : target);
 
@@ -177,6 +182,64 @@ const UI = (() => {
         if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (!pop) open(); }
       });
       return { open, close };
+    },
+
+    // String entry for simulation panels: the text input with a random-string
+    // button and an examples dropdown attached flush to its right edge.
+    //   UI.stringInput("sim-string-input", {
+    //     random: () => "abba",            // string, or null if none can be made
+    //     examples: () => ["", "ab"],      // read each time the menu opens
+    //     onPick: (s) => simRun(),         // called after the input was set
+    //     heading: "Examples",             // optional menu heading
+    //   })
+    // The input keeps its own id and listeners; `random` and `examples` are optional.
+    stringInput(target, { random, examples, onPick, heading = "Examples" } = {}) {
+      const input = el(target);
+      const wrap = document.createElement("div");
+      wrap.className = "ui-strin";
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      const pick = (s) => {
+        input.value = s;
+        if (onPick) onPick(s);
+      };
+      function pickRandom() {
+        let s = null;
+        for (let i = 0; i < 6; i++) {
+          s = random();
+          if (s !== null && s !== input.value) break;
+        }
+        if (s === null) UI.toast("Could not generate a string");
+        else pick(s);
+      }
+      function addButton(cls, text, title) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ui-strin__btn " + cls;
+        b.innerHTML = text;
+        b.title = title;
+        b.setAttribute("aria-label", title);
+        wrap.appendChild(b);
+        return b;
+      }
+      if (random) addButton("ui-strin__btn--random", DIE_SVG, "Random string").addEventListener("click", pickRandom);
+      if (examples || random) {
+        const btn = addButton("ui-strin__btn--menu", "▾", "Example strings");
+        UI.menu(btn, () => {
+          const list = examples ? examples() : [];
+          const items = [];
+          if (random) items.push({ label: "Random string", onSelect: pickRandom });
+          if (list.length) {
+            if (random) items.push({ separator: true });
+            items.push({ heading });
+            for (const s of list) items.push({ label: s === "" ? "ε  (empty string)" : s, checked: s === input.value ? true : undefined, onSelect: () => pick(s) });
+          } else if (examples) {
+            items.push({ separator: random ? true : undefined }, { label: "No example strings", disabled: true });
+          }
+          return items.filter((i) => !(i.separator === undefined && !i.label && !i.heading));
+        }, { align: "right" });
+      }
+      return { input };
     },
 
     // A short message at the bottom of the window that fades after ~2 seconds.

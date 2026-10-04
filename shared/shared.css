@@ -746,29 +746,16 @@ body {
   flex-shrink: 0;
   padding-top: var(--sp-1);
 }
+#sim-input-row .input-group {
+  flex: 1;
+  min-width: 160px;
+}
 #sim-input-row {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
   flex-wrap: wrap;
 }
-#sim-input {
-  background: var(--bg-input);
-  color: var(--text);
-  border: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  padding: 0 var(--sp-4);
-  height: 22px;
-  box-sizing: border-box;
-  outline: none;
-  width: 200px;
-}
-#sim-input:focus {
-  border-color: var(--accent);
-  outline: 1px solid var(--accent);
-}
-
 #sim-body {
   display: flex;
   flex-direction: column;
@@ -1151,57 +1138,6 @@ body {
 }
 /* END SHARED:PARSE-TREE-STYLE */
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SHARED:EXAMPLE-CHIPS
-   Clickable string chips shown below the sim input row.
-   #examples-chips is hidden by default; JS calls
-   renderExampleChips() which sets display:flex when needed.
-   Tools that always show the bar (e.g. regex) override
-   display locally.
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#examples-chips {
-  flex-shrink: 0;
-  display: none;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  align-items: center;
-  padding: var(--sp-3) var(--sp-5);
-  border-bottom: 1px solid var(--border-lo);
-}
-.examples-label {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: var(--fs-2xs);
-  color: var(--text-dim);
-  margin-right: var(--sp-1);
-}
-.example-chip {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-cell);
-  color: var(--text);
-  padding: 1px var(--sp-4);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
-}
-.example-chip.is-selected {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-  color: var(--accent);
-  font-weight: bold;
-}
-.example-chip:hover {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-  color: var(--accent);
-}
-.example-chip.eps-chip {
-  font-style: italic;
-  color: var(--text-dim);
-}
-/* END SHARED:EXAMPLE-CHIPS */
 
 /* ── View menu button (top bar, far right) ── */
 .view-btn {

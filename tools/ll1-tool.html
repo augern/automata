@@ -6,8 +6,8 @@
     <meta name="description" content="Interactive LL(1) parser — compute FIRST/FOLLOW sets, build predictive tables, and step through string simulation with a live parse tree." />
     <title>LL(1) Parser | Parser Tools</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=c2c77530" />
-    <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
+    <link rel="stylesheet" href="../shared/shared.css?v=5dc913f7" />
+    <link rel="stylesheet" href="../shared/ui.css?v=4cccb336" />
     <script src="../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -224,8 +224,7 @@
             <div id="sim-header">
               <div id="sim-input-row">
                 <div class="input-group">
-                  <input id="sim-input" type="text" spellcheck="false" placeholder="e.g. id + id  (empty for ε)" />
-                  <button class="btn" onclick="generateExample()">Derive</button>
+                  <input id="sim-input" class="ui-input ui-input--lg" type="text" spellcheck="false" placeholder="e.g. id + id  (empty for ε)" />
                 </div>
                 <div class="step-group">
                   <button class="btn icon-restart" onclick="simReset()" title="Restart"></button>
@@ -270,10 +269,11 @@
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
     <script src="../shared/algo/panels.js?v=23a37100"></script>
     <script src="../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../shared/algo/ll1.js?v=40eb47b3"></script>
-    <script src="../shared/shared.js?v=cfcb7ddf"></script>
+    <script src="../shared/shared.js?v=180ba700"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
-    <script src="../shared/ui.js?v=35102e64"></script>
+    <script src="../shared/ui.js?v=598bdf1e"></script>
     <script src="../shared/view-menu.js?v=84b55cd9"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
@@ -927,6 +927,12 @@ ${kw("loop")}
         document.getElementById("grammar-input").addEventListener("input", () => {
           clearTimeout(_rebuildTimer);
           _rebuildTimer = setTimeout(build, 400);
+        });
+        UI.stringInput("sim-input", {
+          random: randomSentence,
+          examples: () => sampleSentences(6),
+          heading: "Random sentences",
+          onPick: () => { saveShare(); simReset(); },
         });
         // Clear sim immediately on each keystroke; re-initialize after typing pauses
         let _simInputTimer = null;

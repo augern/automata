@@ -5,9 +5,9 @@
     <title>PDA Simulator</title>
     <script src="../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../shared/shared.css?v=c2c77530" />
+    <link rel="stylesheet" href="../shared/shared.css?v=5dc913f7" />
     <script src="../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../shared/ui.css?v=730601bd" />
+    <link rel="stylesheet" href="../shared/ui.css?v=4cccb336" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 400; --pmin: 300px; }
@@ -125,10 +125,6 @@
                 <button class="btn icon-run-all" id="btn-sim-all"   onclick="simRunAll()" title="Run all" disabled></button>
               </div>
             </div>
-            <div id="examples-chips" class="ui-chips">
-              <span class="examples-label">Examples:</span>
-              <span id="chips-container"></span>
-            </div>
             <div id="sim-log-bar" class="ui-logbar"></div>
           </div>
           <!-- Accept / Reject banner -->
@@ -186,11 +182,12 @@
     <script src="../shared/algo/grammar.js?v=39525f46"></script>
     <script src="../shared/algo/panels.js?v=23a37100"></script>
     <script src="../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../shared/algo/states.js?v=107884d8"></script>
     <script src="../shared/algo/pda.js?v=c6c2e029"></script>
-    <script src="../shared/shared.js?v=cfcb7ddf"></script>
+    <script src="../shared/shared.js?v=180ba700"></script>
     <script src="../shared/share-link.js?v=0d17f714"></script>
-    <script src="../shared/ui.js?v=35102e64"></script>
+    <script src="../shared/ui.js?v=598bdf1e"></script>
     <script src="../shared/view-menu.js?v=84b55cd9"></script>
     <script src="../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../shared/automaton-graph.js?v=38a5e408"></script>
@@ -759,8 +756,19 @@ else: ${kw("reject")}`
         renderStatesTable();
         renderRulesTable();
         onPDAChange();
-        renderExampleChips(ex.strings || [], simRun);
+        _strExamples = ex.strings || [];
       }
+
+      let _strExamples = []; // sample strings of the loaded example, offered in the string input's menu
+      UI.stringInput("sim-string-input", {
+        examples: () => _strExamples,
+        onPick: () => simRun(),
+        // Random words over the rules' input symbols, preferring one the PDA accepts.
+        random() {
+          const alphabet = [...new Set(pdaRules.map((r) => r.input).filter((c) => c))];
+          return strSampleAccepted(alphabet, (w) => pdaAcceptsString(currentPDA(), w).accepted, Math.random).value;
+        },
+      });
 
       let sharedStateApplied = false; // set when the page was restored from a shareable link
       loadAutomataExamples("../examples/examples-pda.json", "examples-select", EXAMPLES, loadExamplePDA, () => !sharedStateApplied);
