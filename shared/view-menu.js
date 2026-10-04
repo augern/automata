@@ -20,8 +20,8 @@
       list.push(
         { separator: true },
         { heading: "Arrow keys step" },
-        ...steppers.map((p) => ({ label: p.title, checked: p.keyFocus, onSelect: () => setKeyPanel(p.id) })),
-        { label: "Next stepping panel", hint: "T", onSelect: () => setKeyPanel(nextKeyPanel(steppers.map((p) => p.id), (steppers.find((p) => p.keyFocus) || {}).id, 1)) }
+        ...steppers.map((p) => ({ label: p.title, checked: p.keyFocus, disabled: p.collapsed, title: p.collapsed ? "Collapsed" : undefined, onSelect: () => setKeyPanel(p.id) })),
+        { label: "Next stepping panel", hint: "T", onSelect: () => setKeyPanel(nextKeyPanel(steppers.filter((p) => !p.collapsed).map((p) => p.id), (steppers.find((p) => p.keyFocus) || {}).id, 1)) }
       );
     }
     if (document.getElementById("panels") && typeof panelsResetLayout === "function") {

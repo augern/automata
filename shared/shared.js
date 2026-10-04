@@ -334,17 +334,43 @@ function _stepperPanelIds() {
 
 function setKeyPanel(id, force) {
   if (!_steppers.has(id) || (_keyPanelId === id && !force)) return;
+  if (document.getElementById(id).classList.contains("collapsed")) return;
   _keyPanelId = id;
   _panels().forEach((el) => el.classList.toggle("has-key-focus", el.id === id));
 }
 
 function keyPanelSummaries() {
-  return _stepperPanelIds().map((id) => ({ id, title: _panelName(document.getElementById(id)), keyFocus: id === _keyPanelId }));
+  return _stepperPanelIds().map((id) => {
+    const el = document.getElementById(id);
+    return { id, title: _panelName(el), keyFocus: id === _keyPanelId, collapsed: el.classList.contains("collapsed") };
+  });
+}
+
+// A collapsed panel cannot have key focus: it loses its tint, and the keys go to the
+// next open stepping panel (or to none when every stepping panel is collapsed).
+// Runs whenever a panel's class changes, so every way of collapsing is covered.
+function _syncKeyFocus() {
+  const isOpen = (id) => !document.getElementById(id).classList.contains("collapsed");
+  if (_keyPanelId !== null && !isOpen(_keyPanelId)) {
+    const ids = _stepperPanelIds();
+    const open = ids.filter(isOpen);
+    const next = open.find((id) => ids.indexOf(id) > ids.indexOf(_keyPanelId)) || open[0] || null;
+    _keyPanelId = next;
+    _panels().forEach((el) => el.classList.toggle("has-key-focus", el.id === next));
+  } else if (_keyPanelId === null) {
+    const first = _stepperPanelIds().find(isOpen);
+    if (first) setKeyPanel(first);
+  }
 }
 
 function _installKeyFocus() {
   if (_keyFocusInstalled) return;
   _keyFocusInstalled = true;
+  if (typeof MutationObserver !== "undefined") {
+    const watch = new MutationObserver(_syncKeyFocus);
+    _panels().forEach((el) => watch.observe(el, { attributes: true, attributeFilter: ["class"] }));
+    _syncKeyFocus();
+  }
   const claim = (e) => {
     const panel = e.target.closest && e.target.closest("#panels > .panel");
     if (!panel) return;
@@ -372,7 +398,7 @@ function _installKeyFocus() {
       return;
     }
     if (action === "next-panel" || action === "prev-panel") {
-      setKeyPanel(nextKeyPanel(_stepperPanelIds(), _keyPanelId, action === "next-panel" ? 1 : -1));
+      setKeyPanel(nextKeyPanel(_stepperPanelIds().filter((id) => !document.getElementById(id).classList.contains("collapsed")), _keyPanelId, action === "next-panel" ? 1 : -1));
       return;
     }
     const stepper = _steppers.get(_keyPanelId);
