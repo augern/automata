@@ -6,7 +6,7 @@ window.TOOL_GUIDE = {
   use: [
     "Type an expression on the left. Operators: `|` union, `*` star, `+` one or more, `?` optional, `( )` grouping, `.` any symbol.",
     "Step through each stage with Step ›, or press ▶| to finish it at once. The tables fill in as you go.",
-    "In the Thompson stage, the expression highlights what each step builds (the operator boxed, the operands tinted), and the diagram under the table shows the fragments being combined, with the new states in amber.",
+    "In the Thompson stage, the expression highlights what each step builds (the operator boxed, the operands tinted), and the diagram under the table shows the fragments being combined, with the transitions this step adds in amber (also boxed in the table).",
     "Run a string in the Simulation panel: type one, use the dice for a random accepted string, or pick from ▾.",
     "The Apply / Skip switch in the Minimization panel decides whether the graph and the simulation use the minimal DFA.",
     "The DFA graph appears once subset construction is complete. Hover a state or edge of it to see the matching row or cell of the subset-construction table.",

@@ -130,15 +130,11 @@
       #tc-frag svg { display: block; width: 100%; max-height: 150px; }
       .tcf-node circle { fill: var(--bg); stroke: var(--text-dim); stroke-width: 1.2; }
       .tcf-node text { font-family: var(--font-mono); font-size: 9px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; }
-      .tcf-new circle { stroke: var(--amber); fill: var(--amber-bg); stroke-width: 1.6; }
-      .tcf-new text { fill: var(--amber); font-weight: bold; }
       .tcf-box { fill: var(--bg-cell); stroke: var(--border-hi); stroke-width: 1.2; }
       .tcf-box-label { font-family: var(--font-mono); font-size: 11px; fill: var(--text); text-anchor: middle; dominant-baseline: central; }
       .tcf-edge { fill: none; stroke: var(--amber); stroke-width: 1.2; stroke-dasharray: 4 3; }
       .tcf-edge--sym { stroke-dasharray: none; }
       .tcf-edge-label { font-family: var(--font-mono); font-size: 10px; font-style: italic; fill: var(--amber); text-anchor: middle; }
-      .tcf-key { margin: var(--sp-2) 0 0; font-size: var(--fs-2xs); font-style: italic; color: var(--text-dim); line-height: 1.4; }
-      .tcf-key b { color: var(--amber); font-style: normal; }
       .tcf-tag { font-family: var(--font-serif); font-size: 10px; font-style: italic; font-weight: bold; text-anchor: middle; }
       .tcf-tag-i { fill: var(--accent); }
       .tcf-tag-f { fill: var(--green); }
@@ -576,7 +572,7 @@
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=5013bc25"></script>
+    <script src="guide.js?v=745fc4d6"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
@@ -871,7 +867,7 @@
           const t = _nfaSrc.slice(o.span[0], o.span[1]);
           return t.length > 14 ? t.slice(0, 6) + "…" + t.slice(-5) : t;
         };
-        const node = (x, y, q, cls) => `<g class="tcf-node ${cls}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y}">q${q}</text></g>`;
+        const node = (x, y, q) => `<g class="tcf-node"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y}">q${q}</text></g>`;
         const edge = (d, lx, ly, text, sym) => `<path class="tcf-edge${sym ? " tcf-edge--sym" : ""}" d="${d}" marker-end="url(#tcf-arrow)"/>` + `<text class="tcf-edge-label" x="${lx}" y="${ly}">${esc(text)}</text>`;
         const line = (x1, y1, x2, y2, text, sym) => edge(`M${x1 + (x2 > x1 ? R : -R)},${y1} L${x2 + (x2 > x1 ? -R : R)},${y2}`, (x1 + x2) / 2, Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 4, text, sym);
         const arc = (x1, y1, x2, y2, up, text) => {
@@ -881,31 +877,30 @@
         const tags = (i, f) => `<text class="tcf-tag tcf-tag-i" x="${i[0]}" y="${i[1] - R - 3}">i</text><text class="tcf-tag tcf-tag-f" x="${f[0]}" y="${f[1] - R - 3}">f</text>`;
         const operandBox = (o, x, y, w, h) =>
           `<rect class="tcf-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><text class="tcf-box-label" x="${x + w / 2}" y="${y + h / 2}">${esc(label(o))}</text>` +
-          node(x, y + h / 2, o.start, "") + node(x + w, y + h / 2, o.accept, "");
+          node(x, y + h / 2, o.start) + node(x + w, y + h / 2, o.accept);
         const [A, B] = step.operands || [];
         const [ns, nt] = step.newStates || [];
         let g = "", iPos, fPos;
         if (step.op === "symbol" || step.op === "eps") {
-          g = node(90, 65, ns, "tcf-new") + node(230, 65, nt, "tcf-new") + line(90, 65, 230, 65, step.op === "eps" ? "ε" : step.ch, step.op === "symbol");
+          g = node(90, 65, ns) + node(230, 65, nt) + line(90, 65, 230, 65, step.op === "eps" ? "ε" : step.ch, step.op === "symbol");
           iPos = [90, 65]; fPos = [230, 65];
         } else if (step.op === "concat") {
           g = operandBox(A, 20, 45, 100, 40) + operandBox(B, 200, 45, 100, 40) + line(120, 65, 200, 65, "ε");
           iPos = [20, 65]; fPos = [300, 65];
         } else if (step.op === "union") {
-          g = operandBox(A, 85, 14, 150, 34) + operandBox(B, 85, 82, 150, 34) + node(25, 65, ns, "tcf-new") + node(295, 65, nt, "tcf-new") +
+          g = operandBox(A, 85, 14, 150, 34) + operandBox(B, 85, 82, 150, 34) + node(25, 65, ns) + node(295, 65, nt) +
             line(25, 65, 85, 31, "ε") + line(25, 65, 85, 99, "ε") + line(235, 31, 295, 65, "ε") + line(235, 99, 295, 65, "ε");
           iPos = [25, 65]; fPos = [295, 65];
         } else {
           // star, plus, optional: the operand between a new start and a new accept state
-          g = operandBox(A, 95, 48, 130, 34) + node(25, 65, ns, "tcf-new") + node(295, 65, nt, "tcf-new") + line(25, 65, 95, 65, "ε") + line(225, 65, 295, 65, "ε");
+          g = operandBox(A, 95, 48, 130, 34) + node(25, 65, ns) + node(295, 65, nt) + line(25, 65, 95, 65, "ε") + line(225, 65, 295, 65, "ε");
           if (step.op !== "plus") g += arc(25, 65, 295, 65, true, "ε");      // skip the operand
           if (step.op !== "opt") g += arc(225, 65, 95, 65, false, "ε");      // repeat it
           iPos = [25, 65]; fPos = [295, 65];
         }
         box.innerHTML =
           `<svg viewBox="0 0 320 130" role="img" aria-label="The fragments combined in this step"><defs><marker id="tcf-arrow" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="6" refX="6.3" refY="2.7" orient="auto"><path class="tcf-arrowhead" d="M0,0 L0,5.4 L7.2,2.7 z"/></marker></defs>` +
-          g + tags(iPos, fPos) + "</svg>" +
-          '<p class="tcf-key"><b>Amber</b>: what this step adds, in the diagram and in the table. Grey: parts built in earlier steps. <b style="color:var(--accent)">i</b> and <b style="color:var(--green)">f</b>: start and accept state of the new fragment.</p>';
+          g + tags(iPos, fPos) + "</svg>";
         box.hidden = false;
       }
 
