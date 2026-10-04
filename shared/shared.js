@@ -774,18 +774,32 @@ function renderExampleChips(strings, simFn) {
   container.innerHTML = "";
   if (!strings || strings.length === 0) { bar.style.display = "none"; return; }
   bar.style.display = "flex";
+  var input = document.getElementById("sim-string-input");
+  // The chip whose string is in the input box is shown as selected.
+  function markSelected() {
+    var v = input ? input.value : null;
+    var chips = container.children;
+    for (var k = 0; k < chips.length; k++) chips[k].classList.toggle("is-selected", chips[k].dataset.value === v);
+  }
   for (var i = 0; i < strings.length; i++) {
     (function(s) {
       var btn = document.createElement("button");
       btn.className   = "example-chip" + (s === "" ? " eps-chip" : "");
       btn.textContent = s === "" ? "ε" : s;
+      btn.dataset.value = s;
       btn.onclick = function() {
         document.getElementById("sim-string-input").value = s;
         simFn();
+        markSelected();
       };
       container.appendChild(btn);
     })(strings[i]);
   }
+  if (input && !input.dataset.chipsBound) {
+    input.dataset.chipsBound = "1";
+    input.addEventListener("input", markSelected);
+  }
+  markSelected();
 }
 
 // Fetch a grouped examples JSON, populate a <select>, store each example

@@ -98,7 +98,8 @@
   height: 100%;
   touch-action: none;
 }
-.ui-canvas__empty {
+.ui-canvas__empty,
+.ui-empty {
   position: absolute;
   inset: 0;
   display: flex;
@@ -110,6 +111,8 @@
   color: var(--text-dim);
   pointer-events: none;
 }
+/* .ui-empty: the same message for places that are not a .ui-canvas */
+.ui-empty { position: static; padding: var(--sp-6); }
 
 /* ── Simulation header block ───────────────────────────── */
 /* .ui-sim > .ui-sim__row (input + step group), .ui-chips, .ui-logbar */

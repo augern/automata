@@ -220,6 +220,10 @@ body {
 .mode-btn:hover:not(.active) {
   border-color: var(--text-dim);
   color: var(--text);
+  background: var(--bg-hover);
+}
+.mode-btn:active:not(.active) {
+  background: var(--bg-cell);
 }
 
 /* ── General buttons ────────────────────────────────────── */
@@ -252,6 +256,19 @@ body {
   background: var(--text);
   color: var(--bg);
   border-color: var(--text);
+}
+/* Pressed: a 1px push, so clicks feel registered */
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  background: var(--bg-cell);
+}
+.btn.primary:active:not(:disabled) {
+  background: var(--btn-primary-hover);
+}
+.btn[aria-pressed="true"] {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .btn.primary:hover:not(:disabled) {
   background: var(--btn-primary-hover);
@@ -354,15 +371,21 @@ body {
   display: flex;
   align-items: center;
   padding: 0 var(--sp-3) 0 var(--sp-5);
-  height: 26px;
+  height: 28px;
   flex-shrink: 0;
   gap: var(--sp-3);
+  transition: box-shadow var(--dur) var(--ease);
+}
+/* The panel you're working in gets an accent rule under its header */
+.panel:focus-within > .panel-header {
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 .panel-title {
   font-family: var(--font-serif);
   font-size: var(--fs-sm);
   font-style: italic;
-  color: var(--text-dim);
+  font-weight: 600;
+  color: var(--text);
   white-space: nowrap;
   flex: 1;
   letter-spacing: 0.01em;
@@ -380,6 +403,10 @@ body {
 }
 .collapse-btn:hover {
   color: var(--text);
+  background: var(--bg-hover);
+}
+.collapse-btn {
+  border-radius: var(--radius);
 }
 
 /* Collapsed panel: rotated label */
@@ -1003,13 +1030,18 @@ body {
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   letter-spacing: 0.04em;
+  border-radius: var(--radius);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.12s;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .algo-btn:hover {
   border-color: var(--border-hi);
   color: var(--text);
+  background: var(--bg-hover);
+}
+.algo-btn:active {
+  background: var(--bg-cell);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1103,8 +1135,15 @@ body {
   background: var(--bg-cell);
   color: var(--text);
   padding: 1px var(--sp-4);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.example-chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: bold;
 }
 .example-chip:hover {
   border-color: var(--accent);
