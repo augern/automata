@@ -632,7 +632,7 @@
           addDerivStep([currentGrammar.start], "initial sentential form", "");
           renderSimTokens();
           renderSimStack();
-          showEmptyTree(); // the parse tree stays empty (with its "Run simulation…" message) until the first step
+          renderTree();
           setSimLog("Ready \u2014 press Step", "");
           simInitialized = true;
         }
@@ -652,12 +652,6 @@
         simSetBtns();
       }
 
-      // Clear the drawn tree and show the placeholder; treeRoot itself is kept so stepping can go on.
-      function showEmptyTree() {
-        d3.select("#tree-root").selectAll("*").remove();
-        document.getElementById("tree-empty").style.display = "";
-      }
-
       function simBack() {
         if (!simHistory.length) return;
         const snap = simHistory.pop();
@@ -670,8 +664,7 @@
         renderSimTokens();
         renderSimStack();
         renderDerivSteps();
-        if (simHistory.length) renderTree();
-        else showEmptyTree(); // back at the start: nothing has been derived yet
+        renderTree();
         setSimLog(snap.log, snap.logCls);
         simSetBtns();
         clearHi();
