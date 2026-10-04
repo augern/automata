@@ -193,7 +193,9 @@ Every tool is a row of resizable panels (`#panels`). The row behaves like this:
   end})`. One such panel at a time has *key focus*: its header is tinted blue with a
   `← →` hint after the title, and the keys act on it. `←`/`→` (or `,`/`.`) step back
   and forward, `Home` resets, `End` runs to the end, and `T` / `Shift+T` move key
-  focus to the next/previous stepping panel. Clicking or tabbing into a stepping
+  focus to the next/previous stepping panel. `F` focuses the tinted panel (or the
+  last panel you used, in tools without steppers) and, pressed again, restores the
+  layout. Clicking or tabbing into a stepping
   panel moves key focus there; the View menu lists the panels too. The keys are
   ignored while you type in a field or while a menu or dialog is open. This
   replaces the old per-tool handlers, LR's "Arrow Keys" selector and LL(1)'s

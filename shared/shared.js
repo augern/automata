@@ -300,9 +300,9 @@ function installPanelMenus() {
       }));
       if (items.length) items.push({ separator: true });
       if (panelFocusedId() === el.id) {
-        items.push({ label: "Restore layout", title: "Undo \"Focus on this panel\": bring back the panels as they were", onSelect: panelRestoreFocus });
+        items.push({ label: "Restore layout", hint: "F", title: "Undo \"Focus on this panel\": bring back the panels as they were", onSelect: panelRestoreFocus });
       } else {
-        items.push({ label: "Focus on this panel", title: "Show only this panel; Restore layout undoes it", onSelect: () => panelFocus(el.id) });
+        items.push({ label: "Focus on this panel", hint: "F", title: "Show only this panel; Restore layout undoes it", onSelect: () => panelFocus(el.id) });
       }
       if (el.querySelector(".collapse-btn")) items.push({ label: "Collapse panel", onSelect: () => toggleCollapse(el.id) });
       return items;
@@ -319,6 +319,7 @@ function installPanelMenus() {
 // never needs to think about any of this.
 const _steppers = new Map();
 var _keyPanelId = null;
+var _lastPanelId = null; // the panel you last clicked or tabbed into, with or without a stepper
 var _keyFocusInstalled = false;
 
 function registerStepper(panelId, actions, opts) {
@@ -346,7 +347,9 @@ function _installKeyFocus() {
   _keyFocusInstalled = true;
   const claim = (e) => {
     const panel = e.target.closest && e.target.closest("#panels > .panel");
-    if (panel) setKeyPanel(panel.id);
+    if (!panel) return;
+    _lastPanelId = panel.id;
+    setKeyPanel(panel.id); // no-op unless the panel has a stepper
   };
   document.addEventListener("pointerdown", claim, true);
   document.addEventListener("focusin", claim);
@@ -358,6 +361,16 @@ function _installKeyFocus() {
     const action = stepperKeyAction(e);
     if (!action) return;
     e.preventDefault();
+    if (action === "focus-panel") {
+      // F toggles: undo the focus if the layout is focused, else focus the tinted
+      // (key-focus) panel, falling back to the panel you last used.
+      if (panelFocusedId()) panelRestoreFocus();
+      else {
+        const target = _keyPanelId || _lastPanelId || (document.querySelector("#panels > .panel:hover") || {}).id;
+        if (target) panelFocus(target);
+      }
+      return;
+    }
     if (action === "next-panel" || action === "prev-panel") {
       setKeyPanel(nextKeyPanel(_stepperPanelIds(), _keyPanelId, action === "next-panel" ? 1 : -1));
       return;
@@ -429,6 +442,7 @@ function startPanelLayout() {
     _panelObserver.observe(row);
   }
   installPanelMenus();
+  _installKeyFocus();
   fitPanelLayout();
 }
 

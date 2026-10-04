@@ -76,6 +76,7 @@ function fitPanels(panels, available, collapsedW = PANEL_COLLAPSED_W) {
 // that are typing into a field or arrive while a menu/modal is open.
 //   ←/→ or ,/.  step back / forward      Home  reset      End  run to the end
 //   t / T       move key focus to the next / previous stepping panel
+//   f / F       focus on the current panel, or undo the focus
 function stepperKeyAction({ key, ctrlKey = false, metaKey = false, altKey = false }) {
   if (ctrlKey || metaKey || altKey) return null;
   switch (key) {
@@ -85,6 +86,7 @@ function stepperKeyAction({ key, ctrlKey = false, metaKey = false, altKey = fals
     case "End": return "end";
     case "t": return "next-panel";
     case "T": return "prev-panel";
+    case "f": case "F": return "focus-panel";
     default: return null;
   }
 }

@@ -28,7 +28,7 @@
       list.push(
         { separator: true },
         { heading: "Layout" },
-        ...(panelFocusedId() ? [{ label: "Restore layout before focus", title: "Undo Focus: bring back the panels as they were", onSelect: panelRestoreFocus }] : []),
+        ...(panelFocusedId() ? [{ label: "Restore layout before focus", hint: "F", title: "Undo Focus: bring back the panels as they were", onSelect: panelRestoreFocus }] : []),
         { label: "Restore default layout", onSelect: panelsResetLayout },
         { label: "Equal panel widths", onSelect: panelsEqualWidths },
         { label: "Expand all panels", onSelect: panelsExpandAll },

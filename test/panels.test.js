@@ -94,12 +94,15 @@ test("stepperKeyAction maps arrows, comma/period, Home/End and t/T", () => {
   assert.equal(act("End"), "end");
   assert.equal(act("t"), "next-panel");
   assert.equal(act("T", { shiftKey: true }), "prev-panel");
+  assert.equal(act("f"), "focus-panel");
+  assert.equal(act("F", { shiftKey: true }), "focus-panel");
   assert.equal(act("x"), null);
   assert.equal(act("Enter"), null);
 });
 
 test("stepperKeyAction ignores shortcuts with Ctrl, Meta or Alt", () => {
   for (const mod of ["ctrlKey", "metaKey", "altKey"]) assert.equal(stepperKeyAction({ key: "ArrowRight", [mod]: true }), null, mod);
+  for (const mod of ["ctrlKey", "metaKey", "altKey"]) assert.equal(stepperKeyAction({ key: "f", [mod]: true }), null, "f + " + mod); // keep Ctrl/Cmd+F for the browser's find
   // Shift alone is fine (Shift+arrow used to step the LL(1) table; now it steps the focused panel)
   assert.equal(stepperKeyAction({ key: "ArrowRight", shiftKey: true }), "step");
 });
