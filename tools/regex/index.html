@@ -473,7 +473,7 @@
               <svg id="dfa-svg">
                 <g id="dfa-graph-root"></g>
               </svg>
-              <div id="dfa-graph-empty">Build an NFA to see the DFA graph.</div>
+              <div id="dfa-graph-empty">The DFA appears here once subset construction is complete. Step through it, or press ▶|.</div>
             </div>
             <!-- String input + step controls -->
             <div id="sim-header" class="ui-sim">
@@ -527,7 +527,7 @@
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=67153a11"></script>
+    <script src="guide.js?v=4dfea734"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
@@ -897,6 +897,7 @@
 
       // ── Subset construction stepper state ──────────────────────────
       let _scData = null; // result of subsetConstruct()
+      let _scDone = false; // the subset-construction stepper has reached its result: only then is the DFA drawn
       const scStepper = createStepper({
         buttons: { reset: "btn-sc-reset", back: "btn-sc-back", step: "btn-sc-step", all: "btn-sc-all" },
         min: -1,
@@ -917,6 +918,7 @@
         const pos = scStepper.pos;
         const step = pos >= 0 ? steps[pos] : null;
         const isDone = step && step.type === "done";
+        if (!!isDone !== _scDone) { _scDone = !!isDone; refreshActiveDFA(); }
 
         // Log bar
         document.getElementById("sc-log-bar").innerHTML = step ? step.html : "";
@@ -1194,6 +1196,7 @@
         // Pre-compute DFA steps and reset the DFA stepper
         _scData = withSubsetHtml(subsetConstruct(nfa));
         scStepper.pos = -1;
+        _scDone = false;
         scRenderStep();
         scSetBtns();
 
@@ -1227,6 +1230,12 @@
       function fitDFA() { dfaGraph.fit(); }
 
       function renderDFA(scData) {
+        if (!_scDone) {
+          // The DFA has not been constructed yet: show the placeholder instead of the answer.
+          d3.select("#dfa-graph-root").selectAll("*").remove();
+          document.getElementById("dfa-graph-empty").style.display = "";
+          return;
+        }
         const { dfaStates, dfaAccepts, dfaTrans } = scData;
         // One edge per (from, to) pair, labelled with all its symbols; self-loops separately.
         const edgeMap = new Map(); // "f-t" → { from, to, labels[], ids[] }

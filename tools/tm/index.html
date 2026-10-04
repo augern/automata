@@ -58,6 +58,7 @@
         position: relative;
       }
       #trace-table-wrap { position: relative; }
+      .trace-table tr.tr-future { display: none; }
       .trace-table {
         border-collapse: collapse;
         font-family: var(--font-mono);
@@ -689,7 +690,7 @@ ${kw("loop")}:
         const totalH = TRACE_HDR_H  + _configs.length * TRACE_CELL_H;
 
         // Table HTML
-        let html = `<div id="trace-table-wrap" style="position:relative;width:${totalW}px;min-height:${totalH}px;">`;
+        let html = `<div id="trace-table-wrap" style="position:relative;width:${totalW}px;">`;
         html += `<table class="trace-table"><thead><tr>`;
         html += `<th class="tc-step tc-pos-hdr">#</th>`;
         html += `<th class="tc-sticky-left tc-pos-hdr"></th>`;
@@ -730,23 +731,30 @@ ${kw("loop")}:
         // Measure actual cell centres for pixel-accurate polyline
         _measureTracePolyline();
 
-        // Compute and display statistics
+        updateTraceHighlight();
+      }
+
+      // Statistics of the computation so far (steps up to the current one).
+      function updateTraceStats() {
         let writes = 0, reversals = 0, leftMoves = 0, rightMoves = 0;
         let prevDir = null;
-        for (const cfg of _configs) {
+        for (const cfg of _configs.slice(0, sim.pos + 1)) {
           if (!cfg.action || cfg.action.implicit) continue;
           if (cfg.action.write !== cfg.action.sym) writes++;
           if (cfg.action.dir === "L") leftMoves++; else rightMoves++;
           if (prevDir !== null && cfg.action.dir !== prevDir) reversals++;
           prevDir = cfg.action.dir;
         }
-        const totalSteps = _configs.length - 1;
-        const tapeSpan   = maxPos - minPos + 1;
-
+        let lo = 0, hi = 0;
+        for (const cfg of _configs.slice(0, sim.pos + 1)) {
+          lo = Math.min(lo, cfg.head, ...cfg.tape.keys());
+          hi = Math.max(hi, cfg.head, ...cfg.tape.keys());
+        }
+        const tapeSpan = hi - lo + 1;
         const statsEl = document.getElementById("trace-stats");
         statsEl.style.display = "flex";
         statsEl.innerHTML =
-          `<span class="ts-item"><span class="ts-val">${totalSteps}</span> steps</span>` +
+          `<span class="ts-item"><span class="ts-val">${sim.pos}</span> steps</span>` +
           `<span class="ts-item"><span class="ts-val">${writes}</span> writes</span>` +
           `<span class="ts-item"><span class="ts-val">${reversals}</span> reversals</span>` +
           `<span class="ts-item"><span class="ts-val">${rightMoves}R / ${leftMoves}L</span> moves</span>` +
@@ -763,7 +771,7 @@ ${kw("loop")}:
         if (!wrap || !rows.length || !polyline) return;
 
         const wrapRect = wrap.getBoundingClientRect();
-        const pts = _configs.map((cfg, i) => {
+        const pts = _configs.slice(0, sim.pos + 1).map((cfg, i) => {
           const row  = rows[i];
           if (!row) return null;
           // cells[0] = step col, cells[1] = state col, cells[2..] = data columns
@@ -777,12 +785,19 @@ ${kw("loop")}:
         }).filter(Boolean).join(" ");
 
         polyline.setAttribute("points", pts);
+        const svg = section.querySelector("#trace-svg");
+        if (svg) svg.setAttribute("height", wrap.getBoundingClientRect().height);
       }
 
       function updateTraceHighlight() {
         const section = document.getElementById("trace-section");
         const tbody   = section.querySelector("tbody");
         if (!tbody) return;
+
+        // Only the steps up to the current one are shown; the rest of the run appears as you step.
+        for (let i = 0; i < tbody.rows.length; i++) tbody.rows[i].classList.toggle("tr-future", i > sim.pos);
+        _measureTracePolyline();
+        updateTraceStats();
 
         // Row highlight
         const prev = tbody.querySelector(".tr-current");

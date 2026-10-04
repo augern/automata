@@ -8,7 +8,7 @@ window.TOOL_GUIDE = {
     "Step through each stage with Step ›, or press ▶| to finish it at once. The tables fill in as you go.",
     "Run a string in the Simulation panel: type one, use the dice for a random accepted string, or pick from ▾.",
     "The Apply / Skip switch in the Minimization panel decides whether the graph and the simulation use the minimal DFA.",
-    "Hover a state or edge of the DFA graph to see the matching row or cell of the subset-construction table.",
+    "The DFA graph appears once subset construction is complete. Hover a state or edge of it to see the matching row or cell of the subset-construction table.",
   ],
   notation: [
     ["q0, q1, …", "states of the NFA"],
