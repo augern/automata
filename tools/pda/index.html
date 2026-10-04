@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PDA Simulator</title>
+    <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
+    <link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/ui.css?v=8c6eec2c" />
+    <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-def { --pw: 400; --pmin: 300px; }
+      #p-sim { --pw: 660; --pmin: 280px; }
+      #p-tree { --pw: 340; --pmin: 200px; }
+
+      /* ── Panel widths ── */
+      /* The PDA definition stacks several sections with a gap; its graph sits under a rule. */
+      #def-scroll { display: flex; flex-direction: column; gap: var(--sp-5); }
+      #pda-graph-wrap { border-top: 1px solid var(--border-lo); }/* ── Definition panel ── *//* Section headers inside def panel *//* ── States mini-table ── *//* Remove buttons *//* Initial stack symbol row *//* ── Rules table ── *//* Acceptance mode toggle *//* Definition footer *//* ── PDA graph (inside sim panel) ── *//* PDA graph nodes *//* PDA graph edges *//* Simulation highlighting *//* ── Simulation panel ── *//* Result banner */
+
+      /* Configurations bar */
+      #sim-configs-bar {
+        flex-shrink: 0;
+        display: none;
+        padding: var(--sp-3) var(--sp-5);
+        border-top: 1px solid var(--border-lo);
+        gap: var(--sp-2) var(--sp-3);
+        flex-wrap: wrap;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: var(--fs-2xs);
+        background: var(--bg-panel);
+        max-height: 80px;
+        overflow-y: auto;
+      }/* ── Configuration tree ── *//* Tree nodes *//* Tree edges */
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../../index.html">PDA Simulator</a></h1>
+    </div>
+
+    <div id="panels">
+      <!-- 1. PDA Definition -->
+      <div class="panel" id="p-def" data-priority="2">
+        <div class="panel-header">
+          <span class="panel-title">PDA Definition</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-bar">
+            <select id="examples-select" class="ui-select ui-select--grow" onchange="loadExamplePDA(this.value)">
+              <option value="">Example…</option>
+            </select>
+          </div>
+          <div id="def-scroll" class="ui-scroll">
+            <!-- States section -->
+            <div>
+              <div class="ui-section-label">States</div>
+              <div id="states-table-wrap"><!-- rendered by JS --></div>
+            </div>
+            <!-- Acceptance mode -->
+            <div id="accept-mode-row" class="ui-field">
+              <span>Accept by:</span>
+              <label>
+                <input type="radio" name="accept-mode" value="final-state" checked
+                       onchange="setAcceptMode('final-state')">
+                final state
+              </label>
+              <label>
+                <input type="radio" name="accept-mode" value="empty-stack"
+                       onchange="setAcceptMode('empty-stack')">
+                empty stack
+              </label>
+            </div>
+
+            <!-- Initial stack symbol -->
+            <div id="init-stack-row" class="ui-field">
+              <span>Initial stack symbol:</span>
+              <input id="init-stack-input" class="ui-input ui-input--sm" type="text" maxlength="4"
+                     value="⊥" oninput="onInitStackChange()" />
+            </div>
+            <!-- Rules section -->
+            <div>
+              <div class="ui-section-label">Transition rules &nbsp;
+                <span style="font-style:italic;text-transform:none;letter-spacing:0">
+                  δ(from, input, pop) → (to, push)
+                </span>
+              </div>
+              <div id="rules-table-wrap"><!-- rendered by JS --></div>
+            </div>
+          </div>
+          <div class="ui-footer">
+            <button class="btn" onclick="addState()">+ State</button>
+            <button class="btn" onclick="addRule()">+ Rule</button>
+            <span class="ui-hint">
+              Leave <code>input</code> blank for ε. Leave <code>pop</code>/<code>push</code>
+              blank for no-pop/no-push. Push string: leftmost symbol becomes new stack top.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. Simulation + Graph -->
+      <div class="panel" id="p-sim" data-priority="3">
+        <div class="panel-header">
+          <span class="panel-title">Simulation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('pda-sim');" title="PDA simulation algorithm">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <!-- Controls -->
+          <div class="ui-sim">
+            <div class="ui-sim__row">
+              <div class="input-group">
+                <input id="sim-string-input" class="ui-input ui-input--lg" type="text" spellcheck="false" placeholder="enter string…" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()"  title="Restart" disabled></button>
+                <button class="btn"              id="btn-sim-back"  onclick="simBack()"   disabled>&#8249; Back</button>
+                <button class="btn primary"      id="btn-sim-step"  onclick="simStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all"   onclick="simRunAll()" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="sim-log-bar" class="ui-logbar"></div>
+          </div>
+          <!-- Accept / Reject banner -->
+          <div id="sim-result" class="ui-result"></div>
+          <!-- PDA graph -->
+          <div id="pda-graph-wrap" class="ui-canvas">
+            <svg id="pda-svg">
+              <g id="pda-graph-root"></g>
+            </svg>
+            <div id="pda-graph-empty" class="ui-canvas__empty">Define a PDA above.</div>
+          </div>
+          <!-- Configurations display -->
+          <div id="sim-configs-bar"></div>
+        </div>
+      </div>
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Configuration tree -->
+      <div class="panel" id="p-tree" data-priority="1">
+        <div class="panel-header">
+          <span class="panel-title">Configuration Tree</span>
+          <button class="collapse-btn"
+                  onclick="event.stopPropagation(); toggleCollapse('p-tree');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="tree-wrap" class="ui-canvas">
+            <svg id="tree-svg">
+              <defs>
+                <marker id="tree-arrow" markerWidth="7" markerHeight="7"
+                        refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L7,3 z" fill="var(--text-dim)" />
+                </marker>
+              </defs>
+              <g id="tree-root"></g>
+            </svg>
+            <div id="tree-empty" class="ui-canvas__empty">Enter a PDA and a string to see the configuration tree.</div>
+          </div>
+          <div id="tree-info" class="ui-explain" hidden></div>
+        </div>
+      </div>
+    </div><!-- #panels -->
+
+    <!-- Algorithm modal -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1"
+         onclick="if(event.target===this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../../shared/algo/grammar.js?v=39525f46"></script>
+    <script src="../../shared/algo/panels.js?v=23a37100"></script>
+    <script src="../../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
+    <script src="../../shared/algo/states.js?v=107884d8"></script>
+    <script src="../../shared/algo/pda.js?v=f367700e"></script>
+    <script src="../../shared/shared.js?v=98590a79"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=dd81c4e8"></script>
+    <script src="../../shared/view-menu.js?v=d1c37b50"></script>
+    <script src="guide.js?v=7157dbd6"></script>
+    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script>
+      initResize("rh-1", "p-def", +1);
+      initResize("rh-2", "p-tree", -1);
+      initAlgoModal();
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ALGORITHM MODAL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PC_PDA_SIM = pcBlock(
+        "PDA Simulation",
+        [
+          { label: "Input",  sym: it("M") + " = (Q, Σ, Γ, δ, q₀, Z₀, F)", desc: "nondeterministic PDA" },
+          { label: "",       sym: it("w") + " = a₁a₂…aₙ",                  desc: "input string" },
+          { label: "Output", sym: "accept / reject",                          desc: "" },
+        ],
+        `configs ${_la} ε-closure({(q₀, Z₀)})${cm("initial config; ε-close immediately")}
+for i ${_in} 1..n:${cm("consume each input symbol")}
+    next ${_la} ${_emp}
+    for each (q, γ) ${_in} configs:
+        for each (p, γ') ${_in} δ(q, aᵢ, top(γ)):${cm("symbol transition")}
+            next ${_la} next ${_cup} {(p, γ' · tail(γ))}
+        if top(γ) = ${_emp}: also try rules with pop = ε
+    configs ${_la} ε-closure(next)${cm("ε-close after each symbol")}
+    if configs = ${_emp}: ${kw("reject")}
+if configs ∩ (F × Γ*) ${_neq} ${_emp}: ${kw("accept")}${cm("some config in accepting state")}
+else: ${kw("reject")}`
+      );
+
+      function openAlgoModal(key) {
+        const modeLabel = pdaAcceptMode === "empty-stack" ? "empty stack" : "final state";
+        const configs = {
+          "pda-sim": { title: "PDA Simulation", subtitle: `nondeterministic, accept by ${modeLabel}`, pc: PC_PDA_SIM },
+        };
+        const cfg = configs[key];
+        if (!cfg) return;
+        document.getElementById("algo-title").textContent    = cfg.title;
+        document.getElementById("algo-subtitle").textContent = cfg.subtitle || "";
+        document.getElementById("algo-body").innerHTML       = cfg.pc;
+        document.getElementById("algo-overlay").classList.remove("hidden");
+        const closeBtn = document.querySelector(".algo-close");
+        if (closeBtn) closeBtn.focus();
+      }
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && isAlgoModalOpen()) closeAlgoModal();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PDA STATE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let pdaStates      = ["q0", "q1", "q2"];
+      let pdaStartIdx    = 0;
+      let pdaAccepts     = new Set([2]);
+      let pdaRules       = [];   // [{ from, input, pop, to, push }]
+      let pdaInitStack   = "⊥";
+      let pdaAcceptMode  = "final-state";  // "final-state" | "empty-stack"
+
+      function isAcceptingConfig(c) {
+        return pdaIsAccepting(currentPDA(), c);
+      }
+
+      function setAcceptMode(mode) {
+        pdaAcceptMode = mode;
+        simRun();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // MUTATION HELPERS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function addState() {
+        const name = freshStateName(pdaStates);
+        pdaStates.push(name);
+        renderStatesTable();
+        onPDAChange();
+      }
+
+      function removeState(idx) {
+        const removed = removeStateAt({ states: pdaStates, start: pdaStartIdx, accepts: pdaAccepts }, idx);
+        if (!removed) return;
+        const name = removed.name;
+        pdaStates.splice(idx, 1);
+        pdaStartIdx = removed.start;
+        pdaAccepts = removed.accepts;
+        // Remove rules referencing this state
+        pdaRules = pdaRules.filter(r => r.from !== name && r.to !== name);
+        renderStatesTable();
+        renderRulesTable();
+        onPDAChange();
+      }
+
+      function setStart(idx) {
+        pdaStartIdx = idx;
+        rerenderStateNameCells();
+        onPDAChange();
+      }
+
+      function toggleAccept(idx, checked) {
+        if (checked) pdaAccepts.add(idx);
+        else pdaAccepts.delete(idx);
+        rerenderStateNameCells();
+        onPDAChange();
+      }
+
+      function rerenderStateNameCells() {
+        UI.table.refreshStates((i) => UI.table.kind(i === pdaStartIdx, pdaAccepts.has(i)));
+      }
+
+      function addRule() {
+        pdaRules.push({ from: pdaStates[pdaStartIdx] || "", input: "", pop: "", to: "", push: "" });
+        renderRulesTable();
+        // Don't trigger onPDAChange here — incomplete rule
+      }
+
+      function removeRule(idx) {
+        pdaRules.splice(idx, 1);
+        renderRulesTable();
+        onPDAChange();
+      }
+
+      function onRuleInput(idx, field, value) {
+        pdaRules[idx][field] = value;
+        onPDAChange();
+      }
+
+      function onInitStackChange() {
+        pdaInitStack = document.getElementById("init-stack-input").value.trim();
+        onPDAChange();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DEFINITION TABLE RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderStatesTable() {
+        const T = UI.table;
+        let h = T.open() + "<thead><tr>";
+        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting state" }) + T.th("state", { left: true });
+        h += "</tr></thead><tbody>";
+        for (let i = 0; i < pdaStates.length; i++) {
+          const isStart = i === pdaStartIdx;
+          const isAccept = pdaAccepts.has(i);
+          h += `<tr data-state="${i}">`;
+          h += T.rm(`removeState(${i})`, "Remove state");
+          h += T.marker(`<input type="radio" name="pda-start" ${isStart ? "checked" : ""} onchange="setStart(${i})">`);
+          h += T.marker(`<input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)">`);
+          h += T.state(pdaStates[i], T.kind(isStart, isAccept));
+          h += "</tr>";
+        }
+        h += "</tbody></table>";
+        document.getElementById("states-table-wrap").innerHTML = h;
+      }
+
+      function renderRulesTable() {
+        const wrap = document.getElementById("rules-table-wrap");
+        if (pdaRules.length === 0) {
+          wrap.innerHTML = `<div class="ui-hint">No rules. Click + Rule to add.</div>`;
+          return;
+        }
+        const T = UI.table;
+        let h = T.open() + "<thead><tr>";
+        h += T.th("") + T.th("from") + T.th("input") + T.th("pop") + T.th("→", { muted: true }) + T.th("to") + T.th("push");
+        h += "</tr></thead><tbody>";
+        const field = (i, f, value, extra, opts) =>
+          T.input(value, `placeholder="${opts.muted ? "ε" : "–"}" data-ri="${i}" data-field="${f}"${extra}`, opts);
+        for (let i = 0; i < pdaRules.length; i++) {
+          const r = pdaRules[i];
+          const fromValid = pdaStates.includes(r.from) || r.from === "";
+          const toValid   = pdaStates.includes(r.to)   || r.to   === "";
+          const stateAttrs = ` data-trans-type="states" oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"`;
+          const plainAttrs = ` oninput="onRuleFieldInput(this)"`;
+          h += `<tr data-rule="${i}">`;
+          h += T.rm(`removeRule(${i})`, "Remove rule");
+          h += field(i, "from",  r.from,  stateAttrs, { invalid: !fromValid });
+          h += field(i, "input", r.input, plainAttrs, { muted: true, size: "narrow" });
+          h += field(i, "pop",   r.pop,   plainAttrs, { muted: true, size: "narrow" });
+          h += T.cell("→");
+          h += field(i, "to",    r.to,    stateAttrs, { invalid: !toValid });
+          h += field(i, "push",  r.push,  plainAttrs, { muted: true });
+          h += "</tr>";
+        }
+        h += "</tbody></table>";
+        wrap.innerHTML = h;
+      }
+
+      function onRuleFieldInput(input) {
+        const i     = parseInt(input.dataset.ri, 10);
+        const field = input.dataset.field;
+        pdaRules[i][field] = input.value;
+        // Validate from/to
+        if (field === "from" || field === "to") {
+          const valid = pdaStates.includes(input.value) || input.value === "";
+          input.classList.toggle("invalid", !valid);
+        }
+        onPDAChange();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PDA GRAPH  (D3 + Dagre)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PDA_R = 16;
+
+      const pdaGraph = createGraphView("pda", { hasNodes: () => pdaStates.length > 0, fallbackWidth: 400 });
+      function fitPDA() { pdaGraph.fit(); }
+
+      function ruleLabel(r) {
+        const inp  = r.input === "" ? "ε" : r.input;
+        const pop  = r.pop   === "" ? "ε" : r.pop;
+        const push = r.push  === "" ? "ε" : r.push;
+        return `${inp}, ${pop}/${push}`;
+      }
+
+      function renderPDAGraph() {
+        // One edge per (from, to) pair with one stacked label per rule; self-loops separately.
+        const edgeMap = new Map(); // "fi-ti" → { from, to, labels[], eps }
+        const loopMap = new Map(); // stateIdx → { node, labels[], eps }
+        for (let ri = 0; ri < pdaRules.length; ri++) {
+          const r = pdaRules[ri];
+          const fi = pdaStates.indexOf(r.from);
+          const ti = pdaStates.indexOf(r.to);
+          if (fi === -1 || ti === -1) continue;
+          let e;
+          if (fi === ti) {
+            if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], ids: [], eps: true });
+            e = loopMap.get(fi);
+          } else {
+            const k = fi + "-" + ti;
+            if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], ids: [], eps: true });
+            e = edgeMap.get(k);
+          }
+          e.labels.push(ruleLabel(r));
+          e.ids.push(ri);
+          if (r.input !== "") e.eps = false;
+        }
+        drawAutomatonGraph("pda", pdaGraph, {
+          nodes: pdaStates.map((name, i) => ({ label: name, accepting: pdaAccepts.has(i) })),
+          start: pdaStartIdx,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          radius: PDA_R,
+          ranksep: 70,
+          onHover: pdaHover,
+          onNodeHover: pdaHoverState,
+        });
+      }
+
+      // Hovering a rule anywhere highlights it everywhere: its edge and label in the graph,
+      // its row in the definition table, and the edges of the configuration tree it produced.
+      // `rules` is a list of rule indices, or null.
+      function pdaHover(rules) {
+        const set = new Set(rules || []);
+        setGraphHot("pda", rules);
+        for (const tr of document.querySelectorAll("#rules-table-wrap tr[data-rule]")) tr.classList.toggle("is-hot", set.has(+tr.dataset.rule));
+        for (const el of document.querySelectorAll("#tree-root [data-rules]")) el.classList.toggle("is-hot", el.dataset.rules.split(",").some((i) => set.has(+i)));
+      }
+      UI.hoverItems("rules-table-wrap", "tr[data-rule]", (tr) => [+tr.dataset.rule], pdaHover);
+
+      // Hovering a state (graph node, state row, configuration-tree node) highlights it in all three.
+      function pdaHoverState(i) {
+        setGraphNodeHot("pda", i);
+        for (const tr of document.querySelectorAll("#states-table-wrap tr[data-state]")) tr.classList.toggle("is-hot", +tr.dataset.state === i);
+        for (const el of document.querySelectorAll("#tree-root .ct-node[data-state]")) el.classList.toggle("is-hot", +el.dataset.state === i);
+      }
+      UI.hoverItems("states-table-wrap", "tr[data-state]", (tr) => +tr.dataset.state, pdaHoverState);
+
+      // Rule indices that explain a configuration-tree edge (the rule moving parent to child).
+      function treeEdgeRules(parent, child) {
+        const out = [];
+        pdaRules.forEach((r, i) => {
+          if (r.from === parent.state && r.to === child.state && r.input === child.edgeInput && r.pop === child.edgePop && r.push === child.edgePush) out.push(i);
+        });
+        return out;
+      }
+
+      function pdaHighlightStates(activeSet) {
+        highlightAutomatonStates("pda", activeSet);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PDA SIMULATION ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const MAX_CONFIGS = PDA_MAX_CONFIGS;
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION STEP ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simHistory  = [];  // _simHistory[i] = configs after consuming i chars
+      const verdict = UI.banner("sim-result");
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_simHistory.length ? _simHistory.length - 1 : null),
+        onChange: () => simRender(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
+      let _simChars    = [];
+
+      function simRun() {
+        saveShare();
+        const input = document.getElementById("sim-string-input").value;
+        _simChars = [...input];
+        sim.pos   = 0;
+        _selNode  = null;
+        verdict.hide();
+        buildSimTree();   // populates _simHistory, _treeFrontiers, _simTree
+        simRender();
+        simSetBtns();
+      }
+
+      function simRender() {
+        if (_simHistory.length === 0) return;
+        const configs  = _simHistory[sim.pos];
+        const maxDepth = _simChars.length;
+        const atEnd    = sim.pos === maxDepth;
+
+        // Log bar
+        const logBar = document.getElementById("sim-log-bar");
+        if (sim.pos === 0) {
+          const startName = pdaStates[pdaStartIdx];
+          logBar.innerHTML = `Start: <span style="color:var(--accent)">${esc(startName)}</span>` +
+            (pdaInitStack ? `  <span style="color:var(--text-lo)">stack: [${esc(pdaInitStack)}]</span>` : "");
+        } else if (!atEnd) {
+          const sym = _simChars[sim.pos - 1];
+          const names = [...new Set(configs.map(c => c.state))];
+          logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span>` +
+            ` → active: {${names.map(esc).join(", ") || "∅"}}` +
+            (configs.length >= MAX_CONFIGS
+              ? ` <span style="color:var(--red)">(≥${MAX_CONFIGS} configs, truncated)</span>` : "");
+        } else {
+          const acceptCfgs = configs.filter(isAcceptingConfig);
+          if (acceptCfgs.length > 0) {
+            const detail = pdaAcceptMode === "empty-stack"
+              ? `${acceptCfgs.length} config(s) with empty stack`
+              : `accepting state(s): {${[...new Set(acceptCfgs.map(c => c.state))].map(esc).join(", ")}}`;
+            logBar.innerHTML = `<span style="color:var(--green)">✓ Accepted</span> — ${detail}`;
+          } else {
+            const detail = pdaAcceptMode === "empty-stack"
+              ? "no config with empty stack"
+              : "no config in an accepting state";
+            logBar.innerHTML = `<span style="color:var(--red)">✗ Rejected</span> — ${detail}`;
+          }
+        }
+
+        // Result banner
+        if (atEnd) {
+          if (configs.some(isAcceptingConfig)) verdict.show("accept", "✓  ACCEPTED");
+          else                                  verdict.show("reject", "✗  REJECTED");
+        } else {
+          verdict.hide();
+        }
+
+        // Configs bar
+        renderConfigsBar(configs);
+
+        // Graph highlights
+        const activeIdxs = [...new Set(configs.map(c => pdaStates.indexOf(c.state)).filter(i => i >= 0))];
+        pdaHighlightStates(activeIdxs);
+
+        // Configuration tree
+        renderTree();
+      }
+
+      function renderConfigsBar(configs) {
+        const bar = document.getElementById("sim-configs-bar");
+        if (configs.length === 0) { bar.style.display = "none"; return; }
+        bar.style.display = "flex";
+        let h = `<span class="ui-label">Configs:</span>`;
+        const shown = configs.slice(0, MAX_CONFIGS);
+        for (const c of shown) {
+          const isAccept = isAcceptingConfig(c);
+          const stackStr = c.stack.length > 0
+            ? c.stack.slice().reverse().join("") + " ↑"  // display: bottom…top↑
+            : "∅";
+          const cls = "ui-badge" + (isAccept ? " ui-badge--accept" : "");
+          h += `<span class="${cls}">(<span class="ui-badge__em">${esc(c.state)}</span>, ${esc(stackStr)})</span>`;
+        }
+        if (configs.length >= MAX_CONFIGS) {
+          h += `<span class="ui-badge ui-badge--reject" title="Configuration limit reached">≥${MAX_CONFIGS}</span>`;
+        }
+        bar.innerHTML = h;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CONFIGURATION TREE  (build + render)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simTree      = null;  // { vRoot, symDepth }
+      let _treeFrontiers = [];   // _treeFrontiers[i] = node[] in frontier at step i
+      const MAX_TREE_NODES = PDA_MAX_TREE_NODES;
+
+      function currentPDA() {
+        return {
+          states: pdaStates, start: pdaStartIdx, accepts: pdaAccepts,
+          rules: pdaRules, initStack: pdaInitStack, acceptMode: pdaAcceptMode,
+        };
+      }
+
+      // Algorithm lives in shared/algo/pda.js; this stores the result for the renderers.
+      function buildSimTree() {
+        const t = pdaBuildSimTree(currentPDA(), _simChars, MAX_TREE_NODES);
+        _treeFrontiers = t.frontiers;
+        _simHistory = t.history;
+        _simTree = { vRoot: t.vRoot, symDepth: t.symDepth };
+      }
+
+      // ── Tree renderer ──────────────────────────────────────
+
+      const TREE_NW = 72, TREE_NH = 36;
+
+      const _pdaTreeZoom = d3.zoom()
+        .scaleExtent([0.08, 6])
+        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", e => d3.select("#tree-root").attr("transform", e.transform));
+      d3.select("#tree-svg").call(_pdaTreeZoom).on("dblclick.zoom", null);
+      document.getElementById("tree-svg").addEventListener("dblclick", () => fitSimTree());
+
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => { if (_simTree) fitSimTree(); })
+          .observe(document.getElementById("tree-svg").parentElement);
+      }
+
+      function stackAbbrev(stack) {
+        if (!stack || stack.length === 0) return "∅";
+        const top = [...stack].reverse();
+        const str = top.slice(0, 3).join(" ");
+        return top.length > 3 ? str + " …" : str + " ↑";
+      }
+
+      function treeEdgeLabelStr(child) {
+        if (child.edgeInput === null) return "";
+        const inp  = child.edgeInput === "" ? "ε" : child.edgeInput;
+        const pop  = child.edgePop  === "" ? "ε" : child.edgePop;
+        const push = child.edgePush === "" ? "ε" : child.edgePush;
+        return `${inp}, ${pop}/${push}`;
+      }
+
+      function treeNodeStatus(pd, activeIds) {
+        if (pd.dead)     return "dead";
+        if (pd.accepted) return "accept";
+        if (pd.rejected) return "reject";
+        if (activeIds.has(pd.id)) return "active";
+        return "normal";
+      }
+
+      // Clicking a node selects it and explains that configuration in #tree-info.
+      let _selNode = null;   // id of the selected configuration, or null
+      let _selPos = null;    // simulation step it was selected at: stepping or editing closes the explanation
+      let _treeNodes = new Map(); // id → node, for the nodes currently drawn
+      function selectConfig(id) {
+        _selNode = _selNode === id ? null : id;
+        _selPos = sim.pos;
+        renderTree();
+      }
+      d3.select("#tree-svg").on("click", () => { if (_selNode !== null) selectConfig(_selNode); });
+
+      // "(q1, bb, A ⊥)": the textbook triple, stack top first.
+      const cfgTriple = (e) => `(${e.state}, ${e.remaining || "ε"}, ${e.stack.join("") || "ε"})`;
+
+      function renderTreeInfo(pd, ctx) {
+        if (!pd) { UI.explain("tree-info", null); return; }
+        const e = pdaExplainConfig(currentPDA(), _simChars, pd, ctx);
+        const stateIdx = pdaStates.indexOf(e.state);
+        const tags = (stateIdx === pdaStartIdx ? " <span class=\"ui-explain__tag\">start state</span>" : "") +
+          (pdaAccepts.has(stateIdx) ? " <span class=\"ui-explain__tag\">accepting state</span>" : "");
+        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Dead end", live: "Alive", expanded: "Expanded" }[e.role];
+        let arrival = "The configuration the simulation starts from: the start state, all input unread, and the initial stack symbol.";
+        if (e.arrival) {
+          const a = e.arrival;
+          const rules = treeEdgeRules(pd.parent, pd);
+          const rl = (x) => (x === "" ? "ε" : x);
+          const link = rules.length
+            ? ` the rule <span class="ui-explain__rule" data-rule="${rules[0]}">${esc(a.fromState)}, ${rl(a.input)}, ${rl(a.pop)} → ${esc(pd.state)}, ${rl(a.push)}</span>`
+            : " an ε/stack rule";
+          const acts = [a.input === "" ? "no input symbol read (an ε-move)" : `read ${esc(a.input)}`, a.pop === "" ? "popped nothing" : `popped ${esc(a.pop)}`, a.push === "" ? "pushed nothing" : `pushed ${esc(a.push)}`];
+          arrival = `From <b>${esc(cfgTriple({ state: a.fromState, remaining: _simChars.slice(pd.parent.symDepth).join(""), stack: a.fromStack }))}</b> by${link}: ${acts.join(", ")}.`;
+        }
+        UI.explain("tree-info", {
+          title: "Configuration " + cfgTriple(e),
+          onClose: () => selectConfig(pd.id),
+          facts: [
+            ["State", esc(e.state) + tags],
+            ["Input", `<span class="ui-explain__done">${esc(e.consumed)}</span><span class="ui-explain__cursor">▏</span>${e.remaining ? esc(e.remaining) : "<i>all read</i>"}`],
+            ["Stack", `${e.stack.length ? esc(e.stack.join(" ")) : "<i>empty</i>"} <span class="ui-explain__hint">(top at left)</span>`],
+          ],
+          lines: [arrival, UI.explainRole(e.role, roleLabel) + " " + esc(e.why) + (e.onAcceptPath && e.role !== "accepted" ? " It lies on an accepting path." : "")],
+        });
+      }
+      UI.hoverItems("tree-info", "[data-rule]", (el) => [+el.dataset.rule], pdaHover);
+
+      function renderTree() {
+        if (_selNode !== null && sim.pos !== _selPos) _selNode = null;
+        const svgRoot = d3.select("#tree-root");
+        svgRoot.selectAll("*").remove();
+
+        const emptyEl = document.getElementById("tree-empty");
+        if (!_simTree) { emptyEl.style.display = ""; renderTreeInfo(null); return; }
+        emptyEl.style.display = "none";
+
+        const realRoot = _simTree.vRoot.children[0];
+        if (!realRoot) { emptyEl.style.display = ""; renderTreeInfo(null); return; }
+
+        const revealDepth = sim.pos;
+        const activeFront = sim.pos < _treeFrontiers.length ? _treeFrontiers[sim.pos] : [];
+        const activeIds   = new Set(activeFront.map(n => n.id));
+
+        // Accepting-path highlight: trace ancestors of accepted leaf nodes
+        const acceptPathIds = new Set();
+        if (sim.pos === _simChars.length && _treeFrontiers.length > _simChars.length) {
+          for (const node of _treeFrontiers[_simChars.length]) {
+            if (node.accepted) {
+              let n = node;
+              while (n && n.state !== null) { acceptPathIds.add(n.id); n = n.parent; }
+            }
+          }
+        }
+
+        // Build D3 hierarchy, revealing only nodes with symDepth ≤ revealDepth
+        const hier = d3.hierarchy(realRoot, d => {
+          const vis = d.children.filter(c => c.symDepth <= revealDepth);
+          return vis.length > 0 ? vis : null;
+        });
+
+        d3.tree().nodeSize([TREE_NW + 12, TREE_NH + 58])(hier);
+
+        // ── Edges (drawn before nodes so nodes sit on top) ──
+        for (const lnk of hier.links()) {
+          const pd = lnk.target.data;
+          const x1 = lnk.source.x, y1 = lnk.source.y + TREE_NH / 2;
+          const x2 = lnk.target.x, y2 = lnk.target.y - TREE_NH / 2;
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+          const isEps    = pd.edgeInput === "";
+          const st       = treeNodeStatus(pd, activeIds);
+          const onAccept = acceptPathIds.has(pd.id);
+
+          let pc = "ct-edge";
+          if (isEps)     pc += " ct-edge--eps";
+          if (onAccept)  pc += " is-accept-path";
+          else if (st === "active")               pc += " is-active";
+          else if (st === "accept")               pc += " is-accept";
+          else if (st === "dead" || st === "reject") pc += " is-dead";
+
+          const curve = `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+          const rules = treeEdgeRules(lnk.source.data, pd).join(",");
+          const hover = (sel) => { if (rules) sel.attr("data-rules", rules).on("mouseenter", () => pdaHover(rules.split(",").map(Number))).on("mouseleave", () => pdaHover(null)); return sel; };
+          svgRoot.append("path")
+            .attr("class", pc)
+            .attr("d", curve)
+            .call(hover);
+          svgRoot.append("path").attr("class", "ct-hit").attr("d", curve).call(hover);
+
+          const lbl = treeEdgeLabelStr(pd);
+          if (lbl) {
+            let lc = "ct-edge-label";
+            if (onAccept)            lc += " is-accept-path";
+            else if (st === "active")  lc += " is-active";
+            else if (st === "accept")  lc += " is-accept";
+            else if (st === "dead" || st === "reject") lc += " is-dead";
+            svgRoot.append("text")
+              .attr("class", lc)
+              .attr("x", mx + 5).attr("y", my - 3)
+              .attr("text-anchor", "start")
+              .call(hover)
+              .text(lbl);
+          }
+        }
+
+        // ── Entry arrow ──
+        svgRoot.append("line")
+          .attr("class", "ag-start")
+          .attr("x1", hier.x).attr("y1", hier.y - TREE_NH / 2 - 14)
+          .attr("x2", hier.x).attr("y2", hier.y - TREE_NH / 2 - 1)
+          .attr("marker-end", "url(#tree-arrow)");
+
+        // ── Nodes ──
+        hier.each(dn => {
+          const pd = dn.data;
+          const st = treeNodeStatus(pd, activeIds);
+          const g  = svgRoot.append("g")
+            .attr("class", "ct-node" + (st !== "normal" ? " is-" + st : "") + (pd.id === _selNode ? " is-selected" : ""))
+            .on("click", (ev) => { ev.stopPropagation(); selectConfig(pd.id); })
+            .call((g) => g.append("title").text("Click to explain this configuration"))
+            .attr("data-state", pdaStates.indexOf(pd.state))
+            .on("mouseenter", () => pdaHoverState(pdaStates.indexOf(pd.state)))
+            .on("mouseleave", () => pdaHoverState(null))
+            .attr("transform", `translate(${dn.x - TREE_NW / 2},${dn.y - TREE_NH / 2})`);
+          g.append("rect").attr("width", TREE_NW).attr("height", TREE_NH).attr("rx", 3);
+          g.append("text").attr("class", "ct-label")
+            .attr("x", TREE_NW / 2).attr("y", 13)
+            .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+            .text(pd.state);
+          g.append("text").attr("class", "ct-sub")
+            .attr("x", TREE_NW / 2).attr("y", 27)
+            .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+            .text(stackAbbrev(pd.stack));
+          if (pd.dead) {
+            g.append("text").attr("class", "ct-dead-mark")
+              .attr("x", TREE_NW - 2).attr("y", 8)
+              .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+              .text("✗");
+          }
+        });
+
+        // The explanation follows the selection, as long as that node is currently drawn.
+        const sel = hier.descendants().find((d) => d.data.id === _selNode);
+        if (!sel) _selNode = null;
+        renderTreeInfo(sel ? sel.data : null, sel ? { active: activeIds.has(_selNode), onAcceptPath: acceptPathIds.has(_selNode) } : null);
+
+        fitSimTree();
+      }
+
+      function fitSimTree() {
+        try {
+          const rootEl = document.getElementById("tree-root");
+          const bb     = rootEl.getBBox();
+          const svgEl  = document.getElementById("tree-svg");
+          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 340;
+          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 400;
+          if (!bb || bb.width < 1) return;
+          const pad = 28;
+          const sc  = Math.min(1.2,
+            Math.min((vw - pad) / (bb.width  + pad),
+                     (vh - pad) / (bb.height + pad)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = pad / 2 - bb.y * sc; // top of the drawing (the entry arrow) sits pad/2 below the top edge
+          d3.select("#tree-svg")
+            .call(_pdaTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch (e) {}
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const EXAMPLES = {};
+
+      function loadExamplePDA(k) {
+        if (!k) return;
+        document.getElementById("examples-select").value = k;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        pdaStates    = [...ex.states];
+        pdaStartIdx  = ex.states.indexOf(ex.start);
+        pdaAccepts   = new Set(ex.accepts.map(s => ex.states.indexOf(s)));
+        pdaRules     = ex.rules ? ex.rules.map(r => ({ ...r })) : [];
+        pdaInitStack  = ex.initStack !== undefined ? ex.initStack : "Z";
+        document.getElementById("init-stack-input").value = pdaInitStack;
+        pdaAcceptMode = ex.acceptMode || "final-state";
+        document.querySelector(`input[name="accept-mode"][value="${pdaAcceptMode}"]`).checked = true;
+        renderStatesTable();
+        renderRulesTable();
+        onPDAChange();
+        _strExamples = ex.strings || [];
+      }
+
+      let _strExamples = []; // sample strings of the loaded example, offered in the string input's menu
+      UI.stringInput("sim-string-input", {
+        examples: () => _strExamples,
+        onPick: () => simRun(),
+        // Random words over the rules' input symbols, preferring one the PDA accepts.
+        random() {
+          const alphabet = [...new Set(pdaRules.map((r) => r.input).filter((c) => c))];
+          return strSampleAccepted(alphabet, (w) => pdaAcceptsString(currentPDA(), w).accepted, Math.random).value;
+        },
+      });
+
+      let sharedStateApplied = false; // set when the page was restored from a shareable link
+      loadAutomataExamples("examples.json", "examples-select", EXAMPLES, loadExamplePDA, () => !sharedStateApplied);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CHANGE HANDLER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function onPDAChange() {
+        renderPDAGraph();
+        simRun();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // KEYBOARD SHORTCUTS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // Arrow-key stepping comes from shared.js (registerStepper): the Simulation panel
+      // has key focus, shown by its tinted header.
+      registerStepper("p-sim", { step: simStepFwd, back: simBack, reset: simReset, end: simRunAll });
+
+      document.getElementById("sim-string-input").addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); simRun(); }
+      });
+      document.getElementById("sim-string-input").addEventListener("input", () => simRun());
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // INIT
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        pda: { states: pdaStates, start: pdaStartIdx, accepts: [...pdaAccepts], initStack: pdaInitStack, acceptMode: pdaAcceptMode, rules: pdaRules },
+        s: document.getElementById("sim-string-input").value,
+      }));
+
+      function applyShareState() {
+        const st = shareValidatePDA(readShareState());
+        if (!st) return;
+        sharedStateApplied = true;
+        const d = st.pda;
+        pdaStates = d.states;
+        pdaStartIdx = d.start;
+        pdaAccepts = new Set(d.accepts);
+        pdaRules = d.rules;
+        pdaInitStack = d.initStack;
+        pdaAcceptMode = d.acceptMode;
+        document.getElementById("init-stack-input").value = pdaInitStack;
+        document.querySelector(`input[name="accept-mode"][value="${pdaAcceptMode}"]`).checked = true;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
+      initPanelStorage("pda-tool-v1", ["p-def", "p-sim", "p-tree"]);
+      loadPanelState();
+      applyShareState();
+      renderStatesTable();
+      renderRulesTable();
+      onPDAChange();
+    </script>
+  </body>
+</html>

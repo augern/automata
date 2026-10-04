@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>NFA Simulator</title>
+    <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
+    <link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/ui.css?v=8c6eec2c" />
+    <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-def { --pw: 360; --pmin: 280px; }
+      #p-nfa { --pw: 340; --pmin: 200px; }
+      #p-sim { --pw: 700; --pmin: 260px; }
+
+      /* ── Panel widths ── */
+      #p-def  { width: 360px; }/* ── Definition panel ── *//* Transition table *//* Inline transition input *//* Remove-state button in first column *//* Remove-symbol button in header *//* Radio / checkbox markers *//* Definition footer *//* ── NFA graph panel ── *//* NFA graph — circles for states *//* Edges *//* Simulation highlighting *//* ── Simulation panel ── */
+      /* Tape */
+      #sim-tape-wrap {
+        flex-shrink: 0;
+        padding: var(--sp-4) var(--sp-5) var(--sp-3);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--sp-5);
+        border-bottom: 1px solid var(--border-lo);
+      }
+      .tape {
+        display: flex;
+        gap: var(--sp-1);
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .tape-cell {
+        width: 24px;
+        height: 24px;
+        border: 1.5px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: var(--fs-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.12s, background 0.12s, color 0.12s, opacity 0.12s;
+      }
+      .tape-cell.tc-consumed { opacity: 0.28; border-color: var(--border-lo); }
+      .tape-cell.tc-current {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+        color: var(--amber);
+        font-weight: bold;
+      }
+      .tape-eof {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: var(--fs-xs);
+        color: var(--text-lo);
+      }/* Result banner *//* Tree *//* Tree nodes *//* Accept double-ring *//* Depth axis labels */
+
+      /* ε-closure chip shown at depth-0 nodes when ε-closure > {start}
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../../index.html">NFA Simulator</a></h1>
+    </div>
+
+    <div id="panels">
+      <!-- 1. NFA Definition -->
+      <div class="panel" id="p-def" data-priority="2">
+        <div class="panel-header">
+          <span class="panel-title">NFA Definition</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-bar">
+            <select id="examples-select" class="ui-select ui-select--grow" onchange="loadExampleNFA(this.value)">
+              <option value="">Example…</option>
+            </select>
+          </div>
+          <div id="def-table-scroll" class="ui-scroll">
+            <!-- transition table rendered by JS -->
+          </div>
+          <div class="ui-footer">
+            <button class="btn" onclick="addState()">+ State</button>
+            <button class="btn" onclick="addSymbol()">+ Symbol</button>
+            <span class="ui-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for ∅.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. NFA Graph -->
+      <div class="panel" id="p-nfa" data-priority="1">
+        <div class="panel-header">
+          <span class="panel-title">NFA</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="nfa-graph-wrap" class="ui-canvas">
+            <svg id="nfa-svg">
+              <g id="nfa-graph-root"></g>
+            </svg>
+            <div id="nfa-graph-empty" class="ui-canvas__empty">Define an NFA above.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Simulation -->
+      <div class="panel" id="p-sim" data-priority="3">
+        <div class="panel-header">
+          <span class="panel-title">Simulation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('nfa-sim');" title="NFA simulation algorithm">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-sim">
+            <div class="ui-sim__row">
+              <div class="input-group">
+                <input id="sim-string-input" class="ui-input ui-input--lg" type="text" spellcheck="false" placeholder="enter string…" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()" title="Restart" disabled></button>
+                <button class="btn" id="btn-sim-back"  onclick="simBack()"    disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-sim-step" onclick="simStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all" onclick="simRunAll()" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="sim-log-bar" class="ui-logbar"></div>
+          </div>
+          <!-- Accept / Reject banner -->
+          <div id="sim-result" class="ui-result"></div>
+          <!-- Tape -->
+          <div id="sim-tape-wrap" style="display:none">
+            <div class="tape" id="sim-tape"></div>
+            <span class="tape-eof">⊣</span>
+          </div>
+          <!-- Tree -->
+          <div id="sim-tree-wrap" class="ui-canvas">
+            <svg id="sim-tree-svg">
+              <defs>
+                <marker id="tree-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L7,3 z" fill="var(--text-dim)" />
+                </marker>
+              </defs>
+              <g id="sim-tree-root"></g>
+            </svg>
+            <div id="sim-tree-empty" class="ui-canvas__empty">Define an NFA and enter a string to simulate.</div>
+          </div>
+          <div id="tree-info" class="ui-explain" hidden></div>
+        </div>
+      </div>
+    </div>
+    <!-- #panels -->
+
+    <!-- Algorithm modal (reused from shared pattern) -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1" onclick="if(event.target===this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../../shared/algo/grammar.js?v=39525f46"></script>
+    <script src="../../shared/algo/panels.js?v=23a37100"></script>
+    <script src="../../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
+    <script src="../../shared/algo/states.js?v=107884d8"></script>
+    <script src="../../shared/algo/nfa.js?v=7110a99c"></script>
+    <script src="../../shared/shared.js?v=98590a79"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=dd81c4e8"></script>
+    <script src="../../shared/view-menu.js?v=d1c37b50"></script>
+    <script src="guide.js?v=90bead1b"></script>
+    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script>
+      // shared.js stubs
+      function renderTree() {}
+
+      initResize("rh-1", "p-def", +1);
+      initResize("rh-2", "p-nfa", +1);
+      initAlgoModal();
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ALGORITHM MODAL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PC_NFA_SIM = pcBlock(
+        "NFA Simulation",
+        [
+          { label: "Input",  sym: it("M") + " = (Q, Σ, δ, q₀, F)", desc: "ε-NFA" },
+          { label: "",       sym: it("w") + " = a₁a₂…aₙ",          desc: "input string" },
+          { label: "Output", sym: "accept / reject",                 desc: "" },
+        ],
+        `current ${_la} {q₀}${cm("start from q₀; ε-closure taken per step below")}
+for i ${_in} 1..n:${cm("consume each input symbol")}
+    reach ${_la} ${_emp}
+    for each q ${_in} current:
+        for each r ${_in} ε-closure({q}):${cm("ε-expand before sym")}
+            reach ${_la} reach ${_cup} ε-closure(δ(r, aᵢ))${cm("sym-transition + ε-close after")}
+    current ${_la} reach
+    if current = ${_emp}: ${kw("reject")}${cm("no active states")}
+if ε-closure(current) ∩ F ${_neq} ${_emp}: ${kw("accept")}${cm("n=0: checks ε-closure({q₀})")}
+else: ${kw("reject")}`
+      );
+
+      function openAlgoModal(key) {
+        const configs = {
+          "nfa-sim": { title: "NFA Simulation", subtitle: "ε-closure fold", pc: PC_NFA_SIM },
+        };
+        const cfg = configs[key];
+        if (!cfg) return;
+        document.getElementById("algo-title").textContent    = cfg.title;
+        document.getElementById("algo-subtitle").textContent = cfg.subtitle || "";
+        document.getElementById("algo-body").innerHTML       = cfg.pc;
+        document.getElementById("algo-overlay").classList.remove("hidden");
+        const closeBtn = document.querySelector(".algo-close");
+        if (closeBtn) closeBtn.focus();
+      }
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && isAlgoModalOpen()) closeAlgoModal();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NFA STATE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let nfaStates   = ["q0", "q1"];   // ordered list of state names
+      let nfaAlphabet = ["a"];           // user-editable symbols; ε always implicit
+      let nfaStartIdx = 0;               // index into nfaStates
+      let nfaAccepts  = new Set([1]);    // indices into nfaStates
+      let nfaTrans    = {                // nfaTrans[state][sym] = [state, ...]
+        "q0": { "a": ["q1"], "ε": [] },
+        "q1": { "a": [],     "ε": [] }
+      };
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NFA MUTATION HELPERS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function addState() {
+        const name = freshStateName(nfaStates);
+        nfaStates.push(name);
+        nfaTrans[name] = {};
+        for (const sym of nfaAlphabet) nfaTrans[name][sym] = [];
+        nfaTrans[name]["ε"] = [];
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function removeState(idx) {
+        const removed = removeStateAt({ states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts }, idx);
+        if (!removed) return; // keep at least one
+        const name = removed.name;
+        nfaStates.splice(idx, 1);
+        delete nfaTrans[name];
+        // Remove references from other states
+        for (const s of nfaStates) {
+          for (const sym of [...nfaAlphabet, "ε"]) {
+            if (nfaTrans[s] && nfaTrans[s][sym]) {
+              nfaTrans[s][sym] = nfaTrans[s][sym].filter(t => t !== name);
+            }
+          }
+        }
+        nfaStartIdx = removed.start;
+        nfaAccepts = removed.accepts;
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function addSymbol() {
+        let name = prompt("New symbol (single character):", "");
+        if (name === null) return;
+        name = name.trim();
+        if (!name || name === "ε") return;
+        if (nfaAlphabet.includes(name)) return;
+        nfaAlphabet.push(name);
+        for (const s of nfaStates) {
+          if (!nfaTrans[s]) nfaTrans[s] = {};
+          if (!nfaTrans[s][name]) nfaTrans[s][name] = [];
+        }
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function removeSymbol(idx) {
+        const sym = nfaAlphabet[idx];
+        if (sym === undefined) return;
+        nfaAlphabet.splice(idx, 1);
+        for (const s of nfaStates) {
+          if (nfaTrans[s]) delete nfaTrans[s][sym];
+        }
+        renderDefTable();
+        onNFAChange();
+      }
+
+      function setStart(idx) {
+        nfaStartIdx = idx;
+        rerenderStateNameCells();
+        onNFAChange();
+      }
+
+      function toggleAccept(idx, checked) {
+        if (checked) nfaAccepts.add(idx);
+        else nfaAccepts.delete(idx);
+        rerenderStateNameCells();
+        onNFAChange();
+      }
+
+      function rerenderStateNameCells() {
+        UI.table.refreshStates((i) => UI.table.kind(i === nfaStartIdx, nfaAccepts.has(i)));
+      }
+
+      function setTransCell(stateName, sym, value) {
+        if (!nfaTrans[stateName]) nfaTrans[stateName] = {};
+        const parts = value.split(",").map(s => s.trim()).filter(Boolean);
+        nfaTrans[stateName][sym] = parts;
+        onNFAChange();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DEFINITION TABLE RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderDefTable() {
+        const T = UI.table;
+        const allSyms = [...nfaAlphabet, "ε"];
+
+        let h = T.open() + "<thead><tr>";
+        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting state" }) + T.th("state", { left: true });
+        for (const [si, sym] of nfaAlphabet.entries()) {
+          h += T.th(esc(sym) + T.rmInline(`removeSymbol(${si})`, `Remove symbol '${sym}'`), { sym: true });
+        }
+        h += T.th("ε", { sym: true, muted: true });
+        h += "</tr></thead><tbody>";
+
+        for (let i = 0; i < nfaStates.length; i++) {
+          const sn = nfaStates[i];
+          const isStart = i === nfaStartIdx;
+          const isAccept = nfaAccepts.has(i);
+          h += `<tr data-si="${i}">`;
+          h += T.rm(`removeState(${i})`, "Remove state");
+          h += T.marker(`<input type="radio" name="nfa-start" ${isStart ? "checked" : ""} onchange="setStart(${i})">`);
+          h += T.marker(`<input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)">`);
+          h += T.state(sn, T.kind(isStart, isAccept));
+          for (const sym of allSyms) {
+            const val = (nfaTrans[sn] && nfaTrans[sn][sym]) ? nfaTrans[sn][sym].join(", ") : "";
+            h += T.input(val,
+              `placeholder="–" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
+              ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"`,
+              { muted: sym === "ε" });
+          }
+          h += "</tr>";
+        }
+        h += "</tbody></table>";
+        document.getElementById("def-table-scroll").innerHTML = h;
+      }
+
+      function onTransInput(input) {
+        const stateName = input.dataset.state;
+        const sym = input.dataset.sym;
+        setTransCell(stateName, sym, input.value);
+        validateTransInput(input);
+      }
+
+      function validateTransInput(input) {
+        const parts = input.value.split(",").map(s => s.trim()).filter(Boolean);
+        const bad = parts.some(p => !nfaStates.includes(p));
+        input.classList.toggle("invalid", bad);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NFA GRAPH RENDERING  (D3 + Dagre, circles for states)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const NFA_R = 16; // node circle radius
+
+      const nfaGraph = createGraphView("nfa", { hasNodes: () => nfaStates.length > 0, fallbackWidth: 340 });
+      function fitNFA() { nfaGraph.fit(); }
+
+      function renderNFAGraph() {
+        // One edge per (from, to) pair, labelled with all its symbols; self-loops separately.
+        const edgeMap = new Map(); // "f-t" → { from, to, labels[], eps }
+        const loopMap = new Map(); // stateIdx → { node, labels[], eps }
+        for (let fi = 0; fi < nfaStates.length; fi++) {
+          const sn = nfaStates[fi];
+          for (const sym of [...nfaAlphabet, "ε"]) {
+            for (const t of (nfaTrans[sn] && nfaTrans[sn][sym]) || []) {
+              const ti = nfaStates.indexOf(t);
+              if (ti === -1) continue;
+              const isEps = sym === "ε";
+              let e;
+              if (fi === ti) {
+                if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], ids: [], eps: true });
+                e = loopMap.get(fi);
+              } else {
+                const k = fi + "-" + ti;
+                if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], ids: [], eps: true });
+                e = edgeMap.get(k);
+              }
+              e.labels.push(sym);
+              e.ids.push(sn + "|" + sym);
+              if (!isEps) e.eps = false;
+            }
+          }
+        }
+        drawAutomatonGraph("nfa", nfaGraph, {
+          nodes: nfaStates.map((name, i) => ({ label: name, accepting: nfaAccepts.has(i) })),
+          start: nfaStartIdx,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          radius: NFA_R,
+          ranksep: 64,
+          joinLabels: true,
+          onHover: nfaHoverEdges,
+          onNodeHover: nfaHoverState,
+        });
+      }
+
+      // Hovering links the graph and the definition table: an edge or label <-> the table
+      // cell(s) of that transition, a node <-> its state cell.
+      function nfaHoverEdges(ids) {
+        setGraphHot("nfa", ids);
+        const want = new Set(ids || []);
+        for (const inp of document.querySelectorAll("#def-table-scroll input[data-sym]")) {
+          inp.closest("td").classList.toggle("is-hot", want.has(inp.dataset.state + "|" + inp.dataset.sym));
+        }
+      }
+      function nfaHoverState(i) {
+        setGraphNodeHot("nfa", i);
+        for (const tr of document.querySelectorAll("#def-table-scroll tr[data-si]")) {
+          tr.querySelector(".ui-td--state").classList.toggle("is-hot", +tr.dataset.si === i);
+        }
+      }
+      UI.hoverItems("def-table-scroll", "input[data-sym]", (inp) => [inp.dataset.state + "|" + inp.dataset.sym], nfaHoverEdges);
+      UI.hoverItems("def-table-scroll", "td.ui-td--state", (td) => +td.parentElement.dataset.si, nfaHoverState);
+
+      function nfaHighlightStates(activeSet, deadSet) {
+        highlightAutomatonStates("nfa", activeSet, deadSet);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ε-CLOSURE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // Thin wrappers binding the pure algorithms in shared/algo/nfa.js to the
+      // tool's current definition.
+      const MAX_TREE_NODES = NFA_MAX_TREE_NODES;
+      function currentNFA() {
+        return { states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts, trans: nfaTrans };
+      }
+      function epsClosure(stateNames) {
+        return nfaEpsClosure(currentNFA(), stateNames);
+      }
+      function buildSimTree(inputStr) {
+        return nfaBuildSimTree(currentNFA(), inputStr, MAX_TREE_NODES);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION TREE RENDERER  (D3)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const TREE_R = 13;       // node radius
+      const TREE_ROW_H = 72;   // vertical distance between depth levels
+      const TREE_COL_W = 48;   // min horizontal spacing between sibling nodes
+
+      const _simTreeZoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+        .on("zoom", e => d3.select("#sim-tree-root").attr("transform", e.transform));
+      d3.select("#sim-tree-svg").call(_simTreeZoom).on("dblclick.zoom", null);
+      document.getElementById("sim-tree-svg").addEventListener("dblclick", () => fitSimTree());
+
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => { if (_simTree) fitSimTree(); })
+          .observe(document.getElementById("sim-tree-svg").parentElement);
+      }
+
+      // Collect all nodes up to revealDepth
+      function collectVisible(vRoot, revealDepth) {
+        const nodes = [], edges = [];
+        function walk(node) {
+          if (node.depth > revealDepth) return;
+          if (node.depth >= 0) nodes.push(node); // skip virtual root
+          for (const c of node.children) {
+            if (c.depth <= revealDepth) {
+              edges.push({ parent: node.depth >= 0 ? node : null, child: c });
+              walk(c);
+            }
+          }
+        }
+        walk(vRoot);
+        return { nodes, edges };
+      }
+
+      // Assign x positions using a simple Reingold-Tilford-inspired approach
+      // (d3.tree() on the vRoot, exclude vRoot from render)
+      function layoutTree(vRoot, revealDepth) {
+        // Build d3 hierarchy from vRoot, filtering to revealDepth
+        function d3Node(n) {
+          const obj = { data: n, children: [] };
+          for (const c of n.children) {
+            if (c.depth <= revealDepth) obj.children.push(d3Node(c));
+          }
+          return obj;
+        }
+        const hier = d3.hierarchy(d3Node(vRoot), d => d.children);
+        const layout = d3.tree().nodeSize([TREE_COL_W, TREE_ROW_H]);
+        layout(hier);
+
+        // Extract position map: nodeId → {x, y}
+        const posMap = new Map();
+        hier.each(d => {
+          posMap.set(d.data.data.id, { x: d.x, y: d.y });
+        });
+        return posMap;
+      }
+
+      // Clicking a node selects it and explains that configuration in #tree-info.
+      let _selNode = null; // id of the selected node, or null
+      let _selPos = null;  // simulation step it was selected at: stepping or editing closes the explanation
+      function selectConfig(id) {
+        _selNode = _selNode === id ? null : id;
+        _selPos = sim.pos;
+        simRender();
+      }
+      d3.select("#sim-tree-svg").on("click", () => { if (_selNode !== null) selectConfig(_selNode); });
+
+      function renderTreeInfo(node, ctx) {
+        if (!node) { UI.explain("tree-info", null); return; }
+        const e = nfaExplainConfig(currentNFA(), _simChars, node, ctx);
+        const idx = nfaStates.indexOf(e.state);
+        const tags = (idx === nfaStartIdx ? ' <span class="ui-explain__tag">start state</span>' : "") + (nfaAccepts.has(idx) ? ' <span class="ui-explain__tag">accepting state</span>' : "");
+        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Dead end", live: "Alive", expanded: "Expanded" }[e.role];
+        let arrival = "The start state. Before any symbol is read, the NFA may already be in any state of its ε-closure; the first symbol is read from all of them.";
+        if (node.depth > 0) {
+          const a = e.arrival;
+          const hop = (from, to, n) => (n > 0 ? `${esc(from)} →ε ${esc(to)}, ` : "");
+          arrival = a
+            ? `From <b>${esc(a.fromState)}</b>: ${hop(a.fromState, a.via, a.epsBefore)}reading ${esc(a.sym)} by the transition ` +
+              `<span class="ui-explain__rule" data-cell="${esc(a.via)}|${esc(a.sym)}">${esc(a.via)} –${esc(a.sym)}→ ${esc(a.to)}</span>` +
+              (a.epsAfter > 0 ? `, then following ε-moves to ${esc(e.state)}` : "") + "."
+            : `From <b>${esc(node.parent.state)}</b> by reading ${esc(_simChars[node.depth - 1])}.`;
+        }
+        UI.explain("tree-info", {
+          title: `Configuration (${e.state}, ${e.remaining || "ε"})`,
+          onClose: () => selectConfig(node.id),
+          facts: [
+            ["State", esc(e.state) + tags],
+            ["Input", `<span class="ui-explain__done">${esc(e.consumed)}</span><span class="ui-explain__cursor">▏</span>${e.remaining ? esc(e.remaining) : "<i>all read</i>"}`],
+            ["ε-closure", esc("{" + e.closure.join(", ") + "}")],
+          ],
+          lines: [arrival, UI.explainRole(e.role, roleLabel) + " " + esc(e.why) + (e.onAcceptPath && e.role !== "accepted" ? " It lies on an accepting path." : "")],
+        });
+      }
+      UI.hoverItems("tree-info", "[data-cell]", (el) => [el.dataset.cell], nfaHoverEdges);
+
+      function renderSimTree(vRoot, revealDepth, inputChars) {
+        if (_selNode !== null && sim.pos !== _selPos) _selNode = null;
+        const svg  = document.getElementById("sim-tree-svg");
+        const root = d3.select("#sim-tree-root");
+        root.selectAll("*").remove();
+
+        const { nodes, edges } = collectVisible(vRoot, revealDepth);
+        document.getElementById("sim-tree-empty").style.display =
+          nodes.length === 0 ? "" : "none";
+        if (nodes.length === 0) { renderTreeInfo(null); return; }
+
+        const posMap = layoutTree(vRoot, revealDepth);
+
+        // Accepting-path highlight: trace ancestors of accepted leaf nodes (final step only)
+        const acceptPathIds = new Set();
+        if (revealDepth > _simTree.maxDepth) {
+          for (const { child } of edges) {
+            if (child.accepted) {
+              let n = child;
+              while (n && n !== vRoot) { acceptPathIds.add(n.id); n = n.parent; }
+            }
+          }
+        }
+
+        // Draw edges first
+        for (const { parent, child } of edges) {
+          if (!parent) continue; // child of vRoot — edges from vRoot are "hidden" (just connect to top)
+          const pp = posMap.get(parent.id);
+          const cp = posMap.get(child.id);
+          if (!pp || !cp) continue;
+
+          // Determine edge status/style
+          let cls = "ct-edge";
+          if (child.dead) cls += " is-dead";
+          else if (acceptPathIds.has(child.id)) cls += " is-accept-path";
+          else if (child.depth === revealDepth && !child.dead) cls += " is-active";
+          if (child.viaEps) cls += " ct-edge--eps";
+
+          // Edge label: "ε,…,ε,sym,ε,…,ε" reflecting actual ε-hop counts on each leg
+          const sym = inputChars[child.depth - 1];
+          const labelParts = [];
+          for (let i = 0; i < (child.epsCountBefore || 0); i++) labelParts.push("ε");
+          if (sym !== undefined) labelParts.push(sym);
+          for (let i = 0; i < (child.epsCountAfter  || 0); i++) labelParts.push("ε");
+          const edgeLabel = labelParts.join(",");
+
+          const edgeG = root.append("g");
+          edgeG.append("path")
+            .attr("class", cls)
+            .attr("d", `M${pp.x},${pp.y} C${pp.x},${(pp.y + cp.y) / 2} ${cp.x},${(pp.y + cp.y) / 2} ${cp.x},${cp.y}`);
+          if (edgeLabel) {
+            edgeG.append("text")
+              .attr("class", "ct-edge-label")
+              .attr("x", (pp.x + cp.x) / 2 + 5)
+              .attr("y", (pp.y + cp.y) / 2)
+              .attr("text-anchor", "start")
+              .text(edgeLabel);
+          }
+        }
+
+        // Draw entry arrow above the single root node
+        const rootChild = vRoot.children[0];
+        if (rootChild) {
+          const rp = posMap.get(rootChild.id);
+          if (rp) {
+            root.append("line")
+              .attr("class", "ag-start")
+              .attr("x1", rp.x).attr("y1", rp.y - TREE_R - 16)
+              .attr("x2", rp.x).attr("y2", rp.y - TREE_R - 1)
+              .attr("marker-end", "url(#tree-arrow)");
+          }
+        }
+
+        // Draw nodes
+        for (const node of nodes) {
+          const pos = posMap.get(node.id);
+          if (!pos) continue;
+
+          let cls = "ct-node";
+          if (node.dead) cls += " is-dead";
+          else if (node.accepted) cls += " is-accept";
+          else if (node.rejected) cls += " is-reject";
+          else if (node.depth === revealDepth) cls += " is-active";
+
+          if (node.id === _selNode) cls += " is-selected";
+          const ng = root.append("g")
+            .attr("class", cls)
+            .attr("transform", `translate(${pos.x},${pos.y})`)
+            .on("click", (ev) => { ev.stopPropagation(); selectConfig(node.id); });
+          ng.append("title").text("Click to explain this configuration");
+          ng.append("circle").attr("r", TREE_R);
+          if (node.accepted) {
+            ng.append("circle").attr("class", "ct-ring").attr("r", TREE_R - 3);
+          }
+          ng.append("text")
+            .attr("class", "ct-label")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(node.state);
+          if (node.dead) {
+            ng.append("text")
+              .attr("class", "ct-dead-mark")
+              .attr("text-anchor", "middle")
+              .attr("x", TREE_R + 1)
+              .attr("y", -TREE_R + 1)
+              .text("✗");
+          }
+        }
+
+        // The explanation follows the selection, as long as that node is currently drawn.
+        const sel = nodes.find((n) => n.id === _selNode);
+        if (!sel) _selNode = null;
+        renderTreeInfo(sel || null, sel ? { active: sel.depth === revealDepth && !sel.dead, onAcceptPath: acceptPathIds.has(sel.id) } : null);
+
+        // Compute centering transform from layout positions (avoids getBBox/clientWidth on SVG)
+        fitSimTreeFromLayout(posMap, vRoot, revealDepth);
+      }
+
+      // Fit using bounding box derived from d3 layout positions — no getBBox needed.
+      function fitSimTreeFromLayout(posMap, vRoot, revealDepth) {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const [id, pos] of posMap) {
+          const node = findNodeById(vRoot, id);
+          if (!node || node.depth < 0 || node.depth > revealDepth) continue;
+          minX = Math.min(minX, pos.x - TREE_R);
+          maxX = Math.max(maxX, pos.x + TREE_R + 20); // +20 for label overhang
+          minY = Math.min(minY, pos.y - TREE_R);
+          maxY = Math.max(maxY, pos.y + TREE_R);
+        }
+        if (minX === Infinity) return;
+        minY -= 20; // headroom for start arrow above root node
+        const contentW = maxX - minX;
+        const contentH = maxY - minY;
+        const wrap = document.getElementById("sim-tree-wrap");
+        const vw = wrap.clientWidth  || 400;
+        const vh = wrap.clientHeight || 300;
+        const pad = 32;
+        const sc = Math.min(1, Math.min(vw / (contentW + pad * 2), vh / (contentH + pad * 2)));
+        const tx = (vw - contentW * sc) / 2 - minX * sc;
+        const ty = pad - minY * sc;
+        d3.select("#sim-tree-svg").call(_simTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+      }
+
+      // Manual refit on double-click — uses getBBox as a fallback for arbitrary pan state.
+      function fitSimTree() {
+        try {
+          const rootEl = document.getElementById("sim-tree-root");
+          const bb = rootEl.getBBox();
+          const wrap = document.getElementById("sim-tree-wrap");
+          const vw = wrap.clientWidth  || 400;
+          const vh = wrap.clientHeight || 300;
+          if (!bb || bb.width < 1 || bb.height < 1) return;
+          const pad = 32;
+          const sc = Math.min(1, Math.min(vw / (bb.width + pad * 2), vh / (bb.height + pad * 2)));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = pad - bb.y * sc;
+          d3.select("#sim-tree-svg").call(_simTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch(e) { /* ignore */ }
+      }
+
+      function findNodeById(vRoot, id) {
+        if (vRoot.id === id) return vRoot;
+        for (const c of vRoot.children) {
+          const found = findNodeById(c, id);
+          if (found) return found;
+        }
+        return null;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION STEP ENGINE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      let _simTree    = null;  // { vRoot, maxDepth, accepted, truncated }
+      const verdict = UI.banner("sim-result");
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_simTree ? _simTree.maxDepth + 1 : null),
+        onChange: () => simRender(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
+      // sim.pos: current reveal depth; 0 = initial states shown
+      let _simChars   = [];    // input characters
+
+      function simRun() {
+        saveShare();
+        const input = document.getElementById("sim-string-input").value;
+        _simChars = [...input];
+        _simTree  = buildSimTree(input);
+        _selNode  = null;
+        sim.pos   = 0;  // start at depth 0 (initial states visible immediately)
+
+        verdict.hide();
+        document.getElementById("sim-tree-empty").style.display = "none";
+        d3.select("#sim-tree-root").selectAll("*").remove();
+        nfaHighlightStates([], []);
+
+        simRender();
+        simSetBtns();
+      }
+
+      function simRender() {
+        if (!_simTree) return;
+        const { vRoot, maxDepth, accepted, truncated } = _simTree;
+        const revealDepth = sim.pos;
+
+        // Tape
+        const tapeEl = document.getElementById("sim-tape");
+        tapeEl.innerHTML = "";
+        _simChars.forEach((ch, i) => {
+          const cell = document.createElement("div");
+          cell.className = "tape-cell" +
+            (i < revealDepth - 1 ? " tc-consumed" : i === revealDepth - 1 ? " tc-current" : "");
+          cell.textContent = ch;
+          tapeEl.appendChild(cell);
+        });
+        document.getElementById("sim-tape-wrap").style.display =
+          _simChars.length > 0 ? "" : "none";
+
+        // Render tree
+        renderSimTree(vRoot, revealDepth, _simChars);
+
+        // Log bar
+        const logBar = document.getElementById("sim-log-bar");
+        if (revealDepth === 0) {
+          const startName = nfaStates[nfaStartIdx];
+          const epsNames = [...epsClosure([startName])].filter(s => s !== startName);
+          const epsNote = epsNames.length > 0
+            ? `  <span style="color:var(--text-lo)">ε-closure: {${esc([startName, ...epsNames].join(", "))}}</span>`
+            : "";
+          logBar.innerHTML = `Start: <span style="color:var(--accent)">${esc(startName)}</span>${epsNote}`;
+        } else if (revealDepth <= maxDepth) {
+          const sym = _simChars[revealDepth - 1];
+          // Collect active state names at this depth
+          const activeNodes = collectNodesAtDepth(vRoot, revealDepth).filter(n => !n.dead);
+          const names = activeNodes.map(n => n.state);
+          const uniqueNames = [...new Set(names)];
+          logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span> → active: {${esc(uniqueNames.join(", ")) || "∅"}}`;
+        } else {
+          // Final step
+          const finalNodes = collectNodesAtDepth(vRoot, maxDepth);
+          const acceptNodes = finalNodes.filter(n => n.accepted);
+          const uNames = [...new Set(acceptNodes.map(n => n.state))];
+          logBar.innerHTML = accepted
+            ? `<span style="color:var(--green)">✓ Accepted</span> — accepting state(s): {${esc(uNames.join(", "))}}`
+            : `<span style="color:var(--red)">✗ Rejected</span> — no active accepting state`;
+        }
+
+        // Result banner
+        if (revealDepth > maxDepth) {
+          if (accepted) verdict.show("accept", "✓  ACCEPTED");
+          else          verdict.show("reject", "✗  REJECTED");
+        } else {
+          verdict.hide();
+        }
+
+        // Highlight NFA graph
+        const active = collectNodesAtDepth(vRoot, revealDepth).filter(n => !n.dead);
+        const activeIdxs = [...new Set(active.map(n => nfaStates.indexOf(n.state)))];
+        nfaHighlightStates(activeIdxs, []);
+
+        if (truncated) {
+          logBar.innerHTML += ` <span style="color:var(--red)">(tree truncated at ${MAX_TREE_NODES} nodes)</span>`;
+        }
+      }
+
+      function collectNodesAtDepth(vRoot, depth) {
+        const result = [];
+        function walk(n) {
+          if (n.depth === depth && n.depth >= 0) result.push(n);
+          for (const c of n.children) walk(c);
+        }
+        walk(vRoot);
+        return result;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const EXAMPLES = {};
+      let _strExamples = []; // sample strings of the loaded example, offered in the string input's menu
+      UI.stringInput("sim-string-input", {
+        examples: () => _strExamples,
+        onPick: () => simRun(),
+        random() {
+          const edges = [];
+          for (const s of nfaStates) for (const sym of Object.keys(nfaTrans[s] || {})) for (const t of nfaTrans[s][sym]) edges.push({ from: s, to: t, sym });
+          return strWalkAccepted(edges, nfaStates[nfaStartIdx], [...nfaAccepts].map((i) => nfaStates[i]), Math.random);
+        },
+      });
+
+      function loadExampleNFA(k) {
+        if (!k) return;
+        document.getElementById("examples-select").value = k;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        nfaStates   = [...ex.states];
+        nfaAlphabet = [...ex.alphabet];
+        nfaStartIdx = ex.states.indexOf(ex.start);
+        nfaAccepts  = new Set(ex.accepts.map(s => ex.states.indexOf(s)));
+        nfaTrans    = {};
+        for (const s of nfaStates) {
+          nfaTrans[s] = {};
+          for (const sym of [...nfaAlphabet, "ε"]) {
+            nfaTrans[s][sym] = (ex.trans[s] && ex.trans[s][sym]) ? [...ex.trans[s][sym]] : [];
+          }
+        }
+        renderDefTable();
+        onNFAChange();
+        _strExamples = ex.strings || [];
+      }
+
+      let sharedStateApplied = false; // set when the page was restored from a shareable link
+      loadAutomataExamples("examples.json", "examples-select", EXAMPLES, loadExampleNFA, () => !sharedStateApplied);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CHANGE HANDLER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function onNFAChange() {
+        renderNFAGraph();
+        simRun();  // re-run (or initialise) simulation for current input
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // KEYBOARD SHORTCUTS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // Arrow-key stepping comes from shared.js (registerStepper): the Simulation panel
+      // has key focus, shown by its tinted header.
+      registerStepper("p-sim", { step: simStepFwd, back: simBack, reset: simReset, end: simRunAll });
+
+      document.getElementById("sim-string-input").addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); simRun(); }
+      });
+      document.getElementById("sim-string-input").addEventListener("input", () => {
+        simRun();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // INIT
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        nfa: { states: nfaStates, alphabet: nfaAlphabet, start: nfaStartIdx, accepts: [...nfaAccepts], trans: nfaTrans },
+        s: document.getElementById("sim-string-input").value,
+      }));
+
+      function applyShareState() {
+        const st = shareValidateNFA(readShareState());
+        if (!st) return;
+        sharedStateApplied = true;
+        const d = st.nfa;
+        nfaStates = d.states;
+        nfaAlphabet = d.alphabet;
+        nfaStartIdx = d.start;
+        nfaAccepts = new Set(d.accepts);
+        nfaTrans = d.trans;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
+      initPanelStorage("nfa-tool-v1", ["p-def", "p-nfa", "p-sim"]);
+      loadPanelState();
+      applyShareState();
+      renderDefTable();
+      onNFAChange();
+    </script>
+  </body>
+</html>

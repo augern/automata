@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Turing Machine Simulator</title>
+    <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
+    <link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/ui.css?v=8c6eec2c" />
+    <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-def { --pw: 460; --pmin: 340px; }
+      #p-tm { --pw: 320; --pmin: 200px; }
+      #p-sim { --pw: 620; --pmin: 320px; }
+
+      /* ── Panel widths ── */
+      #p-def { width: 460px; }/* ── TM graph panel ── *//* TM graph nodes *//* TM graph edges *//* Simulation highlighting *//* ── Definition panel ── *//* Transition table *//* Transition cell inputs *//* Halting-state rows: dim but still editable *//* Definition footer *//* ── Simulation panel ── *//* Result banner */
+
+      /* Tape area — top tape + space-time diagram below */
+      #sim-tape-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+      }
+      #sim-tape-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: var(--fs-md);
+        color: var(--text-lo);
+      }
+      #sim-tape-content {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+      #sim-tape-top {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--sp-6);
+        padding: var(--sp-6) var(--sp-6) var(--sp-5);
+      }
+
+      /* Space-time trace table */
+      #trace-section {
+        flex: 1;
+        overflow: auto;
+        border-top: 1px solid var(--border);
+        position: relative;
+      }
+      #trace-table-wrap { position: relative; }
+      .trace-table {
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: var(--fs-2xs);
+        color: var(--text-dim);
+      }
+      .trace-table th, .trace-table td {
+        /* No width here — sticky column rules set their own without interference */
+        height: 19px;
+        padding: 0;
+        text-align: center;
+        border: 1px solid var(--border-lo);
+        box-sizing: border-box;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      /* Data cells and position-index headers (not the sticky step/state columns) */
+      .tc-cell,
+      .tc-pos-hdr:not(.tc-step):not(.tc-sticky-left) {
+        width: 20px; min-width: 20px; max-width: 20px;
+      }
+      .tc-step {
+        position: sticky; left: 0;
+        background: var(--bg-panel);
+        width: 24px; min-width: 24px; max-width: 24px;
+        color: var(--text-lo);
+        font-size: var(--fs-2xs);
+        z-index: 1;
+      }
+      .tc-sticky-left {
+        position: sticky; left: 24px;
+        background: var(--bg-panel);
+        width: 52px; min-width: 52px; max-width: 52px;
+        /* box-shadow fakes the right border: border-collapse steals the real one
+           from the adjacent scrolling cell, making it vanish on horizontal scroll */
+        box-shadow: inset -1px 0 0 var(--border-lo);
+        z-index: 1;
+      }
+      .tc-pos-hdr {
+        position: sticky; top: 0;
+        background: var(--bg-panel);
+        color: var(--text-lo);
+        border-bottom: 1.5px solid var(--border);
+        z-index: 2;
+      }
+      thead .tc-step,
+      thead .tc-sticky-left { z-index: 3; }
+      .tc-state { color: var(--text-dim); font-size: var(--fs-2xs); }
+      .tc-cell  { color: var(--text-dim); }
+      .tc-cell.tc-blank { color: var(--text-lo); }
+      .tc-head-marker {
+        outline: 1.5px solid var(--amber);
+        outline-offset: -1.5px;
+        color: var(--amber);
+        font-weight: bold;
+      }
+      .tr-current td {
+        background: var(--accent-bg) !important;
+        color: var(--accent) !important;
+      }
+      .tr-current .tc-head-marker {
+        outline-color: var(--accent);
+      }
+      .trace-polyline {
+        fill: none;
+        stroke: var(--amber);
+        stroke-width: 1.5;
+        stroke-opacity: 0.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .trace-cursor { fill: var(--amber); fill-opacity: 0.85; }
+
+      /* Trace statistics bar */
+      #trace-stats {
+        flex-shrink: 0;
+        display: none;
+        flex-wrap: wrap;
+        gap: var(--sp-1) var(--sp-5);
+        padding: var(--sp-3) var(--sp-5);
+        border-top: 1px solid var(--border-lo);
+        font-family: var(--font-mono);
+        font-size: var(--fs-2xs);
+        color: var(--text-dim);
+        background: var(--bg-panel);
+      }
+      .ts-item { white-space: nowrap; }
+      .ts-val  { color: var(--text); font-weight: bold; }
+
+      /* State badge + step counter */
+      #sim-state-row {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-5);
+      }
+      .state-badge {
+        font-family: var(--font-mono);
+        font-size: var(--fs-md);
+        font-weight: bold;
+        padding: var(--sp-2) var(--sp-6);
+        border: 1.5px solid var(--border);
+        color: var(--text);
+        background: var(--bg-panel);
+        transition: color 0.15s, border-color 0.15s, background 0.15s;
+      }
+      .state-badge.sb-compute { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+      .state-badge.sb-accept  { border-color: var(--green);  color: var(--green);  background: var(--green-bg); }
+      .state-badge.sb-reject  { border-color: var(--red);    color: var(--red);    background: var(--red-bg); }
+      .sim-step-counter {
+        font-family: var(--font-mono);
+        font-size: var(--fs-2xs);
+        color: var(--text-lo);
+      }
+
+      /* Tape */
+      #tape-outer {
+        width: 100%;
+        overflow-x: auto;
+        display: flex;
+        justify-content: center;
+      }
+      #tape-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .tape-row {
+        display: flex;
+      }
+      .tape-cell {
+        width: 32px;
+        height: 32px;
+        border: 1.5px solid var(--border);
+        margin-right: -1px;
+        font-family: var(--font-mono);
+        font-size: var(--fs-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: var(--text);
+        background: var(--bg);
+        transition: border-color 0.12s, background 0.12s, color 0.12s;
+      }
+      .tape-cell.tc-blank { color: var(--text-lo); }
+      .tape-cell.tc-head {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+        color: var(--amber);
+        font-weight: bold;
+        position: relative;
+        z-index: 1;
+      }
+      .tape-cell.tc-head.tc-accept {
+        border-color: var(--green);
+        background: var(--green-bg);
+        color: var(--green);
+      }
+      .tape-cell.tc-head.tc-reject {
+        border-color: var(--red);
+        background: var(--red-bg);
+        color: var(--red);
+      }
+
+      /* Head-marker row (▲ under head cell) */
+      .tape-marker-row {
+        display: flex;
+        height: 14px;
+      }
+      .tape-marker-cell {
+        width: 32px;
+        flex-shrink: 0;
+        margin-right: -1px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        color: transparent;
+      }
+      .tape-marker-cell.hm-active { color: var(--amber); }
+      .tape-marker-cell.hm-accept { color: var(--green); }
+      .tape-marker-cell.hm-reject { color: var(--red); }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../../index.html">Turing Machine Simulator</a></h1>
+    </div>
+
+    <div id="panels">
+      <!-- 1. TM Definition -->
+      <div class="panel" id="p-def" data-priority="2">
+        <div class="panel-header">
+          <span class="panel-title">TM Definition</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-bar">
+            <select id="examples-select" class="ui-select ui-select--grow" onchange="loadExampleTM(this.value)">
+              <option value="">Example…</option>
+            </select>
+          </div>
+          <div id="def-table-scroll" class="ui-scroll"></div>
+          <div class="ui-footer">
+            <button class="btn" onclick="addState()">+ State</button>
+            <button class="btn" onclick="addSymbol()">+ Symbol</button>
+            <span class="ui-hint">Each cell: <code>nextState, write, L/R</code>. Use <code>_</code> for blank (□). Empty cell = halt-reject.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. TM Graph -->
+      <div class="panel" id="p-tm" data-priority="1">
+        <div class="panel-header">
+          <span class="panel-title">Automaton</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-tm');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="tm-graph-wrap" class="ui-canvas">
+            <svg id="tm-svg">
+              <g id="tm-graph-root"></g>
+            </svg>
+            <div id="tm-graph-empty" class="ui-canvas__empty">Define a TM above.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Simulation -->
+      <div class="panel" id="p-sim" data-priority="3">
+        <div class="panel-header">
+          <span class="panel-title">Simulation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('tm-sim');" title="TM algorithm">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sim');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-sim">
+            <div class="ui-sim__row">
+              <div class="input-group">
+                <input id="sim-string-input" class="ui-input ui-input--lg" type="text" spellcheck="false" placeholder="enter input string…" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" onclick="simReset()"   title="Restart"  disabled></button>
+                <button class="btn"              id="btn-sim-back"  onclick="simBack()"    disabled>&#8249; Back</button>
+                <button class="btn primary"      id="btn-sim-step"  onclick="simStepFwd()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all"   onclick="simRunAll()"  title="Run all"  disabled></button>
+              </div>
+            </div>
+            <div id="sim-log-bar" class="ui-logbar"></div>
+          </div>
+
+          <div id="sim-result" class="ui-result"></div>
+
+          <div id="sim-tape-area">
+            <div id="sim-tape-empty">Define a TM and enter a string to simulate.</div>
+            <div id="sim-tape-content">
+              <div id="sim-tape-top">
+                <div id="sim-state-row">
+                  <span class="state-badge" id="sim-state-badge">—</span>
+                  <span class="sim-step-counter" id="sim-step-counter"></span>
+                </div>
+                <div id="tape-outer">
+                  <div id="tape-inner">
+                    <div class="tape-row"        id="tape-row"></div>
+                    <div class="tape-marker-row" id="tape-marker-row"></div>
+                  </div>
+                </div>
+              </div>
+              <div id="trace-section"></div>
+              <div id="trace-stats"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Algorithm modal -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1"
+         onclick="if(event.target===this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../../shared/algo/grammar.js?v=39525f46"></script>
+    <script src="../../shared/algo/panels.js?v=23a37100"></script>
+    <script src="../../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
+    <script src="../../shared/algo/states.js?v=107884d8"></script>
+    <script src="../../shared/algo/tm.js?v=c1750898"></script>
+    <script src="../../shared/shared.js?v=98590a79"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=dd81c4e8"></script>
+    <script src="../../shared/view-menu.js?v=d1c37b50"></script>
+    <script src="guide.js?v=5bbe7080"></script>
+    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script>
+      // shared.js stub
+      function renderTree() {}
+
+      initResize("rh-1", "p-def", +1);
+      initResize("rh-2", "p-tm",  +1);
+      initAlgoModal();
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // ALGORITHM MODAL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const PC_TM_SIM = pcBlock(
+        "Turing Machine Simulation",
+        [
+          { label: "Input",  sym: it("M") + " = (Q, Σ, Γ, δ, q₀, q_A, q_R)", desc: "deterministic TM" },
+          { label: "",       sym: it("w") + " = a₁a₂…aₙ",                      desc: "input string"     },
+          { label: "Output", sym: "accept / reject",                             desc: ""                 },
+        ],
+        `tape[0..n−1] ${_la} a₁a₂…aₙ;  tape[i] ${_la} □ otherwise
+head ${_la} 0;  state ${_la} q₀
+${kw("loop")}:
+    sym ${_la} tape[head]
+    ${kw("if")} (state, sym) ${_nin} δ: ${kw("reject")}${cm("no transition defined — implicit reject")}
+    (state′, write, dir) ${_la} δ(state, sym)
+    tape[head] ${_la} write
+    head ${_la} head + (${kw("if")} dir = R ${kw("then")} +1 ${kw("else")} −1)
+    state ${_la} state′
+    ${kw("if")} state = q_A: ${kw("accept")}
+    ${kw("if")} state = q_R: ${kw("reject")}`
+      );
+
+      function openAlgoModal(key) {
+        const configs = {
+          "tm-sim": { title: "TM Simulation", subtitle: "deterministic, single-tape", pc: PC_TM_SIM },
+        };
+        const cfg = configs[key];
+        if (!cfg) return;
+        document.getElementById("algo-title").textContent    = cfg.title;
+        document.getElementById("algo-subtitle").textContent = cfg.subtitle || "";
+        document.getElementById("algo-body").innerHTML       = cfg.pc;
+        document.getElementById("algo-overlay").classList.remove("hidden");
+        document.querySelector(".algo-close")?.focus();
+      }
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && isAlgoModalOpen()) closeAlgoModal();
+      });
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CONSTANTS & TM STATE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const BLANK = TM_BLANK;
+
+      // Default: accepts strings over {a} of even length (parity checker)
+      let tmStates   = ["q0", "q1", "qA", "qR"];
+      let tmAlphabet = ["a"];   // non-blank symbols; □ always implicit
+      let tmStartIdx  = 0;
+      let tmAcceptIdx = 2;
+      let tmRejectIdx = 3;
+      // tmTrans[state][sym] = { next: string, write: string, dir: "L"|"R" } | undefined
+      let tmTrans = {
+        "q0": { "a": { next:"q1", write:"a",  dir:"R" }, [BLANK]: { next:"qA", write:BLANK, dir:"R" } },
+        "q1": { "a": { next:"q0", write:"a",  dir:"R" }, [BLANK]: { next:"qR", write:BLANK, dir:"R" } },
+        "qA": {},
+        "qR": {}
+      };
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // MUTATION HELPERS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function addState() {
+        const name = freshStateName(tmStates);
+        tmStates.push(name);
+        tmTrans[name] = {};
+        renderDefTable();
+        onTMChange();
+      }
+
+      function removeState(idx) {
+        if (tmStates.length <= 1) return;
+        const name = tmStates[idx];
+        const oldLength = tmStates.length;
+        tmStates.splice(idx, 1);
+        delete tmTrans[name];
+        // Remove transitions that target the removed state
+        for (const s of tmStates) {
+          for (const sym of [...tmAlphabet, BLANK]) {
+            if (tmTrans[s]?.[sym]?.next === name) delete tmTrans[s][sym];
+          }
+        }
+        // Clamp special indices
+        tmStartIdx  = indexAfterRemoval(tmStartIdx,  idx, oldLength);
+        tmAcceptIdx = indexAfterRemoval(tmAcceptIdx, idx, oldLength);
+        tmRejectIdx = indexAfterRemoval(tmRejectIdx, idx, oldLength);
+        renderDefTable();
+        onTMChange();
+      }
+
+      function addSymbol() {
+        let name = prompt("New tape symbol (single character):", "");
+        if (name === null) return;
+        name = name.trim();
+        if (!name || name === BLANK || name === "_") return;
+        if (tmAlphabet.includes(name)) return;
+        tmAlphabet.push(name);
+        renderDefTable();
+        onTMChange();
+      }
+
+      function removeSymbol(idx) {
+        const sym = tmAlphabet[idx];
+        if (sym === undefined) return;
+        tmAlphabet.splice(idx, 1);
+        for (const s of tmStates) delete tmTrans[s]?.[sym];
+        renderDefTable();
+        onTMChange();
+      }
+
+      function setStart(idx)  { tmStartIdx  = idx; rerenderStateNameCells(); onTMChange(); }
+      function setAccept(idx) { tmAcceptIdx = idx; rerenderStateNameCells(); onTMChange(); }
+      function setReject(idx) { tmRejectIdx = idx; rerenderStateNameCells(); onTMChange(); }
+
+      // Colour of the state name: accept/reject win over start (as in the old table).
+      function tmStateKind(i) {
+        return UI.table.kind(i === tmStartIdx && i !== tmAcceptIdx, i === tmAcceptIdx, i === tmRejectIdx);
+      }
+
+      function rerenderStateNameCells() {
+        UI.table.refreshStates(tmStateKind);
+        document.querySelectorAll(".ui-table tbody tr").forEach((tr, i) => {
+          tr.classList.toggle("is-muted", i === tmAcceptIdx || i === tmRejectIdx);
+        });
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // TRANSITION PARSING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function normSym(s) {
+        return (s === "_" || s === "B") ? BLANK : s;
+      }
+
+      // Returns { next, write, dir } or null
+      function parseTransCell(val) {
+        if (!val.trim()) return null;
+        const parts = val.split(",").map(s => s.trim());
+        if (parts.length !== 3) return null;
+        const [next, write, dirRaw] = parts;
+        const dir = dirRaw.toUpperCase();
+        const w   = normSym(write);
+        if (!tmStates.includes(next)) return null;
+        if (!["L", "R"].includes(dir)) return null;
+        if (w !== BLANK && !tmAlphabet.includes(w)) return null;
+        return { next, write: w, dir };
+      }
+
+      function transToString(t) {
+        if (!t) return "";
+        return `${t.next},${t.write},${t.dir}`;
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DEFINITION TABLE RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function renderDefTable() {
+        const T = UI.table;
+        const allSyms = [...tmAlphabet, BLANK];
+
+        let h = T.open() + "<thead><tr>";
+        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("A", { title: "Accept state", tone: "accept" }) + T.th("R", { title: "Reject state", tone: "reject" }) + T.th("state", { left: true });
+        for (const [si, sym] of tmAlphabet.entries()) {
+          h += T.th(esc(sym) + T.rmInline(`removeSymbol(${si})`, `Remove '${sym}'`), { sym: true, wide: true });
+        }
+        h += T.th("□", { sym: true, wide: true, muted: true });
+        h += "</tr></thead><tbody>";
+
+        for (let i = 0; i < tmStates.length; i++) {
+          const sn = tmStates[i];
+          const isAccept = i === tmAcceptIdx;
+          const isReject = i === tmRejectIdx;
+          const isHalt = isAccept || isReject;
+          h += `<tr data-si="${i}"${isHalt ? ' class="is-muted"' : ""}>`;
+          h += T.rm(`removeState(${i})`, "Remove state");
+          h += T.marker(`<input type="radio" name="tm-start" ${i === tmStartIdx ? "checked" : ""} onchange="setStart(${i})">`);
+          h += T.marker(`<input type="radio" class="ui-radio--accept" name="tm-accept" ${isAccept ? "checked" : ""} onchange="setAccept(${i})">`);
+          h += T.marker(`<input type="radio" class="ui-radio--reject" name="tm-reject" ${isReject ? "checked" : ""} onchange="setReject(${i})">`);
+          h += T.state(sn, tmStateKind(i));
+          for (const sym of allSyms) {
+            const t = tmTrans[sn]?.[sym];
+            const isBlankCol = sym === BLANK;
+            h += T.input(t ? transToString(t) : "",
+              `placeholder="—" data-state="${esc(sn)}" data-sym="${isBlankCol ? "_blank_" : esc(sym)}"` +
+              ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"`,
+              { muted: isBlankCol, size: "wide" });
+          }
+          h += "</tr>";
+        }
+        h += "</tbody></table>";
+        document.getElementById("def-table-scroll").innerHTML = h;
+      }
+
+      function onTransInput(input) {
+        const stateName = input.dataset.state;
+        const sym = input.dataset.sym === "_blank_" ? BLANK : input.dataset.sym;
+        if (!tmTrans[stateName]) tmTrans[stateName] = {};
+        const parsed = parseTransCell(input.value);
+        if (parsed) tmTrans[stateName][sym] = parsed;
+        else delete tmTrans[stateName][sym];
+        validateTransInput(input);
+        onTMChange();
+      }
+
+      function validateTransInput(input) {
+        const v = input.value.trim();
+        const bad = v !== "" && !parseTransCell(v);
+        input.classList.toggle("invalid", bad);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION — PRE-RUN
+      // Builds a config list upfront; stepping navigates the list.
+      // Config: { tape: Map<int,string>, head: int, state: string,
+      //           action: null | { fromState, sym, write, dir } | { implicit: true, fromState, sym } }
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const MAX_STEPS = TM_MAX_STEPS;
+
+      let _configs    = [];   // array of config objects
+      const verdict = UI.banner("sim-result");
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: 0,
+        last: () => (_configs.length ? _configs.length - 1 : null),
+        onChange: () => simRender(),
+      });
+      function simSetBtns() { sim.refresh(); }
+      function simReset() { sim.reset(); }
+      function simStepFwd() { sim.next(); }
+      function simBack() { sim.prev(); }
+      function simRunAll() { sim.end(); }
+      let _didNotHalt = false;
+
+      // Tape access and the pre-run live in shared/algo/tm.js.
+      const tapeRead = tmTapeRead;
+      function buildConfigs(inputStr) {
+        return tmBuildConfigs(
+          { states: tmStates, start: tmStartIdx, accept: tmAcceptIdx, reject: tmRejectIdx, trans: tmTrans },
+          inputStr, MAX_STEPS);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SIMULATION CONTROL
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function simRun() {
+        saveShare();
+        const input  = document.getElementById("sim-string-input").value;
+        const result = buildConfigs(input);
+        _configs    = result.configs;
+        _didNotHalt = result.didNotHalt;
+        sim.pos     = 0;
+        verdict.hide();
+        buildTraceTable();
+        simRender();
+        simSetBtns();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // TAPE RENDERING
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const TAPE_PAD = 3; // blank padding cells on each side
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SPACE-TIME TRACE TABLE
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const TRACE_STEP_W  = 24;
+      const TRACE_CELL_W  = 20;
+      const TRACE_CELL_H  = 19;
+      const TRACE_STATE_W = 52;
+      const TRACE_HDR_H   = 19;
+
+      const SYM_COLORS = [
+        "rgba(99,179,237,0.28)",
+        "rgba(134,206,107,0.28)",
+        "rgba(236,121,75,0.28)",
+        "rgba(183,120,244,0.28)",
+        "rgba(246,190,85,0.28)",
+        "rgba(99,220,196,0.28)",
+        "rgba(246,109,155,0.28)",
+      ];
+
+      function buildTraceTable() {
+        const section = document.getElementById("trace-section");
+        if (!_configs.length) { section.innerHTML = ""; return; }
+
+        // Stable tape window across all configs
+        let minPos = 0, maxPos = 0;
+        for (const cfg of _configs) {
+          minPos = Math.min(minPos, cfg.head);
+          maxPos = Math.max(maxPos, cfg.head);
+          for (const pos of cfg.tape.keys()) {
+            minPos = Math.min(minPos, pos);
+            maxPos = Math.max(maxPos, pos);
+          }
+        }
+        const numCols = maxPos - minPos + 1;
+
+        // Symbol → background colour map (skip blank)
+        const symColorMap = new Map();
+        let ci = 0;
+        for (const cfg of _configs)
+          for (const sym of cfg.tape.values())
+            if (sym !== BLANK && !symColorMap.has(sym))
+              symColorMap.set(sym, SYM_COLORS[ci++ % SYM_COLORS.length]);
+
+        const totalW = TRACE_STEP_W + TRACE_STATE_W + numCols * TRACE_CELL_W;
+        const totalH = TRACE_HDR_H  + _configs.length * TRACE_CELL_H;
+
+        // Table HTML
+        let html = `<div id="trace-table-wrap" style="position:relative;width:${totalW}px;min-height:${totalH}px;">`;
+        html += `<table class="trace-table"><thead><tr>`;
+        html += `<th class="tc-step tc-pos-hdr">#</th>`;
+        html += `<th class="tc-sticky-left tc-pos-hdr"></th>`;
+        for (let c = minPos; c <= maxPos; c++)
+          html += `<th class="tc-pos-hdr">${c}</th>`;
+        html += `</tr></thead><tbody>`;
+
+        for (let i = 0; i < _configs.length; i++) {
+          const cfg = _configs[i];
+          html += `<tr>`;
+          html += `<td class="tc-step">${i}</td>`;
+          html += `<td class="tc-state tc-sticky-left">${esc(cfg.state)}</td>`;
+          for (let c = minPos; c <= maxPos; c++) {
+            const sym     = tapeRead(cfg.tape, c);
+            const isBlank = sym === BLANK;
+            const isHead  = c === cfg.head;
+            const bg = (!isBlank && symColorMap.has(sym))
+              ? `background:${symColorMap.get(sym)};` : "";
+            let cls = "tc-cell" + (isBlank ? " tc-blank" : "") + (isHead ? " tc-head-marker" : "");
+            html += `<td class="${cls}" style="${bg}">${isBlank ? "□" : esc(sym)}</td>`;
+          }
+          html += `</tr>`;
+        }
+
+        html += `</tbody></table>`;
+
+        // SVG: polyline + cursor — points filled in after DOM render via measurement
+        html += `<svg id="trace-svg" width="${totalW}" height="${totalH}" ` +
+          `style="position:absolute;top:0;left:0;pointer-events:none;">` +
+          `<polyline class="trace-polyline" points=""/>` +
+          `<circle id="trace-cursor" class="trace-cursor" r="3.5" cx="-99" cy="-99"/>` +
+          `</svg>`;
+
+        html += `</div>`;
+        section.innerHTML = html;
+        section.dataset.minPos = minPos;
+
+        // Measure actual cell centres for pixel-accurate polyline
+        _measureTracePolyline();
+
+        // Compute and display statistics
+        let writes = 0, reversals = 0, leftMoves = 0, rightMoves = 0;
+        let prevDir = null;
+        for (const cfg of _configs) {
+          if (!cfg.action || cfg.action.implicit) continue;
+          if (cfg.action.write !== cfg.action.sym) writes++;
+          if (cfg.action.dir === "L") leftMoves++; else rightMoves++;
+          if (prevDir !== null && cfg.action.dir !== prevDir) reversals++;
+          prevDir = cfg.action.dir;
+        }
+        const totalSteps = _configs.length - 1;
+        const tapeSpan   = maxPos - minPos + 1;
+
+        const statsEl = document.getElementById("trace-stats");
+        statsEl.style.display = "flex";
+        statsEl.innerHTML =
+          `<span class="ts-item"><span class="ts-val">${totalSteps}</span> steps</span>` +
+          `<span class="ts-item"><span class="ts-val">${writes}</span> writes</span>` +
+          `<span class="ts-item"><span class="ts-val">${reversals}</span> reversals</span>` +
+          `<span class="ts-item"><span class="ts-val">${rightMoves}R / ${leftMoves}L</span> moves</span>` +
+          `<span class="ts-item"><span class="ts-val">${tapeSpan}</span> cells visited</span>`;
+      }
+
+      // Computes polyline points from getBoundingClientRect so border-collapse
+      // offsets don't cause misalignment.
+      function _measureTracePolyline() {
+        const section  = document.getElementById("trace-section");
+        const wrap     = section.querySelector("#trace-table-wrap");
+        const rows     = section.querySelectorAll("tbody tr");
+        const polyline = section.querySelector(".trace-polyline");
+        if (!wrap || !rows.length || !polyline) return;
+
+        const wrapRect = wrap.getBoundingClientRect();
+        const pts = _configs.map((cfg, i) => {
+          const row  = rows[i];
+          if (!row) return null;
+          // cells[0] = step col, cells[1] = state col, cells[2..] = data columns
+          const minPos = parseInt(section.dataset.minPos ?? "0", 10);
+          const cell   = row.cells[cfg.head - minPos + 2];
+          if (!cell) return null;
+          const r = cell.getBoundingClientRect();
+          const x = r.left - wrapRect.left + r.width  / 2;
+          const y = r.top  - wrapRect.top  + r.height / 2;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).filter(Boolean).join(" ");
+
+        polyline.setAttribute("points", pts);
+      }
+
+      function updateTraceHighlight() {
+        const section = document.getElementById("trace-section");
+        const tbody   = section.querySelector("tbody");
+        if (!tbody) return;
+
+        // Row highlight
+        const prev = tbody.querySelector(".tr-current");
+        if (prev) prev.classList.remove("tr-current");
+        const row = tbody.rows[sim.pos];
+        if (row) {
+          row.classList.add("tr-current");
+          row.scrollIntoView({ behavior: "instant", block: "nearest" });
+        }
+
+        // Cursor circle — also measured from DOM for consistency
+        const cursor = section.querySelector("#trace-cursor");
+        const wrap   = section.querySelector("#trace-table-wrap");
+        const cfg    = _configs[sim.pos];
+        if (cursor && wrap && row && cfg) {
+          const minPos = parseInt(section.dataset.minPos ?? "0", 10);
+          const cell   = row.cells[cfg.head - minPos + 2];
+          if (cell) {
+            const wrapRect = wrap.getBoundingClientRect();
+            const r = cell.getBoundingClientRect();
+            cursor.setAttribute("cx", (r.left - wrapRect.left + r.width  / 2).toFixed(1));
+            cursor.setAttribute("cy", (r.top  - wrapRect.top  + r.height / 2).toFixed(1));
+          }
+        }
+      }
+
+      function simRender() {
+        if (!_configs.length) return;
+        const cfg      = _configs[sim.pos];
+        const { tape, head, state, action } = cfg;
+        const isAccept = state === tmStates[tmAcceptIdx];
+        const isReject = state === tmStates[tmRejectIdx];
+        const isAtEnd  = sim.pos === _configs.length - 1;
+
+        // Show tape content
+        document.getElementById("sim-tape-empty").style.display = "none";
+        document.getElementById("sim-tape-content").style.display = "flex";
+
+        // State badge
+        const badge = document.getElementById("sim-state-badge");
+        badge.textContent = state;
+        badge.className   = "state-badge " + (isAccept ? "sb-accept" : isReject ? "sb-reject" : "sb-compute");
+
+        // Step counter
+        document.getElementById("sim-step-counter").textContent =
+          "step " + sim.pos + (_didNotHalt && isAtEnd ? " (limit)" : "");
+
+        // Determine visible tape window
+        let minPos = head, maxPos = head;
+        for (const pos of tape.keys()) {
+          minPos = Math.min(minPos, pos);
+          maxPos = Math.max(maxPos, pos);
+        }
+        minPos -= TAPE_PAD;
+        maxPos += TAPE_PAD;
+
+        // Render tape cells
+        const tapeRowEl   = document.getElementById("tape-row");
+        const markerRowEl = document.getElementById("tape-marker-row");
+        tapeRowEl.innerHTML   = "";
+        markerRowEl.innerHTML = "";
+
+        let headCellEl = null;
+        for (let pos = minPos; pos <= maxPos; pos++) {
+          const sym    = tapeRead(tape, pos);
+          const isHead = pos === head;
+
+          // Tape cell
+          const cell = document.createElement("div");
+          cell.className = "tape-cell" + (sym === BLANK ? " tc-blank" : "");
+          if (isHead) {
+            cell.classList.add("tc-head");
+            if (isAccept) cell.classList.add("tc-accept");
+            else if (isReject) cell.classList.add("tc-reject");
+            headCellEl = cell;
+          }
+          cell.textContent = sym;
+          tapeRowEl.appendChild(cell);
+
+          // Marker cell (▲ under head)
+          const marker = document.createElement("div");
+          marker.className = "tape-marker-cell";
+          if (isHead) {
+            marker.textContent = "▲";
+            marker.classList.add(isAccept ? "hm-accept" : isReject ? "hm-reject" : "hm-active");
+          }
+          markerRowEl.appendChild(marker);
+        }
+
+        // Keep head in view
+        if (headCellEl) {
+          headCellEl.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
+        }
+
+        // Log bar
+        const logBar = document.getElementById("sim-log-bar");
+        if (!action) {
+          logBar.innerHTML =
+            `Start: state <span style="color:var(--accent)">${esc(state)}</span>, ` +
+            `head at position 0`;
+        } else if (action.implicit) {
+          logBar.innerHTML =
+            `No transition for (<span style="color:var(--accent)">${esc(action.fromState)}</span>, ` +
+            `<span style="color:var(--amber);font-weight:bold">${esc(action.sym)}</span>) ` +
+            `→ <span style="color:var(--red)">halt-reject</span>`;
+        } else {
+          logBar.innerHTML =
+            `Read <span style="color:var(--amber);font-weight:bold">${esc(action.sym)}</span>, ` +
+            `wrote <span style="color:var(--text)">${esc(action.write)}</span>, ` +
+            `moved <b>${action.dir}</b> → ` +
+            `<span style="color:var(--accent)">${esc(state)}</span>`;
+        }
+
+        // Highlight current state in graph
+        tmHighlightState(state);
+
+        // Trace table: update row highlight and cursor
+        updateTraceHighlight();
+
+        // Result banner
+        if (isAtEnd) {
+          if (_didNotHalt)   verdict.show("warn", `⚠  DID NOT HALT  (limit: ${MAX_STEPS} steps)`);
+          else if (isAccept) verdict.show("accept", "✓  ACCEPTED");
+          else               verdict.show("reject", "✗  REJECTED");
+        } else {
+          verdict.hide();
+        }
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // EXAMPLES
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const EXAMPLES = {};
+
+      function loadExampleTM(k) {
+        if (!k) return;
+        document.getElementById("examples-select").value = k;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        tmStates    = [...ex.states];
+        tmAlphabet  = [...ex.alphabet];
+        tmStartIdx  = ex.states.indexOf(ex.start);
+        tmAcceptIdx = ex.states.indexOf(ex.accept);
+        tmRejectIdx = ex.states.indexOf(ex.reject);
+        tmTrans     = {};
+        for (const s of tmStates) {
+          tmTrans[s] = {};
+          for (const [sym, t] of Object.entries(ex.trans[s] || {})) {
+            tmTrans[s][sym] = { ...t };
+          }
+        }
+        renderDefTable();
+        onTMChange();
+        _strExamples = ex.strings || [];
+      }
+
+      let _strExamples = []; // sample strings of the loaded example, offered in the string input's menu
+      UI.stringInput("sim-string-input", {
+        examples: () => _strExamples,
+        onPick: () => simRun(),
+        // Random words, preferring one the machine accepts. The input alphabet is
+        // taken from the example's sample strings (tmAlphabet also holds work symbols).
+        random() {
+          const used = [...new Set(_strExamples.join(""))];
+          const alphabet = used.length ? used : tmAlphabet;
+          const tm = { states: tmStates, start: tmStartIdx, accept: tmAcceptIdx, reject: tmRejectIdx, trans: tmTrans };
+          return strSampleAccepted(alphabet, (w) => tmRun(tm, w).outcome === "accept", Math.random).value;
+        },
+      });
+
+      let sharedStateApplied = false; // set when the page was restored from a shareable link
+      loadAutomataExamples("examples.json", "examples-select", EXAMPLES, loadExampleTM, () => !sharedStateApplied);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // TM GRAPH RENDERING  (D3 + Dagre)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      const TM_R = 16; // node radius
+
+      const tmGraph = createGraphView("tm", { hasNodes: () => tmStates.length > 0, fallbackWidth: 320 });
+      function fitTMGraph() { tmGraph.fit(); }
+
+      // Edge label: "r/w, D" abbreviated to "r, D" when read === write
+      function tmEdgeLabel(r, w, dir) {
+        return r === w ? `${r}, ${dir}` : `${r}/${w}, ${dir}`;
+      }
+
+      function renderTMGraph() {
+        // One edge per (from, to) pair with one stacked label per transition; self-loops separately.
+        const edgeMap = new Map(); // "fi-ti" → { from, to, labels[] }
+        const loopMap = new Map(); // fi → { node, labels[] }
+        for (let fi = 0; fi < tmStates.length; fi++) {
+          for (const [sym, t] of Object.entries(tmTrans[tmStates[fi]] || {})) {
+            if (!t?.next) continue;
+            const ti = tmStates.indexOf(t.next);
+            if (ti === -1) continue;
+            const label = tmEdgeLabel(sym, t.write, t.dir);
+            if (fi === ti) {
+              if (!loopMap.has(fi)) loopMap.set(fi, { node: fi, labels: [], ids: [] });
+              loopMap.get(fi).labels.push(label);
+              loopMap.get(fi).ids.push(tmStates[fi] + "|" + sym);
+            } else {
+              const k = `${fi}-${ti}`;
+              if (!edgeMap.has(k)) edgeMap.set(k, { from: fi, to: ti, labels: [], ids: [] });
+              edgeMap.get(k).labels.push(label);
+              edgeMap.get(k).ids.push(tmStates[fi] + "|" + sym);
+            }
+          }
+        }
+        drawAutomatonGraph("tm", tmGraph, {
+          nodes: tmStates.map((name, i) => ({ label: name, accepting: i === tmAcceptIdx, rejecting: i === tmRejectIdx })),
+          start: tmStartIdx,
+          edges: [...edgeMap.values()],
+          loops: [...loopMap.values()],
+          radius: TM_R,
+          ranksep: 64,
+          onHover: tmHoverEdges,
+          onNodeHover: tmHoverState,
+        });
+      }
+
+      // Hovering links the graph and the definition table: an edge or label <-> the table
+      // cell(s) of that transition, a node <-> its state cell.
+      function tmHoverEdges(ids) {
+        setGraphHot("tm", ids);
+        const want = new Set(ids || []);
+        for (const inp of document.querySelectorAll("#def-table-scroll input[data-sym]")) {
+          inp.closest("td").classList.toggle("is-hot", want.has(inp.dataset.state + "|" + (inp.dataset.sym === "_blank_" ? BLANK : inp.dataset.sym)));
+        }
+      }
+      function tmHoverState(i) {
+        setGraphNodeHot("tm", i);
+        for (const tr of document.querySelectorAll("#def-table-scroll tr[data-si]")) {
+          tr.querySelector(".ui-td--state").classList.toggle("is-hot", +tr.dataset.si === i);
+        }
+      }
+      UI.hoverItems("def-table-scroll", "input[data-sym]", (inp) => [inp.dataset.state + "|" + (inp.dataset.sym === "_blank_" ? BLANK : inp.dataset.sym)], tmHoverEdges);
+      UI.hoverItems("def-table-scroll", "td.ui-td--state", (td) => +td.parentElement.dataset.si, tmHoverState);
+
+      function tmHighlightState(stateName) {
+        const idx = tmStates.indexOf(stateName);
+        highlightAutomatonStates("tm", idx === -1 ? [] : [idx]);
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CHANGE HANDLER
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      function onTMChange() {
+        renderTMGraph();
+        simRun();
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // KEYBOARD SHORTCUTS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // Arrow-key stepping comes from shared.js (registerStepper): the Simulation panel
+      // has key focus, shown by its tinted header.
+      registerStepper("p-sim", { step: simStepFwd, back: simBack, reset: simReset, end: simRunAll });
+
+      document.getElementById("sim-string-input").addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); simRun(); }
+      });
+      document.getElementById("sim-string-input").addEventListener("input", () => simRun());
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // INIT
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      // ── Shareable link ──────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        tm: { states: tmStates, alphabet: tmAlphabet, start: tmStartIdx, accept: tmAcceptIdx, reject: tmRejectIdx, trans: tmTrans },
+        s: document.getElementById("sim-string-input").value,
+      }));
+
+      function applyShareState() {
+        const st = shareValidateTM(readShareState());
+        if (!st) return;
+        sharedStateApplied = true;
+        const d = st.tm;
+        tmStates = d.states;
+        tmAlphabet = d.alphabet;
+        tmStartIdx = d.start;
+        tmAcceptIdx = d.accept;
+        tmRejectIdx = d.reject;
+        tmTrans = d.trans;
+        document.getElementById("sim-string-input").value = st.s;
+      }
+
+      initPanelStorage("tm-tool-v1", ["p-def", "p-tm", "p-sim"]);
+      loadPanelState();
+      applyShareState();
+      renderDefTable();
+      onTMChange();
+    </script>
+  </body>
+</html>

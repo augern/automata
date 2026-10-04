@@ -8,7 +8,7 @@ const { load } = require("./load.js");
 const A = load("grammar.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js");
 
 function examples(name) {
-  const file = path.join(__dirname, "..", "examples", `examples-${name}.json`);
+  const file = path.join(__dirname, "..", "tools", name, "examples.json");
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
   const out = [];
   for (const g of data.groups) for (const ex of g.examples) out.push({ group: g.label, ...ex });
@@ -18,8 +18,9 @@ function examples(name) {
 const textOf = (ex) => (Array.isArray(ex.text) ? ex.text.join("\n") : ex.text);
 
 test("example files are well-formed (unique labels, group labels present)", () => {
-  for (const f of fs.readdirSync(path.join(__dirname, "..", "examples"))) {
-    const name = f.replace(/^examples-|\.json$/g, "");
+  const tools = fs.readdirSync(path.join(__dirname, "..", "tools"), { withFileTypes: true }).filter((d) => d.isDirectory());
+  for (const d of tools) {
+    const name = d.name, f = `tools/${name}/examples.json`;
     const exs = examples(name);
     const labels = exs.map((e) => e.label);
     assert.equal(new Set(labels).size, labels.length, `${f}: duplicate labels`);

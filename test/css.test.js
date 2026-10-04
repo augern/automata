@@ -8,12 +8,14 @@ const path = require("node:path");
 const root = path.join(__dirname, "..");
 const read = (...p) => fs.readFileSync(path.join(root, ...p), "utf8");
 const list = (dir, ext) => fs.readdirSync(path.join(root, dir)).filter((f) => f.endsWith(ext)).map((f) => path.join(dir, f));
+// Each tool is a directory: tools/<name>/index.html
+const toolPages = () => fs.readdirSync(path.join(root, "tools"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => path.join("tools", d.name, "index.html"));
 
 const stripComments = (c) => c.replace(/\/\*[\s\S]*?\*\//g, "");
 const stripStyle = (h) => h.replace(/<style>[\s\S]*?<\/style>/g, "");
 
 // Everything that can mention a class or id: page markup (without <style>) and all scripts.
-const pages = ["index.html", "ui-kit.html", ...list("tools", ".html")];
+const pages = ["index.html", "ui-kit.html", ...toolPages()];
 const scripts = [...list("shared", ".js"), ...list("shared/algo", ".js")];
 const markupAndScripts = pages.map((p) => stripStyle(read(p))).concat(scripts.map((s) => read(s))).join("\n");
 
@@ -47,8 +49,8 @@ for (const sheet of ["shared/shared.css", "shared/ui.css"]) {
   });
 }
 
-for (const tool of list("tools", ".html")) {
-  test(`${path.basename(tool)} has no unused rules in its own <style>`, () => {
+for (const tool of toolPages()) {
+  test(`${path.basename(path.dirname(tool))} has no unused rules in its own <style>`, () => {
     const html = read(tool);
     const css = (html.match(/<style>([\s\S]*?)<\/style>/) || [, ""])[1];
     // A tool's own CSS counts as used only if its own markup, or a script, mentions it.
@@ -66,9 +68,9 @@ test("a tool does not re-declare a shared rule with identical declarations", () 
   };
   const shared = new Map([...parse(read("shared/shared.css")), ...parse(read("shared/ui.css"))]);
   const dupes = [];
-  for (const tool of list("tools", ".html")) {
+  for (const tool of toolPages()) {
     const css = (read(tool).match(/<style>([\s\S]*?)<\/style>/) || [, ""])[1];
-    for (const [sel, p] of parse(css)) if (shared.has(sel) && shared.get(sel) === p) dupes.push(`${path.basename(tool)}: ${sel}`);
+    for (const [sel, p] of parse(css)) if (shared.has(sel) && shared.get(sel) === p) dupes.push(`${path.basename(path.dirname(tool))}: ${sel}`);
   }
   assert.deepEqual(dupes, []);
 });

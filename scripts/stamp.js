@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 // Cache-busting for a build-less static site.
 //
-// Every <script src> and <link href> that points into shared/ or vendor/ gets
-// "?v=<hash of that file's contents>", so a browser never runs a new page with a
-// stale cached copy of a script (or the other way round). Run `npm run stamp`
-// after editing anything under shared/ or vendor/; test/stamps.test.js fails
-// until you do. With --check it only reports.
+// Every local <script src> and <link href> (shared/, vendor/, or a file beside the page,
+// like a tool's guide.js) gets "?v=<hash of that file's contents>", so a browser never
+// runs a new page with a stale cached copy of a script (or the other way round). Run
+// `npm run stamp` after editing any of those files; test/stamps.test.js fails until you do.
+// With --check it only reports.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
 const root = path.join(__dirname, "..");
-const pages = ["index.html", "ui-kit.html", ...fs.readdirSync(path.join(root, "tools")).filter((f) => f.endsWith(".html")).map((f) => "tools/" + f)];
+const toolDirs = fs.readdirSync(path.join(root, "tools"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
+const pages = ["index.html", "ui-kit.html", ...toolDirs.map((d) => `tools/${d}/index.html`)];
 
 function hashOf(file) {
   return crypto.createHash("sha1").update(fs.readFileSync(file)).digest("hex").slice(0, 8);
 }
 
-// <script src="…"> and <link … href="…"> into shared/ or vendor/
-const REF = /((?:<script[^>]*\ssrc|<link[^>]*\shref)=")((?:\.\.\/)?(?:shared|vendor)\/[^"?#]+)(?:\?v=[0-9a-f]+)?(")/g;
+// <script src="…"> and <link … href="…"> to a local .js or .css file
+const REF = /((?:<script[^>]*\ssrc|<link[^>]*\shref)=")((?!https?:|\/\/)[^"?#]+\.(?:js|css))(?:\?v=[0-9a-f]+)?(")/g;
 
 function stamp(html, dir) {
   return html.replace(REF, (m, pre, ref, post) => {

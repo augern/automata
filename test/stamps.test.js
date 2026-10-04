@@ -1,5 +1,5 @@
 // Cache-busting stamps (see scripts/stamp.js): every shared/vendor reference in
-// every page carries ?v=<content hash>, and the hash is current. If this fails,
+// every local script/stylesheet reference carries ?v=<content hash>, and the hash is current. If this fails,
 // run `npm run stamp` and commit the result.
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,7 +9,7 @@ const { stamp, hashOf, pages, REF } = require("../scripts/stamp.js");
 
 const root = path.join(__dirname, "..");
 
-test("every shared/ and vendor/ reference is stamped with its file's current hash", () => {
+test("every local script and stylesheet reference is stamped with its file's current hash", () => {
   const stale = [];
   for (const page of pages) {
     const file = path.join(root, page);
@@ -20,19 +20,19 @@ test("every shared/ and vendor/ reference is stamped with its file's current has
 });
 
 test("stamping is idempotent and replaces an old stamp", () => {
-  const html = '<script src="../shared/ui.js?v=deadbeef"></script><link rel="stylesheet" href="../shared/ui.css">';
-  const dir = path.join(root, "tools");
+  const html = '<script src="../../shared/ui.js?v=deadbeef"></script><link rel="stylesheet" href="../../shared/ui.css">';
+  const dir = path.join(root, "tools", "pda");
   const once = stamp(html, dir);
   assert.match(once, new RegExp(`ui\\.js\\?v=${hashOf(path.join(root, "shared/ui.js"))}"`));
   assert.match(once, new RegExp(`ui\\.css\\?v=${hashOf(path.join(root, "shared/ui.css"))}"`));
   assert.equal(stamp(once, dir), once);
 });
 
-test("only shared/ and vendor/ references are stamped", () => {
-  const html = '<a href="../index.html">x</a><script>fetch("../examples/a.json")</script><script src="../shared/ui.js"></script>';
-  const out = stamp(html, path.join(root, "tools"));
-  assert.ok(out.includes('href="../index.html"'));
-  assert.ok(out.includes('fetch("../examples/a.json")'));
+test("only script and stylesheet references are stamped", () => {
+  const html = '<a href="../../index.html">x</a><script>fetch("examples.json")</script><script src="../../shared/ui.js"></script>';
+  const out = stamp(html, path.join(root, "tools", "pda"));
+  assert.ok(out.includes('href="../../index.html"'));
+  assert.ok(out.includes('fetch("examples.json")'));
   assert.equal([...out.matchAll(REF)].length, 1);
 });
 

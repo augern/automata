@@ -24,7 +24,7 @@ function topLevel(src, maxIndent) {
 const topLevelNames = (src, maxIndent) => topLevel(src, maxIndent).map((d) => d.name);
 
 const algoFiles = fs.readdirSync(path.join(root, "shared", "algo")).filter((f) => f.endsWith(".js"));
-const toolFiles = fs.readdirSync(path.join(root, "tools")).filter((f) => f.endsWith(".html"));
+const toolFiles = fs.readdirSync(path.join(root, "tools"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
 
 test("shared/algo files and shared.js declare no duplicate top-level names", () => {
   const seen = new Map();
@@ -38,8 +38,8 @@ test("shared/algo files and shared.js declare no duplicate top-level names", () 
 
 for (const tool of toolFiles) {
   test(`${tool} does not clash with shared scripts`, () => {
-    const src = read("tools", tool);
-    const loaded = [...src.matchAll(/<script src="\.\.\/shared\/([\w/.]+\.js)(?:\?[^"]*)?"/g)].map((m) => m[1]);
+    const src = read("tools", tool, "index.html");
+    const loaded = [...src.matchAll(/<script src="\.\.\/\.\.\/shared\/([\w/.]+\.js)(?:\?[^"]*)?"/g)].map((m) => m[1]);
     // name -> { file, kind } for everything this tool loads
     const shared = new Map();
     for (const f of loaded) for (const d of topLevel(read("shared", f), 0)) shared.set(d.name, { file: f, kind: d.kind });

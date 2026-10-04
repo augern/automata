@@ -29,24 +29,19 @@ step-by-step algorithm visualisation with Back/Forward controls.
 parser-tools/
 ├── index.html                          ← landing page
 ├── ui-kit.html                         ← living gallery of every shared UI component
-├── tools/
-│   ├── regex-tool.html                 ← regular expression / NFA / DFA tool
-│   ├── nfa-tool.html                   ← NFA simulator
-│   ├── grammar-rewrite-tool.html       ← grammar transformation tool
-│   ├── derivation-tool.html            ← grammar derivation tool
-│   ├── pda-tool.html                   ← PDA simulator
-│   ├── ll1-tool.html                   ← LL(1) parser tool
-│   ├── lr-tool.html                    ← LR parser tool
-│   └── tm-tool.html                    ← Turing machine simulator
-├── examples/
-│   ├── examples-regex.json             ← example expressions for Regular Expression tool
-│   ├── examples-nfa.json               ← example automata for NFA tool
-│   ├── examples-grammar-rewrite.json   ← example grammars for Grammar Transformations tool
-│   ├── examples-derivation.json        ← example grammars for Grammar Derivations tool
-│   ├── examples-pda.json               ← example automata for PDA tool
-│   ├── examples-ll1.json               ← example grammars for LL(1) tool
-│   ├── examples-lr.json                ← example grammars for LR tool
-│   └── examples-tm.json                ← example machines for Turing Machine tool
+├── tools/                              ← one directory per tool; everything exclusive to a tool lives in it
+│   ├── regex/                          ← regular expression → NFA → DFA → minimal DFA
+│   ├── nfa/                            ← NFA simulator
+│   ├── grammar-rewrite/                ← grammar transformations
+│   ├── derivation/                     ← grammar derivations
+│   ├── pda/                            ← PDA simulator
+│   ├── ll1/                            ← LL(1) parser
+│   ├── lr/                             ← LR parser
+│   ├── tm/                             ← Turing machine simulator
+│   │       each contains:  index.html    the page (its own layout, CSS and logic)
+│   │                       guide.js      the text of its Guide pop-up
+│   │                       examples.json its example menu
+│   └── *-tool.html                     ← one-line redirects from the tools' old addresses (safe to delete)
 ├── vendor/
 │   ├── d3.min.js                       ← D3 7.9.0 (ISC), bundled so the tools work offline
 │   ├── dagre.min.js                    ← Dagre 0.8.5 (MIT)
@@ -70,7 +65,7 @@ parser-tools/
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
 │   ├── view-menu.js                    ← the top bar's View menu (share, theme, layout presets)
-│   ├── guide.js                        ← the top bar's Guide button: per-tool "what it does / how to use it / notation / colours" pop-up (texts live in this file)
+│   ├── guide.js                        ← the top bar's Guide button and pop-up (the mechanism; each tool supplies its text in tools/<tool>/guide.js)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
 │   └── shared.js                       ← common logic (parse tree,
@@ -89,8 +84,9 @@ parser-tools/
 (`algo/grammar.js` must be loaded before `shared.js`; `algo/strings.js` for the random-string buttons; `algo/lr.js`, `algo/ll1.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js`, `algo/tm.js` (and `algo/states.js` for the three automata tools) only where needed).
 D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
-> **Adding or editing examples**: each tool's examples live in the corresponding
-> `examples-*.json` file. No HTML changes are needed — just edit the JSON.
+> **Adding or editing examples**: each tool's examples live in its own
+> `tools/<tool>/examples.json`. No HTML changes are needed — just edit the JSON.
+> The text of a tool's Guide pop-up is `tools/<tool>/guide.js`.
 
 ### Example JSON format
 
