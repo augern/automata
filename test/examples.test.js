@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { load } = require("./load.js");
 
-const A = load("grammar.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js", "rdp.js");
+const A = load("grammar.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js", "rdp.js", "pumping.js");
 
 function examples(name) {
   const file = path.join(__dirname, "..", "tools", name, "examples.json");
@@ -66,6 +66,17 @@ test("recursive-descent examples parse, and their sample strings run in the exam
   // Only the examples about left recursion are left-recursive.
   const rec = examples("rdp").filter((ex) => A.rdpLeftRecursive(A.rdpParseGrammar(textOf(ex))).length > 0).map((ex) => ex.label);
   assert.deepEqual([...rec].sort(), ["Hidden left recursion", "Left recursion"]);
+});
+
+test("pumping examples: the machine or grammar parses and the refutation is the one the example says", () => {
+  for (const ex of examples("pumping")) {
+    assert.ok(ex.mode === "regular" || ex.mode === "cf", ex.label);
+    const r = ex.mode === "regular" ? A.pumpParseDFA(textOf(ex)) : A.rdpParseGrammar(textOf(ex));
+    if (!ex.target) { assert.equal(ex.verdict, undefined, ex.label); continue; }
+    assert.ok(A.PUMP_TARGETS[ex.target], `${ex.label}: unknown target`);
+    const out = ex.mode === "regular" ? A.pumpRefuteDFA(r, ex.target) : A.pumpRefuteGrammar(r, ex.target);
+    assert.equal(out.kind, ex.verdict, ex.label);
+  }
 });
 
 test("LL(1) examples build tables", () => {

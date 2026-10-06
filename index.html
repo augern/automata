@@ -139,6 +139,7 @@ body[data-view="list"] #view-map { display: none; }
   <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="459" y="76" width="169" height="34" rx="17"/><text x="543.5" y="93">Grammar Derivations</text></a>
   <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="398" y="132" width="202" height="34" rx="17"/><text x="499" y="149">Grammar Transformations</text></a>
   <a class="pill" id="t-pda" href="tools/pda/" tabindex="0"><rect x="265" y="132" width="123" height="34" rx="17"/><text x="326.5" y="149">PDA Simulator</text></a>
+  <a class="pill" id="t-pumping" href="tools/pumping/" tabindex="0"><rect x="290" y="174" width="150" height="34" rx="17"/><text x="365" y="191">Pumping Explorer</text></a>
   <a class="pill" id="t-rdp" href="tools/rdp/" tabindex="0"><rect x="456" y="174" width="144" height="34" rx="17"/><text x="528" y="191">Recursive Descent</text></a>
   <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="480" y="228" width="92" height="34" rx="17"/><text x="526" y="245">LR Parser</text></a>
   <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="394" y="284" width="150" height="34" rx="17"/><text x="469" y="301">Predictive Parsing</text></a>
@@ -177,6 +178,9 @@ body[data-view="list"] #view-map { display: none; }
     pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages",
       desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
       builds: "NFA Simulator, Grammar Derivations" },
+    pumping: { href: "tools/pumping/", title: "Pumping Explorer", group: "Context-free languages",
+      desc: "Why the pumping lemmas hold — a repeated state on a DFA's path, a repeated nonterminal on a parse tree's path — with the loop pumped step by step, and used to refute DFAs and grammars that claim languages that cannot be pumped.",
+      builds: "NFA Simulator (DFAs), Grammar Derivations (parse trees)" },
     rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages",
       desc: "Top-down parsing by recursive procedures — the procedures generated from a grammar, and the search for a parse with its guesses, backtracking and dead ends, with complete search or ordered choice.",
       builds: "Grammar Derivations; Grammar Transformations removes the left recursion it cannot handle" },
