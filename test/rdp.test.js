@@ -168,3 +168,29 @@ test("every generated line says what it is for", () => {
     assert.deepEqual(arr(lines.map((l) => l.kind)), ["head", "alt", "sym", "sym", "sym", "yield", "alt", "yield", "end"]);
   }
 });
+
+test("rule spans line up with the parsed rules and point at the right text", () => {
+  const src = "// grammar\nS -> a S b | eps\n\n  T → x  | y z";
+  const g = rdpParseGrammar(src);
+  const sp = L.rdpRuleSpans(src);
+  assert.equal(sp.length, g.rules.length);
+  const at = (r) => [src.slice(...sp[r].lhs), src.slice(...sp[r].rhs), arr(sp[r].toks.map((t) => src.slice(...t)))];
+  assert.deepEqual(at(0)[0], "S");
+  assert.deepEqual(at(0)[1], "a S b");
+  assert.deepEqual(at(0)[2], ["a", "S", "b"]);
+  assert.deepEqual(at(1)[1], "eps");
+  assert.deepEqual([at(2)[0], at(2)[1]], ["T", "x"]);
+  assert.deepEqual([at(3)[0], at(3)[1], at(3)[2]], ["T", "y z", ["y", "z"]]);
+});
+
+test("grammar ranges: an alternative's lines mark its production, a symbol line also the symbol", () => {
+  const src = "S -> a S b | eps";
+  const g = rdpParseGrammar(src);
+  const sp = L.rdpRuleSpans(src);
+  const txt = (ranges) => arr(ranges.map((r) => r.role + ":" + src.slice(r.from, r.to)));
+  assert.deepEqual(txt(L.rdpGrammarRanges(g, sp, L.rdpKey("S", "sym", 0, 1))), ["lhs:S", "rhs:a S b", "sym:S"]);
+  assert.deepEqual(txt(L.rdpGrammarRanges(g, sp, L.rdpKey("S", "alt", 1))), ["lhs:S", "rhs:eps"]);
+  assert.deepEqual(txt(L.rdpGrammarRanges(g, sp, L.rdpKey("S", "sym", 0, 3))), ["lhs:S", "rhs:a S b"]); // the yield line
+  assert.deepEqual(txt(L.rdpGrammarRanges(g, sp, L.rdpKey("S", "head"))), ["lhs:S", "lhs:S"]);
+  assert.equal(L.rdpGrammarRanges(g, sp, "nonsense").length, 0);
+});

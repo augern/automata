@@ -159,6 +159,63 @@ function rdpProcedures(g, mode) {
   return procs;
 }
 
+// ── The grammar text ─────────────────────────────────────────────────
+
+// Where each production (in the order of g.rules) sits in the grammar text, as [start, end) offsets:
+// { lhs, rhs, toks } with toks the offsets of the symbols of the right-hand side. Reads the text the
+// way parseBNF does, so rdpRuleSpans(text)[i] is g.rules[i].
+function rdpRuleSpans(text) {
+  const spans = [];
+  let at = 0;
+  for (const raw of text.split("\n")) {
+    const lineStart = at;
+    at += raw.length + 1;
+    const line = raw.trim();
+    if (!line || line.startsWith("//")) continue;
+    const from = lineStart + raw.indexOf(line);
+    const arrow = line.includes("->") ? "->" : "\u2192";
+    const cut = line.indexOf(arrow);
+    const lhsText = line.slice(0, cut).trimEnd();
+    let pos = cut + arrow.length;
+    for (const alt of line.slice(pos).split("|")) {
+      const lead = alt.length - alt.trimStart().length;
+      const body = alt.trim();
+      const start = from + pos + lead;
+      const toks = [...body.matchAll(/\S+/g)].map((m) => [start + m.index, start + m.index + m[0].length]);
+      spans.push({ lhs: [from, from + lhsText.length], rhs: [start, start + body.length], toks });
+      pos += alt.length + 1;
+    }
+  }
+  return spans;
+}
+
+// The parts of the grammar text that a line of the procedures stands for: [{ from, to, role }],
+// role lhs | rhs | sym. A procedure's own lines (head, end) stand for all rules of that nonterminal's
+// left side; an alternative's lines for its production; a symbol's line also for that symbol.
+function rdpGrammarRanges(g, spans, key) {
+  const m = /^(.*)\u0001([hea])?(?:s(\d+)\.(\d+))?(\d+)?$/.exec(key);
+  if (!m || !g.alts[m[1]]) return [];
+  const nt = m[1];
+  const out = [];
+  const addRule = (ruleIdx) => {
+    const sp = spans[ruleIdx];
+    if (!sp) return;
+    out.push({ from: sp.lhs[0], to: sp.lhs[1], role: "lhs" });
+    if (sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "rhs" });
+  };
+  if (m[2] === "h" || m[2] === "e") {
+    for (const alt of g.alts[nt]) if (spans[alt.rule]) out.push({ from: spans[alt.rule].lhs[0], to: spans[alt.rule].lhs[1], role: "lhs" });
+  } else if (m[2] === "a") {
+    addRule(g.alts[nt][+m[5]].rule);
+  } else if (m[3] !== undefined) {
+    const alt = g.alts[nt][+m[3]];
+    addRule(alt.rule);
+    const tok = spans[alt.rule] && spans[alt.rule].toks[+m[4]];
+    if (tok && +m[4] < alt.rhs.length) out.push({ from: tok[0], to: tok[1], role: "sym" });
+  }
+  return out;
+}
+
 // ── The run ──────────────────────────────────────────────────────────
 
 function rdpRun(g, tokens, opts) {

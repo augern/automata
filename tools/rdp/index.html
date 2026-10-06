@@ -15,6 +15,18 @@
       #p-code { --pw: 400; --pmin: 250px; }
       #p-search { --pw: 740; --pmin: 320px; }
 
+      /* What the current step is about is marked by a copy of the text behind the (transparent) textarea */
+      #grammar-field { position: relative; flex: 1; min-height: 0; display: flex; }
+      #grammar-input, #grammar-hl { box-sizing: border-box; width: 100%; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); overflow-wrap: break-word; white-space: pre-wrap; }
+      #grammar-input { position: relative; }
+      #grammar-hl { position: absolute; inset: 0; color: transparent; overflow: hidden; pointer-events: none; }
+      #grammar-hl .gh-lhs, #grammar-hl .gh-rhs { background: var(--st-active-bg); }
+      #grammar-hl .gh-hot { background: var(--hot-bg); }
+      #grammar-hl .gh-sym { background: color-mix(in srgb, var(--st-active) 38%, transparent); }
+      #grammar-hl .gh-sym.gh-good { background: color-mix(in srgb, var(--st-accept) 38%, transparent); }
+      #grammar-hl .gh-sym.gh-bad { background: color-mix(in srgb, var(--st-reject) 38%, transparent); }
+      #grammar-hl .gh-sym.gh-warn { background: color-mix(in srgb, var(--st-warn) 38%, transparent); }
+
       #grammar-note {
         flex-shrink: 0;
         padding: 0 var(--sp-5) var(--sp-4);
@@ -114,7 +126,10 @@
               <option value="">Example Grammar</option>
             </select>
           </div>
-          <textarea id="grammar-input" spellcheck="false" placeholder="S -> a S b | eps"></textarea>
+          <div id="grammar-field">
+            <div id="grammar-hl" aria-hidden="true"></div>
+            <textarea id="grammar-input" spellcheck="false" placeholder="S -> a S b | eps"></textarea>
+          </div>
           <div id="grammar-note"></div>
           <div id="grammar-footer">
             <div id="error-msg"></div>
@@ -221,13 +236,13 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/rdp.js?v=74e334bb"></script>
+    <script src="../../shared/algo/rdp.js?v=0f1d9726"></script>
     <script src="../../shared/shared.js?v=15943b26"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=006bfdfd"></script>
+    <script src="guide.js?v=3d3b50f0"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -244,12 +259,15 @@
       let rdSel = null; // id of the node whose explanation is open
       let rdSelStep = null; // step it was opened at: stepping or editing closes it
       let rdHot = null; // { nodes: Set, lines: Set, span: [from, to] | null }: what the pointer is on
+      let rdSrc = ""; // the grammar text rdG was parsed from, and where its productions sit in it
+      let rdSpans = [];
       let rdLines = new Map(); // code-line key -> element
       let rdLineList = []; // the same elements in listing order, and what each line is for
       let rdLineInfo = [];
       let rdGenTouched = false; // the user has used the build stepper
       let rdState = null; // rdpStateAt for the current step
 
+      const rdToneClass = { "is-good": "gh-good", "is-bad": "gh-bad", "is-warn": "gh-warn" };
       const rdTone = { mismatch: "is-bad", fail: "is-bad", loop: "is-bad", reject: "is-warn", yield: "is-good", match: "" };
       const MODE_HINT = {
         full: "Each procedure yields every position where it can end. When the rest of the parse fails, control returns into it for the next one, so a parse is found whenever there is one.",
@@ -263,7 +281,9 @@
 
       function build() {
         try {
-          rdG = rdpParseGrammar($("grammar-input").value);
+          rdSrc = $("grammar-input").value;
+          rdG = rdpParseGrammar(rdSrc);
+          rdSpans = rdpRuleSpans(rdSrc);
           setError("");
         } catch (e) {
           rdG = null;
@@ -318,8 +338,42 @@
         else if (gen.pos === total) log.set("Done: " + total + " lines for " + rdG.order.length + " procedure" + (rdG.order.length === 1 ? "" : "s") + ".");
         else log.set(esc(rdLineInfo[gen.pos - 1].note));
         paintCode();
+        paintGrammar();
         if (rdGenTouched && gen.pos > 0 && gen.pos < total) scrollCodeTo([rdLineInfo[gen.pos - 1].key]);
       }
+
+      // Mark in the grammar text what the current step is about: the production (left side and
+      // right side) of the line being executed or generated, and the symbol itself; hovered lines
+      // in the hover colour. Only while the text is still the one the procedures were made from.
+      function paintGrammar() {
+        const hl = $("grammar-hl"), text = $("grammar-input").value;
+        if (!rdG || text !== rdSrc) { hl.innerHTML = ""; return; }
+        const cls = new Array(text.length).fill("");
+        const mark = (ranges, role, extra) => { for (const r of ranges) for (let i = r.from; i < r.to; i++) cls[i] += " gh-" + role + (extra && r.role === "sym" ? " " + extra : ""); };
+        const building = rdGenTouched && gen.pos > 0 && gen.pos < rdLineList.length;
+        const ev = rdState && rdState.event;
+        const nowKey = building ? rdLineInfo[gen.pos - 1].key : ev ? ev.line : null;
+        if (rdHot) for (const k of rdHot.lines) mark(rdpGrammarRanges(rdG, rdSpans, k).filter((r) => r.role !== "sym"), "hot");
+        if (nowKey) {
+          const tone = !building && ev ? rdToneClass[rdTone[ev.kind]] : "";
+          for (const r of rdpGrammarRanges(rdG, rdSpans, nowKey)) mark([r], r.role, tone);
+        }
+        let h = "", i = 0;
+        while (i < text.length) {
+          let j = i + 1;
+          while (j < text.length && cls[j] === cls[i]) j++;
+          const piece = esc(text.slice(i, j));
+          h += cls[i] ? '<span class="' + cls[i].trim() + '">' + piece + "</span>" : piece;
+          i = j;
+        }
+        hl.innerHTML = h;
+        hl.scrollTop = $("grammar-input").scrollTop;
+      }
+      (function keepGrammarHighlightScrolled() {
+        const input = $("grammar-input");
+        for (const ev of ["input", "keyup", "scroll", "mouseup"]) input.addEventListener(ev, () => { $("grammar-hl").scrollTop = input.scrollTop; });
+        input.addEventListener("input", paintGrammar); // typing: the highlight is dropped until the grammar is rebuilt
+      })();
 
       // Bring the lines into view in the code panel (only when they are not already), with a little context.
       function scrollCodeTo(keys) {
@@ -578,6 +632,7 @@
         const h = rdHot;
         d3.selectAll("#tree-root .rdp-n").classed("is-hot", (d) => !!h && h.nodes.has(d.data.id));
         rdLines.forEach((el, key) => el.classList.toggle("is-hot", !!h && h.lines.has(key)));
+        paintGrammar();
         document.querySelectorAll("#rdp-strip .tok").forEach((el) => {
           const i = +el.dataset.i;
           el.classList.toggle("is-hot", !!h && !!h.span && i >= h.span[0] && i < h.span[1]);
