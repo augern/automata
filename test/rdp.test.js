@@ -159,3 +159,12 @@ test("explain: a node says what happened to it", () => {
   assert.equal(rdpExplainNode(r2.g, r2.t, st2, bad.id).role, "dead");
   assert.equal(rdpExplainNode(g, t, st, 9999), null);
 });
+
+test("every generated line says what it is for", () => {
+  const g = rdpParseGrammar("S -> a S b | eps");
+  for (const mode of ["full", "ordered"]) {
+    const lines = rdpProcedures(g, mode).flatMap((p) => p.lines);
+    assert.ok(lines.every((l) => l.note && l.kind), mode);
+    assert.deepEqual(arr(lines.map((l) => l.kind)), ["head", "alt", "sym", "sym", "sym", "yield", "alt", "yield", "end"]);
+  }
+});

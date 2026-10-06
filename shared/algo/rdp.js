@@ -112,7 +112,8 @@ function rdpSub(n) {
   return String(n).split("").map((d) => RDP_SUB[+d]).join("");
 }
 
-// The procedures of the grammar as data: [{ nt, lines: [{ key, indent, segs: [[cls, text]] }] }].
+// The procedures of the grammar as data: [{ nt, lines: [{ key, indent, kind, note, segs: [[cls, text]] }] }].
+// kind: head | alt | sym | yield | end; note says in a sentence why the line is generated (the build stepper shows it).
 // cls: kw (keyword) | nt | t (terminal) | cm (comment) | "" (plain).
 function rdpProcedures(g, mode) {
   const procs = [];
@@ -123,29 +124,36 @@ function rdpProcedures(g, mode) {
     const alts = g.alts[nt];
     const multi = alts.length > 1;
     const lines = [];
-    const add = (key, indent, segs) => lines.push({ key, indent, segs });
-    add(rdpKey(nt, "head"), 0, [
+    const add = (key, indent, kind, note, segs) => lines.push({ key, indent, kind, note, segs });
+    add(rdpKey(nt, "head"), 0, "head",
+      "Procedure " + nt + "(i): " + (ordered ? "it returns where its first matching alternative ends, or ✗." : "it yields every position where " + nt + " can end."), [
       ["nt", nt], ["", "(i)  "],
       ["cm", ordered ? "▷ end j of the first alternative that matches, or ✗" : "▷ yields each j where " + nt + " matches input[i…j)"],
     ]);
     alts.forEach((alt, a) => {
       const base = multi ? 2 : 1;
       if (multi) {
-        add(rdpKey(nt, "alt", a), 1, [
+        add(rdpKey(nt, "alt", a), 1, "alt", "Alternative " + (a + 1) + " of " + nt + ": " + nt + " → " + (alt.rhs.join(" ") || "ε") + ". The alternatives are tried in the order written.", [
           ["kw", "alt " + (a + 1)], ["", "  "], ["nt", nt], ["", " → "],
           ...(alt.rhs.length ? alt.rhs.flatMap((s, x) => (x ? [["", " "], symSeg(s)] : [symSeg(s)])) : [["cm", "ε"]]),
         ]);
       }
       alt.rhs.forEach((s, k) => {
+        const isNt = g.nonterminals.has(s);
+        const note = isNt
+          ? s + " is a nonterminal: " + (ordered ? "call its procedure at the current position; a ✗ gives up this alternative." : "call its procedure and loop over every position it yields.")
+          : "“" + s + "” is a terminal: " + (ordered ? "match it at the current position; ✗ if the token differs." : "it yields the next position if the token matches, and nothing otherwise.");
         const call = g.nonterminals.has(s) ? [["nt", s], ["", "(" + jv(k) + ")"]] : [["kw", "match"], ["", "("], ["t", s], ["", ", " + jv(k) + ")"]];
-        if (ordered) add(rdpKey(nt, "sym", a, k), base, [["", jv(k + 1) + " ← "], ...call]);
-        else add(rdpKey(nt, "sym", a, k), base + k, [["kw", "for"], ["", " " + jv(k + 1) + " "], ["kw", "in"], ["", " "], ...call]);
+        if (ordered) add(rdpKey(nt, "sym", a, k), base, "sym", note, [["", jv(k + 1) + " ← "], ...call]);
+        else add(rdpKey(nt, "sym", a, k), base + k, "sym", note, [["kw", "for"], ["", " " + jv(k + 1) + " "], ["kw", "in"], ["", " "], ...call]);
       });
       const len = alt.rhs.length;
-      if (ordered) add(rdpKey(nt, "sym", a, len), base, [["kw", "return"], ["", " " + jv(len)]]);
-      else add(rdpKey(nt, "sym", a, len), base + len, [["kw", "yield"], ["", " " + jv(len)]]);
+      const done = !len ? "The alternative is empty: it matches without reading anything. "
+        : "Every symbol matched. ";
+      if (ordered) add(rdpKey(nt, "sym", a, len), base, "yield", done + "Return the position reached; the choice is final.", [["kw", "return"], ["", " " + jv(len)]]);
+      else add(rdpKey(nt, "sym", a, len), base + len, "yield", done + "Yield the position reached; if the caller rejects it, control returns into the loops above for the next way.", [["kw", "yield"], ["", " " + jv(len)]]);
     });
-    add(rdpKey(nt, "end"), 1, ordered ? [["kw", "return"], ["", " ✗  "], ["cm", "▷ no alternative matched"]] : [["cm", "▷ no way left: " + nt + " fails"]]);
+    add(rdpKey(nt, "end"), 1, "end", ordered ? "No alternative matched: return ✗." : "No way left: the procedure ends, and " + nt + " fails.", ordered ? [["kw", "return"], ["", " ✗  "], ["cm", "▷ no alternative matched"]] : [["cm", "▷ no way left: " + nt + " fails"]]);
     procs.push({ nt, lines });
   }
   return procs;

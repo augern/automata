@@ -31,6 +31,10 @@
       #mode-hint { flex-shrink: 0; border-top: 1px solid var(--border-lo); border-bottom: 0; }
       #code { padding: var(--sp-4) 0 var(--sp-6); font-family: var(--font-serif); font-size: var(--fs-sm); color: var(--text); }
       .rdp-proc { margin: 0 var(--sp-5) var(--sp-5); border-top: 1.5px solid var(--text); border-bottom: 1.5px solid var(--text); padding: var(--sp-2) 0; }
+      /* Alternating faint shading, so that where one procedure ends and the next begins reads at a glance */
+      .rdp-proc:nth-child(even) { background: color-mix(in srgb, var(--text) 4%, transparent); }
+      #gen-bar .ui-label { flex-shrink: 0; }
+      #gen-log { min-height: 2.6em; }
       .rdp-line {
         padding: 0 var(--sp-3) 0 calc(var(--sp-3) + var(--ind) * 1.4em);
         border-left: 2px solid transparent;
@@ -46,6 +50,7 @@
       .rdp-line.is-now.is-good { background: var(--st-accept-bg); border-left-color: var(--st-accept); }
       .rdp-line.is-now.is-bad { background: var(--st-reject-bg); border-left-color: var(--st-reject); }
       .rdp-line.is-now.is-warn { background: var(--st-warn-bg); border-left-color: var(--st-warn); }
+      .rdp-line.is-new { background: var(--st-active-bg); border-left-color: var(--st-active); }
       .rdp-line.is-hot { background: var(--hot-bg); border-left-color: var(--hot); }
 
       /* ── Input, position curve, counters ── */
@@ -138,6 +143,16 @@
               </label>
             </div>
           </div>
+          <div id="gen-bar" class="ui-bar">
+            <span class="ui-label" title="Build the procedures one line at a time, as the algorithm generates them from the grammar">Build</span>
+            <div class="step-group">
+              <button class="btn icon-restart" id="btn-gen-reset" onclick="gen.reset()" title="Empty the listing and start building it" disabled></button>
+              <button class="btn" id="btn-gen-back" onclick="gen.prev()" disabled>&#8249; Back</button>
+              <button class="btn primary" id="btn-gen-step" onclick="gen.next()" disabled>Step &#8250;</button>
+              <button class="btn icon-run-all" id="btn-gen-all" onclick="gen.end()" title="Build everything" disabled></button>
+            </div>
+          </div>
+          <div id="gen-log" class="ui-logbar"></div>
           <div id="code-scroll" class="ui-scroll" style="padding: 0">
             <div id="code"><div class="ui-empty">Enter a grammar.</div></div>
           </div>
@@ -206,7 +221,7 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/rdp.js?v=54e87b81"></script>
+    <script src="../../shared/algo/rdp.js?v=74e334bb"></script>
     <script src="../../shared/shared.js?v=15943b26"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -230,6 +245,9 @@
       let rdSelStep = null; // step it was opened at: stepping or editing closes it
       let rdHot = null; // { nodes: Set, lines: Set, span: [from, to] | null }: what the pointer is on
       let rdLines = new Map(); // code-line key -> element
+      let rdLineList = []; // the same elements in listing order, and what each line is for
+      let rdLineInfo = [];
+      let rdGenTouched = false; // the user has used the build stepper
       let rdState = null; // rdpStateAt for the current step
 
       const rdTone = { mismatch: "is-bad", fail: "is-bad", loop: "is-bad", reject: "is-warn", yield: "is-good", match: "" };
@@ -262,9 +280,12 @@
 
       function renderCode() {
         rdLines = new Map();
+        rdLineList = [];
+        rdLineInfo = [];
+        rdGenTouched = false;
         const box = $("code");
         $("mode-hint-text").textContent = MODE_HINT[rdMode];
-        if (!rdG) { box.innerHTML = '<div class="ui-empty">Enter a grammar.</div>'; return; }
+        if (!rdG) { box.innerHTML = '<div class="ui-empty">Enter a grammar.</div>'; gen.pos = 0; renderGen(); gen.refresh(); return; }
         box.innerHTML = rdpProcedures(rdG, rdMode).map((p) =>
           '<div class="rdp-proc">' + p.lines.map((l) =>
             '<div class="rdp-line" style="--ind:' + l.indent + '">' +
@@ -274,7 +295,44 @@
         // Elements are matched to their keys in the same order.
         const els = box.querySelectorAll(".rdp-line");
         let n = 0;
-        for (const p of rdpProcedures(rdG, rdMode)) for (const l of p.lines) { els[n].dataset.key = l.key; rdLines.set(l.key, els[n++]); }
+        for (const p of rdpProcedures(rdG, rdMode)) for (const l of p.lines) { els[n].dataset.key = l.key; rdLineInfo.push(l); rdLineList.push(els[n]); rdLines.set(l.key, els[n++]); }
+        gen.pos = rdLineList.length; // the listing starts out complete
+        renderGen();
+        gen.refresh();
+      }
+
+      // ── Building the procedures step by step ──
+      const gen = createStepper({
+        buttons: { reset: "btn-gen-reset", back: "btn-gen-back", step: "btn-gen-step", all: "btn-gen-all" },
+        min: 0,
+        last: () => (rdLineList.length ? rdLineList.length : null),
+        onChange: () => { rdGenTouched = true; renderGen(); },
+      });
+      function renderGen() {
+        const total = rdLineList.length;
+        rdLineList.forEach((el, i) => { el.hidden = i >= gen.pos; });
+        document.querySelectorAll("#code .rdp-proc").forEach((p) => { p.hidden = p.firstElementChild.hidden; });
+        const log = UI.logBar("gen-log");
+        if (!rdGenTouched) log.clear();
+        else if (gen.pos === 0) log.set("Nothing generated yet. <b>Step ›</b> emits the first line.");
+        else if (gen.pos === total) log.set("Done: " + total + " lines for " + rdG.order.length + " procedure" + (rdG.order.length === 1 ? "" : "s") + ".");
+        else log.set(esc(rdLineInfo[gen.pos - 1].note));
+        paintCode();
+        if (rdGenTouched && gen.pos > 0 && gen.pos < total) scrollCodeTo([rdLineInfo[gen.pos - 1].key]);
+      }
+
+      // Bring the lines into view in the code panel (only when they are not already), with a little context.
+      function scrollCodeTo(keys) {
+        const els = [...keys].map((k) => rdLines.get(k)).filter((e) => e && !e.hidden);
+        if (!els.length) return;
+        const box = $("code-scroll"), br = box.getBoundingClientRect();
+        const rect = (e) => e.getBoundingClientRect();
+        let top = Math.min(...els.map((e) => rect(e).top)) - br.top;
+        let bottom = Math.max(...els.map((e) => rect(e).bottom)) - br.top;
+        const h = box.clientHeight, margin = 12, context = 24;
+        if (bottom - top > h - 2 * margin) { top = rect(els[0]).top - br.top; bottom = rect(els[0]).bottom - br.top; } // too tall: the first line
+        if (top < margin) box.scrollTop += top - margin - context;
+        else if (bottom > h - margin) box.scrollTop += bottom - h + margin + context;
       }
 
       function run() {
@@ -384,6 +442,7 @@
 
       function paintCode() {
         rdLines.forEach((el) => { el.className = "rdp-line"; });
+        if (rdGenTouched && gen.pos > 0 && gen.pos < rdLineList.length) { rdLineList[gen.pos - 1].classList.add("is-new"); return; } // building: the listing is not complete
         const ev = rdState && rdState.event;
         if (!ev) return;
         for (const k of rdpPendingLines(rdTrace, ev)) if (rdLines.has(k)) rdLines.get(k).classList.add("is-wait");
@@ -392,10 +451,7 @@
           now.classList.remove("is-wait");
           now.classList.add("is-now");
           if (rdTone[ev.kind]) now.classList.add(rdTone[ev.kind]);
-          const box = $("code-scroll");
-          const top = now.offsetTop - box.offsetTop, bottom = top + now.offsetHeight;
-          if (top < box.scrollTop + 8) box.scrollTop = Math.max(0, top - 40);
-          else if (bottom > box.scrollTop + box.clientHeight - 8) box.scrollTop = bottom - box.clientHeight + 40;
+          scrollCodeTo([ev.line]);
         }
       }
 
@@ -474,6 +530,7 @@
         rdSelStep = sim.pos;
         drawSearchTree();
         renderInfo();
+        if (rdSel !== null && rdState) scrollCodeTo(hotFromNode(rdSel).lines); // selecting a node shows its code
       }
       const ROLE = { open: ["live", "In progress"], ok: ["accepted", "Matched"], fail: ["rejected", "Failed"], dead: ["dead", "Undone"] };
       function renderInfo() {
@@ -491,16 +548,16 @@
       function hotFromNode(id) {
         const nd = rdTrace.nodes[id], cur = rdState.status[id];
         const lines = new Set();
+        if (nd.kind === "call") lines.add(rdpKey(nd.nt, "head")); // its own procedure first, then the line that called it
         if (nd.site) lines.add(nd.site);
-        if (nd.kind === "call") lines.add(rdpKey(nd.nt, "head"));
         let to = cur && cur.end !== undefined ? cur.end : nd.kind === "tok" ? nd.i + 1 : Math.max(rdState.pos, nd.i);
         if (nd.eps) to = nd.i;
-        return { nodes: new Set([id]), lines, span: [nd.i, to] };
+        return { nodes: new Set([id]), lines, span: [nd.i, to], scroll: true };
       }
       function hotFromAlt(alt) {
         const cur = rdState.status[alt.id];
         const nodes = new Set(rdTrace.nodes.filter((nd) => nd.parent === alt.id && rdState.status[nd.id]).map((nd) => nd.id));
-        return { nodes, lines: new Set([rdpKey(alt.nt, "alt", alt.alt)]), span: [alt.i, cur && cur.end !== undefined ? cur.end : Math.max(rdState.pos, alt.i)] };
+        return { nodes, lines: new Set([rdpKey(alt.nt, "alt", alt.alt)]), span: [alt.i, cur && cur.end !== undefined ? cur.end : Math.max(rdState.pos, alt.i)], scroll: true };
       }
       function hotFromLine(key) {
         const nodes = new Set();
@@ -515,6 +572,7 @@
       function setHot(h) {
         rdHot = h;
         applyHot();
+        if (h && h.scroll) scrollCodeTo(h.lines); // hovering a tree node shows its code
       }
       function applyHot() {
         const h = rdHot;
@@ -535,6 +593,7 @@
         onChange: () => render(),
       });
       // ←/→ (or ,/.) step, Home restarts, End runs; the Parsing panel has key focus.
+      registerStepper("p-code", { step: () => gen.next(), back: () => gen.prev(), reset: () => gen.reset(), end: () => gen.end() });
       registerStepper("p-search", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
 
       $("grammar-input").addEventListener("input", () => { clearTimeout(rdBuildTimer); rdBuildTimer = setTimeout(build, 300); });
