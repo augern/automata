@@ -381,15 +381,17 @@ function stepBack() {
   if (!stepHistory.length) return;
   simPos = stepHistory.pop();
 
-  // Rebuild log up to simPos
+  // Drop the entries after simPos from the log. (Rebuilding the whole log would empty it, scroll it
+  // to the top and then scroll back down.)
   const log = document.getElementById('step-log');
-  log.innerHTML = '';
+  while (log.children.length > simPos) log.lastElementChild.remove();
   if (simPos === 0) {
     document.getElementById('step-empty').style.display = '';
     renderGrammarDisplay(inputGrammar.rules, [], []);
   } else {
-    document.getElementById('step-empty').style.display = 'none';
-    for (let i = 0; i < simPos; i++) appendStepEntry(i);
+    log.querySelectorAll('.step-entry.current').forEach(e => e.classList.remove('current'));
+    log.lastElementChild.classList.add('current');
+    log.lastElementChild.scrollIntoView({ block: 'nearest' });
     const prev = simSteps[simPos - 1];
     renderGrammarDisplay(prev.grammarAfter, prev.newRules || [], prev.activeRules || []);
   }
