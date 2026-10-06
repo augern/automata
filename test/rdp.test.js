@@ -194,3 +194,20 @@ test("grammar ranges: an alternative's lines mark its production, a symbol line 
   assert.deepEqual(txt(L.rdpGrammarRanges(g, sp, L.rdpKey("S", "head"))), ["lhs:S", "lhs:S"]);
   assert.equal(L.rdpGrammarRanges(g, sp, "nonsense").length, 0);
 });
+
+test("frame progress: symbols before the line are done, earlier alternatives are gone", () => {
+  const src = "S -> a b | c d e | f";
+  const g = rdpParseGrammar(src);
+  const sp = L.rdpRuleSpans(src);
+  const key = L.rdpKey("S", "sym", 1, 2); // second alternative, at "e"
+  const txt = (ranges) => arr(ranges.map((r) => r.role + ":" + src.slice(r.from, r.to)));
+  assert.deepEqual(txt(L.rdpFrameRanges(g, sp, key)), ["done:c", "done:d", "gone:a b"]);
+  const lines = L.rdpFrameLines(g, key);
+  assert.deepEqual(arr(lines.done.map((k) => k.replace("\u0001", ":"))), ["S:s1.0", "S:s1.1"]);
+  assert.deepEqual(arr(lines.gone.map((k) => k.replace("\u0001", ":"))), ["S:a0", "S:s0.0", "S:s0.1", "S:s0.2"]);
+  // the first alternative's yield line: everything before it is done, nothing is gone
+  assert.equal(L.rdpFrameRanges(g, sp, L.rdpKey("S", "sym", 0, 2)).length, 2);
+  assert.equal(L.rdpFrameRanges(g, sp, L.rdpKey("S", "head")).length, 0);
+  assert.equal(L.rdpFrameRanges(g, sp, L.rdpKey("S", "alt", 0)).length, 0);
+  assert.deepEqual(arr(L.rdpFrameRanges(g, sp, L.rdpKey("S", "end")).map((r) => r.role)), ["gone", "gone", "gone"]);
+});

@@ -20,8 +20,10 @@
       #grammar-input, #grammar-hl { box-sizing: border-box; width: 100%; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); overflow-wrap: break-word; white-space: pre-wrap; }
       #grammar-input { position: relative; }
       #grammar-hl { position: absolute; inset: 0; color: transparent; overflow: hidden; pointer-events: none; }
+      #grammar-hl .gh-gone { background: var(--bg-hover); }
       #grammar-hl .gh-lhs, #grammar-hl .gh-rhs { background: var(--st-active-bg); }
       #grammar-hl .gh-hot { background: var(--hot-bg); }
+      #grammar-hl .gh-done { background: var(--st-accept-bg); }
       #grammar-hl .gh-sym { background: color-mix(in srgb, var(--st-active) 38%, transparent); }
       #grammar-hl .gh-sym.gh-good { background: color-mix(in srgb, var(--st-accept) 38%, transparent); }
       #grammar-hl .gh-sym.gh-bad { background: color-mix(in srgb, var(--st-reject) 38%, transparent); }
@@ -62,6 +64,9 @@
       .rdp-line.is-now.is-good { background: var(--st-accept-bg); border-left-color: var(--st-accept); }
       .rdp-line.is-now.is-bad { background: var(--st-reject-bg); border-left-color: var(--st-reject); }
       .rdp-line.is-now.is-warn { background: var(--st-warn-bg); border-left-color: var(--st-warn); }
+      /* How far each call on the stack has got: symbols already matched, alternatives given up */
+      .rdp-line.is-done { box-shadow: inset -3px 0 0 var(--st-accept); }
+      .rdp-line.is-gone, .rdp-line.is-gone .nt, .rdp-line.is-gone .t, .rdp-line.is-gone .kw { color: var(--st-dead); }
       .rdp-line.is-new { background: var(--st-active-bg); border-left-color: var(--st-active); }
       .rdp-line.is-hot { background: var(--hot-bg); border-left-color: var(--hot); }
 
@@ -236,13 +241,13 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/rdp.js?v=0f1d9726"></script>
+    <script src="../../shared/algo/rdp.js?v=dc539a84"></script>
     <script src="../../shared/shared.js?v=15943b26"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=3d3b50f0"></script>
+    <script src="guide.js?v=1ee6b1ff"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -349,10 +354,12 @@
         const hl = $("grammar-hl"), text = $("grammar-input").value;
         if (!rdG || text !== rdSrc) { hl.innerHTML = ""; return; }
         const cls = new Array(text.length).fill("");
-        const mark = (ranges, role, extra) => { for (const r of ranges) for (let i = r.from; i < r.to; i++) cls[i] += " gh-" + role + (extra && r.role === "sym" ? " " + extra : ""); };
+        const mark = (ranges, role, extra) => { for (const r of ranges) for (let i = r.from; i < r.to; i++) cls[i] += " gh-" + (role || r.role) + (extra && r.role === "sym" ? " " + extra : ""); };
         const building = rdGenTouched && gen.pos > 0 && gen.pos < rdLineList.length;
         const ev = rdState && rdState.event;
         const nowKey = building ? rdLineInfo[gen.pos - 1].key : ev ? ev.line : null;
+        const fk = !building && frameKey(ev);
+        if (fk) mark(rdpFrameRanges(rdG, rdSpans, fk), null);
         if (rdHot) for (const k of rdHot.lines) mark(rdpGrammarRanges(rdG, rdSpans, k).filter((r) => r.role !== "sym"), "hot");
         if (nowKey) {
           const tone = !building && ev ? rdToneClass[rdTone[ev.kind]] : "";
@@ -494,12 +501,27 @@
         new ResizeObserver(() => renderChart()).observe(svg);
       })();
 
+      // The call whose progress the code and the grammar show: the one the step is in; for a new call
+      // (its first line is only the heading) the call site in its caller. Progress of every call on the
+      // stack at once would be ambiguous when a procedure calls itself.
+      function frameKey(ev) {
+        if (!ev) return null;
+        const kp = rdpKeyParts(ev.line);
+        return kp && kp.part !== "head" ? ev.line : rdpPendingLines(rdTrace, ev)[0] || null;
+      }
+
       function paintCode() {
         rdLines.forEach((el) => { el.className = "rdp-line"; });
         if (rdGenTouched && gen.pos > 0 && gen.pos < rdLineList.length) { rdLineList[gen.pos - 1].classList.add("is-new"); return; } // building: the listing is not complete
         const ev = rdState && rdState.event;
         if (!ev) return;
         for (const k of rdpPendingLines(rdTrace, ev)) if (rdLines.has(k)) rdLines.get(k).classList.add("is-wait");
+        const fk = frameKey(ev);
+        if (fk) {
+          const fl = rdpFrameLines(rdG, fk);
+          for (const d of fl.done) if (rdLines.has(d)) rdLines.get(d).classList.add("is-done");
+          for (const d of fl.gone) if (rdLines.has(d)) rdLines.get(d).classList.add("is-gone");
+        }
         const now = ev.line && rdLines.get(ev.line);
         if (now) {
           now.classList.remove("is-wait");

@@ -189,13 +189,23 @@ function rdpRuleSpans(text) {
   return spans;
 }
 
+// The pieces of a line key: { nt, part: head | end | alt | sym, alt, k }, or null.
+function rdpKeyParts(key) {
+  const m = /^(.*)\u0001([hea])?(?:s(\d+)\.(\d+))?(\d+)?$/.exec(key || "");
+  if (!m) return null;
+  if (m[2] === "h") return { nt: m[1], part: "head" };
+  if (m[2] === "e") return { nt: m[1], part: "end" };
+  if (m[2] === "a") return { nt: m[1], part: "alt", alt: +m[5] };
+  if (m[3] !== undefined) return { nt: m[1], part: "sym", alt: +m[3], k: +m[4] };
+  return null;
+}
+
 // The parts of the grammar text that a line of the procedures stands for: [{ from, to, role }],
 // role lhs | rhs | sym. A procedure's own lines (head, end) stand for all rules of that nonterminal's
 // left side; an alternative's lines for its production; a symbol's line also for that symbol.
 function rdpGrammarRanges(g, spans, key) {
-  const m = /^(.*)\u0001([hea])?(?:s(\d+)\.(\d+))?(\d+)?$/.exec(key);
-  if (!m || !g.alts[m[1]]) return [];
-  const nt = m[1];
+  const kp = rdpKeyParts(key);
+  if (!kp || !g.alts[kp.nt]) return [];
   const out = [];
   const addRule = (ruleIdx) => {
     const sp = spans[ruleIdx];
@@ -203,15 +213,62 @@ function rdpGrammarRanges(g, spans, key) {
     out.push({ from: sp.lhs[0], to: sp.lhs[1], role: "lhs" });
     if (sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "rhs" });
   };
-  if (m[2] === "h" || m[2] === "e") {
-    for (const alt of g.alts[nt]) if (spans[alt.rule]) out.push({ from: spans[alt.rule].lhs[0], to: spans[alt.rule].lhs[1], role: "lhs" });
-  } else if (m[2] === "a") {
-    addRule(g.alts[nt][+m[5]].rule);
-  } else if (m[3] !== undefined) {
-    const alt = g.alts[nt][+m[3]];
+  if (kp.part === "head" || kp.part === "end") {
+    for (const alt of g.alts[kp.nt]) if (spans[alt.rule]) out.push({ from: spans[alt.rule].lhs[0], to: spans[alt.rule].lhs[1], role: "lhs" });
+  } else if (kp.part === "alt") {
+    addRule(g.alts[kp.nt][kp.alt].rule);
+  } else {
+    const alt = g.alts[kp.nt][kp.alt];
     addRule(alt.rule);
-    const tok = spans[alt.rule] && spans[alt.rule].toks[+m[4]];
-    if (tok && +m[4] < alt.rhs.length) out.push({ from: tok[0], to: tok[1], role: "sym" });
+    const tok = spans[alt.rule] && spans[alt.rule].toks[kp.k];
+    if (tok && kp.k < alt.rhs.length) out.push({ from: tok[0], to: tok[1], role: "sym" });
+  }
+  return out;
+}
+
+// How far a call has got, for the frame that a line key belongs to (ordered choice, where what is
+// matched is settled): the symbols of its alternative before the one at the line, and the earlier
+// alternatives, which have been given up. Returns { doneSyms: [[alt, k]], goneAlts: [alt] }.
+function rdpFrameProgress(g, key) {
+  const kp = rdpKeyParts(key);
+  const out = { doneSyms: [], goneAlts: [] };
+  if (!kp || !g.alts[kp.nt] || kp.part === "head") return out;
+  if (kp.part === "end") { // every alternative has been given up
+    for (let a = 0; a < g.alts[kp.nt].length; a++) out.goneAlts.push(a);
+    return out;
+  }
+  for (let a = 0; a < kp.alt; a++) out.goneAlts.push(a);
+  if (kp.part === "sym") for (let k = 0; k < kp.k; k++) out.doneSyms.push([kp.alt, k]);
+  return out;
+}
+
+// The same as ranges in the grammar text: [{ from, to, role: "done" | "gone" }].
+function rdpFrameRanges(g, spans, key) {
+  const kp = rdpKeyParts(key);
+  const pr = rdpFrameProgress(g, key);
+  const out = [];
+  if (!kp || !g.alts[kp.nt]) return out;
+  for (const [a, k] of pr.doneSyms) {
+    const tok = spans[g.alts[kp.nt][a].rule] && spans[g.alts[kp.nt][a].rule].toks[k];
+    if (tok) out.push({ from: tok[0], to: tok[1], role: "done" });
+  }
+  for (const a of pr.goneAlts) {
+    const sp = spans[g.alts[kp.nt][a].rule];
+    if (sp && sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "gone" });
+  }
+  return out;
+}
+
+// And as keys of the lines in the procedures: { done: [key], gone: [key] }.
+function rdpFrameLines(g, key) {
+  const kp = rdpKeyParts(key);
+  const pr = rdpFrameProgress(g, key);
+  const out = { done: [], gone: [] };
+  if (!kp || !g.alts[kp.nt]) return out;
+  for (const [a, k] of pr.doneSyms) out.done.push(rdpKey(kp.nt, "sym", a, k));
+  for (const a of pr.goneAlts) {
+    out.gone.push(rdpKey(kp.nt, "alt", a));
+    for (let k = 0; k <= g.alts[kp.nt][a].rhs.length; k++) out.gone.push(rdpKey(kp.nt, "sym", a, k));
   }
   return out;
 }

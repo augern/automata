@@ -26,7 +26,7 @@ const DYNAMIC = new Set([
   "ui-cell--narrow", "ui-cell--wide", // UI.table.input size
   "ui-explain__role--initial", "ui-explain__role--live", "ui-explain__role--accepted", "ui-explain__role--rejected", "ui-explain__role--dead", "ui-explain__role--expanded", // role names built in the PDA tool
   "ag-arrowhead--eps", "ag-arrowhead--hot", // arrow marker kinds built in ensureArrowMarkers
-  "gh-lhs", "gh-rhs", "gh-sym", "gh-hot", "k-tok", "st-open", "st-ok", "st-fail", // search-tree node kind/status and grammar-highlight roles, built in the RDP tool
+  "gh-lhs", "gh-rhs", "gh-sym", "gh-hot", "gh-done", "gh-gone", "k-tok", "st-open", "st-ok", "st-fail", // search-tree node kind/status and grammar-highlight roles, built in the RDP tool
 ]);
 
 const TOKEN = /[.#]([A-Za-z_][\w-]*)/g;
