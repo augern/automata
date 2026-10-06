@@ -117,33 +117,33 @@ body[data-view="list"] #view-map { display: none; }
 
 <!-- Map view: the tools placed on the Chomsky hierarchy -->
 <section id="view-map" aria-label="Map of the tools">
-<svg id="map" viewBox="0 0 700 490" role="group" aria-label="The tools placed on the Chomsky hierarchy">
+<svg id="map" viewBox="0 0 700 530" role="group" aria-label="The tools placed on the Chomsky hierarchy">
   <!-- Rings, outermost first. Solid: Chomsky's classes; dashed: subclasses of the context-free languages. -->
-  <rect class="ring ring-0" data-ring="re" x="10" y="10" width="680" height="470" rx="64"/>
-  <rect class="ring ring-1" data-ring="cs" x="38" y="66" width="624" height="398" rx="54"/>
-  <rect class="ring ring-2" data-ring="cf" x="66" y="122" width="568" height="326" rx="46"/>
-  <rect class="ring ring-3 ring-sub" data-ring="dcf" x="94" y="178" width="512" height="254" rx="38"/>
-  <rect class="ring ring-4 ring-sub" data-ring="ll1" x="122" y="234" width="456" height="182" rx="30"/>
-  <rect class="ring ring-5" data-ring="reg" x="150" y="290" width="400" height="110" rx="22"/>
+  <rect class="ring ring-0" data-ring="re" x="10" y="10" width="680" height="510" rx="64"/>
+  <rect class="ring ring-1" data-ring="cs" x="38" y="66" width="624" height="438" rx="54"/>
+  <rect class="ring ring-2" data-ring="cf" x="66" y="122" width="568" height="366" rx="46"/>
+  <rect class="ring ring-3 ring-sub" data-ring="dcf" x="94" y="218" width="512" height="254" rx="38"/>
+  <rect class="ring ring-4 ring-sub" data-ring="ll1" x="122" y="274" width="456" height="182" rx="30"/>
+  <rect class="ring ring-5" data-ring="reg" x="150" y="330" width="400" height="110" rx="22"/>
 
   <!-- Ring names; hover a ring for its Chomsky type, what accepts it, and an example language -->
   <text x="40" y="44" class="ring-name">Recursively enumerable</text>
   <text x="68" y="100" class="ring-name">Context-sensitive</text>
   <text x="96" y="156" class="ring-name">Context-free</text>
-  <text x="124" y="212" class="ring-name">Deterministic context-free</text>
-  <text x="152" y="268" class="ring-name">LL(1)</text>
-  <text x="180" y="322" class="ring-name">Regular</text>
+  <text x="124" y="252" class="ring-name">Deterministic context-free</text>
+  <text x="152" y="308" class="ring-name">LL(1)</text>
+  <text x="180" y="362" class="ring-name">Regular</text>
 
   <!-- Tools: placed by the languages they work with; their text comes from TOOLS below -->
   <a class="pill" id="t-tm" href="tools/tm/" tabindex="0"><rect x="527" y="19" width="129" height="34" rx="17"/><text x="591.5" y="36">Turing Machine</text></a>
   <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="459" y="76" width="169" height="34" rx="17"/><text x="543.5" y="93">Grammar Derivations</text></a>
   <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="398" y="132" width="202" height="34" rx="17"/><text x="499" y="149">Grammar Transformations</text></a>
   <a class="pill" id="t-pda" href="tools/pda/" tabindex="0"><rect x="265" y="132" width="123" height="34" rx="17"/><text x="326.5" y="149">PDA Simulator</text></a>
-  <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="480" y="188" width="92" height="34" rx="17"/><text x="526" y="205">LR Parser</text></a>
-  <a class="pill" id="t-rdp" href="tools/rdp/" tabindex="0"><rect x="272" y="244" width="144" height="34" rx="17"/><text x="344" y="261">Recursive Descent</text></a>
-  <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="437" y="244" width="107" height="34" rx="17"/><text x="490.5" y="261">LL(1) Parser</text></a>
-  <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="197" y="344" width="124" height="34" rx="17"/><text x="259" y="361">NFA Simulator</text></a>
-  <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="345" y="344" width="158" height="34" rx="17"/><text x="424" y="361">Regular Expressions</text></a>
+  <a class="pill" id="t-rdp" href="tools/rdp/" tabindex="0"><rect x="456" y="174" width="144" height="34" rx="17"/><text x="528" y="191">Recursive Descent</text></a>
+  <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="480" y="228" width="92" height="34" rx="17"/><text x="526" y="245">LR Parser</text></a>
+  <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="394" y="284" width="150" height="34" rx="17"/><text x="469" y="301">Predictive Parsing</text></a>
+  <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="197" y="384" width="124" height="34" rx="17"/><text x="259" y="401">NFA Simulator</text></a>
+  <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="345" y="384" width="158" height="34" rx="17"/><text x="424" y="401">Regular Expressions</text></a>
 
 </svg>
 <p class="hint">Hover a ring or a tool for details.</p>
@@ -180,12 +180,12 @@ body[data-view="list"] #view-map { display: none; }
     rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages",
       desc: "Top-down parsing by recursive procedures — the procedures generated from a grammar, and the search for a parse with its guesses, backtracking and dead ends, with complete search or ordered choice.",
       builds: "Grammar Derivations; Grammar Transformations removes the left recursion it cannot handle" },
-    ll1: { href: "tools/ll1/", title: "LL(1) Parser", group: "Context-free languages",
-      desc: "Top-down predictive parsing — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
+    ll1: { href: "tools/ll1/", title: "Predictive Parsing", group: "Context-free languages",
+      desc: "Top-down predictive parsing with one symbol of lookahead (LL(1)) — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
       builds: "Recursive Descent (LL(1) is the case that never has to backtrack); Grammar Transformations removes the left recursion LL(1) cannot handle" },
     lr: { href: "tools/lr/", title: "LR Parser", group: "Context-free languages",
       desc: "Bottom-up shift–reduce parsing — LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree.",
-      builds: "LL(1) Parser, NFA Simulator (the automaton of items)" },
+      builds: "Predictive Parsing, NFA Simulator (the automaton of items)" },
     tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages",
       desc: "Deterministic single-tape Turing machines — transition function, tape and head, and stepwise execution of the computation.",
       builds: "PDA Simulator" },
