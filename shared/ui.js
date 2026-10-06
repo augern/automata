@@ -193,8 +193,11 @@ const UI = (() => {
     //     heading: "Examples",             // optional menu heading
     //   })
     // The input keeps its own id and listeners; `random` and `examples` are optional.
+    // An empty field means the empty string, and says so with ε as its placeholder.
     stringInput(target, { random, examples, onPick, heading = "Examples" } = {}) {
       const input = el(target);
+      input.placeholder = "ε";
+      if (!input.title && !input.getAttribute("aria-label")) input.setAttribute("aria-label", "Input string (empty for ε)");
       const wrap = document.createElement("div");
       wrap.className = "ui-strin";
       input.parentNode.insertBefore(wrap, input);

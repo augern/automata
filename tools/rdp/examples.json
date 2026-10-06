@@ -60,19 +60,6 @@
       "label": "Complete or ordered choice",
       "examples": [
         {
-          "label": "Ordered choice commits",
-          "purpose": "The Wrong first guess grammar with ordered choice: A's first match is final, so aab is rejected although it is in the language.",
-          "mode": "ordered",
-          "text": [
-            "S -> A b",
-            "A -> a | a a"
-          ],
-          "strings": [
-            "aab",
-            "ab"
-          ]
-        },
-        {
           "label": "Shortest alternative first",
           "purpose": "With ordered choice A stops after one a and the rest never matches. Switch to complete search and it works; or reorder the alternatives.",
           "mode": "ordered",
@@ -96,19 +83,6 @@
           "strings": [
             "aaab",
             "ab"
-          ]
-        },
-        {
-          "label": "Palindromes (ordered)",
-          "purpose": "Even palindromes such as aaaa are rejected: an inner S commits to its middle too early and is never asked again.",
-          "mode": "ordered",
-          "text": [
-            "S -> a S a | b S b | a | b | eps"
-          ],
-          "strings": [
-            "aaaa",
-            "aaa",
-            "abba"
           ]
         }
       ]
