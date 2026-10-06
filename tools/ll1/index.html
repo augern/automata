@@ -556,6 +556,8 @@
 
       function renderDerivSteps() {
         const area = document.getElementById("deriv-steps");
+        const scroller = document.getElementById("deriv-area");
+        const keepTop = scroller.scrollTop; // the list is rebuilt; keep the scroll position instead of letting it jump
         area.innerHTML = "";
         document.getElementById("deriv-empty").style.display = derivSteps.length ? "none" : "";
         document.getElementById("deriv-head").style.display  = derivSteps.length ? ""     : "none";
@@ -572,6 +574,7 @@
           div.innerHTML = '<span class="ds-num">' + (i + 1) + "</span>" + '<span class="ds-form">' + formHtml + "</span>" + '<span class="ds-action">' + esc(step.action) + "</span>";
           area.appendChild(div);
         });
+        scroller.scrollTop = keepTop;
         // Scroll last step into view
         const last = area.lastElementChild;
         if (last) last.scrollIntoView({ block: "nearest", behavior: "smooth" });
