@@ -77,7 +77,6 @@
       .rdp-n text { font-family: var(--font-serif); font-size: var(--fs-sm); fill: var(--text); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
       .rdp-n .sub { font-size: var(--fs-2xs); fill: var(--text-lo); }
       .rdp-n.k-tok text { fill: var(--text-dim); }
-      .rdp-n.k-alt text { font-size: var(--fs-xs); }
       .rdp-n.st-open rect { stroke: var(--st-active); fill: var(--st-active-bg); }
       .rdp-n.st-ok rect { stroke: var(--st-accept); fill: var(--st-accept-bg); }
       .rdp-n.st-fail rect { stroke: var(--st-reject); fill: var(--st-reject-bg); }
@@ -88,6 +87,9 @@
       .rdp-n.is-hot rect { stroke: var(--hot); fill: var(--hot-bg); }
       .rdp-e { fill: none; stroke: var(--border-hi); stroke-width: 1.3; }
       .rdp-e.e-dead { stroke: var(--st-dead); stroke-dasharray: 3 3; }
+      /* The number of the alternative a branch belongs to, on the first edge of that alternative */
+      .rdp-el { font-family: var(--font-serif); font-size: var(--fs-xs); fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; cursor: default; }
+      .rdp-el.e-dead { fill: var(--st-dead); }
     </style>
   </head>
   <body>
@@ -210,7 +212,7 @@
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=10f81c69"></script>
+    <script src="guide.js?v=006bfdfd"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -277,6 +279,7 @@
 
       function run() {
         rdSel = null;
+        rdUserZoomed = false;
         rdTrace = rdG ? rdpRun(rdG, rdpTokenise(rdG, $("sim-input").value), { mode: rdMode }) : null;
         sim.pos = -1;
         render();
@@ -397,24 +400,24 @@
       }
 
       // ── Search tree ───────────────────────────────────────────
-      const NODE_H = { call: 28, alt: 20, tok: 26 };
+      const NODE_H = { call: 28, tok: 26 };
       function nodeLabel(nd) {
         if (nd.kind === "call") return { main: nd.nt, sub: "@" + nd.i };
-        if (nd.kind === "alt") return { main: String(nd.alt + 1), sub: "" };
         return { main: nd.sym, sub: "" };
       }
       function nodeWidth(nd) {
         const l = nodeLabel(nd);
-        return Math.max(nd.kind === "alt" ? 22 : 30, 9 * l.main.length + 7.5 * l.sub.length + 20);
+        return Math.max(30, 9 * l.main.length + 7.5 * l.sub.length + 20);
       }
 
       let rdZoom = null;
-      let rdUserZoomed = false;
+      let rdUserZoomed = false; // the user changed the zoom: stop fitting the tree to the view
+      let rdFitK = null; // the scale of the last fit
       function initTreeView() {
         rdZoom = d3.zoom().scaleExtent([0.08, 3])
           .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
           .on("zoom", (e) => {
-            if (e.sourceEvent) rdUserZoomed = true;
+            if (e.sourceEvent && (rdFitK === null || Math.abs(e.transform.k - rdFitK) > 1e-6)) rdUserZoomed = true;
             d3.select("#tree-root").attr("transform", e.transform);
           });
         d3.select("#tree-svg").call(rdZoom).on("dblclick.zoom", null);
@@ -422,7 +425,8 @@
         d3.select("#tree-svg").on("click", () => { if (rdSel !== null) selectNode(rdSel); });
         new ResizeObserver(() => { if (!rdUserZoomed) fitTreeView(); }).observe($("tree-wrap"));
       }
-      function fitTreeView() {
+      // Fit the whole tree into the view (it grows as the run goes on); panning alone does not stop this.
+      function fitTreeView(animate) {
         try {
           const bb = $("tree-root").getBBox();
           const svg = $("tree-svg");
@@ -431,7 +435,9 @@
           const sc = Math.min(1, Math.min((vw - 24) / bb.width, (vh - 24) / bb.height));
           const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
           const ty = Math.max(12, (vh - bb.height * sc) / 2) - bb.y * sc;
-          d3.select("#tree-svg").call(rdZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+          rdFitK = sc;
+          const sel = d3.select("#tree-svg");
+          (animate ? sel.transition().duration(180) : sel).call(rdZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
         } catch (e) { /* not laid out yet */ }
       }
 
@@ -443,24 +449,40 @@
         const showDead = $("show-dead").checked;
         const st = rdState.status;
         const kids = new Map();
+        const altOf = new Map(); // first child of an alternative -> the alternative, for the label on its edge
+        const seenAlt = new Set();
         let root = null;
         for (const nd of rdTrace.nodes) {
           const s = st[nd.id];
-          if (!s || (!showDead && s.st === "dead")) continue;
-          if (nd.parent < 0) root = nd;
-          else { if (!kids.has(nd.parent)) kids.set(nd.parent, []); kids.get(nd.parent).push(nd); }
+          if (nd.kind === "alt" || !s || (!showDead && s.st === "dead")) continue;
+          if (nd.parent < 0) { root = nd; continue; }
+          // The alternatives of a nonterminal are not nodes of their own: their symbols hang off the call.
+          const up = rdTrace.nodes[nd.parent];
+          const owner = up.kind === "alt" ? up.parent : up.id;
+          if (up.kind === "alt" && !seenAlt.has(up.id)) { seenAlt.add(up.id); altOf.set(nd.id, up); }
+          if (!kids.has(owner)) kids.set(owner, []);
+          kids.get(owner).push(nd);
         }
         if (!root) { empty.style.display = ""; return; }
         empty.style.display = "none";
         const h = d3.hierarchy(root, (d) => kids.get(d.id) || []);
         d3.tree().nodeSize([40, 66]).separation((a, b) => Math.max(0.9, (nodeWidth(a.data) + nodeWidth(b.data)) / 2 / 40 + 0.2))(h);
         const active = rdState.event ? rdState.event.node : -1;
+        const ends = (l) => ({ y1: l.source.y + NODE_H[l.source.data.kind] / 2, y2: l.target.y - NODE_H[l.target.data.kind] / 2 });
         g.append("g").selectAll("path").data(h.links()).join("path")
           .attr("class", (l) => "rdp-e" + (st[l.target.data.id].st === "dead" ? " e-dead" : ""))
           .attr("d", (l) => {
-            const y1 = l.source.y + NODE_H[l.source.data.kind] / 2, y2 = l.target.y - NODE_H[l.target.data.kind] / 2, m = (y1 + y2) / 2;
+            const { y1, y2 } = ends(l), m = (y1 + y2) / 2;
             return "M" + l.source.x + "," + y1 + "C" + l.source.x + "," + m + " " + l.target.x + "," + m + " " + l.target.x + "," + y2;
           });
+        g.append("g").selectAll("text").data(h.links().filter((l) => altOf.has(l.target.data.id))).join("text")
+          .attr("class", (l) => "rdp-el" + (st[l.target.data.id].st === "dead" ? " e-dead" : ""))
+          .attr("x", (l) => 0.216 * l.source.x + 0.784 * l.target.x) // the edge's point at t = 0.7
+          .attr("y", (l) => { const { y1, y2 } = ends(l), m = (y1 + y2) / 2; return 0.027 * y1 + 0.441 * m + 0.343 * y2 + 0.189 * m; })
+          .text((l) => altOf.get(l.target.data.id).alt + 1)
+          .on("mouseenter", (e, l) => setHot(hotFromAlt(altOf.get(l.target.data.id))))
+          .on("mouseleave", () => setHot(null))
+          .append("title").text((l) => { const a = altOf.get(l.target.data.id); return "Alternative " + (a.alt + 1) + ": " + a.nt + " → " + (rdG.alts[a.nt][a.alt].rhs.join(" ") || "ε"); });
         const ns = g.append("g").selectAll("g").data(h.descendants()).join("g")
           .attr("class", (d) => "rdp-n k-" + d.data.kind + " st-" + st[d.data.id].st + (d.data.id === active ? " is-active" : "") + (d.data.id === rdSel ? " is-sel" : ""))
           .attr("data-id", (d) => d.data.id)
@@ -477,7 +499,7 @@
           t.append("tspan").text(l.main);
           if (l.sub) t.append("tspan").attr("class", "sub").attr("dx", 3).text(l.sub);
         });
-        if (!rdUserZoomed) fitTreeView();
+        if (!rdUserZoomed) fitTreeView(rdFitK !== null);
       }
 
       // ── Selection and explanation ─────────────────────────────
@@ -505,16 +527,22 @@
         const lines = new Set();
         if (nd.site) lines.add(nd.site);
         if (nd.kind === "call") lines.add(rdpKey(nd.nt, "head"));
-        if (nd.kind === "alt") lines.add(rdpKey(nd.nt, "alt", nd.alt));
         let to = cur && cur.end !== undefined ? cur.end : nd.kind === "tok" ? nd.i + 1 : Math.max(rdState.pos, nd.i);
         if (nd.eps) to = nd.i;
         return { nodes: new Set([id]), lines, span: [nd.i, to] };
+      }
+      function hotFromAlt(alt) {
+        const cur = rdState.status[alt.id];
+        const nodes = new Set(rdTrace.nodes.filter((nd) => nd.parent === alt.id && rdState.status[nd.id]).map((nd) => nd.id));
+        return { nodes, lines: new Set([rdpKey(alt.nt, "alt", alt.alt)]), span: [alt.i, cur && cur.end !== undefined ? cur.end : Math.max(rdState.pos, alt.i)] };
       }
       function hotFromLine(key) {
         const nodes = new Set();
         for (const nd of rdTrace.nodes) {
           if (!rdState.status[nd.id]) continue;
-          if (nd.site === key || (nd.kind === "alt" && rdpKey(nd.nt, "alt", nd.alt) === key) || (nd.kind === "call" && (rdpKey(nd.nt, "head") === key || rdpKey(nd.nt, "end") === key))) nodes.add(nd.id);
+          if (nd.site === key || (nd.kind === "call" && (rdpKey(nd.nt, "head") === key || rdpKey(nd.nt, "end") === key))) nodes.add(nd.id);
+          // An alternative line stands for the symbols that were tried under it.
+          else if (nd.kind === "alt" && rdpKey(nd.nt, "alt", nd.alt) === key) for (const c of rdTrace.nodes) if (c.parent === nd.id && rdState.status[c.id]) nodes.add(c.id);
         }
         return { nodes, lines: new Set([key]), span: null };
       }

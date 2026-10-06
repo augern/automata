@@ -13,7 +13,7 @@ window.TOOL_GUIDE = {
   ],
   notation: [
     ["A @ i", "a call of A at position i, that is, after i tokens have been read"],
-    ["①②", "a numbered alternative of a nonterminal with more than one rule"],
+    ["1, 2 on a branch", "the alternative of the nonterminal that the branch starts; hover it for the rule"],
     ["backtrack", "a rejected match that is taken back, or an alternative given up for the next one"],
     ["depth", "how many calls are waiting for an answer; the longest chain so far"],
   ],
