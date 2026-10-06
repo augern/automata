@@ -10,6 +10,7 @@ window.TOOL_GUIDE = {
     "The tree shows every call and every alternative tried. Abandoned attempts stay in the tree, greyed out, so you can see the dead ends; untick the box to see only what is left. Click a node for an explanation.",
     "The curve under the input shows the read position over time. Every drop is a backtrack. Click or drag along it to move through the run.",
     "Complete search yields every position where a nonterminal can end and returns into it when the rest fails, so it finds a parse whenever there is one. Ordered choice commits to the first alternative that matches and never revisits it: faster, but it can reject strings that are in the language.",
+    "Packrat is ordered choice with a memo table: when a nonterminal is called again at a position it was already tried at, the remembered result is used (the node is marked ↺) and nothing is parsed again. The verdicts are the same as with plain ordered choice; only the repeated work goes.",
     "A left-recursive nonterminal calls itself without reading anything. The run stops at the first repeat; the Grammar Transformations tool can remove the recursion.",
   ],
   notation: [

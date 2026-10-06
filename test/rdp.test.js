@@ -211,3 +211,56 @@ test("frame progress: symbols before the line are done, earlier alternatives are
   assert.equal(L.rdpFrameRanges(g, sp, L.rdpKey("S", "alt", 0)).length, 0);
   assert.deepEqual(arr(L.rdpFrameRanges(g, sp, L.rdpKey("S", "end")).map((r) => r.role)), ["gone", "gone", "gone"]);
 });
+
+test("packrat: the same verdicts as ordered choice with less work, memo hits replace repeated calls", () => {
+  const src = "E -> T + E | T\nT -> id | ( E )";
+  const input = "( ( ( ( id ) ) ) )";
+  const plain = run(src, input, "ordered").t;
+  const memo = run(src, input, "packrat").t;
+  assert.equal(memo.accepted, plain.accepted);
+  assert.equal(memo.mode, "ordered");
+  assert.equal(memo.memo, true);
+  assert.ok(memo.events.length < plain.events.length / 3, `${memo.events.length} vs ${plain.events.length}`);
+  const hits = memo.events.filter((e) => e.kind === "memo");
+  assert.ok(hits.length > 0);
+  assert.equal(final(memo).memoHits, hits.length);
+  // a hit is a leaf with the remembered result
+  for (const e of hits) assert.equal(memo.nodes.filter((nd) => nd.parent === e.node).length, 0);
+});
+
+test("packrat: a remembered failure is reused too", () => {
+  const { t } = run("S -> A x | A y\nA -> a", "a y", "packrat");
+  assert.equal(t.accepted, true);
+  assert.equal(t.events.some((e) => e.kind === "memo"), true);
+});
+
+test("packrat: random grammars give the verdict of plain ordered choice", () => {
+  let seed = 777;
+  const rnd = (n) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+  const NT = ["S", "A", "B"], T = ["a", "b"];
+  let compared = 0;
+  for (let k = 0; k < 200; k++) {
+    const lines = NT.slice(0, 2 + rnd(2)).map((lhs) => lhs + " -> " + Array.from({ length: 1 + rnd(3) }, () => Array.from({ length: rnd(4) }, () => (rnd(3) === 0 ? NT[rnd(NT.length)] : T[rnd(2)])).join(" ") || "eps").join(" | "));
+    const g = rdpParseGrammar(lines.join("\n"));
+    if (g.rules.some((r) => r.rhs.some((x) => NT.includes(x) && !g.alts[x]))) continue;
+    for (const w of ["", "a", "ab", "aab", "abba", "bab"]) {
+      const a = rdpRun(g, rdpTokenise(g, w), { mode: "ordered" });
+      const b = rdpRun(g, rdpTokenise(g, w), { mode: "packrat" });
+      assert.equal(b.accepted, a.accepted, lines.join("; ") + " on " + w);
+      assert.equal(b.aborted, a.aborted);
+      compared++;
+    }
+  }
+  assert.ok(compared > 300);
+});
+
+test("packrat procedures start with a memo lookup and store their result", () => {
+  const g = rdpParseGrammar("S -> a S | b");
+  const lines = rdpProcedures(g, "packrat")[0].lines;
+  const text = (l) => l.segs.map((s) => s[1]).join("");
+  assert.equal(lines[1].kind, "memo");
+  assert.match(text(lines[1]), /memo/);
+  assert.ok(lines.filter((l) => l.kind === "yield").every((l) => /^memo\(S, i\) ←/.test(text(l))));
+  assert.match(text(lines.at(-1)), /^memo\(S, i\) ← ✗/);
+  assert.equal(L.rdpKeyParts(L.rdpKey("S", "memo")).part, "memo");
+});

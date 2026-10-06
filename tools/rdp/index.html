@@ -161,6 +161,9 @@
               <label title="The first alternative that matches is final; it is never revisited (as in PEG parsers)">
                 <input type="radio" name="rdp-mode" value="ordered" /> ordered choice
               </label>
+              <label title="Ordered choice that remembers the result of each nonterminal at each position and reuses it instead of parsing it again">
+                <input type="radio" name="rdp-mode" value="packrat" /> packrat
+              </label>
             </div>
           </div>
           <div id="gen-bar" class="ui-bar">
@@ -211,6 +214,7 @@
               <span>step <b id="st-step">0</b></span>
               <span>calls <b id="st-calls">0</b></span>
               <span>backtracks <b id="st-back">0</b></span>
+              <span id="st-memo-wrap" hidden>memo hits <b id="st-memo">0</b></span>
               <span>depth <b id="st-depth">0</b></span>
               <label title="Keep the attempts that backtracking undid in the tree, greyed out"><input type="checkbox" id="show-dead" checked /> show abandoned attempts</label>
             </div>
@@ -241,13 +245,13 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/rdp.js?v=dc539a84"></script>
+    <script src="../../shared/algo/rdp.js?v=9fe07733"></script>
     <script src="../../shared/shared.js?v=15943b26"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=1ee6b1ff"></script>
+    <script src="guide.js?v=3e6a982c"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -272,11 +276,14 @@
       let rdGenTouched = false; // the user has used the build stepper
       let rdState = null; // rdpStateAt for the current step
 
+      // A memo hit is green when it answers with a match and red when with a failure.
+      const toneOf = (ev) => (ev.kind === "memo" ? (ev.set[0][1] === "ok" ? "is-good" : "is-bad") : rdTone[ev.kind]);
       const rdToneClass = { "is-good": "gh-good", "is-bad": "gh-bad", "is-warn": "gh-warn" };
       const rdTone = { mismatch: "is-bad", fail: "is-bad", loop: "is-bad", reject: "is-warn", yield: "is-good", match: "" };
       const MODE_HINT = {
         full: "Each procedure yields every position where it can end. When the rest of the parse fails, control returns into it for the next one, so a parse is found whenever there is one.",
         ordered: "Each procedure returns the end of its first alternative that matches. That choice is final: it is never revisited, so some strings of the language are rejected.",
+        packrat: "Ordered choice with a memo table: the result of every nonterminal at every position is remembered, and a repeated call is answered from the table. The verdicts are those of ordered choice; only the repeated work goes.",
       };
 
       // ── Build ─────────────────────────────────────────────────
@@ -362,7 +369,7 @@
         if (fk) mark(rdpFrameRanges(rdG, rdSpans, fk), null);
         if (rdHot) for (const k of rdHot.lines) mark(rdpGrammarRanges(rdG, rdSpans, k).filter((r) => r.role !== "sym"), "hot");
         if (nowKey) {
-          const tone = !building && ev ? rdToneClass[rdTone[ev.kind]] : "";
+          const tone = !building && ev ? rdToneClass[toneOf(ev)] : "";
           for (const r of rdpGrammarRanges(rdG, rdSpans, nowKey)) mark([r], r.role, tone);
         }
         let h = "", i = 0;
@@ -452,6 +459,8 @@
         $("st-step").textContent = (sim.pos + 1) + " / " + total;
         $("st-calls").textContent = rdState ? rdState.calls : 0;
         $("st-back").textContent = rdState ? rdState.backtracks : 0;
+        $("st-memo-wrap").hidden = rdMode !== "packrat";
+        $("st-memo").textContent = rdState ? rdState.memoHits : 0;
         $("st-depth").textContent = rdState ? rdState.maxDepth : 0;
       }
 
@@ -507,7 +516,7 @@
       function frameKey(ev) {
         if (!ev) return null;
         const kp = rdpKeyParts(ev.line);
-        return kp && kp.part !== "head" ? ev.line : rdpPendingLines(rdTrace, ev)[0] || null;
+        return kp && kp.part !== "head" && kp.part !== "memo" ? ev.line : rdpPendingLines(rdTrace, ev)[0] || null;
       }
 
       function paintCode() {
@@ -526,7 +535,7 @@
         if (now) {
           now.classList.remove("is-wait");
           now.classList.add("is-now");
-          if (rdTone[ev.kind]) now.classList.add(rdTone[ev.kind]);
+          if (toneOf(ev)) now.classList.add(toneOf(ev));
           scrollCodeTo([ev.line]);
         }
       }
@@ -534,7 +543,7 @@
       // ── Search tree ───────────────────────────────────────────
       const NODE_H = { call: 28, tok: 26 };
       function nodeLabel(nd) {
-        return nd.kind === "call" ? nd.nt : nd.sym;
+        return nd.kind === "call" ? nd.nt + (nd.memo ? " ↺" : "") : nd.sym; // ↺: answered from the memo table
       }
       function nodeWidth(nd) {
         return Math.max(30, 9 * nodeLabel(nd).length + 20);
@@ -714,7 +723,7 @@
       const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("sim-input").value, m: rdMode }));
       let sharedStateApplied = false;
       function applyShareState() {
-        const st = shareValidateTextState(readShareState(), "g", ["full", "ordered"]);
+        const st = shareValidateTextState(readShareState(), "g", ["full", "ordered", "packrat"]);
         if (!st) return;
         sharedStateApplied = true;
         $("grammar-input").value = st.g;

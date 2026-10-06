@@ -57,7 +57,7 @@ test("recursive-descent examples parse, and their sample strings run in the exam
   for (const ex of examples("rdp")) {
     const g = A.rdpParseGrammar(textOf(ex));
     assert.ok(ex.strings && ex.strings.length > 0, `${ex.label}: no sample strings`);
-    assert.ok(ex.mode === undefined || ex.mode === "full" || ex.mode === "ordered", `${ex.label}: bad mode`);
+    assert.ok(["full", "ordered", "packrat"].includes(ex.mode) || ex.mode === undefined, `${ex.label}: bad mode`);
     for (const s of ex.strings) {
       const t = A.rdpRun(g, A.rdpTokenise(g, s), { mode: ex.mode || "full" });
       assert.ok(t.events.length > 0, `${ex.label}: "${s}"`);

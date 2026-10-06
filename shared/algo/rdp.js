@@ -11,6 +11,8 @@
 //   "ordered" — ordered choice (as in PEG parsers): the first alternative that matches wins and
 //               is never revisited. Simpler and faster, but it can reject strings that are in the
 //               language.
+//   "packrat" — ordered choice that remembers the result of every (nonterminal, position) it has
+//               finished, and reuses it instead of parsing the same thing again.
 //
 // Tree nodes: { id, kind: "call" | "alt" | "tok", parent, ... } (see mk* below). A node's status
 // changes over time and is not stored on it: rdpStateAt replays the events.
@@ -18,7 +20,7 @@
 //   fail  — failed right here       dead — undone by backtracking
 //
 // Event: { kind, node, pos, line, depth, text, add?, set?, kill?, altIdx? }
-//   kind  call | try | match | mismatch | yield | reject | fail | accept | leftover | loop | limit
+//   kind  call | try | match | mismatch | yield | reject | fail | memo | accept | leftover | loop | limit
 //   pos   input position (tokens read) after the event; line: key of the code line (rdpKey) or null
 //   Applied in this order: kill (every node with id >= kill that is alive becomes dead), add
 //   (new nodes, status open), set ([id, status, end?] triples).
@@ -98,10 +100,11 @@ function rdpLeftRecursive(g) {
 
 // ── Code lines ───────────────────────────────────────────────────────
 
-// Key of a line of the generated procedures. part: head | alt | sym | end.
+// Key of a line of the generated procedures. part: head | memo | alt | sym | end.
 // sym with k = the right-hand side's length is the line that yields/returns.
 function rdpKey(nt, part, a, k) {
   if (part === "head") return nt + "\u0001h";
+  if (part === "memo") return nt + "\u0001m";
   if (part === "end") return nt + "\u0001e";
   if (part === "alt") return nt + "\u0001a" + a;
   return nt + "\u0001s" + a + "." + k;
@@ -117,7 +120,8 @@ function rdpSub(n) {
 // cls: kw (keyword) | nt | t (terminal) | cm (comment) | "" (plain).
 function rdpProcedures(g, mode) {
   const procs = [];
-  const ordered = mode === "ordered";
+  const ordered = mode === "ordered" || mode === "packrat";
+  const memo = mode === "packrat";
   const jv = (k) => (k === 0 ? "i" : "j" + rdpSub(k));
   const symSeg = (s) => [g.nonterminals.has(s) ? "nt" : "t", s];
   for (const nt of g.order) {
@@ -130,6 +134,11 @@ function rdpProcedures(g, mode) {
       ["nt", nt], ["", "(i)  "],
       ["cm", ordered ? "▷ end j of the first alternative that matches, or ✗" : "▷ yields each j where " + nt + " matches input[i…j)"],
     ]);
+    if (memo) {
+      add(rdpKey(nt, "memo"), 1, "memo", "Packrat: first look in the memo table. If " + nt + " was already tried at this position, return the remembered result (an end position, or ✗) without parsing again.", [
+        ["kw", "if"], ["", " ("], ["nt", nt], ["", ", i) ∈ memo  "], ["kw", "return"], ["", " memo("], ["nt", nt], ["", ", i)"],
+      ]);
+    }
     alts.forEach((alt, a) => {
       const base = multi ? 2 : 1;
       if (multi) {
@@ -150,10 +159,15 @@ function rdpProcedures(g, mode) {
       const len = alt.rhs.length;
       const done = !len ? "The alternative is empty: it matches without reading anything. "
         : "Every symbol matched. ";
-      if (ordered) add(rdpKey(nt, "sym", a, len), base, "yield", done + "Return the position reached; the choice is final.", [["kw", "return"], ["", " " + jv(len)]]);
+      if (memo) add(rdpKey(nt, "sym", a, len), base, "yield", done + "Remember the position reached in the memo table, then return it; the choice is final.", [["", "memo("], ["nt", nt], ["", ", i) ← " + jv(len) + ";  "], ["kw", "return"], ["", " " + jv(len)]]);
+      else if (ordered) add(rdpKey(nt, "sym", a, len), base, "yield", done + "Return the position reached; the choice is final.", [["kw", "return"], ["", " " + jv(len)]]);
       else add(rdpKey(nt, "sym", a, len), base + len, "yield", done + "Yield the position reached; if the caller rejects it, control returns into the loops above for the next way.", [["kw", "yield"], ["", " " + jv(len)]]);
     });
-    add(rdpKey(nt, "end"), 1, "end", ordered ? "No alternative matched: return ✗." : "No way left: the procedure ends, and " + nt + " fails.", ordered ? [["kw", "return"], ["", " ✗  "], ["cm", "▷ no alternative matched"]] : [["cm", "▷ no way left: " + nt + " fails"]]);
+    add(rdpKey(nt, "end"), 1, "end",
+      ordered ? (memo ? "No alternative matched: remember the failure in the memo table and return ✗." : "No alternative matched: return ✗.") : "No way left: the procedure ends, and " + nt + " fails.",
+      ordered
+        ? (memo ? [["", "memo("], ["nt", nt], ["", ", i) ← ✗;  "], ["kw", "return"], ["", " ✗"]] : [["kw", "return"], ["", " ✗  "], ["cm", "▷ no alternative matched"]])
+        : [["cm", "▷ no way left: " + nt + " fails"]]);
     procs.push({ nt, lines });
   }
   return procs;
@@ -189,11 +203,12 @@ function rdpRuleSpans(text) {
   return spans;
 }
 
-// The pieces of a line key: { nt, part: head | end | alt | sym, alt, k }, or null.
+// The pieces of a line key: { nt, part: head | memo | end | alt | sym, alt, k }, or null.
 function rdpKeyParts(key) {
-  const m = /^(.*)\u0001([hea])?(?:s(\d+)\.(\d+))?(\d+)?$/.exec(key || "");
+  const m = /^(.*)\u0001([heam])?(?:s(\d+)\.(\d+))?(\d+)?$/.exec(key || "");
   if (!m) return null;
   if (m[2] === "h") return { nt: m[1], part: "head" };
+  if (m[2] === "m") return { nt: m[1], part: "memo" };
   if (m[2] === "e") return { nt: m[1], part: "end" };
   if (m[2] === "a") return { nt: m[1], part: "alt", alt: +m[5] };
   if (m[3] !== undefined) return { nt: m[1], part: "sym", alt: +m[3], k: +m[4] };
@@ -213,7 +228,7 @@ function rdpGrammarRanges(g, spans, key) {
     out.push({ from: sp.lhs[0], to: sp.lhs[1], role: "lhs" });
     if (sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "rhs" });
   };
-  if (kp.part === "head" || kp.part === "end") {
+  if (kp.part === "head" || kp.part === "memo" || kp.part === "end") {
     for (const alt of g.alts[kp.nt]) if (spans[alt.rule]) out.push({ from: spans[alt.rule].lhs[0], to: spans[alt.rule].lhs[1], role: "lhs" });
   } else if (kp.part === "alt") {
     addRule(g.alts[kp.nt][kp.alt].rule);
@@ -232,7 +247,7 @@ function rdpGrammarRanges(g, spans, key) {
 function rdpFrameProgress(g, key) {
   const kp = rdpKeyParts(key);
   const out = { doneSyms: [], goneAlts: [] };
-  if (!kp || !g.alts[kp.nt] || kp.part === "head") return out;
+  if (!kp || !g.alts[kp.nt] || kp.part === "head" || kp.part === "memo") return out;
   if (kp.part === "end") { // every alternative has been given up
     for (let a = 0; a < g.alts[kp.nt].length; a++) out.goneAlts.push(a);
     return out;
@@ -277,7 +292,9 @@ function rdpFrameLines(g, key) {
 
 function rdpRun(g, tokens, opts) {
   const o = opts || {};
-  const mode = o.mode === "ordered" ? "ordered" : "full";
+  const mode = o.mode === "ordered" || o.mode === "packrat" ? "ordered" : "full";
+  const memoOn = o.mode === "packrat";
+  const memo = new Map(); // "nt<i" -> end position, or -1 for a failure
   const maxEvents = o.maxEvents || RDP_MAX_EVENTS;
   const maxDepth = o.maxDepth || RDP_MAX_DEPTH;
   const n = tokens.length;
@@ -401,6 +418,14 @@ function rdpRun(g, tokens, opts) {
 
   // Ordered choice: returns the end position, or -1.
   function callOrdered(nt, i, parentId, site) {
+    const memoKey = nt + "\u0002" + i;
+    if (memoOn && memo.has(memoKey)) {
+      const j = memo.get(memoKey);
+      const hit = mk({ kind: "call", parent: parentId, nt, i, site, memo: true });
+      emit({ kind: "memo", node: hit.id, pos: j >= 0 ? j : i, line: rdpKey(nt, "memo"), add: [hit.id], set: [[hit.id, j >= 0 ? "ok" : "fail", j >= 0 ? j : undefined]],
+        text: nt + " at position " + i + " has been tried before: " + (j >= 0 ? "it matched " + span(i, j) : "it failed") + ". The remembered result is used and nothing is parsed again." });
+      return j;
+    }
     const node = enter(nt, i, parentId, site);
     const alts = g.alts[nt];
     let prev = null;
@@ -420,12 +445,14 @@ function rdpRun(g, tokens, opts) {
       if (ok) {
         yieldEv(node, a, p, altNode, owner);
         stack.pop();
+        if (memoOn) memo.set(memoKey, p);
         return p;
       }
       prev = altNode;
     }
     failEv(node);
     stack.pop();
+    if (memoOn) memo.set(memoKey, -1);
     return -1;
   }
 
@@ -456,7 +483,7 @@ function rdpRun(g, tokens, opts) {
         text: "Stopped after " + events.length + " steps (or a call depth of " + maxDepth + "): the search is too large to follow." });
     }
   }
-  return { mode, tokens, nodes, events, accepted, aborted };
+  return { mode, memo: memoOn, tokens, nodes, events, accepted, aborted };
 }
 
 // ── State at a step ──────────────────────────────────────────────────
@@ -466,6 +493,7 @@ function rdpStateAt(trace, step) {
   const status = [];
   let backtracks = 0;
   let calls = 0;
+  let memoHits = 0;
   let maxDepth = 0;
   let ev = null;
   const last = Math.min(step, trace.events.length - 1);
@@ -478,9 +506,10 @@ function rdpStateAt(trace, step) {
     for (const [id, st, end] of ev.set || []) status[id] = { st, end };
     if (ev.kind === "reject" || (ev.kind === "try" && ev.altIdx > 0)) backtracks++;
     if (ev.kind === "call") calls++;
+    if (ev.kind === "memo") memoHits++;
     if (ev.depth > maxDepth) maxDepth = ev.depth;
   }
-  return { status, pos: ev ? ev.pos : 0, event: ev, backtracks, calls, maxDepth };
+  return { status, pos: ev ? ev.pos : 0, event: ev, backtracks, calls, memoHits, maxDepth };
 }
 
 // Code-line keys of the calls that led to the node an event is about (the "call stack" in the code).
@@ -551,6 +580,7 @@ function rdpExplainNode(g, trace, state, id) {
       dead: "Backtracking went back past this call, so it is tried again if another path reaches it.",
     }[role];
     lines.push(why);
+    if (nd.memo) lines.push("This result was remembered from an earlier call at the same position, so nothing was parsed again.");
   }
   return { role, title, facts, lines };
 }
