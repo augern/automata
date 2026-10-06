@@ -10,6 +10,7 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination |
 | **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step, or let a seeded "Random choice" stepper derive for you (Back/forward, Reseed, ←/→ keys, seed kept in share links) |
 | **PDA Simulator** | Nondeterministic PDA / ε-PDA — transition rule list, automaton graph, configuration-set simulation |
+| **Backtracking Recursive Descent** | The procedures generated from a grammar and the search for a parse — guesses, backtracking and dead ends as a call tree, the read position over time, linked to the highlighted code; complete search or ordered choice, left recursion detected |
 | **LL(1) Parser Tool** | Predictive parsing — FIRST/FOLLOW sets, predictive table M[A,a], derivation steps, string simulation, parse tree |
 | **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
 | **Turing Machine Simulator** | Deterministic TM — editable transition table, tape simulation, step-by-step execution |
@@ -35,6 +36,7 @@ parser-tools/
 │   ├── grammar-rewrite/                ← grammar transformations
 │   ├── derivation/                     ← grammar derivations
 │   ├── pda/                            ← PDA simulator
+│   ├── rdp/                            ← backtracking recursive descent
 │   ├── ll1/                            ← LL(1) parser
 │   ├── lr/                             ← LR parser
 │   └── tm/                             ← Turing machine simulator
@@ -51,6 +53,7 @@ parser-tools/
 │   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check, seeded random moves
 │   │   ├── strings.js                  ← pure: random input strings (automaton walks, sampling, grammar sentences)
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
+│   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
 │   │   ├── nfa.js                      ← pure: ε-closure, NFA simulation tree, exact acceptance
@@ -80,7 +83,7 @@ parser-tools/
 ```
 
 `shared.css`, `shared.js` and `algo/grammar.js` are required by all tools
-(`algo/grammar.js` must be loaded before `shared.js`; `algo/strings.js` for the random-string buttons; `algo/lr.js`, `algo/ll1.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js`, `algo/tm.js` (and `algo/states.js` for the three automata tools) only where needed).
+(`algo/grammar.js` must be loaded before `shared.js`; `algo/strings.js` for the random-string buttons; `algo/lr.js`, `algo/ll1.js`, `algo/rdp.js`, `algo/derivation.js`, `algo/nfa.js`, `algo/pda.js`, `algo/regex.js`, `algo/rewrite.js`, `algo/tm.js` (and `algo/states.js` for the three automata tools) only where needed).
 D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in its own
@@ -115,6 +118,7 @@ Each file has the structure:
 - **`groups`** maps to `<optgroup>` elements in the dropdown.
 - **`label`** is the display text shown in the dropdown.
 - **`text`** is an array of lines; the loader joins them with `\n` before passing the grammar to the tool. No `\n` escapes needed.
+- Examples may carry more fields for their tool: the recursive-descent tool reads `strings` (sample inputs, the first is loaded) and `mode` (`full` or `ordered`).
 - There is no `value`/ID field — the loader assigns stable positional keys (`ex0`, `ex1`, …) automatically.
 
 Shared sections in `shared.js` are delimited by comments:

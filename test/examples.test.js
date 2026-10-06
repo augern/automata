@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { load } = require("./load.js");
 
-const A = load("grammar.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js");
+const A = load("grammar.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js", "rdp.js");
 
 function examples(name) {
   const file = path.join(__dirname, "..", "tools", name, "examples.json");
@@ -51,6 +51,21 @@ test("LR examples build automata and tables in every mode", () => {
     A.buildTables(g, lalr, "LR1");
     A.buildTables(g, lr1, "LR1");
   }
+});
+
+test("recursive-descent examples parse, and their sample strings run in the example's mode", () => {
+  for (const ex of examples("rdp")) {
+    const g = A.rdpParseGrammar(textOf(ex));
+    assert.ok(ex.strings && ex.strings.length > 0, `${ex.label}: no sample strings`);
+    assert.ok(ex.mode === undefined || ex.mode === "full" || ex.mode === "ordered", `${ex.label}: bad mode`);
+    for (const s of ex.strings) {
+      const t = A.rdpRun(g, A.rdpTokenise(g, s), { mode: ex.mode || "full" });
+      assert.ok(t.events.length > 0, `${ex.label}: "${s}"`);
+    }
+  }
+  // Only the examples about left recursion are left-recursive.
+  const rec = examples("rdp").filter((ex) => A.rdpLeftRecursive(A.rdpParseGrammar(textOf(ex))).length > 0).map((ex) => ex.label);
+  assert.deepEqual([...rec].sort(), ["Hidden left recursion", "Left recursion"]);
 });
 
 test("LL(1) examples build tables", () => {

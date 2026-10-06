@@ -940,7 +940,7 @@ ${kw("return")} Follow`,
 
 // Fetches a JSON examples file and populates a <select> with <optgroup> elements.
 // JSON format: { groups: [{ label, examples: [{ value, label, text }] }] }
-// examplesObj will have keys added as { text: "..." } entries.
+// examplesObj gets one entry per example: its JSON fields, with text joined into one string.
 // onReady (optional) is called once the dropdown and examplesObj are populated.
 // Replace an examples <select> by a button that opens a menu: examples grouped under their
 // headings, each with its one-line purpose as a tooltip (native option tooltips are not shown
@@ -1009,7 +1009,7 @@ function loadExamplesInto(url, selectId, examplesObj, onReady) {
           opt.value = key;
           opt.textContent = ex.label;
           og.appendChild(opt);
-          examplesObj[key] = { text: Array.isArray(ex.text) ? ex.text.join("\n") : ex.text };
+          examplesObj[key] = Object.assign({}, ex, { text: Array.isArray(ex.text) ? ex.text.join("\n") : ex.text });
           items.push({ key: key, label: ex.label, purpose: ex.purpose });
         });
         groups.push({ label: group.label, items: items });

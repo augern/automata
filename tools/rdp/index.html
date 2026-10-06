@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Backtracking recursive-descent parser: the procedures generated from a grammar, and the search for a parse with its guesses and backtracking, step by step." />
+    <title>Backtracking Recursive Descent | Parser Tools</title>
+    <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=31206555" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-grammar { --pw: 230; --pmin: 170px; }
+      #p-code { --pw: 400; --pmin: 250px; }
+      #p-search { --pw: 740; --pmin: 320px; }
+
+      #grammar-note {
+        flex-shrink: 0;
+        padding: 0 var(--sp-5) var(--sp-4);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: var(--fs-xs);
+        line-height: 1.5;
+        color: var(--text-dim);
+      }
+      #grammar-note:empty { display: none; }
+
+      /* ── Procedures ── */
+      #mode-bar { flex-wrap: wrap; }
+      #mode-hint { flex-shrink: 0; border-top: 1px solid var(--border-lo); border-bottom: 0; }
+      #code { padding: var(--sp-4) 0 var(--sp-6); font-family: var(--font-serif); font-size: var(--fs-sm); color: var(--text); }
+      .rdp-proc { margin: 0 var(--sp-5) var(--sp-5); border-top: 1.5px solid var(--text); border-bottom: 1.5px solid var(--text); padding: var(--sp-2) 0; }
+      .rdp-line {
+        padding: 0 var(--sp-3) 0 calc(var(--sp-3) + var(--ind) * 1.4em);
+        border-left: 2px solid transparent;
+        line-height: 1.8;
+        white-space: pre;
+      }
+      .rdp-line .kw { font-variant: small-caps; letter-spacing: 0.04em; }
+      .rdp-line .nt { color: var(--accent); }
+      .rdp-line .t { font-weight: 600; }
+      .rdp-line .cm { color: var(--text-lo); font-style: italic; font-size: 0.88em; }
+      .rdp-line.is-wait { background: var(--bg-cell); border-left-color: var(--border-hi); }
+      .rdp-line.is-now { background: var(--st-active-bg); border-left-color: var(--st-active); }
+      .rdp-line.is-now.is-good { background: var(--st-accept-bg); border-left-color: var(--st-accept); }
+      .rdp-line.is-now.is-bad { background: var(--st-reject-bg); border-left-color: var(--st-reject); }
+      .rdp-line.is-now.is-warn { background: var(--st-warn-bg); border-left-color: var(--st-warn); }
+      .rdp-line.is-hot { background: var(--hot-bg); border-left-color: var(--hot); }
+
+      /* ── Input, position curve, counters ── */
+      #rdp-view { flex-shrink: 0; border-bottom: 1.5px solid var(--border-hi); background: var(--bg-panel); }
+      .rdp-row { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-5); }
+      .rdp-row + .rdp-row { border-top: 1px solid var(--border-lo); }
+      .rdp-row > .ui-label { width: 48px; flex-shrink: 0; }
+      #rdp-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); min-height: 24px; }
+      .tok.rdp-read { background: var(--st-active-bg); border-color: var(--st-active); color: var(--st-active); }
+      .tok.is-hot { background: var(--hot-bg); border-color: var(--hot); color: var(--hot); }
+      #rdp-chart { flex: 1; min-width: 0; height: 56px; display: block; cursor: pointer; touch-action: none; }
+      #rdp-chart .c-axis { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
+      #rdp-chart .c-label { fill: var(--text-lo); font-family: var(--font-mono); font-size: 9px; }
+      #rdp-chart .c-line { fill: none; stroke-width: 1.5; }
+      #rdp-chart .c-done { stroke: var(--accent); }
+      #rdp-chart .c-todo { stroke: var(--border-hi); }
+      #rdp-chart .c-back { fill: var(--st-warn); }
+      #rdp-chart .c-now { fill: var(--accent); stroke: var(--bg); stroke-width: 1.5; }
+      #rdp-stats { gap: var(--sp-5); flex-wrap: wrap; font-family: var(--font-serif); font-size: var(--fs-xs); color: var(--text-dim); }
+      #rdp-stats b { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+      #rdp-stats label { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+      #rdp-stats input { accent-color: var(--accent); cursor: pointer; }
+
+      /* ── Search tree ── */
+      #tree-wrap { min-height: 120px; }
+      #tree-svg { cursor: grab; }
+      .rdp-n { cursor: pointer; }
+      .rdp-n rect { fill: var(--bg); stroke: var(--border-hi); stroke-width: 1.4; }
+      .rdp-n text { font-family: var(--font-serif); font-size: var(--fs-sm); fill: var(--text); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+      .rdp-n .sub { font-size: var(--fs-2xs); fill: var(--text-lo); }
+      .rdp-n.k-tok text { fill: var(--text-dim); }
+      .rdp-n.k-alt text { font-size: var(--fs-xs); }
+      .rdp-n.st-open rect { stroke: var(--st-active); fill: var(--st-active-bg); }
+      .rdp-n.st-ok rect { stroke: var(--st-accept); fill: var(--st-accept-bg); }
+      .rdp-n.st-fail rect { stroke: var(--st-reject); fill: var(--st-reject-bg); }
+      .rdp-n.st-dead rect { stroke: var(--st-dead); fill: var(--bg-cell); stroke-dasharray: 3 2; }
+      .rdp-n.st-dead text, .rdp-n.st-dead .sub { fill: var(--st-dead); }
+      .rdp-n.is-active rect { stroke-width: 3; }
+      .rdp-n.is-sel rect { stroke-width: 3; stroke-dasharray: none; }
+      .rdp-n.is-hot rect { stroke: var(--hot); fill: var(--hot-bg); }
+      .rdp-e { fill: none; stroke: var(--border-hi); stroke-width: 1.3; }
+      .rdp-e.e-dead { stroke: var(--st-dead); stroke-dasharray: 3 3; }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1><a href="../../index.html">Backtracking Recursive Descent</a></h1>
+    </div>
+
+    <div id="panels">
+      <!-- 1. Grammar -->
+      <div class="panel" id="p-grammar" data-priority="3">
+        <div class="panel-header">
+          <span class="panel-title">Grammar</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-grammar');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="examples-bar">
+            <select id="examples-select" onchange="loadExample(this.value)">
+              <option value="">Example Grammar</option>
+            </select>
+          </div>
+          <textarea id="grammar-input" spellcheck="false" placeholder="S -> a S b | eps"></textarea>
+          <div id="grammar-note"></div>
+          <div id="grammar-footer">
+            <div id="error-msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. Procedures -->
+      <div class="panel" id="p-code" data-priority="2">
+        <div class="panel-header">
+          <span class="panel-title">Procedures</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal();" title="How the procedures are generated from the grammar">Algorithm</button>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-code');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="mode-bar" class="ui-bar">
+            <div class="ui-field">
+              <span>Backtracking:</span>
+              <label title="Every procedure yields all the positions where it can end, and is asked again when the rest of the parse fails">
+                <input type="radio" name="rdp-mode" value="full" checked /> complete
+              </label>
+              <label title="The first alternative that matches is final; it is never revisited (as in PEG parsers)">
+                <input type="radio" name="rdp-mode" value="ordered" /> ordered choice
+              </label>
+            </div>
+          </div>
+          <div id="code-scroll" class="ui-scroll" style="padding: 0">
+            <div id="code"><div class="ui-empty">Enter a grammar.</div></div>
+          </div>
+          <div id="mode-hint" class="ui-footer"><span class="ui-hint" id="mode-hint-text"></span></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Search -->
+      <div class="panel" id="p-search" data-priority="4">
+        <div class="panel-header">
+          <span class="panel-title">Parsing</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-search');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-sim">
+            <div class="ui-sim__row">
+              <div class="input-group">
+                <input id="sim-input" class="ui-input ui-input--lg" type="text" spellcheck="false" placeholder="enter a string…" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" onclick="sim.reset()" title="Restart" disabled></button>
+                <button class="btn" id="btn-sim-back" onclick="sim.prev()" disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-sim-step" onclick="sim.next()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all" onclick="sim.end()" title="Run to the end" disabled></button>
+              </div>
+            </div>
+            <div id="sim-log-bar" class="ui-logbar"></div>
+          </div>
+          <div id="sim-result" class="ui-result"></div>
+          <div id="rdp-view">
+            <div class="rdp-row"><span class="ui-label">Input</span><div id="rdp-strip"></div></div>
+            <div class="rdp-row"><span class="ui-label" title="How many tokens have been read, over the steps of the run">Position</span><svg id="rdp-chart"><title></title></svg></div>
+            <div class="rdp-row" id="rdp-stats">
+              <span>step <b id="st-step">0</b></span>
+              <span>calls <b id="st-calls">0</b></span>
+              <span>backtracks <b id="st-back">0</b></span>
+              <span>depth <b id="st-depth">0</b></span>
+              <label title="Keep the attempts that backtracking undid in the tree, greyed out"><input type="checkbox" id="show-dead" checked /> show abandoned attempts</label>
+            </div>
+          </div>
+          <div id="tree-wrap" class="ui-canvas">
+            <svg id="tree-svg"><g id="tree-root"></g></svg>
+            <div id="tree-empty" class="ui-canvas__empty">Step through a run to grow the search tree.</div>
+          </div>
+          <div id="tree-info" class="ui-explain" hidden></div>
+        </div>
+      </div>
+    </div>
+    <!-- #panels -->
+
+    <!-- Algorithm modal -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1" onclick="if (event.target === this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
+    <script src="../../shared/algo/grammar.js?v=39525f46"></script>
+    <script src="../../shared/algo/panels.js?v=23a37100"></script>
+    <script src="../../shared/algo/share.js?v=e00a0058"></script>
+    <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
+    <script src="../../shared/algo/rdp.js?v=54e87b81"></script>
+    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=accb50ec"></script>
+    <script src="../../shared/view-menu.js?v=d1c37b50"></script>
+    <script src="guide.js?v=10f81c69"></script>
+    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script>
+      initResize("rh-1", "p-grammar", +1);
+      initResize("rh-2", "p-code", +1);
+
+      const EXAMPLES = {};
+      const $ = (id) => document.getElementById(id);
+
+      let rdG = null; // the parsed grammar, or null
+      let rdTrace = null; // the recorded run
+      let rdMode = "full";
+      let rdStrings = []; // example strings of the loaded example, offered in the string input's menu
+      let rdSel = null; // id of the node whose explanation is open
+      let rdSelStep = null; // step it was opened at: stepping or editing closes it
+      let rdHot = null; // { nodes: Set, lines: Set, span: [from, to] | null }: what the pointer is on
+      let rdLines = new Map(); // code-line key -> element
+      let rdState = null; // rdpStateAt for the current step
+
+      const rdTone = { mismatch: "is-bad", fail: "is-bad", loop: "is-bad", reject: "is-warn", yield: "is-good", match: "" };
+      const MODE_HINT = {
+        full: "Each procedure yields every position where it can end. When the rest of the parse fails, control returns into it for the next one, so a parse is found whenever there is one.",
+        ordered: "Each procedure returns the end of its first alternative that matches. That choice is final: it is never revisited, so some strings of the language are rejected.",
+      };
+
+      // ── Build ─────────────────────────────────────────────────
+      function setError(msg) {
+        $("error-msg").textContent = msg || "";
+      }
+
+      function build() {
+        try {
+          rdG = rdpParseGrammar($("grammar-input").value);
+          setError("");
+        } catch (e) {
+          rdG = null;
+          setError(e.message);
+        }
+        const rec = rdG ? rdpLeftRecursive(rdG) : [];
+        $("grammar-note").textContent = rec.length
+          ? "Left-recursive: " + rec.join(", ") + ". A top-down parser would call itself forever there; the run stops at the first repeat."
+          : "";
+        renderCode();
+        run();
+        saveShare();
+      }
+
+      function renderCode() {
+        rdLines = new Map();
+        const box = $("code");
+        $("mode-hint-text").textContent = MODE_HINT[rdMode];
+        if (!rdG) { box.innerHTML = '<div class="ui-empty">Enter a grammar.</div>'; return; }
+        box.innerHTML = rdpProcedures(rdG, rdMode).map((p) =>
+          '<div class="rdp-proc">' + p.lines.map((l) =>
+            '<div class="rdp-line" style="--ind:' + l.indent + '">' +
+            l.segs.map((s) => (s[0] ? '<span class="' + s[0] + '">' + esc(s[1]) + "</span>" : esc(s[1]))).join("") + "</div>"
+          ).join("") + "</div>"
+        ).join("");
+        // Elements are matched to their keys in the same order.
+        const els = box.querySelectorAll(".rdp-line");
+        let n = 0;
+        for (const p of rdpProcedures(rdG, rdMode)) for (const l of p.lines) { els[n].dataset.key = l.key; rdLines.set(l.key, els[n++]); }
+      }
+
+      function run() {
+        rdSel = null;
+        rdTrace = rdG ? rdpRun(rdG, rdpTokenise(rdG, $("sim-input").value), { mode: rdMode }) : null;
+        sim.pos = -1;
+        render();
+        sim.refresh();
+      }
+
+      // ── Rendering ─────────────────────────────────────────────
+      function render() {
+        if (rdSel !== null && sim.pos !== rdSelStep) rdSel = null;
+        rdState = rdTrace ? rdpStateAt(rdTrace, sim.pos) : null;
+        renderLog();
+        renderStrip();
+        renderChart();
+        renderStats();
+        paintCode();
+        drawSearchTree();
+        renderInfo();
+        applyHot();
+      }
+
+      function renderLog() {
+        const log = UI.logBar("sim-log-bar");
+        const verdict = UI.banner("sim-result");
+        if (!rdTrace) { log.clear(); verdict.hide(); return; }
+        const ev = rdState.event;
+        if (!ev) {
+          log.set("Press <b>Step ›</b> to start: " + esc(rdG.start) + " is called at position 0.");
+          verdict.hide();
+          return;
+        }
+        log.set(esc(ev.text));
+        if (sim.pos === rdTrace.events.length - 1) {
+          if (rdTrace.accepted) verdict.show("accept", "✓  ACCEPTED");
+          else if (rdTrace.aborted === "left-recursion") verdict.show("warn", "⚠  LEFT RECURSION: this would never stop");
+          else if (rdTrace.aborted === "limit") verdict.show("warn", "⚠  STOPPED: too large to follow");
+          else verdict.show("reject", "✗  REJECTED");
+        } else verdict.hide();
+      }
+
+      function renderStrip() {
+        const strip = $("rdp-strip");
+        if (!rdTrace) { strip.innerHTML = ""; return; }
+        const toks = rdTrace.tokens;
+        const pos = rdState.pos;
+        strip.innerHTML = toks.map((t, i) => '<span class="tok' + (i < pos ? " rdp-read" : i === pos ? " current" : "") + '" data-i="' + i + '">' + esc(t) + "</span>").join("") +
+          '<span class="tok eof' + (pos === toks.length ? " current" : "") + '" data-i="' + toks.length + '" title="end of the input">' + (toks.length ? "⊣" : "ε ⊣") + "</span>";
+      }
+
+      function renderStats() {
+        const total = rdTrace ? rdTrace.events.length : 0;
+        $("st-step").textContent = (sim.pos + 1) + " / " + total;
+        $("st-calls").textContent = rdState ? rdState.calls : 0;
+        $("st-back").textContent = rdState ? rdState.backtracks : 0;
+        $("st-depth").textContent = rdState ? rdState.maxDepth : 0;
+      }
+
+      // The read position over the steps: every drop is a backtrack. Click or drag to move.
+      const SVGNS = "http://www.w3.org/2000/svg";
+      function renderChart() {
+        const svg = $("rdp-chart");
+        const keep = svg.querySelector("title");
+        svg.textContent = "";
+        svg.appendChild(keep);
+        if (!rdTrace || !rdTrace.events.length) return;
+        const W = svg.clientWidth || 400, H = 56, L = 16, R = 6, T = 6, B = 6;
+        const ev = rdTrace.events, N = ev.length, n = rdTrace.tokens.length;
+        const x = (s) => L + (W - L - R) * (N > 1 ? s / (N - 1) : 0);
+        const y = (p) => H - B - (H - T - B) * (n ? p / n : 0);
+        const mk = (name, attrs) => { const e = document.createElementNS(SVGNS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+        mk("line", { class: "c-axis", x1: L, x2: W - R, y1: y(n), y2: y(n) });
+        mk("line", { class: "c-axis", x1: L, x2: W - R, y1: y(0), y2: y(0) });
+        const t0 = mk("text", { class: "c-label", x: 2, y: y(0) + 3 }); t0.textContent = "0";
+        const tn = mk("text", { class: "c-label", x: 2, y: y(n) + 3 }); tn.textContent = n;
+        const pts = (a, b) => { const o = []; for (let s = a; s <= b; s++) o.push(x(s).toFixed(1) + "," + y(ev[s].pos).toFixed(1)); return o.join(" "); };
+        const cur = Math.min(sim.pos, N - 1);
+        if (cur < N - 1) mk("polyline", { class: "c-line c-todo", points: pts(Math.max(cur, 0), N - 1) });
+        if (cur >= 0) mk("polyline", { class: "c-line c-done", points: pts(0, cur) });
+        for (let s = 0; s <= cur; s++) {
+          if (ev[s].kind === "reject" || (ev[s].kind === "try" && ev[s].altIdx > 0)) mk("circle", { class: "c-back", cx: x(s), cy: y(ev[s].pos), r: 2.6 });
+        }
+        if (cur >= 0) mk("circle", { class: "c-now", cx: x(cur), cy: y(ev[cur].pos), r: 4 });
+      }
+      (function () {
+        const svg = $("rdp-chart");
+        const stepAt = (e) => {
+          if (!rdTrace) return null;
+          const r = svg.getBoundingClientRect(), N = rdTrace.events.length;
+          const f = (e.clientX - r.left - 16) / Math.max(1, r.width - 22);
+          return Math.max(0, Math.min(N - 1, Math.round(f * (N - 1))));
+        };
+        let down = false;
+        svg.addEventListener("pointerdown", (e) => { down = true; svg.setPointerCapture(e.pointerId); const s = stepAt(e); if (s !== null) sim.go(s); });
+        svg.addEventListener("pointerup", () => { down = false; });
+        svg.addEventListener("pointermove", (e) => {
+          const s = stepAt(e);
+          if (s === null) return;
+          svg.querySelector("title").textContent = "step " + (s + 1) + ": " + rdTrace.events[s].text;
+          if (down) sim.go(s);
+        });
+        new ResizeObserver(() => renderChart()).observe(svg);
+      })();
+
+      function paintCode() {
+        rdLines.forEach((el) => { el.className = "rdp-line"; });
+        const ev = rdState && rdState.event;
+        if (!ev) return;
+        for (const k of rdpPendingLines(rdTrace, ev)) if (rdLines.has(k)) rdLines.get(k).classList.add("is-wait");
+        const now = ev.line && rdLines.get(ev.line);
+        if (now) {
+          now.classList.remove("is-wait");
+          now.classList.add("is-now");
+          if (rdTone[ev.kind]) now.classList.add(rdTone[ev.kind]);
+          const box = $("code-scroll");
+          const top = now.offsetTop - box.offsetTop, bottom = top + now.offsetHeight;
+          if (top < box.scrollTop + 8) box.scrollTop = Math.max(0, top - 40);
+          else if (bottom > box.scrollTop + box.clientHeight - 8) box.scrollTop = bottom - box.clientHeight + 40;
+        }
+      }
+
+      // ── Search tree ───────────────────────────────────────────
+      const NODE_H = { call: 28, alt: 20, tok: 26 };
+      function nodeLabel(nd) {
+        if (nd.kind === "call") return { main: nd.nt, sub: "@" + nd.i };
+        if (nd.kind === "alt") return { main: String(nd.alt + 1), sub: "" };
+        return { main: nd.sym, sub: "" };
+      }
+      function nodeWidth(nd) {
+        const l = nodeLabel(nd);
+        return Math.max(nd.kind === "alt" ? 22 : 30, 9 * l.main.length + 7.5 * l.sub.length + 20);
+      }
+
+      let rdZoom = null;
+      let rdUserZoomed = false;
+      function initTreeView() {
+        rdZoom = d3.zoom().scaleExtent([0.08, 3])
+          .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
+          .on("zoom", (e) => {
+            if (e.sourceEvent) rdUserZoomed = true;
+            d3.select("#tree-root").attr("transform", e.transform);
+          });
+        d3.select("#tree-svg").call(rdZoom).on("dblclick.zoom", null);
+        $("tree-svg").addEventListener("dblclick", () => { rdUserZoomed = false; fitTreeView(); });
+        d3.select("#tree-svg").on("click", () => { if (rdSel !== null) selectNode(rdSel); });
+        new ResizeObserver(() => { if (!rdUserZoomed) fitTreeView(); }).observe($("tree-wrap"));
+      }
+      function fitTreeView() {
+        try {
+          const bb = $("tree-root").getBBox();
+          const svg = $("tree-svg");
+          const vw = svg.clientWidth, vh = svg.clientHeight;
+          if (!bb || bb.width < 1 || !vw || !vh) return;
+          const sc = Math.min(1, Math.min((vw - 24) / bb.width, (vh - 24) / bb.height));
+          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
+          const ty = Math.max(12, (vh - bb.height * sc) / 2) - bb.y * sc;
+          d3.select("#tree-svg").call(rdZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+        } catch (e) { /* not laid out yet */ }
+      }
+
+      function drawSearchTree() {
+        const g = d3.select("#tree-root");
+        g.selectAll("*").remove();
+        const empty = $("tree-empty");
+        if (!rdTrace || !rdState) { empty.style.display = ""; return; }
+        const showDead = $("show-dead").checked;
+        const st = rdState.status;
+        const kids = new Map();
+        let root = null;
+        for (const nd of rdTrace.nodes) {
+          const s = st[nd.id];
+          if (!s || (!showDead && s.st === "dead")) continue;
+          if (nd.parent < 0) root = nd;
+          else { if (!kids.has(nd.parent)) kids.set(nd.parent, []); kids.get(nd.parent).push(nd); }
+        }
+        if (!root) { empty.style.display = ""; return; }
+        empty.style.display = "none";
+        const h = d3.hierarchy(root, (d) => kids.get(d.id) || []);
+        d3.tree().nodeSize([40, 66]).separation((a, b) => Math.max(0.9, (nodeWidth(a.data) + nodeWidth(b.data)) / 2 / 40 + 0.2))(h);
+        const active = rdState.event ? rdState.event.node : -1;
+        g.append("g").selectAll("path").data(h.links()).join("path")
+          .attr("class", (l) => "rdp-e" + (st[l.target.data.id].st === "dead" ? " e-dead" : ""))
+          .attr("d", (l) => {
+            const y1 = l.source.y + NODE_H[l.source.data.kind] / 2, y2 = l.target.y - NODE_H[l.target.data.kind] / 2, m = (y1 + y2) / 2;
+            return "M" + l.source.x + "," + y1 + "C" + l.source.x + "," + m + " " + l.target.x + "," + m + " " + l.target.x + "," + y2;
+          });
+        const ns = g.append("g").selectAll("g").data(h.descendants()).join("g")
+          .attr("class", (d) => "rdp-n k-" + d.data.kind + " st-" + st[d.data.id].st + (d.data.id === active ? " is-active" : "") + (d.data.id === rdSel ? " is-sel" : ""))
+          .attr("data-id", (d) => d.data.id)
+          .attr("transform", (d) => "translate(" + d.x + "," + d.y + ")")
+          .on("click", (e, d) => { e.stopPropagation(); selectNode(d.data.id); })
+          .on("mouseenter", (e, d) => setHot(hotFromNode(d.data.id)))
+          .on("mouseleave", () => setHot(null));
+        ns.append("rect").attr("rx", (d) => NODE_H[d.data.kind] / 2).attr("x", (d) => -nodeWidth(d.data) / 2).attr("y", (d) => -NODE_H[d.data.kind] / 2)
+          .attr("width", (d) => nodeWidth(d.data)).attr("height", (d) => NODE_H[d.data.kind]);
+        ns.append("text").each(function (d) {
+          const l = nodeLabel(d.data);
+          const t = d3.select(this);
+          if (d.data.eps) t.style("font-style", "italic");
+          t.append("tspan").text(l.main);
+          if (l.sub) t.append("tspan").attr("class", "sub").attr("dx", 3).text(l.sub);
+        });
+        if (!rdUserZoomed) fitTreeView();
+      }
+
+      // ── Selection and explanation ─────────────────────────────
+      function selectNode(id) {
+        rdSel = rdSel === id ? null : id;
+        rdSelStep = sim.pos;
+        drawSearchTree();
+        renderInfo();
+      }
+      const ROLE = { open: ["live", "In progress"], ok: ["accepted", "Matched"], fail: ["rejected", "Failed"], dead: ["dead", "Undone"] };
+      function renderInfo() {
+        const e = rdSel !== null && rdState ? rdpExplainNode(rdG, rdTrace, rdState, rdSel) : null;
+        if (!e) { UI.explain("tree-info", null); return; }
+        UI.explain("tree-info", {
+          title: e.title,
+          onClose: () => selectNode(rdSel),
+          facts: e.facts,
+          lines: [UI.explainRole(ROLE[e.role][0], ROLE[e.role][1]) + " " + e.lines.join(" ")],
+        });
+      }
+
+      // ── Linked hover: tree node <-> code line <-> input tokens ──
+      function hotFromNode(id) {
+        const nd = rdTrace.nodes[id], cur = rdState.status[id];
+        const lines = new Set();
+        if (nd.site) lines.add(nd.site);
+        if (nd.kind === "call") lines.add(rdpKey(nd.nt, "head"));
+        if (nd.kind === "alt") lines.add(rdpKey(nd.nt, "alt", nd.alt));
+        let to = cur && cur.end !== undefined ? cur.end : nd.kind === "tok" ? nd.i + 1 : Math.max(rdState.pos, nd.i);
+        if (nd.eps) to = nd.i;
+        return { nodes: new Set([id]), lines, span: [nd.i, to] };
+      }
+      function hotFromLine(key) {
+        const nodes = new Set();
+        for (const nd of rdTrace.nodes) {
+          if (!rdState.status[nd.id]) continue;
+          if (nd.site === key || (nd.kind === "alt" && rdpKey(nd.nt, "alt", nd.alt) === key) || (nd.kind === "call" && (rdpKey(nd.nt, "head") === key || rdpKey(nd.nt, "end") === key))) nodes.add(nd.id);
+        }
+        return { nodes, lines: new Set([key]), span: null };
+      }
+      function setHot(h) {
+        rdHot = h;
+        applyHot();
+      }
+      function applyHot() {
+        const h = rdHot;
+        d3.selectAll("#tree-root .rdp-n").classed("is-hot", (d) => !!h && h.nodes.has(d.data.id));
+        rdLines.forEach((el, key) => el.classList.toggle("is-hot", !!h && h.lines.has(key)));
+        document.querySelectorAll("#rdp-strip .tok").forEach((el) => {
+          const i = +el.dataset.i;
+          el.classList.toggle("is-hot", !!h && !!h.span && i >= h.span[0] && i < h.span[1]);
+        });
+      }
+      UI.hoverItems("code", ".rdp-line", (el) => el.dataset.key, (key) => setHot(key && rdTrace && rdState ? hotFromLine(key) : null));
+
+      // ── Controls ──────────────────────────────────────────────
+      const sim = createStepper({
+        buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
+        min: -1,
+        last: () => (rdTrace && rdTrace.events.length ? rdTrace.events.length - 1 : null),
+        onChange: () => render(),
+      });
+      // ←/→ (or ,/.) step, Home restarts, End runs; the Parsing panel has key focus.
+      registerStepper("p-search", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
+
+      $("grammar-input").addEventListener("input", () => { clearTimeout(rdBuildTimer); rdBuildTimer = setTimeout(build, 300); });
+      let rdBuildTimer = null;
+      $("sim-input").addEventListener("input", () => { run(); saveShare(); });
+      $("show-dead").addEventListener("change", () => { drawSearchTree(); applyHot(); });
+      document.querySelectorAll('input[name="rdp-mode"]').forEach((r) => r.addEventListener("change", () => setMode(r.value)));
+      function setMode(m) {
+        rdMode = m;
+        document.querySelector('input[name="rdp-mode"][value="' + m + '"]').checked = true;
+        renderCode();
+        run();
+        saveShare();
+      }
+
+      UI.stringInput("sim-input", {
+        examples: () => rdStrings,
+        onPick: () => { run(); saveShare(); },
+        // A random sentence of the grammar; with ordered choice it may well be rejected.
+        random() {
+          if (!rdG) return null;
+          const s = grammarRandomSentence(rdG.base, Math.random, { minTerms: 1 + Math.floor(Math.random() * 4), maxTerms: 9 });
+          if (!s) return null;
+          return s.join([...rdG.terminals].every((t) => t.length === 1) ? "" : " ");
+        },
+      });
+
+      // ── Examples and shareable link ───────────────────────────
+      function loadExample(k) {
+        if (!k) return;
+        const ex = EXAMPLES[k];
+        if (!ex) return;
+        $("grammar-input").value = ex.text;
+        $("examples-select").value = k;
+        rdStrings = ex.strings || [];
+        $("sim-input").value = rdStrings[0] || "";
+        setMode(ex.mode || "full");
+        build();
+      }
+
+      const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("sim-input").value, m: rdMode }));
+      let sharedStateApplied = false;
+      function applyShareState() {
+        const st = shareValidateTextState(readShareState(), "g", ["full", "ordered"]);
+        if (!st) return;
+        sharedStateApplied = true;
+        $("grammar-input").value = st.g;
+        $("sim-input").value = st.s;
+        if (st.m) { rdMode = st.m; document.querySelector('input[name="rdp-mode"][value="' + st.m + '"]').checked = true; }
+      }
+
+      // ── Algorithm box ─────────────────────────────────────────
+      const PC_RDP_GEN = pcBlock(
+        "Generate-Procedures",
+        [
+          { label: "Input", sym: it("G"), desc: "a context-free grammar, its alternatives in the order written" },
+          { label: "Output", sym: "", desc: "one procedure per nonterminal; a procedure takes the position " + it("i") + " in the input" },
+        ],
+        `${kw("for each")} nonterminal A ${_in} G
+  emit  ${kw("procedure")} A(${it("i")})
+  ${kw("for each")} production A ${_ra} X₁ X₂ … Xₖ, in order
+    ${kw("for")} j ${_la} 1 to k
+      ${kw("if")} Xⱼ is a terminal  emit  “match Xⱼ”
+      ${kw("else")}  emit  “call Xⱼ”
+      ${cm("each step starts where the one before it ended; the first starts at i")}
+    ${kw("complete")}  nest the steps as loops over every end position, then  ${kw("yield")} jₖ
+    ${kw("ordered")}   chain the steps;  if one gives ✗ go to the next alternative, else  ${kw("return")} jₖ
+  ${kw("complete")}  the procedure ends:  A fails
+  ${kw("ordered")}   ${kw("return")} ✗`,
+      );
+      function openAlgoModal() {
+        $("algo-title").textContent = "Generating the procedures";
+        $("algo-subtitle").textContent = "recursive descent";
+        $("algo-body").innerHTML = PC_RDP_GEN +
+          '<div class="pc-note">Calling the start symbol at position 0 starts the parse; it succeeds when the start symbol ends exactly at the end of the input. A procedure that calls itself at the same position without reading anything (left recursion) never returns.</div>';
+        $("algo-overlay").classList.remove("hidden");
+        const b = $("algo-overlay").querySelector(".algo-close");
+        if (b) b.focus();
+      }
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAlgoModal(); });
+
+      // ── Init ──────────────────────────────────────────────────
+      initPanelStorage("rdp-tool-v1", ["p-grammar", "p-code", "p-search"]);
+      loadPanelState();
+      initAlgoModal();
+      initTreeView();
+      applyShareState();
+      loadExamplesInto("examples.json", "examples-select", EXAMPLES, () => {
+        const first = Object.keys(EXAMPLES)[0];
+        if (first && !sharedStateApplied) loadExample(first);
+      });
+      build();
+    </script>
+  </body>
+</html>

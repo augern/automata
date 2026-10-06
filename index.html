@@ -140,6 +140,7 @@ body[data-view="list"] #view-map { display: none; }
   <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="398" y="132" width="202" height="34" rx="17"/><text x="499" y="149">Grammar Transformations</text></a>
   <a class="pill" id="t-pda" href="tools/pda/" tabindex="0"><rect x="265" y="132" width="123" height="34" rx="17"/><text x="326.5" y="149">PDA Simulator</text></a>
   <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="480" y="188" width="92" height="34" rx="17"/><text x="526" y="205">LR Parser</text></a>
+  <a class="pill" id="t-rdp" href="tools/rdp/" tabindex="0"><rect x="272" y="244" width="144" height="34" rx="17"/><text x="344" y="261">Recursive Descent</text></a>
   <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="437" y="244" width="107" height="34" rx="17"/><text x="490.5" y="261">LL(1) Parser</text></a>
   <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="197" y="344" width="124" height="34" rx="17"/><text x="259" y="361">NFA Simulator</text></a>
   <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="345" y="344" width="158" height="34" rx="17"/><text x="424" y="361">Regular Expressions</text></a>
@@ -176,9 +177,12 @@ body[data-view="list"] #view-map { display: none; }
     pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages",
       desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
       builds: "NFA Simulator, Grammar Derivations" },
+    rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages",
+      desc: "Top-down parsing by recursive procedures — the procedures generated from a grammar, and the search for a parse with its guesses, backtracking and dead ends, with complete search or ordered choice.",
+      builds: "Grammar Derivations; Grammar Transformations removes the left recursion it cannot handle" },
     ll1: { href: "tools/ll1/", title: "LL(1) Parser", group: "Context-free languages",
       desc: "Top-down predictive parsing — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
-      builds: "Grammar Derivations; Grammar Transformations removes the left recursion LL(1) cannot handle" },
+      builds: "Recursive Descent (LL(1) is the case that never has to backtrack); Grammar Transformations removes the left recursion LL(1) cannot handle" },
     lr: { href: "tools/lr/", title: "LR Parser", group: "Context-free languages",
       desc: "Bottom-up shift–reduce parsing — LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree.",
       builds: "LL(1) Parser, NFA Simulator (the automaton of items)" },
