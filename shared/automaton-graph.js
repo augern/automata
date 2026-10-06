@@ -8,38 +8,17 @@
 // ag-node + is-accepting / is-rejecting, edges ag-edge (+ ag-edge--eps), and
 // highlightAutomatonStates() toggles is-active / is-dead.
 
-// Zoom/pan on the svg, plus fit-to-view (double-click, and whenever the pane
-// resizes while hasNodes() is true). Returns { fit, zoom }.
-function createGraphView(prefix, { hasNodes = () => true, fallbackWidth = 340 } = {}) {
-  const svgSel = d3.select("#" + prefix + "-svg");
-  ensureArrowMarkers(svgSel, prefix);
-  const zoom = d3.zoom()
-    .scaleExtent([0.1, 8])
-    .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-    .on("zoom", (e) => d3.select("#" + prefix + "-graph-root").attr("transform", e.transform));
-  svgSel.call(zoom).on("dblclick.zoom", null);
-
-  function fit() {
-    try {
-      const bb = document.getElementById(prefix + "-graph-root").getBBox();
-      const svgEl = document.getElementById(prefix + "-svg");
-      const vw = svgEl.clientWidth || svgEl.parentElement.clientWidth || fallbackWidth;
-      const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
-      if (!bb || bb.width < 1 || bb.height < 1) return;
-      const sc = Math.min(0.92, Math.min(vw / (bb.width + 80), vh / (bb.height + 60)));
-      const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-      const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-      svgSel.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-    } catch (e) {
-      /* ignore: element not laid out yet */
-    }
-  }
-
-  document.getElementById(prefix + "-svg").addEventListener("dblclick", fit);
-  if (typeof ResizeObserver !== "undefined") {
-    new ResizeObserver(() => { if (hasNodes()) fit(); }).observe(document.getElementById(prefix + "-svg").parentElement);
-  }
-  return { fit, zoom };
+// Zoom/pan on the svg, and fitting the graph to the view (see fit-view.js, which must be loaded
+// first): fit() after every redrawing, on double-click and when the pane resizes while hasNodes()
+// is true. Returns { fit, zoom }.
+function createGraphView(prefix, { hasNodes = () => true } = {}) {
+  ensureArrowMarkers(d3.select("#" + prefix + "-svg"), prefix);
+  const view = createFitView({
+    svg: prefix + "-svg", root: prefix + "-graph-root", scaleExtent: [0.1, 8],
+    maxScale: 0.92, padX: 40, padY: 30, hasContent: hasNodes,
+    sticky: false, // a redrawn definition is always fitted again
+  });
+  return { fit: view.fit, zoom: view.zoom };
 }
 
 // <marker id="P-arrow"> and <marker id="P-arrow-eps"> in the svg's <defs> (idempotent).

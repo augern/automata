@@ -526,7 +526,8 @@
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
@@ -838,75 +839,18 @@
         });
         fitAutomaton();
       }
-      // Track whether the user has manually panned/zoomed since last build
-      let _userZoomed = false;
-      let _lastFitTransform = null;
+      // Pan/zoom and fit-to-view for the automaton and for the parse forest (see shared/fit-view.js).
+      // The automaton is fitted whenever it is built; a pane resize leaves a zoom the user chose alone.
+      const _autoView = createFitView({
+        svg: "cy", root: "root", scaleExtent: [0.08, 8], maxScale: 0.9, padX: 40, padY: 30,
+        hasContent: () => !!currentAuto,
+      });
+      function fitAutomaton() { _autoView.fit(); }
+      _treeView = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.1, 8], maxScale: 0.95, pad: 24 });
 
-      const _zoomBehavior = d3
-        .zoom()
-        .scaleExtent([0.08, 8])
-        .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", (e) => {
-          d3.select("#root").attr("transform", e.transform);
-          _userZoomed = true;
-        });
-      d3.select("#cy").call(_zoomBehavior).on("dblclick.zoom", null); // disable double-click zoom (confusing in teaching context)
-
-      // ── Tree zoom (pan + pinch, same feel as automaton) ──────────────────────
-      _treeZoom = d3
-        .zoom()
-        .scaleExtent([0.1, 8])
-        .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", (e) => d3.select("#tree-root").attr("transform", e.transform));
-      d3.select("#tree-svg").call(_treeZoom).on("dblclick.zoom", null);
-
-      // Double-click on tree resets to fit
-      document.getElementById("tree-svg").addEventListener("dblclick", () => fitTree());
-
-      function fitTree() {
-        try {
-          const rootEl = document.getElementById("tree-root");
-          if (!rootEl) return;
-          const bb = rootEl.getBBox();
-          const svgEl = document.getElementById("tree-svg");
-          const vw = svgEl.clientWidth || 320;
-          const vh = svgEl.clientHeight || 400;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const sc = Math.min(0.95, Math.min(vw / bb.width, vh / bb.height)) * 0.9;
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-          d3.select("#tree-svg").call(_treeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch (e) {}
-      }
-
-      function fitAutomaton() {
-        try {
-          const rootEl = document.getElementById("root");
-          if (!rootEl) return;
-          const bb = rootEl.getBBox();
-          const svgEl = document.getElementById("cy");
-          const vw = svgEl.clientWidth || svgEl.parentElement.clientWidth || 400;
-          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 300;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const sc = Math.min(0.9, Math.min(vw / bb.width, vh / bb.height)) * 0.88;
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-          const t = d3.zoomIdentity.translate(tx, ty).scale(sc);
-          _lastFitTransform = t;
-          // Apply via zoom behavior so internal state stays consistent
-          d3.select("#cy").call(_zoomBehavior.transform, t);
-          _userZoomed = false;
-        } catch (e) {
-          console.warn("fitAutomaton:", e);
-        }
-      }
-
-      // Refit whenever the SVG container is resized (panel drag, window resize)
+      // The forest is redrawn when its pane resizes (the view refits by itself)
       if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => {
-          if (!_userZoomed && currentAuto) fitAutomaton();
-          renderTree();
-        }).observe(document.getElementById("cy").parentElement);
+        new ResizeObserver(() => renderTree()).observe(document.getElementById("cy").parentElement);
       }
 
       function tSnap() {
@@ -1005,7 +949,7 @@
 
         // Render at natural coords — zoom behavior handles pan/scale
         root.selectAll("*").remove();
-        const g = root.append("g"); // no transform — _treeZoom owns the transform on #tree-root
+        const g = root.append("g"); // no transform — the fit view owns the transform on #tree-root
 
         // Baseline rule under terminals
         const lvs = nodes.filter((n) => !n.children.length);
@@ -1404,8 +1348,8 @@
           const screenCy = (er.top + er.bottom) / 2 - sr.top;
           const tx = curT.x + (vw / 2 - screenCx);
           const ty = curT.y + (vh / 2 - screenCy);
-          d3.select("#cy").transition().duration(250).call(_zoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(curT.k));
-          _userZoomed = true;
+          d3.select("#cy").transition().duration(250).call(_autoView.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(curT.k));
+          _autoView.hold();
         } catch (e) {}
       }
 
@@ -2101,7 +2045,7 @@
         const tables = buildTables(currentGrammar, currentAuto, tm);
         simTables = tables;
         simReset();
-        _userZoomed = false;
+        _autoView.release();
 
         // Render full automaton; reset construction sim state (steps recorded lazily on first use)
         setTimeout(() => {
@@ -2392,7 +2336,6 @@ ${kw("loop")}
         applyShareState();
         if (!document.getElementById("grammar-input").value.trim()) document.getElementById("grammar-input").value = "S -> E\nE -> E + T | T\nT -> id";
         build();
-        // Tree zoom is already initialised above via d3.select('#tree-svg').call(_treeZoom)
         // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
         let _rebuildTimer = null;
         document.getElementById("grammar-input").addEventListener("input", () => {

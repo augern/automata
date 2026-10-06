@@ -568,14 +568,15 @@
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/regex.js?v=311ec5b3"></script>
-    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
     <script src="guide.js?v=745fc4d6"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
       // shared.js's initResize calls renderTree() after each drag; stub it out
       function renderTree() {}
@@ -1358,7 +1359,7 @@
       // DFA GRAPH RENDERER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      const dfaGraph = createGraphView("dfa", { hasNodes: () => !!_scData, fallbackWidth: 400 });
+      const dfaGraph = createGraphView("dfa", { hasNodes: () => !!_scData });
       function fitDFA() { dfaGraph.fit(); }
 
       function renderDFA(scData) {

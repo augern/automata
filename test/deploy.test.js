@@ -48,3 +48,10 @@ test("the Pages job copies every directory the pages load from", () => {
   for (const d of dirs) assert.match(ci, new RegExp(`cp -r [^\\n]*\\b${d}\\b`), `.gitlab-ci.yml does not copy ${d}/`);
   assert.match(ci, /cp index\.html ui-kit\.html/);
 });
+
+test("a page that fits drawings into their view loads fit-view.js", () => {
+  for (const page of pages) {
+    const html = fs.readFileSync(path.join(root, ...page), "utf8");
+    if (/createFitView|createGraphView|initTreeZoom/.test(html)) assert.match(html, /<script src="[^"]*shared\/fit-view\.js/, `${page.join("/")} uses a fit view but does not load fit-view.js`);
+  }
+});

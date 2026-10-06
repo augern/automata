@@ -731,7 +731,7 @@ function renderTree() {
   const ns = new Set(lastN);
   if (!nodes.length) return;
 
-  // Render at natural coordinates — _treeZoom handles pan/scale
+  // Render at natural coordinates — the tree view handles pan/scale
   root.selectAll("*").remove();
   const g = root.append("g"); // no transform here; zoom owns #tree-root transform
 
@@ -791,47 +791,20 @@ function renderTree() {
   if (typeof fitTree === "function") fitTree();
 }
 
-// ── Tree zoom setup (call once from each tool's init) ────────────────────────
-// Each tool must call initTreeZoom() after the DOM is ready.
-var _treeZoom = null;
+// ── Tree view (call initTreeZoom once from each tool's init) ─────────────────
+// Pan/zoom for #tree-svg; fitTree() fits the tree into the view (see fit-view.js).
+var _treeView = null;
 function initTreeZoom() {
-  _treeZoom = d3
-    .zoom()
-    .scaleExtent([0.08, 8])
-    .wheelDelta(function (e) {
-      return -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002);
-    })
-    .on("zoom", function (e) {
-      d3.select("#tree-root").attr("transform", e.transform);
-    });
-  d3.select("#tree-svg").call(_treeZoom).on("dblclick.zoom", null);
-  document.getElementById("tree-svg").addEventListener("dblclick", function () {
-    fitTree();
+  _treeView = createFitView({
+    svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 8], maxScale: 0.95, pad: 24,
+    hasContent: function () { return typeof treeRoot !== "undefined" && !!treeRoot; },
   });
-  // The panel may only get its real size after the first drawing (or change size later): fit again.
-  if (typeof ResizeObserver !== "undefined") {
-    new ResizeObserver(function () {
-      if (typeof treeRoot !== "undefined" && treeRoot) fitTree();
-    }).observe(document.getElementById("tree-svg").parentElement);
-  }
 }
 
 function fitTree() {
-  if (!_treeZoom) return;
-  try {
-    var rootEl = document.getElementById("tree-root");
-    if (!rootEl) return;
-    var bb = rootEl.getBBox();
-    var svgEl = document.getElementById("tree-svg");
-    var vw = svgEl.clientWidth || 320;
-    var vh = svgEl.clientHeight || 400;
-    if (!bb || bb.width < 1 || bb.height < 1) return;
-    var sc = Math.min(0.95, Math.min(vw / bb.width, vh / bb.height)) * 0.88;
-    var tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-    var ty = (vh - bb.height * sc) / 2 - bb.y * sc;
-    d3.select("#tree-svg").call(_treeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-  } catch (e) {}
+  if (_treeView) _treeView.refit();
 }
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:EXAMPLE-GENERATOR (LL/LR sentence input)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -186,14 +186,15 @@
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
     <script src="../../shared/algo/pda.js?v=f367700e"></script>
-    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
     <script src="guide.js?v=7157dbd6"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
       initResize("rh-1", "p-def", +1);
       initResize("rh-2", "p-tree", -1);
@@ -399,7 +400,7 @@ else: ${kw("reject")}`
 
       const PDA_R = 16;
 
-      const pdaGraph = createGraphView("pda", { hasNodes: () => pdaStates.length > 0, fallbackWidth: 400 });
+      const pdaGraph = createGraphView("pda", { hasNodes: () => pdaStates.length > 0 });
       function fitPDA() { pdaGraph.fit(); }
 
       function ruleLabel(r) {
@@ -612,17 +613,11 @@ else: ${kw("reject")}`
 
       const TREE_NW = 72, TREE_NH = 36;
 
-      const _pdaTreeZoom = d3.zoom()
-        .scaleExtent([0.08, 6])
-        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", e => d3.select("#tree-root").attr("transform", e.transform));
-      d3.select("#tree-svg").call(_pdaTreeZoom).on("dblclick.zoom", null);
-      document.getElementById("tree-svg").addEventListener("dblclick", () => fitSimTree());
-
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => { if (_simTree) fitSimTree(); })
-          .observe(document.getElementById("tree-svg").parentElement);
-      }
+      // Pan/zoom and fit-to-view for the tree (see shared/fit-view.js)
+      const _pdaTreeView = createFitView({
+        svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 6], maxScale: 1.2, pad: 14, align: "top",
+        hasContent: () => !!_simTree,
+      });
 
       function stackAbbrev(stack) {
         if (!stack || stack.length === 0) return "∅";
@@ -813,24 +808,7 @@ else: ${kw("reject")}`
         fitSimTree();
       }
 
-      function fitSimTree() {
-        try {
-          const rootEl = document.getElementById("tree-root");
-          const bb     = rootEl.getBBox();
-          const svgEl  = document.getElementById("tree-svg");
-          const vw = svgEl.clientWidth  || svgEl.parentElement.clientWidth  || 340;
-          const vh = svgEl.clientHeight || svgEl.parentElement.clientHeight || 400;
-          if (!bb || bb.width < 1) return;
-          const pad = 28;
-          const sc  = Math.min(1.2,
-            Math.min((vw - pad) / (bb.width  + pad),
-                     (vh - pad) / (bb.height + pad)));
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = pad / 2 - bb.y * sc; // top of the drawing (the entry arrow) sits pad/2 below the top edge
-          d3.select("#tree-svg")
-            .call(_pdaTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch (e) {}
-      }
+      function fitSimTree() { _pdaTreeView.refit(); }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // EXAMPLES

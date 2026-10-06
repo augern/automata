@@ -208,7 +208,8 @@
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/rdp.js?v=54e87b81"></script>
-    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
@@ -279,7 +280,7 @@
 
       function run() {
         rdSel = null;
-        rdUserZoomed = false;
+        rdView.release();
         rdTrace = rdG ? rdpRun(rdG, rdpTokenise(rdG, $("sim-input").value), { mode: rdMode }) : null;
         sim.pos = -1;
         render();
@@ -410,36 +411,9 @@
         return Math.max(30, 9 * l.main.length + 7.5 * l.sub.length + 20);
       }
 
-      let rdZoom = null;
-      let rdUserZoomed = false; // the user changed the zoom: stop fitting the tree to the view
-      let rdFitK = null; // the scale of the last fit
-      function initTreeView() {
-        rdZoom = d3.zoom().scaleExtent([0.08, 3])
-          .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-          .on("zoom", (e) => {
-            if (e.sourceEvent && (rdFitK === null || Math.abs(e.transform.k - rdFitK) > 1e-6)) rdUserZoomed = true;
-            d3.select("#tree-root").attr("transform", e.transform);
-          });
-        d3.select("#tree-svg").call(rdZoom).on("dblclick.zoom", null);
-        $("tree-svg").addEventListener("dblclick", () => { rdUserZoomed = false; fitTreeView(); });
-        d3.select("#tree-svg").on("click", () => { if (rdSel !== null) selectNode(rdSel); });
-        new ResizeObserver(() => { if (!rdUserZoomed) fitTreeView(); }).observe($("tree-wrap"));
-      }
-      // Fit the whole tree into the view (it grows as the run goes on); panning alone does not stop this.
-      function fitTreeView(animate) {
-        try {
-          const bb = $("tree-root").getBBox();
-          const svg = $("tree-svg");
-          const vw = svg.clientWidth, vh = svg.clientHeight;
-          if (!bb || bb.width < 1 || !vw || !vh) return;
-          const sc = Math.min(1, Math.min((vw - 24) / bb.width, (vh - 24) / bb.height));
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = Math.max(12, (vh - bb.height * sc) / 2) - bb.y * sc;
-          rdFitK = sc;
-          const sel = d3.select("#tree-svg");
-          (animate ? sel.transition().duration(180) : sel).call(rdZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch (e) { /* not laid out yet */ }
-      }
+      // Pan/zoom and fit-to-view for the tree (see shared/fit-view.js): it refits as the search tree grows.
+      const rdView = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 3], maxScale: 1, pad: 12, hasContent: () => !!rdTrace });
+      d3.select("#tree-svg").on("click", () => { if (rdSel !== null) selectNode(rdSel); });
 
       function drawSearchTree() {
         const g = d3.select("#tree-root");
@@ -499,7 +473,7 @@
           t.append("tspan").text(l.main);
           if (l.sub) t.append("tspan").attr("class", "sub").attr("dx", 3).text(l.sub);
         });
-        if (!rdUserZoomed) fitTreeView(rdFitK !== null);
+        rdView.refit();
       }
 
       // ── Selection and explanation ─────────────────────────────
@@ -654,7 +628,6 @@
       initPanelStorage("rdp-tool-v1", ["p-grammar", "p-code", "p-search"]);
       loadPanelState();
       initAlgoModal();
-      initTreeView();
       applyShareState();
       loadExamplesInto("examples.json", "examples-select", EXAMPLES, () => {
         const first = Object.keys(EXAMPLES)[0];

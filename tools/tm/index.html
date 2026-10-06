@@ -357,14 +357,15 @@
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
     <script src="../../shared/algo/tm.js?v=c1750898"></script>
-    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
     <script src="guide.js?v=5bbe7080"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
       // shared.js stub
       function renderTree() {}
@@ -978,7 +979,7 @@ ${kw("loop")}:
 
       const TM_R = 16; // node radius
 
-      const tmGraph = createGraphView("tm", { hasNodes: () => tmStates.length > 0, fallbackWidth: 320 });
+      const tmGraph = createGraphView("tm", { hasNodes: () => tmStates.length > 0 });
       function fitTMGraph() { tmGraph.fit(); }
 
       // Edge label: "r/w, D" abbreviated to "r, D" when read === write

@@ -173,14 +173,15 @@
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
     <script src="../../shared/algo/nfa.js?v=7110a99c"></script>
-    <script src="../../shared/shared.js?v=1cde59fa"></script>
+    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=accb50ec"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
     <script src="guide.js?v=90bead1b"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/automaton-graph.js?v=c6dd1ec4"></script>
+    <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
       // shared.js stubs
       function renderTree() {}
@@ -384,7 +385,7 @@ else: ${kw("reject")}`
 
       const NFA_R = 16; // node circle radius
 
-      const nfaGraph = createGraphView("nfa", { hasNodes: () => nfaStates.length > 0, fallbackWidth: 340 });
+      const nfaGraph = createGraphView("nfa", { hasNodes: () => nfaStates.length > 0 });
       function fitNFA() { nfaGraph.fit(); }
 
       function renderNFAGraph() {
@@ -473,17 +474,12 @@ else: ${kw("reject")}`
       const TREE_ROW_H = 72;   // vertical distance between depth levels
       const TREE_COL_W = 48;   // min horizontal spacing between sibling nodes
 
-      const _simTreeZoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .wheelDelta(e => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002))
-        .on("zoom", e => d3.select("#sim-tree-root").attr("transform", e.transform));
-      d3.select("#sim-tree-svg").call(_simTreeZoom).on("dblclick.zoom", null);
-      document.getElementById("sim-tree-svg").addEventListener("dblclick", () => fitSimTree());
-
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => { if (_simTree) fitSimTree(); })
-          .observe(document.getElementById("sim-tree-svg").parentElement);
-      }
+      // Pan/zoom and fit-to-view for the tree (see shared/fit-view.js). The extent comes from the layout.
+      let _nfaTreeBounds = null;
+      const _nfaTreeView = createFitView({
+        svg: "sim-tree-svg", root: "sim-tree-root", scaleExtent: [0.1, 4], maxScale: 1, pad: 32, align: "top",
+        bounds: () => _nfaTreeBounds, hasContent: () => !!_simTree,
+      });
 
       // Collect all nodes up to revealDepth
       function collectVisible(vRoot, revealDepth) {
@@ -682,7 +678,7 @@ else: ${kw("reject")}`
         fitSimTreeFromLayout(posMap, vRoot, revealDepth);
       }
 
-      // Fit using bounding box derived from d3 layout positions — no getBBox needed.
+      // Fit using the extent derived from the d3 layout positions — no getBBox needed.
       function fitSimTreeFromLayout(posMap, vRoot, revealDepth) {
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         for (const [id, pos] of posMap) {
@@ -695,33 +691,8 @@ else: ${kw("reject")}`
         }
         if (minX === Infinity) return;
         minY -= 20; // headroom for start arrow above root node
-        const contentW = maxX - minX;
-        const contentH = maxY - minY;
-        const wrap = document.getElementById("sim-tree-wrap");
-        const vw = wrap.clientWidth  || 400;
-        const vh = wrap.clientHeight || 300;
-        const pad = 32;
-        const sc = Math.min(1, Math.min(vw / (contentW + pad * 2), vh / (contentH + pad * 2)));
-        const tx = (vw - contentW * sc) / 2 - minX * sc;
-        const ty = pad - minY * sc;
-        d3.select("#sim-tree-svg").call(_simTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-      }
-
-      // Manual refit on double-click — uses getBBox as a fallback for arbitrary pan state.
-      function fitSimTree() {
-        try {
-          const rootEl = document.getElementById("sim-tree-root");
-          const bb = rootEl.getBBox();
-          const wrap = document.getElementById("sim-tree-wrap");
-          const vw = wrap.clientWidth  || 400;
-          const vh = wrap.clientHeight || 300;
-          if (!bb || bb.width < 1 || bb.height < 1) return;
-          const pad = 32;
-          const sc = Math.min(1, Math.min(vw / (bb.width + pad * 2), vh / (bb.height + pad * 2)));
-          const tx = (vw - bb.width * sc) / 2 - bb.x * sc;
-          const ty = pad - bb.y * sc;
-          d3.select("#sim-tree-svg").call(_simTreeZoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
-        } catch(e) { /* ignore */ }
+        _nfaTreeBounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+        _nfaTreeView.refit();
       }
 
       function findNodeById(vRoot, id) {
