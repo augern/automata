@@ -87,6 +87,7 @@
   <button class="mode-btn"        id="btn-mode-unit"  onclick="setMode('unit')">Unit Elim</button>
   <button class="mode-btn"        id="btn-mode-cnf"   onclick="setMode('cnf')">CNF</button>
   <button class="mode-btn"        id="btn-mode-lre"   onclick="setMode('lre')">Left Recursion</button>
+  <button class="mode-btn"        id="btn-mode-gnf"   onclick="setMode('gnf')">GNF</button>
 </div>
 
 <div id="panels">
@@ -166,12 +167,12 @@
 <script src="../../shared/algo/grammar.js?v=39525f46"></script>
 <script src="../../shared/algo/panels.js?v=23a37100"></script>
 <script src="../../shared/algo/share.js?v=e00a0058"></script>
-<script src="../../shared/algo/rewrite.js?v=42ea18db"></script>
+<script src="../../shared/algo/rewrite.js?v=be1db128"></script>
 <script src="../../shared/shared.js?v=15943b26"></script>
 <script src="../../shared/share-link.js?v=0d17f714"></script>
 <script src="../../shared/ui.js?v=accb50ec"></script>
 <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-<script src="guide.js?v=2ab97083"></script>
+<script src="guide.js?v=4013c66c"></script>
 <script src="../../shared/guide.js?v=f731818c"></script>
 <script>
 'use strict';
@@ -223,6 +224,7 @@ const MODE_TITLES = {
   unit:  'Unit Production Elimination',
   cnf:   'Chomsky Normal Form',
   lre:   'Left-Recursion Elimination',
+  gnf:   'Greibach Normal Form',
 };
 
 // What each transformation does, shown until the first step is taken.
@@ -232,12 +234,13 @@ const MODE_INTRO = {
   unit:  'Removes unit productions (A → B): it finds which nonterminals each one can reach through chains of unit rules, then gives it all the non-unit rules of those. Press Step to begin.',
   cnf:   'Converts the grammar to Chomsky normal form, where every rule is A → B C or A → a. It first runs cleanup, ε-elimination and unit elimination, then replaces terminals inside longer rules by new nonterminals and splits long right-hand sides. Press Step to begin.',
   lre:   'Removes left recursion (A → A α), which top-down parsers such as LL(1) cannot handle: indirect recursion is first made direct, then each directly recursive nonterminal is rewritten with a new helper nonterminal. Press Step to begin.',
+  gnf:   'Converts the grammar to Greibach normal form, where every rule is A → a B₁ … Bₖ: a terminal followed by nonterminals only. It first runs cleanup, ε-elimination and unit elimination, then orders the nonterminals, substitutes earlier ones into later rules while removing left recursion, and works back up. S → ε is kept if the language contains ε. The result can be much larger than the input. Press Step to begin.',
 };
 
 function setMode(m) {
   currentMode = m;
   document.getElementById('step-empty').textContent = MODE_INTRO[m];
-  ['clean','eps','unit','cnf','lre'].forEach(mm => {
+  ['clean','eps','unit','cnf','lre','gnf'].forEach(mm => {
     document.getElementById('btn-mode-' + mm).classList.toggle('active', mm === m);
   });
   document.getElementById('main-title').textContent = MODE_TITLES[m];
@@ -285,6 +288,7 @@ function resetSim() {
   if (currentMode === 'unit')  simSteps = computeUnitSteps(inputGrammar);
   if (currentMode === 'cnf')   simSteps = computeCNFSteps(inputGrammar);
   if (currentMode === 'lre')   simSteps = computeLRESteps(inputGrammar);
+  if (currentMode === 'gnf')   simSteps = computeGNFSteps(inputGrammar);
 
   renderGrammarDisplay(inputGrammar.rules, [], []);
   updateBtns();
@@ -397,7 +401,7 @@ function runAll() {
 }
 
 // computeCleanupSteps, computeEpsSteps, computeUnitSteps, computeCNFSteps and
-// computeLRESteps — see shared/algo/rewrite.js
+// computeLRESteps and computeGNFSteps — see shared/algo/rewrite.js
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ALGORITHM PSEUDOCODE
@@ -559,6 +563,25 @@ ${kw('for')} i ${_la} 1 to n
   eliminate direct left recursion from Aᵢ${cm('see Eliminate-Direct-LR')}`
 );
 
+const PC_GNF = pcBlock(
+  'Greibach-Normal-Form',
+  [
+    { label: 'Input',  sym: it('G'),   desc: 'a context-free grammar' },
+    { label: 'Output', sym: '',        desc: 'an equivalent grammar whose rules are all A ' + _ra + ' a B₁ … Bₖ (a terminal, then nonterminals), plus S ' + _ra + ' ' + _eps + ' if ' + _eps + ' ' + _in + ' L(G)' },
+  ],
+  `clean up, eliminate ${_eps}-rules and unit rules${cm('set S ' + '→ ε aside if the language contains ε')}
+order nonterminals: A₁, … , Aₙ
+${kw('for')} i ${_la} 1 to n${cm('forward pass')}
+  ${kw('for')} j ${_la} 1 to i − 1: substitute Aⱼ into every rule Aᵢ ${_ra} Aⱼ γ
+  ${kw('if')} Aᵢ has rules Aᵢ ${_ra} Aᵢ α₁ | … and Aᵢ ${_ra} β₁ | …
+    replace them by  Aᵢ ${_ra} βₖ | βₖ Bᵢ  and  Bᵢ ${_ra} αₘ | αₘ Bᵢ${cm('Bᵢ has no ε-rule')}
+${kw('for')} i ${_la} n − 1 ${kw('down to')} 1${cm('back-substitution')}
+  ${kw('for')} k ${_la} i + 1 to n: substitute Aₖ into every rule Aᵢ ${_ra} Aₖ γ
+${kw('for each')} tail Bᵢ: substitute the Aⱼ at the front of its rules
+replace every terminal t that is not first by a fresh Xₜ, add Xₜ ${_ra} t
+remove duplicate and unreachable rules; put S ${_ra} ${_eps} back`
+);
+
 // ── Modal open / close ────────────────────────────────────────
 function openAlgoModal() {
   const overlay   = document.getElementById('algo-overlay');
@@ -591,6 +614,11 @@ function openAlgoModal() {
     subtitleEl.textContent = 'indirect & direct';
     bodyEl.innerHTML = PC_LRE + PC_LRE_DIRECT +
       '<div class="pc-note">The substitution pass (outer loop) converts any indirect left recursion into direct left recursion for A<sub>i</sub>; the inner pass then removes it. The result is guaranteed left-recursion-free for any ordering of the nonterminals. For grammars with ε-rules or unit cycles the result may contain ε-productions — run ε-elimination and unit elimination beforehand for cleanest output.</div>';
+  } else if (currentMode === 'gnf') {
+    titleEl.textContent    = 'Greibach Normal Form';
+    subtitleEl.textContent = 'substitution & tails';
+    bodyEl.innerHTML = PC_GNF +
+      '<div class="pc-note">The tail nonterminals Bᵢ here get no ε-rule (A → β and A → β Bᵢ are both added instead), so the grammar stays ε-free. After the forward pass the rules of Aₙ all start with a terminal, which is what makes the back-substitution work. Substitution can multiply the number of rules, so the run stops at 300 rules.</div>';
   }
 
   overlay.classList.remove('hidden');

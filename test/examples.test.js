@@ -90,10 +90,10 @@ test("regex examples compile, and NFA/DFA/minimal DFA agree on short strings", (
   }
 });
 
-test("grammar-rewrite examples run through all five transformations", () => {
+test("grammar-rewrite examples run through all six transformations", () => {
   for (const ex of examples("grammar-rewrite")) {
     const g = A.parseGrammarRaw(textOf(ex));
-    for (const fn of [A.computeCleanupSteps, A.computeEpsSteps, A.computeUnitSteps, A.computeCNFSteps, A.computeLRESteps]) {
+    for (const fn of [A.computeCleanupSteps, A.computeEpsSteps, A.computeUnitSteps, A.computeCNFSteps, A.computeLRESteps, A.computeGNFSteps]) {
       assert.ok(fn(g).length > 0, `${ex.label}: ${fn.name}`);
     }
   }

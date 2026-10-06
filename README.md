@@ -7,7 +7,7 @@ regular languages, context-free grammars and parsing, and Turing machines.
 |---|---|
 | **Regular Expression Tool** | Thompson's NFA construction — RE → NFA (step-by-step), NFA → DFA (subset construction, step-by-step), DFA string simulation |
 | **NFA Simulator** | ε-NFA — editable transition table, NFA graph, nondeterministic simulation tree |
-| **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination |
+| **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination, Greibach Normal Form (GNF) |
 | **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step, or let a seeded "Random choice" stepper derive for you (Back/forward, Reseed, ←/→ keys, seed kept in share links) |
 | **PDA Simulator** | Nondeterministic PDA / ε-PDA — transition rule list, automaton graph, configuration-set simulation |
 | **Backtracking Recursive Descent** | The procedures generated from a grammar and the search for a parse — guesses, backtracking and dead ends as a call tree, the read position over time, linked to the highlighted code; complete search or ordered choice, left recursion detected |
@@ -59,7 +59,7 @@ parser-tools/
 │   │   ├── nfa.js                      ← pure: ε-closure, NFA simulation tree, exact acceptance
 │   │   ├── pda.js                      ← pure: PDA configurations, simulation tree, exact acceptance
 │   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimization
-│   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion
+│   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion, GNF
 │   │   └── tm.js                       ← pure: TM tape and pre-run
 │   ├── theme.js                        ← light/dark theme (system default, remembered toggle)
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css

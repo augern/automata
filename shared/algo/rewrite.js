@@ -1,6 +1,6 @@
 // Grammar transformations: cleanup (unproductive/unreachable), ε-elimination,
-// unit-production elimination, Chomsky Normal Form and left-recursion
-// elimination. No DOM access.
+// unit-production elimination, Chomsky Normal Form, left-recursion
+// elimination and Greibach Normal Form. No DOM access.
 //
 // Each computeXSteps(g) takes a grammar { rules, start, nts } (see
 // parseGrammarRaw) and returns the list of steps the tool animates. The final
@@ -950,5 +950,220 @@ function computeLRESteps(g) {
     isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
   });
 
+  return steps;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GREIBACH NORMAL FORM
+// Every rule becomes A → a B₁ … Bₖ (a terminal, then nonterminals); S → ε is kept when the
+// language contains ε. Performs: preparation (cleanup, ε-elimination, unit elimination), then
+//   (1) order the nonterminals, (2) forward pass: substitute the earlier nonterminals into each
+//   rule that starts with one, and remove direct left recursion with a tail nonterminal that,
+//   unlike in the left-recursion tool, has no ε-rule, (3) back-substitution from the last
+//   nonterminal up, (4) substitute into the tails, (5) isolate terminals that are not first,
+//   (6) tidy up. The result can be much larger than the input, so the run stops at GNF_MAX_RULES.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const GNF_MAX_RULES = 300;
+
+function gnfSub(n) { return String(n).split('').map(d => '₀₁₂₃₄₅₆₇₈₉'[+d]).join(''); }
+
+function computeGNFSteps(g) {
+  const steps = [];
+  const start = g.start;
+  let rules = cloneRules(g.rules);
+  const ruleKey = r => r.lhs + '\0' + r.rhs.join('\0');
+  const hl  = r => '<span class="lg-hl">' + ruleStr(r) + '</span>';
+  const del = r => '<span class="lg-del">' + ruleStr(r) + '</span>';
+  const add = r => '<span class="lg-new">' + ruleStr(r) + '</span>';
+  const nm  = n => '<span class="lg-hl">' + esc(n) + '</span>';
+  const push = (html, o = {}) => steps.push({
+    phase: o.phase || '', html, isPhase: !!o.isPhase,
+    grammarAfter: cloneRules(rules), newRules: o.newRules || [], activeRules: o.activeRules || [],
+  });
+  const ntSet = () => new Set(rules.map(r => r.lhs));
+
+  push('Greibach normal form: every rule is A → a B₁ … Bₖ, a terminal followed by nonterminals. '
+     + 'Six phases after a preparation: (1) order the nonterminals, (2) forward pass — substitute earlier nonterminals and remove direct left recursion, '
+     + '(3) back-substitution, (4) substitute into the tail nonterminals, (5) isolate terminals that are not first, (6) tidy up.',
+     { phase: 'Overview', isPhase: true });
+
+  // ── Preparation: the grammar must be clean, ε-free (but for S → ε) and without unit rules ──
+  for (const [label, fn] of [['Preparation 1 — Cleanup', computeCleanupSteps], ['Preparation 2 — ε-elimination', computeEpsSteps], ['Preparation 3 — Unit elimination', computeUnitSteps]]) {
+    push('Run first, so the rest can assume it: ' + label.split(' — ')[1].toLowerCase() + '.', { phase: label, isPhase: true });
+    const sub = fn({ rules: cloneRules(rules), start, nts: ntSet() });
+    for (const st of sub) steps.push({ ...st, phase: st.phase ? label.split(' — ')[0] + ' · ' + st.phase : '' });
+    rules = cloneRules(sub[sub.length - 1].grammarAfter);
+  }
+
+  if (!rules.some(r => r.lhs === start)) {
+    push('The start symbol derives no string, so the language is empty and there is nothing to convert.', { phase: 'Done', isPhase: true });
+    return steps;
+  }
+
+  const startEps = rules.some(r => r.lhs === start && r.rhs.length === 0);
+  if (startEps) {
+    rules = rules.filter(r => !(r.lhs === start && r.rhs.length === 0));
+    push('The language contains ε. <span class="lg-hl">' + esc(start) + ' → ε</span> is set aside, kept as it is, and put back at the end; the transformation works on the ε-free rest.');
+    if (!rules.length) {
+      rules = [{ lhs: start, rhs: [] }];
+      push('Nothing else is left: the language is {ε}, and ' + esc(start) + ' → ε is already in Greibach normal form.', { phase: 'Done', isPhase: true });
+      return steps;
+    }
+  }
+
+  const fresh = base => {
+    const used = ntSet();
+    let n = base + "'";
+    while (used.has(n)) n += "'";
+    return n;
+  };
+
+  // Replace every rule  owner → head γ  by  owner → δ γ  for each rule  head → δ.
+  function substitute(owner, head) {
+    const hit = rules.filter(r => r.lhs === owner && r.rhs[0] === head);
+    if (!hit.length) return false;
+    const prods = rules.filter(r => r.lhs === head);
+    push((hit.length === 1 ? 'Rule ' : 'Rules ') + hit.map(hl).join(', ') + (hit.length === 1 ? ' starts' : ' start')
+       + ' with ' + nm(head) + ' — substituting its productions.', { activeRules: hit.map(r => rules.indexOf(r)) });
+    const hitSet = new Set(hit);
+    const seen = new Set(rules.filter(r => !hitSet.has(r)).map(ruleKey));
+    const made = [];
+    for (const r of hit) for (const pr of prods) {
+      const n = { lhs: owner, rhs: [...pr.rhs, ...r.rhs.slice(1)] };
+      if (!seen.has(ruleKey(n))) { seen.add(ruleKey(n)); made.push(n); }
+    }
+    rules = rules.filter(r => !hitSet.has(r));
+    const at = rules.length;
+    rules.push(...made);
+    push('Removed: ' + hit.map(del).join(', ') + '<br>Added:&nbsp; ' + (made.length ? made.map(add).join(', ') : '<span class="lg-dim">nothing new (all already present)</span>'),
+         { newRules: made.map((_, k) => at + k) });
+    if (rules.length > GNF_MAX_RULES) throw { gnfStop: true };
+    return true;
+  }
+
+  try {
+    // ── Phase 1: order ──
+    const A = [];
+    for (const r of [{ lhs: start }, ...rules]) if (!A.includes(r.lhs)) A.push(r.lhs);
+    push('Number the nonterminals, the start symbol first: ' + A.map((n, i) => 'A<sub>' + (i + 1) + '</sub> = ' + nm(n)).join(', ')
+       + '. The aim of the next phases: a rule of A<sub>i</sub> never starts with A<sub>j</sub> unless j &gt; i.', { phase: 'Phase 1 — Order the nonterminals', isPhase: true });
+
+    // ── Phase 2: forward pass ──
+    push('For i = 1 … n: substitute A<sub>j</sub> (j &lt; i) into the rules of A<sub>i</sub> that start with it, then remove direct left recursion A<sub>i</sub> → A<sub>i</sub> α with a tail nonterminal. '
+       + 'The tail has no ε-rule here, so the grammar stays ε-free.', { phase: 'Phase 2 — Forward pass', isPhase: true });
+    const tails = [];
+    for (let i = 0; i < A.length; i++) {
+      const Ai = A[i];
+      push('Processing ' + nm(Ai) + ' (A<sub>' + (i + 1) + '</sub>).');
+      for (let j = 0; j < i; j++) substitute(Ai, A[j]);
+      const lr = rules.filter(r => r.lhs === Ai && r.rhs[0] === Ai);
+      if (!lr.length) {
+        push(nm(Ai) + ' has no direct left recursion — nothing to remove.');
+        continue;
+      }
+      const base = rules.filter(r => r.lhs === Ai && r.rhs[0] !== Ai);
+      push('Direct left recursion in ' + nm(Ai) + ':<br>Left-recursive: ' + lr.map(hl).join(', ') + '<br>Other rules: '
+         + (base.length ? base.map(hl).join(', ') : '<span class="lg-dim">none</span>'),
+         { activeRules: rules.map((r, k) => r.lhs === Ai ? k : -1).filter(k => k >= 0) });
+      if (!base.length) {
+        rules = rules.filter(r => r.lhs !== Ai);
+        push(nm(Ai) + ' has no rule that does not start with itself, so it derives nothing: its rules are removed.');
+        continue;
+      }
+      const B = fresh(Ai);
+      const mine = [...base.flatMap(r => [{ lhs: Ai, rhs: [...r.rhs] }, { lhs: Ai, rhs: [...r.rhs, B] }]),
+                    ...lr.flatMap(r => [{ lhs: B, rhs: r.rhs.slice(1) }, { lhs: B, rhs: [...r.rhs.slice(1), B] }])];
+      rules = rules.filter(r => r.lhs !== Ai);
+      const at = rules.length;
+      rules.push(...mine);
+      tails.push(B);
+      push('Tail nonterminal ' + nm(B) + ' (no ε-rule): each other rule β gives A → β and A → β ' + esc(B) + '; each recursive A → A α gives ' + esc(B) + ' → α and ' + esc(B) + ' → α ' + esc(B) + '.<br>'
+         + mine.map(add).join(', '), { newRules: mine.map((_, k) => at + k) });
+      if (rules.length > GNF_MAX_RULES) throw { gnfStop: true };
+    }
+
+    // ── Phase 3: back-substitution ──
+    push('Now the rules of A<sub>n</sub> all start with a terminal. Going from A<sub>n−1</sub> up to A<sub>1</sub>, substitute the later nonterminals into every rule that starts with one: '
+       + 'each of those is already terminal-led, so the result is too.', { phase: 'Phase 3 — Back-substitution', isPhase: true });
+    for (let i = A.length - 2; i >= 0; i--) {
+      let any = false;
+      for (let k = i + 1; k < A.length; k++) any = substitute(A[i], A[k]) || any;
+      if (!any) push(nm(A[i]) + ': every rule already starts with a terminal.');
+    }
+
+    // ── Phase 4: the tails ──
+    push('The tail nonterminals ' + (tails.length ? tails.map(nm).join(', ') : '(none were needed)') + ' can still have rules that start with some A<sub>j</sub>. Substitute those too.',
+         { phase: 'Phase 4 — Substitute into the tails', isPhase: true });
+    for (let round = 0; round < 20; round++) {
+      let changed = false;
+      for (const T of tails) {
+        const heads = [...new Set(rules.filter(r => r.lhs === T && r.rhs.length && ntSet().has(r.rhs[0]) && r.rhs[0] !== T).map(r => r.rhs[0]))];
+        for (const h of heads) changed = substitute(T, h) || changed;
+      }
+      if (!changed) break;
+    }
+    if (!tails.length) push('No tail nonterminals — nothing to do.');
+    if (rules.some(r => r.rhs.length && ntSet().has(r.rhs[0]))) push('<span class="lg-del">A rule still starts with a nonterminal</span> — the result is not in Greibach normal form (this should not happen).');
+
+    // ── Phase 5: terminals that are not first ──
+    push('A rule A → a α needs α to consist of nonterminals only. Replace every terminal t that is not first by a fresh nonterminal Xₜ with the rule Xₜ → t.', { phase: 'Phase 5 — Isolate terminals', isPhase: true });
+    {
+      const names = ntSet();
+      const wrap = new Map();
+      const wrapper = t => {
+        if (wrap.has(t)) return wrap.get(t);
+        let c = wrap.size + 1, n = 'X' + gnfSub(c);
+        while (names.has(n)) n = 'X' + gnfSub(++c);
+        names.add(n);
+        wrap.set(t, n);
+        return n;
+      };
+      let touched = [];
+      rules = rules.map(r => {
+        if (r.rhs.length < 2) return r;
+        const rhs = r.rhs.map((s, i) => (i > 0 && !names.has(s) ? wrapper(s) : s));
+        if (rhs.every((s, i) => s === r.rhs[i])) return r;
+        touched.push(r);
+        return { lhs: r.lhs, rhs };
+      });
+      if (!wrap.size) push('No terminal stands behind another symbol — nothing to do.');
+      else {
+        const ws = [...wrap.entries()].map(([t, n]) => ({ lhs: n, rhs: [t] }));
+        const at = rules.length;
+        rules.push(...ws);
+        push('Replaced terminals in ' + touched.length + (touched.length === 1 ? ' rule' : ' rules') + '. New rules: ' + ws.map(add).join(', '), { newRules: ws.map((_, k) => at + k) });
+      }
+    }
+
+    // ── Phase 6: tidy ──
+    push('Remove duplicate rules and the rules of nonterminals that can no longer be reached from the start symbol.', { phase: 'Phase 6 — Tidy up', isPhase: true });
+    {
+      const seen = new Set();
+      const kept = rules.filter(r => { const k = ruleKey(r); if (seen.has(k)) return false; seen.add(k); return true; });
+      if (kept.length < rules.length) { rules = kept; push('Removed ' + (seen.size ? '' : '') + 'duplicate rules.'); }
+      const names = ntSet(), reach = new Set([start]), queue = [start];
+      while (queue.length) {
+        const n = queue.shift();
+        for (const r of rules) if (r.lhs === n) for (const s of r.rhs) if (names.has(s) && !reach.has(s)) { reach.add(s); queue.push(s); }
+      }
+      const dead = rules.filter(r => !reach.has(r.lhs));
+      if (dead.length) { rules = rules.filter(r => reach.has(r.lhs)); push('Unreachable: ' + dead.map(del).join(', ')); }
+      else push('Nothing unreachable.');
+    }
+  } catch (e) {
+    if (!e || !e.gnfStop) throw e;
+    push('Stopped: the grammar grew beyond ' + GNF_MAX_RULES + ' rules. Substitution can make Greibach normal form exponentially larger than the original; the grammar shown is where it stopped, not a result.',
+         { phase: 'Stopped', isPhase: true });
+    return steps;
+  }
+
+  if (startEps) {
+    rules.unshift({ lhs: start, rhs: [] });
+    push('Put back ' + add(rules[0]) + '.' + (rules.some(r => r.rhs.includes(start))
+        ? ' <span class="lg-dim">(Strictly, S → ε is allowed in Greibach normal form only when S appears on no right-hand side; here it does, so a new start symbol S₀ → S | ε would be needed.)</span>' : ''),
+         { newRules: [0] });
+  }
+  push('Greibach normal form reached: ' + rules.length + ' rules, each A → a B₁ … Bₖ'
+     + (startEps ? ', apart from ' + esc(start) + ' → ε' : '') + '. The language is unchanged.', { phase: 'Done', isPhase: true });
   return steps;
 }

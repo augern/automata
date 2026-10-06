@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
 const R = load("grammar.js", "rewrite.js");
-const { EPSILON, parseGrammarRaw, computeCleanupSteps, computeEpsSteps, computeUnitSteps, computeCNFSteps, computeLRESteps } = R;
+const { EPSILON, parseGrammarRaw, computeCleanupSteps, computeEpsSteps, computeUnitSteps, computeCNFSteps, computeLRESteps, computeGNFSteps } = R;
 
 const run = (fn, text) => {
   const g = parseGrammarRaw(text);
@@ -180,9 +180,61 @@ test("left recursion: a grammar without it is reported unchanged", () => {
   assert.match(steps.at(-1).html, /No left recursion/);
 });
 
+// ── Greibach normal form ──────────────────────────────────────────────
+// Every rule is A → a B₁ … Bₖ (a terminal, then nonterminals); only the start symbol may derive ε.
+function assertGNF(rules, start) {
+  const ntSet = nts(rules);
+  for (const r of rules) {
+    if (r.rhs.length === 0) { assert.equal(r.lhs, start, "only the start symbol may derive ε"); continue; }
+    assert.ok(!ntSet.has(r.rhs[0]), `rule starts with a nonterminal: ${r.lhs} -> ${r.rhs}`);
+    for (const x of r.rhs.slice(1)) assert.ok(ntSet.has(x), `terminal behind the first symbol: ${r.lhs} -> ${r.rhs}`);
+  }
+}
+
+for (const [name, text, start] of [
+  ["aⁿbⁿ", "S -> a S b | a b", "S"],
+  ["expression grammar (left recursion)", "E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id", "E"],
+  ["balanced parentheses with ε", "S -> ( S ) S | eps", "S"],
+  ["indirect left recursion", "A -> B x | y\nB -> C z\nC -> A w | v", "A"],
+  ["Dragon book 4.18", "S -> A a | b\nA -> A c | S d | eps", "S"],
+  ["nullable chain", "S -> A B C\nA -> a | eps\nB -> b | eps\nC -> c | eps", "S"],
+  ["unit cycle", "S -> A | a\nA -> B\nB -> A | b", "S"],
+  ["palindromes", "S -> a S a | b S b | a | b | eps", "S"],
+  ["only ε", "S -> eps", "S"],
+]) {
+  test(`GNF: ${name} reaches Greibach normal form and generates the same language`, () => {
+    const { rules, g, steps } = run(computeGNFSteps, text);
+    assert.notEqual(steps.at(-1).phase, "Stopped");
+    assertGNF(rules, start);
+    sameLanguage(g.rules, rules, start, 5);
+  });
+}
+
+test("GNF: S → ε is kept first, the other rules are ε-free", () => {
+  const { rules } = run(computeGNFSteps, "S -> ( S ) S | eps");
+  assert.deepEqual(fmt(rules.filter((r) => r.rhs.length === 0)), ["S -> ε"]);
+});
+
+test("GNF: the tail nonterminal of a left-recursive rule has no ε-rule", () => {
+  const { rules } = run(computeGNFSteps, "S -> S a | b");
+  assert.deepEqual(fmt(rules), ["S -> b", "S -> b S'", "S' -> a", "S' -> a S'"]);
+});
+
+test("GNF: an empty language is reported, not converted", () => {
+  const { steps } = run(computeGNFSteps, "S -> S a");
+  assert.match(steps.at(-1).html, /empty/);
+});
+
+test("GNF: a grammar that blows up is stopped with a message", () => {
+  // each level multiplies the number of rules after substitution
+  const text = "A1 -> A2 A2 | a\nA2 -> A3 A3 | b\nA3 -> A4 A4 | c\nA4 -> A5 A5 | d\nA5 -> A6 A6 | e\nA6 -> A7 A7 | f\nA7 -> A8 A8 | g\nA8 -> A9 A9 | h\nA9 -> i | j | k | l | m";
+  const { steps } = run(computeGNFSteps, text);
+  assert.equal(steps.at(-1).phase === "Stopped" || steps.at(-1).grammarAfter.length <= 300, true);
+});
+
 // ── Step structure ────────────────────────────────────────────────────
 test("every step has the fields the tool renders", () => {
-  for (const fn of [computeCleanupSteps, computeEpsSteps, computeUnitSteps, computeCNFSteps, computeLRESteps]) {
+  for (const fn of [computeCleanupSteps, computeEpsSteps, computeUnitSteps, computeCNFSteps, computeLRESteps, computeGNFSteps]) {
     const { steps } = run(fn, "S -> A B | a\nA -> A a | b | eps\nB -> S | c");
     assert.ok(steps.length > 0);
     for (const st of steps) {
@@ -198,4 +250,36 @@ test("step HTML escapes grammar symbols", () => {
   const { steps } = run(computeCleanupSteps, "S -> <b> | a\n<b> -> x");
   const all = steps.map((s) => s.html + (s.phase || "")).join("");
   assert.ok(!all.includes("<b>"), "raw <b> leaked into step HTML");
+});
+
+test("GNF: random small grammars end in Greibach normal form with the same language", () => {
+  let seed = 12345;
+  const rnd = (n) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+  const NT = ["S", "A", "B", "C"], T = ["a", "b"];
+  let checked = 0;
+  for (let t = 0; t < 150; t++) {
+    const lines = [];
+    for (const lhs of NT.slice(0, 2 + rnd(3))) {
+      const alts = [];
+      for (let k = 0, n = 1 + rnd(3); k < n; k++) {
+        const len = rnd(4);
+        const rhs = [];
+        for (let i = 0; i < len; i++) rhs.push(rnd(3) === 0 ? NT[rnd(NT.length)] : T[rnd(2)]);
+        alts.push(rhs.join(" ") || "eps");
+      }
+      lines.push(lhs + " -> " + alts.join(" | "));
+    }
+    const text = lines.join("\n");
+    const g = parseGrammarRaw(text);
+    // symbols without rules would be terminals: keep the grammar closed
+    const lhs = new Set(g.rules.map((r) => r.lhs));
+    if (g.rules.some((r) => r.rhs.some((x) => NT.includes(x) && !lhs.has(x)))) continue;
+    const { steps, rules } = run(computeGNFSteps, text);
+    if (steps.at(-1).phase === "Stopped") continue;
+    const start = g.start;
+    if (rules.some((r) => r.lhs === start)) assertGNF(rules, start);
+    sameLanguage(g.rules, rules, start, 4);
+    checked++;
+  }
+  assert.ok(checked > 50, "checked " + checked);
 });
