@@ -6,26 +6,53 @@
         {
           "label": "aⁿbⁿ",
           "purpose": "Recursion with a cheap guess: each failed alternative is undone at once, and nothing deeper has to be revisited.",
-          "text": ["S -> a S b | eps"],
-          "strings": ["aabb", "aaabbb", "aab", ""]
+          "text": [
+            "S -> a S b | eps"
+          ],
+          "strings": [
+            "aabb",
+            "aaabbb",
+            "aab",
+            ""
+          ]
         },
         {
           "label": "Wrong first guess",
           "purpose": "A takes one a, the b then fails, and the parser must go back into A for its second way. The jump back is the point.",
-          "text": ["S -> A b", "A -> a | a a"],
-          "strings": ["aab", "ab", "aaab"]
+          "text": [
+            "S -> A b",
+            "A -> a | a a"
+          ],
+          "strings": [
+            "aab",
+            "ab",
+            "aaab"
+          ]
         },
         {
           "label": "Palindromes",
           "purpose": "Guessing the middle: no amount of lookahead tells where a palindrome turns, so the parser has to try the possibilities.",
-          "text": ["S -> a S a | b S b | a | b | eps"],
-          "strings": ["abbba", "aaaa", "abba", "ab"]
+          "text": [
+            "S -> a S a | b S b | a | b | eps"
+          ],
+          "strings": [
+            "abbba",
+            "aaaa",
+            "abba",
+            "ab"
+          ]
         },
         {
           "label": "Dangling else",
           "purpose": "The longer alternative goes first, so an else binds to the nearest if; the shared prefix is matched again when it fails.",
-          "text": ["S -> if c then S else S | if c then S | x"],
-          "strings": ["if c then if c then x else x", "if c then x", "if c then x else x"]
+          "text": [
+            "S -> if c then S else S | if c then S | x"
+          ],
+          "strings": [
+            "if c then if c then x else x",
+            "if c then x",
+            "if c then x else x"
+          ]
         }
       ]
     },
@@ -36,29 +63,97 @@
           "label": "Ordered choice commits",
           "purpose": "The Wrong first guess grammar with ordered choice: A's first match is final, so aab is rejected although it is in the language.",
           "mode": "ordered",
-          "text": ["S -> A b", "A -> a | a a"],
-          "strings": ["aab", "ab"]
+          "text": [
+            "S -> A b",
+            "A -> a | a a"
+          ],
+          "strings": [
+            "aab",
+            "ab"
+          ]
         },
         {
           "label": "Shortest alternative first",
           "purpose": "With ordered choice A stops after one a and the rest never matches. Switch to complete search and it works; or reorder the alternatives.",
           "mode": "ordered",
-          "text": ["S -> A b", "A -> a | a A"],
-          "strings": ["aaab", "ab"]
+          "text": [
+            "S -> A b",
+            "A -> a | a A"
+          ],
+          "strings": [
+            "aaab",
+            "ab"
+          ]
         },
         {
           "label": "Longest alternative first",
           "purpose": "The same language with the alternatives swapped: now ordered choice accepts it, because the long way is tried before the short one.",
           "mode": "ordered",
-          "text": ["S -> A b", "A -> a A | a"],
-          "strings": ["aaab", "ab"]
+          "text": [
+            "S -> A b",
+            "A -> a A | a"
+          ],
+          "strings": [
+            "aaab",
+            "ab"
+          ]
         },
         {
           "label": "Palindromes (ordered)",
           "purpose": "Even palindromes such as aaaa are rejected: an inner S commits to its middle too early and is never asked again.",
           "mode": "ordered",
-          "text": ["S -> a S a | b S b | a | b | eps"],
-          "strings": ["aaaa", "aaa", "abba"]
+          "text": [
+            "S -> a S a | b S b | a | b | eps"
+          ],
+          "strings": [
+            "aaaa",
+            "aaa",
+            "abba"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Like a real parser",
+      "examples": [
+        {
+          "label": "Tiny statement language",
+          "purpose": "A small language written the way recursive-descent parsers are: a keyword picks the alternative. The tokens id and num stand for names and numbers.",
+          "text": [
+            "Program -> Stmt Program | eps",
+            "Stmt -> id = Expr ; | print Expr ; | while ( Expr ) Block | if ( Expr ) Block Else",
+            "Else -> else Block | eps",
+            "Block -> { Program }",
+            "Expr -> Term Expr'",
+            "Expr' -> + Term Expr' | - Term Expr' | eps",
+            "Term -> Factor Term'",
+            "Term' -> * Factor Term' | eps",
+            "Factor -> num | id | ( Expr )"
+          ],
+          "strings": [
+            "id = num + num * id ;",
+            "while ( id ) { print id ; id = id - num ; }",
+            "if ( id ) { id = num ; } else { id = num ; }",
+            "id = ( num + ;"
+          ]
+        },
+        {
+          "label": "Assignment or call",
+          "purpose": "Both statements start with id: the parser guesses assignment, backs up one token and tries the call. One more token of lookahead would avoid it.",
+          "text": [
+            "Program -> Stmt Program | eps",
+            "Stmt -> id = Expr ; | id ( Args ) ;",
+            "Args -> Expr Rest | eps",
+            "Rest -> , Expr Rest | eps",
+            "Expr -> Term Expr'",
+            "Expr' -> + Term Expr' | eps",
+            "Term -> id | num"
+          ],
+          "strings": [
+            "id = id + num ; id ( id , num ) ;",
+            "id ( ) ;",
+            "id = ;"
+          ]
         }
       ]
     },
@@ -68,26 +163,55 @@
         {
           "label": "Left recursion",
           "purpose": "E calls E at the same position without reading anything, so a top-down parser would loop forever. The run stops at the first repeat.",
-          "text": ["E -> E + T | T", "T -> id"],
-          "strings": ["id + id", "id"]
+          "text": [
+            "E -> E + T | T",
+            "T -> id"
+          ],
+          "strings": [
+            "id + id",
+            "id"
+          ]
         },
         {
           "label": "Hidden left recursion",
           "purpose": "S -> A S looks right-recursive, but A can be empty, so S still calls itself before reading anything.",
-          "text": ["S -> A S | b", "A -> eps | a"],
-          "strings": ["a b", "b"]
+          "text": [
+            "S -> A S | b",
+            "A -> eps | a"
+          ],
+          "strings": [
+            "a b",
+            "b"
+          ]
         },
         {
           "label": "Left recursion removed",
           "purpose": "The usual expression grammar with the recursion moved to the right: the parser terminates and rarely has to undo anything.",
-          "text": ["E -> T E'", "E' -> + T E' | eps", "T -> F T'", "T' -> * F T' | eps", "F -> ( E ) | id"],
-          "strings": ["id + id * id", "( id + id ) * id", "id + * id"]
+          "text": [
+            "E -> T E'",
+            "E' -> + T E' | eps",
+            "T -> F T'",
+            "T' -> * F T' | eps",
+            "F -> ( E ) | id"
+          ],
+          "strings": [
+            "id + id * id",
+            "( id + id ) * id",
+            "id + * id"
+          ]
         },
         {
           "label": "Repeated work",
           "purpose": "Both alternatives of E start with T, so a T that is not followed by + is matched twice; every nesting level doubles the work.",
-          "text": ["E -> T + E | T", "T -> id | ( E )"],
-          "strings": ["( ( ( id ) ) )", "( ( id ) )", "id + id + id"]
+          "text": [
+            "E -> T + E | T",
+            "T -> id | ( E )"
+          ],
+          "strings": [
+            "( ( ( id ) ) )",
+            "( ( id ) )",
+            "id + id + id"
+          ]
         }
       ]
     }
