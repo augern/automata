@@ -74,14 +74,13 @@
       #tree-svg { cursor: grab; }
       .rdp-n { cursor: pointer; }
       .rdp-n rect { fill: var(--bg); stroke: var(--border-hi); stroke-width: 1.4; }
-      .rdp-n text { font-family: var(--font-serif); font-size: var(--fs-sm); fill: var(--text); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-      .rdp-n .sub { font-size: var(--fs-2xs); fill: var(--text-lo); }
+      .rdp-n text { font-family: var(--font-serif); font-size: var(--fs-sm); fill: var(--text); text-anchor: middle; pointer-events: none; }
       .rdp-n.k-tok text { fill: var(--text-dim); }
       .rdp-n.st-open rect { stroke: var(--st-active); fill: var(--st-active-bg); }
       .rdp-n.st-ok rect { stroke: var(--st-accept); fill: var(--st-accept-bg); }
       .rdp-n.st-fail rect { stroke: var(--st-reject); fill: var(--st-reject-bg); }
       .rdp-n.st-dead rect { stroke: var(--st-dead); fill: var(--bg-cell); stroke-dasharray: 3 2; }
-      .rdp-n.st-dead text, .rdp-n.st-dead .sub { fill: var(--st-dead); }
+      .rdp-n.st-dead text { fill: var(--st-dead); }
       .rdp-n.is-active rect { stroke-width: 3; }
       .rdp-n.is-sel rect { stroke-width: 3; stroke-dasharray: none; }
       .rdp-n.is-hot rect { stroke: var(--hot); fill: var(--hot-bg); }
@@ -403,12 +402,10 @@
       // ── Search tree ───────────────────────────────────────────
       const NODE_H = { call: 28, tok: 26 };
       function nodeLabel(nd) {
-        if (nd.kind === "call") return { main: nd.nt, sub: "@" + nd.i };
-        return { main: nd.sym, sub: "" };
+        return nd.kind === "call" ? nd.nt : nd.sym;
       }
       function nodeWidth(nd) {
-        const l = nodeLabel(nd);
-        return Math.max(30, 9 * l.main.length + 7.5 * l.sub.length + 20);
+        return Math.max(30, 9 * nodeLabel(nd).length + 20);
       }
 
       // Pan/zoom and fit-to-view for the tree (see shared/fit-view.js): it refits as the search tree grows.
@@ -466,13 +463,8 @@
           .on("mouseleave", () => setHot(null));
         ns.append("rect").attr("rx", (d) => NODE_H[d.data.kind] / 2).attr("x", (d) => -nodeWidth(d.data) / 2).attr("y", (d) => -NODE_H[d.data.kind] / 2)
           .attr("width", (d) => nodeWidth(d.data)).attr("height", (d) => NODE_H[d.data.kind]);
-        ns.append("text").each(function (d) {
-          const l = nodeLabel(d.data);
-          const t = d3.select(this);
-          if (d.data.eps) t.style("font-style", "italic");
-          t.append("tspan").text(l.main);
-          if (l.sub) t.append("tspan").attr("class", "sub").attr("dx", 3).text(l.sub);
-        });
+        // dy centres the text on the node's middle line, which dominant-baseline does not do evenly across fonts
+        ns.append("text").attr("dy", "0.35em").style("font-style", (d) => (d.data.eps ? "italic" : null)).text((d) => nodeLabel(d.data));
         rdView.refit();
       }
 
