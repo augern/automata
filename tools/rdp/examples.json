@@ -212,20 +212,6 @@
             "( ( id ) )",
             "id + id + id"
           ]
-        },
-        {
-          "label": "Repeated work, packrat",
-          "purpose": "The same grammar with a memo table: each nonterminal is parsed once per position, so the doubling at every nesting level is gone.",
-          "mode": "packrat",
-          "text": [
-            "E -> T + E | T",
-            "T -> id | ( E )"
-          ],
-          "strings": [
-            "( ( ( id ) ) )",
-            "( ( id ) )",
-            "id + id + id"
-          ]
         }
       ]
     }
