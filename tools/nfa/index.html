@@ -7,7 +7,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../../shared/ui.css?v=31206555" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=1108e9c0" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 360; --pmin: 280px; }
@@ -172,7 +172,7 @@
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
-    <script src="../../shared/algo/nfa.js?v=7110a99c"></script>
+    <script src="../../shared/algo/nfa.js?v=3dd147d3"></script>
     <script src="../../shared/shared.js?v=15943b26"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -432,12 +432,15 @@ else: ${kw("reject")}`
       function nfaHoverEdges(ids) {
         setGraphHot("nfa", ids);
         const want = new Set(ids || []);
+        // tree edges (and their labels) that use one of the transitions
+        for (const el of document.querySelectorAll("#sim-tree-root [data-cells]")) el.classList.toggle("is-hot", JSON.parse(el.dataset.cells).some((c) => want.has(c)));
         for (const inp of document.querySelectorAll("#def-table-scroll input[data-sym]")) {
           inp.closest("td").classList.toggle("is-hot", want.has(inp.dataset.state + "|" + inp.dataset.sym));
         }
       }
       function nfaHoverState(i) {
         setGraphNodeHot("nfa", i);
+        for (const el of document.querySelectorAll("#sim-tree-root .ct-node[data-state]")) el.classList.toggle("is-hot", +el.dataset.state === i);
         for (const tr of document.querySelectorAll("#def-table-scroll tr[data-si]")) {
           tr.querySelector(".ui-td--state").classList.toggle("is-hot", +tr.dataset.si === i);
         }
@@ -606,16 +609,23 @@ else: ${kw("reject")}`
           for (let i = 0; i < (child.epsCountAfter  || 0); i++) labelParts.push("ε");
           const edgeLabel = labelParts.join(",");
 
+          // Hovering the edge shows the transitions it uses in the graph and the table
+          const cells = nfaEdgeCells(currentNFA(), inputChars, child);
+          const hover = (sel) => {
+            if (cells.length) sel.attr("data-cells", JSON.stringify(cells)).on("mouseenter", () => nfaHoverEdges(cells)).on("mouseleave", () => nfaHoverEdges(null));
+            return sel;
+          };
           const edgeG = root.append("g");
-          edgeG.append("path")
-            .attr("class", cls)
-            .attr("d", `M${pp.x},${pp.y} C${pp.x},${(pp.y + cp.y) / 2} ${cp.x},${(pp.y + cp.y) / 2} ${cp.x},${cp.y}`);
+          const curve = `M${pp.x},${pp.y} C${pp.x},${(pp.y + cp.y) / 2} ${cp.x},${(pp.y + cp.y) / 2} ${cp.x},${cp.y}`;
+          edgeG.append("path").attr("class", cls).attr("d", curve).call(hover);
+          edgeG.append("path").attr("class", "ct-hit").attr("d", curve).call(hover);
           if (edgeLabel) {
             edgeG.append("text")
               .attr("class", "ct-edge-label")
               .attr("x", (pp.x + cp.x) / 2 + 5)
               .attr("y", (pp.y + cp.y) / 2)
               .attr("text-anchor", "start")
+              .call(hover)
               .text(edgeLabel);
           }
         }
@@ -648,6 +658,9 @@ else: ${kw("reject")}`
           const ng = root.append("g")
             .attr("class", cls)
             .attr("transform", `translate(${pos.x},${pos.y})`)
+            .attr("data-state", nfaStates.indexOf(node.state))
+            .on("mouseenter", () => nfaHoverState(nfaStates.indexOf(node.state)))
+            .on("mouseleave", () => nfaHoverState(null))
             .on("click", (ev) => { ev.stopPropagation(); selectConfig(node.id); });
           ng.append("title").text("Click to explain this configuration");
           ng.append("circle").attr("r", TREE_R);

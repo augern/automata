@@ -61,6 +61,28 @@ function nfaEpsDistance(nfa, fromState, toState) {
   return Infinity;
 }
 
+// The states of a shortest ε-path from fromState to toState, both included ([fromState] when they are
+// equal), or null when there is none.
+function nfaEpsPath(nfa, fromState, toState) {
+  if (fromState === toState) return [fromState];
+  const prev = new Map([[fromState, null]]);
+  const queue = [fromState];
+  while (queue.length > 0) {
+    const s = queue.shift();
+    for (const t of (nfa.trans[s]?.["ε"] || [])) {
+      if (prev.has(t)) continue;
+      prev.set(t, s);
+      if (t === toState) {
+        const path = [t];
+        for (let c = s; c !== null; c = prev.get(c)) path.unshift(c);
+        return path;
+      }
+      queue.push(t);
+    }
+  }
+  return null;
+}
+
 // For a tree edge parent --sym--> child (with ε-closure folded), compute the minimum
 // ε-hop counts: (n1, n2) where parent --ε×n1--> r --sym--> t --ε×n2--> child.
 // Picks the path with minimum n1, breaking ties by minimum n2.
@@ -210,3 +232,14 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
     arrival, role, why, successors: node.children.length, onAcceptPath: !!ctx.onAcceptPath,
   };
 }
+
+// The cells of the transition table ("state|symbol") that the edge into a tree node uses: the ε-moves
+// before the symbol, the transition on the symbol, and the ε-moves after it. [] for the start state.
+// Used to link tree edges, graph edges and table cells when hovering.
+function nfaEdgeCells(nfa, chars, node) {
+  const a = nfaExplainConfig(nfa, chars, node).arrival;
+  if (!a) return [];
+  const hops = (path) => (path ? path.slice(0, -1).map((s) => s + "|ε") : []);
+  return [...hops(nfaEpsPath(nfa, a.fromState, a.via)), a.via + "|" + a.sym, ...hops(nfaEpsPath(nfa, a.to, node.state))];
+}
+

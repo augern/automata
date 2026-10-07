@@ -530,7 +530,7 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 
 .ct-edge-label { font-family: var(--font-mono); font-size: 9px; font-style: italic; fill: var(--text-dim); pointer-events: none; }
 .ct-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; }
-.ct-edge-label[data-rules] { pointer-events: all; }
+.ct-edge-label[data-rules], .ct-edge-label[data-cells] { pointer-events: all; }
 .ct-edge.is-hot { stroke: var(--hot); stroke-width: 2.4; }
 .ct-node.is-hot circle, .ct-node.is-hot rect { fill: var(--hot-bg); stroke: var(--hot); stroke-width: 2.4; }
 .ct-edge-label.is-hot { fill: var(--hot); font-weight: bold; }

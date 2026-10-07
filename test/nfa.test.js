@@ -112,6 +112,17 @@ test("tree growth is capped and reported", () => {
     assert.deepEqual([...nfaExplainConfig(nfa, chars, nodes[0]).closure], ["q0", "q1"]);
   });
 
+  test("nfaEdgeCells: the table cells an edge uses, ε-hops included", () => {
+    const { nfaEdgeCells, nfaEpsPath } = load("nfa.js");
+    const t = nfaBuildSimTree(nfa, "a");
+    const q2 = walk(t.vRoot.children[0]).find((n) => n.state === "q2");
+    assert.deepEqual([...nfaEdgeCells(nfa, [..."a"], q2)], ["q0|ε", "q1|a"]);
+    assert.deepEqual([...nfaEdgeCells(nfa, [..."a"], t.vRoot.children[0])], []);
+    assert.deepEqual([...nfaEpsPath(nfa, "q0", "q1")], ["q0", "q1"]);
+    assert.equal(nfaEpsPath(nfa, "q1", "q0"), null);
+    assert.deepEqual([...nfaEpsPath(nfa, "q0", "q0")], ["q0"]);
+  });
+
   test("nfaExplainConfig: dead ends and rejections explain themselves", () => {
     const t = nfaBuildSimTree(nfa, "bb");
     const nodes = walk(t.vRoot.children[0]);
