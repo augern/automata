@@ -6,14 +6,46 @@
         {
           "label": "Even number of a's — a deterministic automaton is an NFA too",
           "purpose": "A DFA is a special NFA: one choice at every step, so the computation tree is a single path.",
-          "states": ["q0", "q1"],
-          "alphabet": ["a", "b"],
+          "states": [
+            "q0",
+            "q1"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
           "start": "q0",
-          "accepts": ["q0"],
-          "strings": ["", "b", "aa", "abab", "a", "aba", "bab"],
+          "accepts": [
+            "q0"
+          ],
+          "strings": [
+            "",
+            "b",
+            "aa",
+            "abab",
+            "a",
+            "aba",
+            "bab"
+          ],
           "trans": {
-            "q0": {"a": ["q1"], "b": ["q0"], "ε": []},
-            "q1": {"a": ["q0"], "b": ["q1"], "ε": []}
+            "q0": {
+              "a": [
+                "q1"
+              ],
+              "b": [
+                "q0"
+              ],
+              "ε": []
+            },
+            "q1": {
+              "a": [
+                "q0"
+              ],
+              "b": [
+                "q1"
+              ],
+              "ε": []
+            }
           }
         }
       ]
@@ -24,46 +56,197 @@
         {
           "label": "ends in ab",
           "purpose": "The classic nondeterministic guess: stay in q0, or guess that the final ab starts here.",
-          "states": ["q0", "q1", "q2"],
-          "alphabet": ["a", "b"],
+          "states": [
+            "q0",
+            "q1",
+            "q2"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
           "start": "q0",
-          "accepts": ["q2"],
-          "strings": ["ab", "aab", "bab", "aaab", "abab", "a", "b", "ba", "aba", "bb"],
+          "accepts": [
+            "q2"
+          ],
+          "strings": [
+            "ab",
+            "aab",
+            "bab",
+            "aaab",
+            "abab",
+            "a",
+            "b",
+            "ba",
+            "aba",
+            "bb"
+          ],
           "trans": {
-            "q0": { "a": ["q0", "q1"], "b": ["q0"], "ε": [] },
-            "q1": { "a": [],           "b": ["q2"], "ε": [] },
-            "q2": { "a": [],           "b": [],     "ε": [] }
+            "q0": {
+              "a": [
+                "q0",
+                "q1"
+              ],
+              "b": [
+                "q0"
+              ],
+              "ε": []
+            },
+            "q1": {
+              "a": [],
+              "b": [
+                "q2"
+              ],
+              "ε": []
+            },
+            "q2": {
+              "a": [],
+              "b": [],
+              "ε": []
+            }
           }
         },
         {
           "label": "contains aa or bb",
           "purpose": "Two independent guesses; the tree shows branches dying when a guess was wrong.",
-          "states": ["q0", "q1", "q2", "q3"],
-          "alphabet": ["a", "b"],
+          "states": [
+            "q0",
+            "q1",
+            "q2",
+            "q3"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
           "start": "q0",
-          "accepts": ["q3"],
-          "strings": ["aa", "bb", "aab", "bba", "abba", "a", "b", "ab", "ba", "aba", "bab"],
+          "accepts": [
+            "q3"
+          ],
+          "strings": [
+            "aa",
+            "bb",
+            "aab",
+            "bba",
+            "abba",
+            "a",
+            "b",
+            "ab",
+            "ba",
+            "aba",
+            "bab"
+          ],
           "trans": {
-            "q0": { "a": ["q0", "q1"], "b": ["q0", "q2"], "ε": [] },
-            "q1": { "a": ["q3"],       "b": [],            "ε": [] },
-            "q2": { "a": [],           "b": ["q3"],        "ε": [] },
-            "q3": { "a": ["q3"],       "b": ["q3"],        "ε": [] }
+            "q0": {
+              "a": [
+                "q0",
+                "q1"
+              ],
+              "b": [
+                "q0",
+                "q2"
+              ],
+              "ε": []
+            },
+            "q1": {
+              "a": [
+                "q3"
+              ],
+              "b": [],
+              "ε": []
+            },
+            "q2": {
+              "a": [],
+              "b": [
+                "q3"
+              ],
+              "ε": []
+            },
+            "q3": {
+              "a": [
+                "q3"
+              ],
+              "b": [
+                "q3"
+              ],
+              "ε": []
+            }
           }
         },
         {
           "label": "4th-from-last is a",
           "purpose": "A 5-state NFA whose smallest DFA needs 16 states: nondeterminism can be exponentially more compact.",
-          "states": ["q0", "q1", "q2", "q3", "q4"],
-          "alphabet": ["a", "b"],
+          "states": [
+            "q0",
+            "q1",
+            "q2",
+            "q3",
+            "q4"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
           "start": "q0",
-          "accepts": ["q4"],
-          "strings": ["aaaa", "abbb", "aabb", "abab", "baaaa", "baabb", "b", "bb", "bbb", "bbbb", "baaa"],
+          "accepts": [
+            "q4"
+          ],
+          "strings": [
+            "aaaa",
+            "abbb",
+            "aabb",
+            "abab",
+            "baaaa",
+            "baabb",
+            "b",
+            "bb",
+            "bbb",
+            "bbbb",
+            "baaa"
+          ],
           "trans": {
-            "q0": { "a": ["q0", "q1"], "b": ["q0"], "ε": [] },
-            "q1": { "a": ["q2"],       "b": ["q2"], "ε": [] },
-            "q2": { "a": ["q3"],       "b": ["q3"], "ε": [] },
-            "q3": { "a": ["q4"],       "b": ["q4"], "ε": [] },
-            "q4": { "a": [],           "b": [],     "ε": [] }
+            "q0": {
+              "a": [
+                "q0",
+                "q1"
+              ],
+              "b": [
+                "q0"
+              ],
+              "ε": []
+            },
+            "q1": {
+              "a": [
+                "q2"
+              ],
+              "b": [
+                "q2"
+              ],
+              "ε": []
+            },
+            "q2": {
+              "a": [
+                "q3"
+              ],
+              "b": [
+                "q3"
+              ],
+              "ε": []
+            },
+            "q3": {
+              "a": [
+                "q4"
+              ],
+              "b": [
+                "q4"
+              ],
+              "ε": []
+            },
+            "q4": {
+              "a": [],
+              "b": [],
+              "ε": []
+            }
           }
         }
       ]
@@ -74,27 +257,70 @@
         {
           "label": "ε* (ε-loop)",
           "purpose": "An ε-cycle: the ε-closure still terminates although q0 and q1 lead to each other.",
-          "states": ["q0", "q1"],
-          "alphabet": ["a"],
+          "states": [
+            "q0",
+            "q1"
+          ],
+          "alphabet": [
+            "a"
+          ],
           "start": "q0",
-          "accepts": ["q1"],
-          "strings": ["", "a", "aa"],
+          "accepts": [
+            "q1"
+          ],
+          "strings": [
+            "",
+            "a",
+            "aa"
+          ],
           "trans": {
-            "q0": { "a": [], "ε": ["q1"] },
-            "q1": { "a": [], "ε": ["q0"] }
+            "q0": {
+              "a": [],
+              "ε": [
+                "q1"
+              ]
+            },
+            "q1": {
+              "a": [],
+              "ε": [
+                "q0"
+              ]
+            }
           }
         },
         {
           "label": "a? (zero or one a)",
           "purpose": "An optional symbol: an ε-move that lets the NFA skip the a.",
-          "states": ["q0", "q1"],
-          "alphabet": ["a"],
+          "states": [
+            "q0",
+            "q1"
+          ],
+          "alphabet": [
+            "a"
+          ],
           "start": "q0",
-          "accepts": ["q1"],
-          "strings": ["", "a", "aa", "aaa"],
+          "accepts": [
+            "q1"
+          ],
+          "strings": [
+            "",
+            "a",
+            "aa",
+            "aaa"
+          ],
           "trans": {
-            "q0": { "a": ["q1"], "ε": ["q1"] },
-            "q1": { "a": [],     "ε": [] }
+            "q0": {
+              "a": [
+                "q1"
+              ],
+              "ε": [
+                "q1"
+              ]
+            },
+            "q1": {
+              "a": [],
+              "ε": []
+            }
           }
         }
       ]
@@ -105,17 +331,75 @@
         {
           "label": "a* ∪ b*",
           "purpose": "Union via ε: a fresh start state branches into the two automata.",
-          "states": ["q0", "q1", "q2", "q3", "q4"],
-          "alphabet": ["a", "b"],
+          "states": [
+            "q0",
+            "q1",
+            "q2",
+            "q3",
+            "q4"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
           "start": "q0",
-          "accepts": ["q1", "q3"],
-          "strings": ["", "a", "aa", "aaa", "b", "bb", "bbb", "ab", "ba", "aab"],
+          "accepts": [
+            "q1",
+            "q3"
+          ],
+          "strings": [
+            "",
+            "a",
+            "aa",
+            "aaa",
+            "b",
+            "bb",
+            "bbb",
+            "ab",
+            "ba",
+            "aab"
+          ],
           "trans": {
-            "q0": { "a": [],      "b": [],      "ε": ["q1", "q3"] },
-            "q1": { "a": ["q2"],  "b": [],      "ε": [] },
-            "q2": { "a": ["q2"],  "b": [],      "ε": ["q1"] },
-            "q3": { "a": [],      "b": ["q4"],  "ε": [] },
-            "q4": { "a": [],      "b": ["q4"],  "ε": ["q3"] }
+            "q0": {
+              "a": [],
+              "b": [],
+              "ε": [
+                "q1",
+                "q3"
+              ]
+            },
+            "q1": {
+              "a": [
+                "q2"
+              ],
+              "b": [],
+              "ε": []
+            },
+            "q2": {
+              "a": [
+                "q2"
+              ],
+              "b": [],
+              "ε": [
+                "q1"
+              ]
+            },
+            "q3": {
+              "a": [],
+              "b": [
+                "q4"
+              ],
+              "ε": []
+            },
+            "q4": {
+              "a": [],
+              "b": [
+                "q4"
+              ],
+              "ε": [
+                "q3"
+              ]
+            }
           }
         }
       ]
@@ -126,14 +410,38 @@
         {
           "label": "Many accepting paths for one string",
           "purpose": "One string, several accepting computations: acceptance only asks that at least one exists.",
-          "states": ["q0", "q1"],
-          "alphabet": ["a"],
+          "states": [
+            "q0",
+            "q1"
+          ],
+          "alphabet": [
+            "a"
+          ],
           "start": "q0",
-          "accepts": ["q0", "q1"],
-          "strings": ["", "a", "aa", "aaa"],
+          "accepts": [
+            "q0",
+            "q1"
+          ],
+          "strings": [
+            "",
+            "a",
+            "aa",
+            "aaa"
+          ],
           "trans": {
-            "q0": {"a": ["q0", "q1"], "ε": []},
-            "q1": {"a": ["q1"], "ε": []}
+            "q0": {
+              "a": [
+                "q0",
+                "q1"
+              ],
+              "ε": []
+            },
+            "q1": {
+              "a": [
+                "q1"
+              ],
+              "ε": []
+            }
           }
         }
       ]
@@ -144,14 +452,162 @@
         {
           "label": "a*b* — concatenation via ε",
           "purpose": "Concatenation: an ε-move from the first automaton's accepting state into the second.",
-          "states": ["q0", "q1"],
-          "alphabet": ["a", "b"],
+          "states": [
+            "q0",
+            "q1"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
           "start": "q0",
-          "accepts": ["q1"],
-          "strings": ["", "a", "b", "aabb", "ba", "aba"],
+          "accepts": [
+            "q1"
+          ],
+          "strings": [
+            "",
+            "a",
+            "b",
+            "aabb",
+            "ba",
+            "aba"
+          ],
           "trans": {
-            "q0": {"a": ["q0"], "b": [], "ε": ["q1"]},
-            "q1": {"a": [], "b": ["q1"], "ε": []}
+            "q0": {
+              "a": [
+                "q0"
+              ],
+              "b": [],
+              "ε": [
+                "q1"
+              ]
+            },
+            "q1": {
+              "a": [],
+              "b": [
+                "q1"
+              ],
+              "ε": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "label": "Practical",
+      "examples": [
+        {
+          "label": "Number literal — optional parts as ε-moves",
+          "purpose": "Signed decimal with optional fraction and exponent (d is a digit). Each optional part is an ε-bypass, so several paths of ε-moves run in parallel.",
+          "states": [
+            "s",
+            "t",
+            "i",
+            "p",
+            "f",
+            "g",
+            "q",
+            "r",
+            "x",
+            "h"
+          ],
+          "alphabet": [
+            "+",
+            "-",
+            "d",
+            ".",
+            "e"
+          ],
+          "start": "s",
+          "accepts": [
+            "h"
+          ],
+          "strings": [
+            "-dd.ddde+dd",
+            "d.dde-d",
+            "+dddd",
+            "d.",
+            "e+d"
+          ],
+          "trans": {
+            "s": {
+              "+": [
+                "t"
+              ],
+              "-": [
+                "t"
+              ],
+              "ε": [
+                "t"
+              ]
+            },
+            "t": {
+              "d": [
+                "i"
+              ],
+              "ε": []
+            },
+            "i": {
+              "d": [
+                "i"
+              ],
+              ".": [
+                "p"
+              ],
+              "ε": [
+                "g"
+              ]
+            },
+            "p": {
+              "d": [
+                "f"
+              ],
+              "ε": []
+            },
+            "f": {
+              "d": [
+                "f"
+              ],
+              "ε": [
+                "g"
+              ]
+            },
+            "g": {
+              "e": [
+                "q"
+              ],
+              "ε": [
+                "h"
+              ]
+            },
+            "q": {
+              "+": [
+                "r"
+              ],
+              "-": [
+                "r"
+              ],
+              "ε": [
+                "r"
+              ]
+            },
+            "r": {
+              "d": [
+                "x"
+              ],
+              "ε": []
+            },
+            "x": {
+              "d": [
+                "x"
+              ],
+              "ε": [
+                "h"
+              ]
+            },
+            "h": {
+              "ε": []
+            }
           }
         }
       ]

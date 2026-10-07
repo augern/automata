@@ -3,35 +3,96 @@
     {
       "label": "Operators",
       "examples": [
-        { "label": "ab", "purpose": "Concatenation: the simplest construction, two literals in a row.",   "text": "ab" },
-        { "label": "a|b", "purpose": "Union: a new start state branching by ε into both alternatives.",  "text": "a|b" },
-        { "label": "a*", "purpose": "Kleene star: the ε-loop that allows zero or more repetitions.",   "text": "a*" },
-        { "label": "a+", "purpose": "One or more: a star that must be taken at least once.",   "text": "a+" },
-        { "label": "a?b", "purpose": "Optional: an ε-bypass around a symbol.",  "text": "a?b" }
+        {
+          "label": "ab",
+          "purpose": "Concatenation: the simplest construction, two literals in a row.",
+          "text": "ab"
+        },
+        {
+          "label": "a|b",
+          "purpose": "Union: a new start state branching by ε into both alternatives.",
+          "text": "a|b"
+        },
+        {
+          "label": "a*",
+          "purpose": "Kleene star: the ε-loop that allows zero or more repetitions.",
+          "text": "a*"
+        },
+        {
+          "label": "a+",
+          "purpose": "One or more: a star that must be taken at least once.",
+          "text": "a+"
+        },
+        {
+          "label": "a?b",
+          "purpose": "Optional: an ε-bypass around a symbol.",
+          "text": "a?b"
+        }
       ]
     },
     {
       "label": "Expressions",
       "examples": [
-        { "label": "(a|b)*abb", "purpose": "The textbook example: strings ending in abb. Its DFA has 5 states before minimization and 4 after.",          "text": "(a|b)*abb" },
-        { "label": "(ab)+", "purpose": "Repetition of a longer block: the operand is a group, not a single symbol.",              "text": "(ab)+" },
-        { "label": "a(b|c)*d", "purpose": "All three operators together: a union inside a star inside a concatenation.",           "text": "a(b|c)*d" },
-        { "label": "(0|1|...|9)+", "purpose": "A practical token, unsigned decimal numbers, built from a wide union.",       "text": "(0|1|2|3|4|5|6|7|8|9)+" }
+        {
+          "label": "(a|b)*abb",
+          "purpose": "The textbook example: strings ending in abb. Its DFA has 5 states before minimization and 4 after.",
+          "text": "(a|b)*abb"
+        },
+        {
+          "label": "(ab)+",
+          "purpose": "Repetition of a longer block: the operand is a group, not a single symbol.",
+          "text": "(ab)+"
+        },
+        {
+          "label": "a(b|c)*d",
+          "purpose": "All three operators together: a union inside a star inside a concatenation.",
+          "text": "a(b|c)*d"
+        },
+        {
+          "label": "(0|1|...|9)+",
+          "purpose": "A practical token, unsigned decimal numbers, built from a wide union.",
+          "text": "(0|1|2|3|4|5|6|7|8|9)+"
+        }
       ]
     },
     {
       "label": "Properties",
       "examples": [
-        {"label": "3rd from last is a — DFA blow-up", "purpose": "A small NFA whose DFA needs 2³ states: the exponential worst case of subset construction.", "text": "(a|b)*a(a|b)(a|b)"},
-        {"label": "(a*b*)* — same language as (a|b)*", "purpose": "Two different expressions for the same language: minimization collapses the DFA to a single state.", "text": "(a*b*)*"},
-        {"label": "Even number of a's", "purpose": "Counting modulo 2 with a regular expression; the minimal DFA has two states.", "text": "b*(ab*ab*)*"}
+        {
+          "label": "3rd from last is a — DFA blow-up",
+          "purpose": "A small NFA whose DFA needs 2³ states: the exponential worst case of subset construction.",
+          "text": "(a|b)*a(a|b)(a|b)"
+        },
+        {
+          "label": "(a*b*)* — same language as (a|b)*",
+          "purpose": "Two different expressions for the same language: minimization collapses the DFA to a single state.",
+          "text": "(a*b*)*"
+        },
+        {
+          "label": "Even number of a's",
+          "purpose": "Counting modulo 2 with a regular expression; the minimal DFA has two states.",
+          "text": "b*(ab*ab*)*"
+        }
       ]
     },
     {
       "label": "Practical",
       "examples": [
-        {"label": "Signed binary number", "purpose": "A practical token with an optional sign; \\+ shows how to match an operator character literally.", "text": "(\\+|-)?(0|1)+"},
-        {"label": "Identifier (letters a, b; digits 0, 1)", "purpose": "A practical token: a letter followed by letters or digits, as in programming languages.", "text": "(a|b)(a|b|0|1)*"}
+        {
+          "label": "Signed binary number",
+          "purpose": "A practical token with an optional sign; \\+ shows how to match an operator character literally.",
+          "text": "(\\+|-)?(0|1)+"
+        },
+        {
+          "label": "Identifier (letters a, b; digits 0, 1)",
+          "purpose": "A practical token: a letter followed by letters or digits, as in programming languages.",
+          "text": "(a|b)(a|b|0|1)*"
+        },
+        {
+          "label": "Number literal with fraction and exponent",
+          "purpose": "A practical token: optional sign, digits, optional fraction, optional exponent (d is a digit). Nested optional parts give a long ε-chain.",
+          "text": "(\\+|-)?d+(\\.d+)?(e(\\+|-)?d+)?"
+        }
       ]
     }
   ]
