@@ -42,6 +42,22 @@
             "e b e",
             "o b o"
           ]
+        },
+        {
+          "label": "A loop of three symbols",
+          "purpose": "Only abc, abc, abc… is accepted, so the loop has length three: y = abc. Pumping repeats the whole round trip through q0, q1, q2, never a part of it.",
+          "mode": "regular",
+          "strings": [
+            "abcabc",
+            "abcabcabc"
+          ],
+          "text": [
+            "start: q0",
+            "accept: q0",
+            "q0 a q1",
+            "q1 b q2",
+            "q2 c q0"
+          ]
         }
       ]
     },
@@ -84,6 +100,19 @@
             "E -> T + E | T",
             "T -> F * T | F",
             "F -> ( E ) | a"
+          ]
+        },
+        {
+          "label": "A repeat two steps down",
+          "purpose": "S reappears only after passing through A, so the pumped part is two symbols on each side (v = ab, y = cd) and the chain between the two S nodes is longer.",
+          "mode": "cf",
+          "strings": [
+            "abcd",
+            "ababcdcd"
+          ],
+          "text": [
+            "S -> a A d | eps",
+            "A -> b S c"
           ]
         }
       ]
