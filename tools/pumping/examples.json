@@ -61,7 +61,7 @@
         },
         {
           "label": "Number literals",
-          "purpose": "Signed decimals with an optional exponent (d stands for a digit): eight states, so the pumped loop is found deep inside the string, and the digit loops can be repeated freely.",
+          "purpose": "Signed decimals with an optional exponent (d is a digit). Eight states, so the repeat sits deep in the string, and the digit loops pump freely.",
           "mode": "regular",
           "strings": [
             "-dd.ddde+dd",
