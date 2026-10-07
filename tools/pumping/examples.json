@@ -58,6 +58,34 @@
             "q1 b q2",
             "q2 c q0"
           ]
+        },
+        {
+          "label": "Number literals",
+          "purpose": "Signed decimals with an optional exponent (d stands for a digit): eight states, so the pumped loop is found deep inside the string, and the digit loops can be repeated freely.",
+          "mode": "regular",
+          "strings": [
+            "-dd.ddde+dd",
+            "d.dde-d",
+            "+dddd"
+          ],
+          "text": [
+            "// d = any digit",
+            "start: s",
+            "accept: i f x",
+            "s +,- sg",
+            "s d i",
+            "sg d i",
+            "i d i",
+            "i . dot",
+            "i e ex0",
+            "dot d f",
+            "f d f",
+            "f e ex0",
+            "ex0 +,- exs",
+            "ex0 d x",
+            "exs d x",
+            "x d x"
+          ]
         }
       ]
     },
