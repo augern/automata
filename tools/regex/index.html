@@ -266,7 +266,7 @@
         font-style: italic;
         font-size: var(--fs-2xs);
         color: var(--text-dim);
-      }/* Result banner *//* ── Minimization panel ── */
+      }/* Result banner *//* ── Minimisation panel ── */
       #min-table-wrap {
         flex: 1;
         overflow: auto;
@@ -461,19 +461,19 @@
             </div>
             <div id="sc-log-bar" class="ui-logbar"></div>
           </div>
-          <div id="dfa-empty" class="ui-empty">Build an NFA first.</div>
+          <div id="dfa-empty" class="ui-empty">Build the NFA first.</div>
           <div id="dfa-table-wrap" style="display: none"></div>
         </div>
       </div>
 
       <div class="resize-handle" id="rh-3"></div>
 
-      <!-- 4. DFA Minimization — table-filling algorithm -->
+      <!-- 4. DFA Minimisation — table-filling algorithm -->
       <div class="panel" id="p-min" data-priority="1">
         <div class="panel-header">
-          <span class="panel-title">DFA — Minimization</span>
-          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('minimize');" title="Table-filling minimization algorithm">Algorithm</button>
-          <button class="algo-btn min-toggle active" id="btn-min-toggle" onclick="event.stopPropagation(); toggleMinimize();" title="Toggle: apply minimization to simulation and graph">Apply ✓</button>
+          <span class="panel-title">DFA — Minimisation</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('minimize');" title="Table-filling minimisation algorithm">Algorithm</button>
+          <button class="algo-btn min-toggle active" id="btn-min-toggle" onclick="event.stopPropagation(); toggleMinimize();" title="Toggle: apply minimisation to simulation and graph">Apply ✓</button>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-min');">&#8250;</button>
         </div>
         <div class="panel-body">
@@ -488,7 +488,7 @@
             </div>
             <div id="mc-log-bar" class="ui-logbar"></div>
           </div>
-          <div id="min-empty" class="ui-empty">Build an NFA first.</div>
+          <div id="min-empty" class="ui-empty">Build the NFA first.</div>
           <div id="min-table-wrap" style="display: none"></div>
         </div>
       </div>
@@ -511,14 +511,14 @@
           </button>
         </div>
         <div class="panel-body">
-          <div id="sim-empty" class="ui-empty">Build an NFA first.</div>
+          <div id="sim-empty" class="ui-empty">Build the NFA first.</div>
           <div id="sim-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
             <!-- DFA graph -->
             <div class="dfa-graph-wrap">
               <svg id="dfa-svg">
                 <g id="dfa-graph-root"></g>
               </svg>
-              <div id="dfa-graph-empty">The DFA appears here once subset construction is complete. Step through it, or press ▶|.</div>
+              <div id="dfa-graph-empty">The DFA appears when subset construction is complete.</div>
             </div>
             <!-- String input + step controls -->
             <div id="sim-header" class="ui-sim">
@@ -567,14 +567,14 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/regex.js?v=311ec5b3"></script>
-    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
+    <script src="../../shared/shared.js?v=a3412ea2"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=745fc4d6"></script>
-    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="guide.js?v=9fefa41c"></script>
+    <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
@@ -712,7 +712,7 @@
         }
       }
 
-      // Attach html to each step of a subset-construction / minimization result.
+      // Attach html to each step of a subset-construction / minimisation result.
       function withSubsetHtml(sc) {
         sc.steps.forEach((st) => (st.html = formatSubsetStep(st)));
         return sc;
@@ -1025,7 +1025,7 @@
       // Returns a pre-computed { dfaStates, dfaAccepts, dfaTrans, alphabet, steps }
       // where steps[] drives the step-by-step display.
 
-      // Subset construction, minimization and Thompson's construction live in
+      // Subset construction, minimisation and Thompson's construction live in
       // shared/algo/regex.js; this file formats their steps and renders the results.
 
       // ── Subset construction stepper state ──────────────────────────
@@ -1167,10 +1167,10 @@
       function mcBack() { mcStepper.prev(); }
       function mcRunAll() { mcStepper.end(); }
       let _minEnabled = true;  // when false, skip min and use raw _scData
-      let _minDone = false;    // the minimization stepper has reached its result
+      let _minDone = false;    // the minimisation stepper has reached its result
 
       // Returns whichever scData should drive graph + simulation: the subset-construction DFA
-      // until minimization has actually been carried out (and unless it is skipped).
+      // until minimisation has actually been carried out (and unless it is skipped).
       function activeScData() {
         return (_minEnabled && _minData && _minDone) ? _minData : _scData;
       }
@@ -1333,7 +1333,7 @@
         scRenderStep();
         scSetBtns();
 
-        // Compute minimization and reset the min stepper
+        // Compute minimisation and reset the min stepper
         _minData = withMinHtml(minimizeDFA(_scData));
         _minDone = false;
         mcStepper.pos = -1;
@@ -1849,7 +1849,7 @@ ${kw("return")} D′`,
           subtitleEl.textContent = "NFA → DFA";
           bodyEl.innerHTML = PC_EPS_CLOSURE + PC_MOVE + PC_SUBSET + '<div class="pc-note">' + "The DFA may have up to 2ⁿ states for an n-state NFA, but in practice far fewer are reachable." + "</div>";
         } else if (type === "minimize") {
-          titleEl.textContent = "DFA Minimization";
+          titleEl.textContent = "DFA Minimisation";
           subtitleEl.textContent = "table-filling algorithm";
           bodyEl.innerHTML = PC_MINIMIZE + '<div class="pc-note">' +
             "Two states are <em>distinguishable</em> if some input string leads one to an accepting state " +

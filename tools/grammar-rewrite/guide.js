@@ -2,11 +2,11 @@
 // Legend colour names: blue, green, red, grey.
 window.TOOL_GUIDE = {
   title: "Grammar transformations",
-  intro: "Applies a classic transformation to a context-free grammar, one step at a time. Cleanup, ε-elimination, unit elimination and Chomsky normal form go from mild to strict, each building on the ones before; left-recursion elimination prepares a grammar for top-down parsing such as LL(1), and Greibach normal form (every rule starts with a terminal) builds on both.",
+  intro: "Applies a standard transformation to a context-free grammar, one step at a time. Cleanup, ε-elimination, unit elimination and Chomsky normal form each build on the previous ones. Left-recursion elimination prepares a grammar for top-down parsing; Greibach normal form builds on both.",
   use: [
-    "Type or pick a grammar on the left, one rule per line, `A -> α | β`; `eps` is the empty string.",
-    "Choose the transformation in the top bar, then press Step. The middle panel explains each step; Current Grammar shows the result so far.",
-    "Compare the original grammar with the result: the language stays the same (apart from ε where noted), only the form changes.",
+    "Enter a grammar, one rule per line, `A -> α | β`; `eps` is the empty string.",
+    "Select the transformation in the top bar and press Step. The middle panel explains each step; Current Grammar shows the result so far.",
+    "The language is preserved (except for ε where noted); only the form changes.",
   ],
   notation: [
     ["productive", "a nonterminal that can derive some string of terminals"],

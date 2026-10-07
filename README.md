@@ -61,7 +61,7 @@ parser-tools/
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
 │   │   ├── nfa.js                      ← pure: ε-closure, NFA simulation tree, exact acceptance
 │   │   ├── pda.js                      ← pure: PDA configurations, simulation tree, exact acceptance
-│   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimization
+│   │   ├── regex.js                    ← pure: Thompson NFA, subset construction, DFA minimisation
 │   │   ├── rewrite.js                  ← pure: grammar cleanup, ε/unit elimination, CNF, left recursion, GNF
 │   │   └── tm.js                       ← pure: TM tape and pre-run
 │   ├── theme.js                        ← light/dark theme (system default, remembered toggle)

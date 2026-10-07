@@ -124,7 +124,7 @@ function computeCleanupSteps(g) {
     phase: 'Phase 2 — Reachable symbols',
     html:  'A nonterminal is <em>reachable</em> if it can appear in a sentential form'
          + ' derived from the start symbol <span class="lg-hl">' + esc(start) + '</span>.'
-         + ' We find all reachable nonterminals with a BFS.',
+         + ' Reachable nonterminals are found by breadth-first search.',
     isPhase: true, grammarAfter: cloneRules(rules), newRules: [], activeRules: [],
   });
 
@@ -1103,7 +1103,7 @@ function computeGNFSteps(g) {
       if (!changed) break;
     }
     if (!tails.length) push('No tail nonterminals — nothing to do.');
-    if (rules.some(r => r.rhs.length && ntSet().has(r.rhs[0]))) push('<span class="lg-del">A rule still starts with a nonterminal</span> — the result is not in Greibach normal form (this should not happen).');
+    if (rules.some(r => r.rhs.length && ntSet().has(r.rhs[0]))) push('<span class="lg-del">A rule still starts with a nonterminal</span> — the result is not in Greibach normal form (internal error).');
 
     // ── Phase 5: terminals that are not first ──
     push('A rule A → a α needs α to consist of nonterminals only. Replace every terminal t that is not first by a fresh nonterminal Xₜ with the rule Xₜ → t.', { phase: 'Phase 5 — Isolate terminals', isPhase: true });

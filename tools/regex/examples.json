@@ -35,7 +35,7 @@
       "examples": [
         {
           "label": "(a|b)*abb",
-          "purpose": "The textbook example: strings ending in abb. Its DFA has 5 states before minimization and 4 after.",
+          "purpose": "The textbook example: strings ending in abb. Its DFA has 5 states before minimisation and 4 after.",
           "text": "(a|b)*abb"
         },
         {
@@ -65,7 +65,7 @@
         },
         {
           "label": "(a*b*)* — same language as (a|b)*",
-          "purpose": "Two different expressions for the same language: minimization collapses the DFA to a single state.",
+          "purpose": "Two different expressions for the same language: minimisation collapses the DFA to a single state.",
           "text": "(a*b*)*"
         },
         {

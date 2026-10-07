@@ -160,16 +160,16 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/regex.js?v=311ec5b3"></script>
+    <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
     <script src="../../shared/algo/rdp.js?v=9fe07733"></script>
     <script src="../../shared/algo/pumping.js?v=9850ae52"></script>
-    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/shared.js?v=a3412ea2"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=85154bbd"></script>
-    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="guide.js?v=08304ad6"></script>
+    <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
@@ -293,12 +293,12 @@
 
         let t = "";
         if (parts) {
-          t += "<p>The path of <b>" + esc(w || "ε") + "</b> visits " + w.length + " + 1 states, and the DFA has only " + k + ". It visits state <b>" + esc(name(run.path[loop.s])) + "</b> twice (after " + loop.s + " and after " + loop.t + " symbols), so the symbols between, <b class=\"pp-y\">" + esc(parts.y) + "</b>, take the machine around a loop.</p>";
-          t += "<p>Going around that loop " + i + (i === 1 ? " time (the original string)" : " times") + " gives <b>" + esc(pumped || "ε") + "</b>. Every extra round returns to the same state, so the machine ends where it did before: it " + (prun.accepted ? "<b>accepts</b>" : "<b>rejects</b>") + " this string exactly as it " + (run.accepted ? "accepts" : "rejects") + " the original. Pumping never changes the verdict.</p>";
+          t += "<p>The path of <b>" + esc(w || "ε") + "</b> visits " + (w.length + 1) + " states; the DFA has " + k + ". State <b>" + esc(name(run.path[loop.s])) + "</b> is visited twice (after " + loop.s + " and " + loop.t + " symbols), so the symbols between, <b class=\"pp-y\">" + esc(parts.y) + "</b>, form a loop.</p>";
+          t += "<p>The loop taken " + i + (i === 1 ? " time (the original string)" : " times") + " gives <b>" + esc(pumped || "ε") + "</b>. Each round returns to the same state, so the DFA ends in the same state: it " + (prun.accepted ? "<b>accepts</b>" : "<b>rejects</b>") + " this string, as it " + (run.accepted ? "accepts" : "rejects") + " the original. Pumping does not change the verdict.</p>";
         } else if (run.stuckAt >= 0) {
-          t += "<p>The machine stops at symbol " + (run.stuckAt + 1) + " (no transition) before any state repeats.</p>";
+          t += "<p>The DFA stops at symbol " + (run.stuckAt + 1) + " (no transition) before any state repeats.</p>";
         } else {
-          t += "<p><b>" + esc(w || "ε") + "</b> has " + w.length + " symbols and the DFA has " + k + " states: no state is forced to repeat. A string needs at least " + k + " symbols for the pigeonhole to bite. Try a longer one.</p>";
+          t += "<p><b>" + esc(w || "ε") + "</b> has " + w.length + " symbols and the DFA has " + k + " states: no state need repeat. A string of at least " + k + " symbols forces a repeat.</p>";
         }
         ex.innerHTML = t;
         paintGraph();
@@ -420,18 +420,18 @@
           const leaves = pumpLeaves(pumpedTree);
           html += '<div class="pp-row"><span class="ui-label">yield</span><div class="pp-body">' + (leaves.map((l) => '<span class="pp-ch pp-' + l.part + '">' + esc(l.sym) + "</span>").join(sep ? " " : "") || '<span class="pp-ch pp-x">ε</span>') + "</div></div>";
         } else {
-          html += '<div class="pp-row"><span class="ui-label">split</span><span class="pp-formula">no nonterminal is repeated on a path with something to repeat</span></div>';
+          html += '<div class="pp-row"><span class="ui-label">split</span><span class="pp-formula">no path repeats a nonterminal with something between</span></div>';
         }
         strip.innerHTML = html;
         let t = "";
         if (pair) {
           const A = pumpGet(ppCF.tree, pair.up).sym;
           const pr = ppCF.parts;
-          t += "<p>The tree of <b>" + esc(ppCF.w || "ε") + "</b> has a path on which the nonterminal <b>" + esc(A) + "</b> occurs twice. The lower " + esc(A) + " derives <b class=\"pp-x\">" + esc(pr.x.join(sep) || "ε") + "</b>; the upper one derives <b class=\"pp-v\">" + esc(pr.v.join(sep) || "ε") + "</b> <b class=\"pp-x\">" + esc(pr.x.join(sep) || "ε") + "</b> <b class=\"pp-y\">" + esc(pr.y.join(sep) || "ε") + "</b>. Since both are " + esc(A) + ", the whole middle part can be repeated, or cut out.</p>";
-          t += "<p>With i = " + i + (i === 1 ? " (the original tree)" : i === 0 ? ": the lower " + esc(A) + " takes the place of the upper one" : ": the middle part is repeated " + i + " times") + ". The result is again a parse tree of the grammar, so its yield is in the language.</p>";
-          t += "<p class=\"ui-label\">A path with more than " + nts + " nonterminal" + (nts === 1 ? "" : "s") + " on it must repeat one, because the grammar has only " + nts + (nts === 1 ? "" : " of them") + (ppCF.pairs.length > 1 ? ". " + ppCF.pairs.length + " repeats on the longest path(s); “Another repeat” cycles through them." : ".") + "</p>";
+          t += "<p>The tree of <b>" + esc(ppCF.w || "ε") + "</b> has a path on which the nonterminal <b>" + esc(A) + "</b> occurs twice. The lower " + esc(A) + " derives <b class=\"pp-x\">" + esc(pr.x.join(sep) || "ε") + "</b>; the upper one derives <b class=\"pp-v\">" + esc(pr.v.join(sep) || "ε") + "</b> <b class=\"pp-x\">" + esc(pr.x.join(sep) || "ε") + "</b> <b class=\"pp-y\">" + esc(pr.y.join(sep) || "ε") + "</b>. Both are " + esc(A) + ", so the part between them can be repeated or removed.</p>";
+          t += "<p>With i = " + i + (i === 1 ? " (the original tree)" : i === 0 ? ": the lower " + esc(A) + " replaces the upper one" : ": the middle part is repeated " + i + " times") + ". The result is a parse tree of the grammar, so its yield is in the language.</p>";
+          t += "<p class=\"ui-label\">A path with more than " + nts + " nonterminal" + (nts === 1 ? "" : "s") + " on it must repeat one (the grammar has " + nts + ")." + (ppCF.pairs.length > 1 ? " " + ppCF.pairs.length + " repeats on the longest paths; “Another repeat” selects the next." : "") + "</p>";
         } else {
-          t += "<p>This tree has no nonterminal twice on one path with something to repeat. Try a longer string.</p>";
+          t += "<p>No path of this tree repeats a nonterminal with something between the occurrences. A longer string is needed.</p>";
         }
         ex.innerHTML = t;
         drawTree(pair ? pumpTree(ppCF.tagged, pair, i) : ppCF.tree);

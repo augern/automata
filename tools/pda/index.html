@@ -134,7 +134,7 @@
             <svg id="pda-svg">
               <g id="pda-graph-root"></g>
             </svg>
-            <div id="pda-graph-empty" class="ui-canvas__empty">Define a PDA above.</div>
+            <div id="pda-graph-empty" class="ui-canvas__empty">Define a PDA.</div>
           </div>
           <!-- Configurations display -->
           <div id="sim-configs-bar"></div>
@@ -160,7 +160,7 @@
               </defs>
               <g id="tree-root"></g>
             </svg>
-            <div id="tree-empty" class="ui-canvas__empty">Enter a PDA and a string to see the configuration tree.</div>
+            <div id="tree-empty" class="ui-canvas__empty">Define a PDA and enter a string.</div>
           </div>
           <div id="tree-info" class="ui-explain" hidden></div>
         </div>
@@ -186,13 +186,13 @@
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
     <script src="../../shared/algo/pda.js?v=f367700e"></script>
-    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/shared.js?v=a3412ea2"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=7157dbd6"></script>
-    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="guide.js?v=cb5888d4"></script>
+    <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
@@ -353,7 +353,7 @@ else: ${kw("reject")}`
       function renderRulesTable() {
         const wrap = document.getElementById("rules-table-wrap");
         if (pdaRules.length === 0) {
-          wrap.innerHTML = `<div class="ui-hint">No rules. Click + Rule to add.</div>`;
+          wrap.innerHTML = `<div class="ui-hint">No rules. + Rule adds one.</div>`;
           return;
         }
         const T = UI.table;

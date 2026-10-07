@@ -80,7 +80,7 @@
         },
         {
           "label": "aⁿbⁿcⁿ (n ≥ 0)",
-          "purpose": "Not context-free, yet easy for a Turing machine: three-way matching by repeated sweeps.",
+          "purpose": "Not context-free: three counts matched by repeated sweeps.",
           "states": ["q0", "q1", "q2", "q3", "qC", "qA", "qR"],
           "alphabet": ["a", "b", "c", "X", "Y", "Z"],
           "start": "q0",

@@ -146,7 +146,7 @@
     </div>
     <div class="panel-body">
       <div id="grammar-display">
-        <div class="ui-empty">Build a grammar to see it here.</div>
+        <div class="ui-empty">Enter a grammar.</div>
       </div>
     </div>
   </div>
@@ -167,13 +167,13 @@
 <script src="../../shared/algo/grammar.js?v=39525f46"></script>
 <script src="../../shared/algo/panels.js?v=23a37100"></script>
 <script src="../../shared/algo/share.js?v=e00a0058"></script>
-<script src="../../shared/algo/rewrite.js?v=be1db128"></script>
-<script src="../../shared/shared.js?v=15943b26"></script>
+<script src="../../shared/algo/rewrite.js?v=96125aa5"></script>
+<script src="../../shared/shared.js?v=a3412ea2"></script>
 <script src="../../shared/share-link.js?v=0d17f714"></script>
 <script src="../../shared/ui.js?v=b7fb54c9"></script>
 <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-<script src="guide.js?v=4013c66c"></script>
-<script src="../../shared/guide.js?v=f731818c"></script>
+<script src="guide.js?v=58dbc569"></script>
+<script src="../../shared/guide.js?v=98cfe80c"></script>
 <script>
 'use strict';
 
@@ -229,12 +229,12 @@ const MODE_TITLES = {
 
 // What each transformation does, shown until the first step is taken.
 const MODE_INTRO = {
-  clean: 'Removes symbols that can never take part in deriving a word: first the unproductive nonterminals (those that derive no terminal string), then the unreachable ones (those not reachable from the start symbol). Press Step to begin.',
-  eps:   'Removes ε-productions (A → ε) without changing the language: it finds the nullable nonterminals, then adds a copy of each rule for every way of leaving nullable symbols out. Press Step to begin.',
-  unit:  'Removes unit productions (A → B): it finds which nonterminals each one can reach through chains of unit rules, then gives it all the non-unit rules of those. Press Step to begin.',
-  cnf:   'Converts the grammar to Chomsky normal form, where every rule is A → B C or A → a. It first runs cleanup, ε-elimination and unit elimination, then replaces terminals inside longer rules by new nonterminals and splits long right-hand sides. Press Step to begin.',
-  lre:   'Removes left recursion (A → A α), which top-down parsers such as LL(1) cannot handle: indirect recursion is first made direct, then each directly recursive nonterminal is rewritten with a new helper nonterminal. Press Step to begin.',
-  gnf:   'Converts the grammar to Greibach normal form, where every rule is A → a B₁ … Bₖ: a terminal followed by nonterminals only. It first runs cleanup, ε-elimination and unit elimination, then orders the nonterminals, substitutes earlier ones into later rules while removing left recursion, and works back up. S → ε is kept if the language contains ε. The result can be much larger than the input. Press Step to begin.',
+  clean: 'Removes symbols that take no part in deriving a word: first the unproductive nonterminals (deriving no terminal string), then the unreachable ones (not reachable from the start symbol).',
+  eps:   'Removes ε-productions (A → ε), preserving the language: finds the nullable nonterminals, then adds a copy of each rule for every way of omitting nullable symbols.',
+  unit:  'Removes unit productions (A → B): finds the nonterminals reachable through chains of unit rules, then copies their non-unit rules.',
+  cnf:   'Converts to Chomsky normal form, where every rule is A → B C or A → a: cleanup, ε-elimination and unit elimination, then terminals in longer rules are replaced by new nonterminals and long right-hand sides are split.',
+  lre:   'Removes left recursion (A → A α), which top-down parsers such as LL(1) cannot handle: indirect recursion is made direct, then each directly recursive nonterminal is rewritten with a new tail nonterminal.',
+  gnf:   'Converts to Greibach normal form, where every rule is A → a B₁ … Bₖ (a terminal, then nonterminals): cleanup, ε-elimination and unit elimination, then the nonterminals are ordered, earlier ones are substituted into later rules while left recursion is removed, and the substitution is carried back up. S → ε is kept if the language contains ε. The result can be much larger than the input.',
 };
 
 function setMode(m) {
@@ -553,7 +553,7 @@ ${kw('replace')} all rules for A with:
 const PC_LRE = pcBlock(
   'Eliminate-Left-Recursion',
   [
-    { label: 'Input',  sym: it('G'),   desc: 'grammar; works best after ε-elimination and unit elimination (ε-rules and cycles can cause unexpected results)' },
+    { label: 'Input',  sym: it('G'),   desc: 'grammar; run ε-elimination and unit elimination first (ε-rules and unit cycles can leave ε-productions in the result)' },
     { label: 'Output', sym: '',        desc: 'equivalent grammar with no left-recursive rules' },
   ],
   `order nonterminals: A₁, A₂, … , Aₙ${cm('any fixed order; first-appearance order is used here')}
@@ -615,7 +615,7 @@ function openAlgoModal() {
     titleEl.textContent    = 'Left-Recursion Elimination';
     subtitleEl.textContent = 'indirect & direct';
     bodyEl.innerHTML = PC_LRE + PC_LRE_DIRECT +
-      '<div class="pc-note">The substitution pass (outer loop) converts any indirect left recursion into direct left recursion for A<sub>i</sub>; the inner pass then removes it. The result is guaranteed left-recursion-free for any ordering of the nonterminals. For grammars with ε-rules or unit cycles the result may contain ε-productions — run ε-elimination and unit elimination beforehand for cleanest output.</div>';
+      '<div class="pc-note">The substitution pass (outer loop) converts any indirect left recursion into direct left recursion for A<sub>i</sub>; the inner pass then removes it. The result is guaranteed left-recursion-free for any ordering of the nonterminals. For grammars with ε-rules or unit cycles the result may contain ε-productions — run ε-elimination and unit elimination first.</div>';
   } else if (currentMode === 'gnf') {
     titleEl.textContent    = 'Greibach Normal Form';
     subtitleEl.textContent = 'substitution & tails';

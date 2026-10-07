@@ -1,5 +1,5 @@
 // Pure regular-language algorithms: regex → ε-NFA (Thompson), NFA → DFA (subset
-// construction), DFA minimization (table filling), and DFA helpers. No DOM
+// construction), DFA minimisation (table filling), and DFA helpers. No DOM
 // access and no HTML: step records carry data only; the tool formats them.
 // Depends on grammar.js (EPSILON).
 //
@@ -242,7 +242,7 @@ function subsetConstruct(nfa) {
   return { dfaStates, dfaAccepts, dfaTrans, alpha, steps };
 }
 
-// ── DFA minimization — table-filling algorithm ────────────────────────
+// ── DFA minimisation — table-filling algorithm ────────────────────────
 // Input: the result of subsetConstruct. The result has the same shape (plus the
 // extra fields below) so renderers, generateExamples and dfaRun accept it.
 // Extra fields: groups, origN, n, DEAD, origScData, renumMap, alreadyMinimal.

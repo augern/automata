@@ -5,7 +5,7 @@
       "examples": [
         {
           "label": "Strings ending in abb",
-          "purpose": "Four states: any string of four or more symbols passes through a state twice. Pump the loop and the verdict never changes.",
+          "purpose": "Four states: any string of four or more symbols visits a state twice. Pumping the loop never changes the verdict.",
           "mode": "regular",
           "strings": [
             "babb",
@@ -27,7 +27,7 @@
         },
         {
           "label": "Even number of a's",
-          "purpose": "Two states, so the loop is found within two symbols. Whatever is pumped, an a-loop keeps the parity right or flips it, and the verdict follows.",
+          "purpose": "Two states, so the loop appears within two symbols. Pumping never changes the verdict.",
           "mode": "regular",
           "strings": [
             "abab",
@@ -45,7 +45,7 @@
         },
         {
           "label": "A loop of three symbols",
-          "purpose": "Only abc, abc, abc… is accepted, so the loop has length three: y = abc. Pumping repeats the whole round trip through q0, q1, q2, never a part of it.",
+          "purpose": "Accepts abc repeated, so y = abc: pumping repeats the whole cycle q0, q1, q2.",
           "mode": "regular",
           "strings": [
             "abcabc",
@@ -61,7 +61,7 @@
         },
         {
           "label": "Number literals",
-          "purpose": "Signed decimals with an optional exponent (d is a digit). Eight states, so the repeat sits deep in the string, and the digit loops pump freely.",
+          "purpose": "Signed decimals with optional fraction and exponent (d is a digit). Eight states; the digit loops pump freely.",
           "mode": "regular",
           "strings": [
             "-dd.ddde+dd",
@@ -94,7 +94,7 @@
       "examples": [
         {
           "label": "aⁿbⁿ",
-          "purpose": "S appears again below S on the tree's longest path: the a and the b around the lower S can be repeated, or cut out, in step.",
+          "purpose": "S repeats on the longest path: the a and b around the lower S are repeated or cut out together.",
           "mode": "cf",
           "strings": [
             "aaabbb",
@@ -106,7 +106,7 @@
         },
         {
           "label": "Balanced parentheses",
-          "purpose": "A pair of parentheses around a balanced part can be repeated or removed: the repeated nonterminal is the one that stands for a balanced part.",
+          "purpose": "A pair of parentheses around a balanced part can be repeated or removed.",
           "mode": "cf",
           "strings": [
             "(()())",
@@ -118,7 +118,7 @@
         },
         {
           "label": "Expressions",
-          "purpose": "Several nonterminals repeat on the tallest path; Another repeat cycles through them, and each gives a different but valid pumping.",
+          "purpose": "Several nonterminals repeat on the longest path; Another repeat cycles through them.",
           "mode": "cf",
           "strings": [
             "a+a*a",
@@ -132,7 +132,7 @@
         },
         {
           "label": "A repeat two steps down",
-          "purpose": "S reappears only after passing through A, so the pumped part is two symbols on each side (v = ab, y = cd) and the chain between the two S nodes is longer.",
+          "purpose": "S recurs through A, so v = ab and y = cd: the chain between the two S nodes is longer.",
           "mode": "cf",
           "strings": [
             "abcd",

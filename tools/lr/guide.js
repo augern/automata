@@ -2,12 +2,12 @@
 // Legend colour names: blue, green, red, grey.
 window.TOOL_GUIDE = {
   title: "LR parser",
-  intro: "Enter a grammar and build a bottom-up (shift–reduce) parser for it. The buttons at the top choose how much lookahead the parser uses to decide reductions: none for LR(0), FOLLOW sets for SLR(1), full lookahead for LR(1), and LALR(1) is a compact approximation of LR(1). The automaton, the ACTION and GOTO tables and a parse of a string are shown.",
+  intro: "Builds a bottom-up (shift–reduce) parser for a grammar: the automaton, the ACTION and GOTO tables, and a parse of a string. The buttons at the top select the lookahead used for reductions: none (LR(0)), FOLLOW sets (SLR(1)), merged LR(1) lookaheads (LALR(1)) or full LR(1) lookahead.",
   use: [
     "Write one rule per line, `A -> α | β`, with symbols separated by spaces. `eps` is the empty string.",
-    "Step through building the automaton and then the tables. The Coarse / Fine switch sets how much happens in each construction step.",
-    "A table cell with two actions is a conflict (red): the grammar does not work with the chosen method. Try a stronger method and see whether the conflict goes away.",
-    "Parse a string in the simulation panel (the dice makes a random sentence).",
+    "Step through the construction of the automaton, then of the tables. Coarse / Fine sets the size of each step.",
+    "A cell with two actions is a conflict (red): the grammar is outside the chosen class. A stronger method may remove it.",
+    "Simulation panel: enter a string (the dice gives a random sentence).",
   ],
   notation: [
     ["I0, I1, …", "states of the automaton; each is a set of items"],

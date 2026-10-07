@@ -169,7 +169,7 @@
         <div id="tstep-log-bar" style="display: none; padding: 3px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); font-family: var(--font-mono); color: var(--text-dim); min-height: 1.8em"></div>
         <div class="panel-body">
           <div id="tables-wrap">
-            <div style="color: var(--text-dim); font-size: var(--fs-sm)">Build a grammar to see tables.</div>
+            <div style="color: var(--text-dim); font-size: var(--fs-sm)">Enter a grammar.</div>
           </div>
         </div>
       </div>
@@ -184,7 +184,7 @@
         </div>
         <div class="panel-body main-body">
           <div id="deriv-area">
-            <div id="deriv-empty">Build a grammar, then simulate a string.</div>
+            <div id="deriv-empty">Enter a grammar and a string.</div>
             <div id="deriv-head" style="display:none">
               <span class="ds-num">#</span>
               <span class="ds-form">Stack (top at left)</span>
@@ -214,7 +214,7 @@
         <div class="panel-body tree-panel-body">
           <div class="tree-area">
             <svg id="tree-svg" width="100%" height="100%"><g id="tree-root"></g></svg>
-            <div id="tree-empty">Run simulation to grow the parse tree.</div>
+            <div id="tree-empty">The parse tree grows with the simulation.</div>
           </div>
           <div id="sim-panel">
             <div class="panel-header">
@@ -270,14 +270,14 @@
     <script src="../../shared/algo/panels.js?v=23a37100"></script>
     <script src="../../shared/algo/share.js?v=e00a0058"></script>
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
-    <script src="../../shared/algo/ll1.js?v=0d4f5155"></script>
-    <script src="../../shared/shared.js?v=15943b26"></script>
+    <script src="../../shared/algo/ll1.js?v=70f066b7"></script>
+    <script src="../../shared/shared.js?v=a3412ea2"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=d7146b70"></script>
-    <script src="../../shared/guide.js?v=f731818c"></script>
+    <script src="guide.js?v=46166704"></script>
+    <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
       initResize("rh-1", "p-grammar", +1);
@@ -637,7 +637,7 @@
           renderSimTokens();
           renderSimStack();
           renderTree();
-          setSimLog("Ready \u2014 press Step", "");
+          setSimLog("Ready", "");
           simInitialized = true;
         }
         simSetBtns();
@@ -702,7 +702,7 @@
         const act = ll1Step(currentGrammar, simTable, simStack, simTokens, simPos);
 
         if (act.type === "accept") {
-          setSimLog("\u2713 Accepted!", "accept");
+          setSimLog("\u2713 Accepted", "accept");
           addDerivStep([], "accepted", "accepted");
           simDone = true;
           simSetBtns();

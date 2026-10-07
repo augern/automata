@@ -55,7 +55,7 @@
       "examples": [
         {
           "label": "ends in ab",
-          "purpose": "The classic nondeterministic guess: stay in q0, or guess that the final ab starts here.",
+          "purpose": "Guess in q0 whether the final ab starts here.",
           "states": [
             "q0",
             "q1",
@@ -108,7 +108,7 @@
         },
         {
           "label": "contains aa or bb",
-          "purpose": "Two independent guesses; the tree shows branches dying when a guess was wrong.",
+          "purpose": "Two independent guesses; a branch dies when its guess was wrong.",
           "states": [
             "q0",
             "q1",
@@ -498,7 +498,7 @@
       "examples": [
         {
           "label": "Number literal — optional parts as ε-moves",
-          "purpose": "Signed decimal with optional fraction and exponent (d is a digit). Each optional part is an ε-bypass, so several paths of ε-moves run in parallel.",
+          "purpose": "Signed decimal with optional fraction and exponent (d is a digit). Each optional part is an ε-bypass.",
           "states": [
             "s",
             "t",

@@ -2,11 +2,11 @@
 // Legend colour names: blue, green, red, grey, orange.
 window.TOOL_GUIDE = {
   title: "Pumping explorer",
-  intro: "Why can long strings of a regular language be pumped, and long strings of a context-free language too? In a DFA a long path must visit some state twice; in a parse tree a tall path must repeat some nonterminal. Going around that loop, or repeating that middle part, gives more strings of the same language. This tool shows the loop and lets you pump it.",
+  intro: "Shows why the pumping lemmas hold. A long path in a DFA visits some state twice; a tall path in a parse tree repeats some nonterminal. Repeating the loop, or the part between the two nonterminals, gives more strings of the same language.",
   use: [
-    "Regular: describe a DFA in the text (`q0 a q1` is a transition, `start:` and `accept:` name states), or turn a regular expression into its minimal DFA. Enter a string: its path through the machine is shown, and the first state it visits twice splits it into x, y and z.",
-    "The slider repeats y i times (0 cuts the loop out). Step through the string to see the machine go around the loop. The pumped string always ends in the same state, so it is accepted exactly when the original was.",
-    "Context-free: write a grammar and a string it generates. The tree's longest path repeats a nonterminal; the part between the two occurrences is repeated (v and y) or cut out. The result is a parse tree of the same grammar. “Another repeat” picks another pair.",
+    "Regular: define a DFA as text (`q0 a q1` is a transition; `start:` and `accept:` name states) or convert a regular expression to its minimal DFA. For a string, the path through the DFA is shown; the first state visited twice splits the string into x, y and z.",
+    "The slider repeats y i times (0 removes the loop). Stepping follows the DFA through the string. The pumped string ends in the same state, so it is accepted exactly when the original was.",
+    "Context-free: enter a grammar and a string it generates. The longest path of its parse tree repeats a nonterminal; the part between the two occurrences (v and y) is repeated or removed. The result is a parse tree of the same grammar. “Another repeat” selects another pair.",
   ],
   notation: [
     ["p", "the pumping length: the number of states of the DFA; for a grammar in Chomsky normal form 2 to the power of the number of nonterminals"],

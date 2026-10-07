@@ -10,10 +10,10 @@
   const COMMON_KEYS = [
     ["← →", "step back and forward (also , and .)"],
     ["Home / End", "restart / run to the end"],
-    ["T", "move the arrow keys to the next stepping panel (its header is tinted)"],
-    ["F", "focus the current panel; press again to restore the layout"],
+    ["T", "switch the arrow keys to the next stepping panel (its header is tinted)"],
+    ["F", "focus the current panel; again to restore the layout"],
   ];
-  const COMMON_USE = "The View menu (top right) copies a link to exactly what you see, switches theme, and rearranges the panels. Hovering something in one panel highlights the same thing in the others, in orange.";
+  const COMMON_USE = "The View menu (top right) copies a link to the current state, switches theme and rearranges the panels. Hovering an item in one panel marks the same item in the others, in orange.";
 
 
   const DOT = { blue: "var(--accent)", green: "var(--st-accept)", red: "var(--st-reject)", grey: "var(--st-dead)", orange: "var(--hot)" };
@@ -21,7 +21,7 @@
   function html(g, withKeys) {
     const list = (items) => "<ul class=\"guide-list\">" + items.map((t) => "<li>" + fmt(t) + "</li>").join("") + "</ul>";
     const dl = (rows) => "<dl class=\"guide-terms\">" + rows.map((r) => "<dt>" + esc(r[0]) + "</dt><dd>" + fmt(r[1]) + "</dd>").join("") + "</dl>";
-    const legend = g.legend.concat([["orange", "whatever you hover, in every panel where it appears"]]);
+    const legend = g.legend.concat([["orange", "the hovered item, in every panel where it appears"]]);
     return (
       "<p class=\"guide-intro\">" + fmt(g.intro) + "</p>" +
       "<h3 class=\"guide-h\">How to use it</h3>" + list(g.use.concat([COMMON_USE])) +

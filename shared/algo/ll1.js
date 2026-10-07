@@ -93,7 +93,7 @@ function ll1ExplainConflict(g, first, conflict) {
         return {
           kind: "common-prefix",
           text: `Productions ${rules[a].i} and ${rules[b].i} both begin with ${x}, so one symbol of lookahead (${sym}) cannot choose between ${list}.`,
-          hint: "Left factoring helps: move the common beginning into one production and let a new nonterminal carry the differing endings.",
+          hint: "Left factoring resolves this: the common prefix moves into one production and a new nonterminal carries the differing endings.",
           tool: null,
         };
       }
@@ -104,14 +104,14 @@ function ll1ExplainConflict(g, first, conflict) {
     return {
       kind: "nullable",
       text: `Production ${nullable.i} can derive ε, so the parser chooses it when ${sym} is in FOLLOW(${nt}); but ${sym} can also start the other alternative, so ${list} compete.`,
-      hint: "FIRST and FOLLOW overlap here. The grammar needs rewriting (or it is ambiguous, which no LL(1) grammar can be).",
+      hint: "FIRST and FOLLOW overlap: the grammar must be rewritten, or it is ambiguous (no LL(1) grammar is).",
       tool: null,
     };
   }
   return {
     kind: "overlap",
     text: `The alternatives ${list} can all start with ${sym}, so one symbol of lookahead cannot choose between them.`,
-    hint: "The grammar needs rewriting (or it is ambiguous, which no LL(1) grammar can be).",
+    hint: "The grammar must be rewritten, or it is ambiguous (no LL(1) grammar is).",
     tool: null,
   };
 }

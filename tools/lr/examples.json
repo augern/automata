@@ -5,7 +5,7 @@
       "examples": [
         {
           "label": "Lecture grammar",
-          "purpose": "A tiny grammar for lecturing: no conflicts in any method, so the automaton is easy to follow.",
+          "purpose": "Small grammar with no conflicts in any method; the automaton is easy to follow.",
           "text": [
             "// Suitable for lecturing",
             "S -> a B C d",
@@ -72,7 +72,7 @@
       "examples": [
         {
           "label": "Shift-reduce",
-          "purpose": "A shift/reduce conflict: read the next token, or reduce first?",
+          "purpose": "A shift/reduce conflict: shift the next token or reduce first.",
           "text": [
             "// Suitable for lecturing",
             "// Shift-Reduce conflict",
@@ -95,7 +95,7 @@
         },
         {
           "label": "Dangling else",
-          "purpose": "The best-known conflict: it survives even in LR(1), because the grammar is ambiguous.",
+          "purpose": "Conflict that survives even in LR(1), because the grammar is ambiguous.",
           "text": [
             "// Dangling-else — classic shift/reduce conflict",
             "S -> if E S",
@@ -158,7 +158,7 @@
       "examples": [
         {
           "label": "Mini-Pascal",
-          "purpose": "A realistic grammar that stresses the tool: dozens of states.",
+          "purpose": "A realistic grammar with dozens of states.",
           "text": [
             "// Mini-Pascal subset — LALR(1)",
             "// assignments · if-then-else · while · arithmetic",

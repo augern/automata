@@ -115,7 +115,7 @@
       "examples": [
         {
           "label": "FIRST/FOLLOW with ε (nullable chain)",
-          "purpose": "Practice FIRST and FOLLOW when several nonterminals can derive ε.",
+          "purpose": "FIRST and FOLLOW when several nonterminals derive ε.",
           "text": [
             "// Every nonterminal after S can vanish: practice FIRST and FOLLOW with nullable symbols",
             "S -> A B C",

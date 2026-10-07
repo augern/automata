@@ -5,7 +5,7 @@
       "examples": [
         {
           "label": "aⁿbⁿ  (n ≥ 0)",
-          "purpose": "The canonical context-free language that no finite automaton can recognise: the stack counts the a's.",
+          "purpose": "Not regular: the stack counts the a's.",
           "states": ["q0", "q1", "q2"],
           "start": "q0",
           "accepts": ["q2"],

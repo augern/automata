@@ -1101,7 +1101,7 @@ function tBack() {
   tStepIdx--;
   if (tStepIdx < 0) {
     tClearStepping();
-    tSetLog("Press Table Step ► to begin filling entries.");
+    tSetLog("Table Step ► fills the entries.");
   } else {
     tApplySteps(tStepIdx);
     tSetLog(tSteps[tStepIdx].html);
@@ -1121,7 +1121,7 @@ function tReset() {
   tStepIdx = -1;
   tClearStepping();
   document.querySelectorAll(".parse-table").forEach((t) => t.classList.add("is-stepping"));
-  tSetLog("Press Table Step ► to begin filling entries.");
+  tSetLog("Table Step ► fills the entries.");
   tSetBtns();
 }
 

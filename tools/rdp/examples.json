@@ -5,7 +5,7 @@
       "examples": [
         {
           "label": "aⁿbⁿ",
-          "purpose": "Recursion with a cheap guess: each failed alternative is undone at once, and nothing deeper has to be revisited.",
+          "purpose": "Each failed alternative is undone at once; nothing deeper is revisited.",
           "text": [
             "S -> a S b | eps"
           ],
@@ -18,7 +18,7 @@
         },
         {
           "label": "Wrong first guess",
-          "purpose": "A takes one a, the b then fails, and the parser must go back into A for its second way. The jump back is the point.",
+          "purpose": "A takes one a, then b fails, and the parser backs into A for its second way.",
           "text": [
             "S -> A b",
             "A -> a | a a"
@@ -31,7 +31,7 @@
         },
         {
           "label": "Palindromes",
-          "purpose": "Guessing the middle: no amount of lookahead tells where a palindrome turns, so the parser has to try the possibilities.",
+          "purpose": "Guessing the middle: lookahead cannot tell where a palindrome turns, so each position is tried.",
           "text": [
             "S -> a S a | b S b | a | b | eps"
           ],
@@ -44,7 +44,7 @@
         },
         {
           "label": "Dangling else",
-          "purpose": "The longer alternative goes first, so an else binds to the nearest if; the shared prefix is matched again when it fails.",
+          "purpose": "The longer alternative goes first, so else binds to the nearest if; the shared prefix is matched again after a failure.",
           "text": [
             "S -> if c then S else S | if c then S | x"
           ],
@@ -61,7 +61,7 @@
       "examples": [
         {
           "label": "Shortest alternative first",
-          "purpose": "With ordered choice A stops after one a and the rest never matches. Switch to complete search and it works; or reorder the alternatives.",
+          "purpose": "With ordered choice A stops after one a and the rest fails. Complete search accepts; so does reordering the alternatives.",
           "mode": "ordered",
           "text": [
             "S -> A b",
@@ -74,7 +74,7 @@
         },
         {
           "label": "Longest alternative first",
-          "purpose": "The same language with the alternatives swapped: now ordered choice accepts it, because the long way is tried before the short one.",
+          "purpose": "The same language with the alternatives swapped: ordered choice accepts, since the long way is tried first.",
           "mode": "ordered",
           "text": [
             "S -> A b",
@@ -92,7 +92,7 @@
       "examples": [
         {
           "label": "Tiny statement language",
-          "purpose": "A small language written the way recursive-descent parsers are: a keyword picks the alternative. The tokens id and num stand for names and numbers.",
+          "purpose": "A keyword selects the alternative, as in real recursive-descent parsers. id and num stand for names and numbers.",
           "text": [
             "Program -> Stmt Program | eps",
             "Stmt -> id = Expr ; | print Expr ; | while ( Expr ) Block | if ( Expr ) Block Else",
@@ -113,7 +113,7 @@
         },
         {
           "label": "Assignment or call",
-          "purpose": "Both statements start with id: the parser guesses assignment, backs up one token and tries the call. One more token of lookahead would avoid it.",
+          "purpose": "Both start with id: the parser tries assignment, backs up one token and tries the call. One more token of lookahead avoids it.",
           "text": [
             "Program -> Stmt Program | eps",
             "Stmt -> id = Expr ; | id ( Args ) ;",
@@ -160,7 +160,7 @@
         },
         {
           "label": "Left recursion removed",
-          "purpose": "The usual expression grammar with the recursion moved to the right: the parser terminates and rarely has to undo anything.",
+          "purpose": "The expression grammar with the recursion moved to the right: the parser terminates and seldom backtracks.",
           "text": [
             "E -> T E'",
             "E' -> + T E' | eps",

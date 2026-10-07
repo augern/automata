@@ -5,7 +5,7 @@
       "examples": [
         {
           "label": "Unreachable rules",
-          "purpose": "Symbols that can never be reached from the start symbol are dead weight; cleanup removes them.",
+          "purpose": "Symbols unreachable from the start symbol are removed by cleanup.",
           "text": [
             "// Unreachable rules",
             "S -> A B",
@@ -17,7 +17,7 @@
         },
         {
           "label": "Unproductive nonterminals",
-          "purpose": "Nonterminals that derive no terminal string can never be used.",
+          "purpose": "Nonterminals that derive no terminal string are removed.",
           "text": [
             "// Unproductive nonterminals",
             "S -> A | B",
@@ -28,7 +28,7 @@
         },
         {
           "label": "Both issues",
-          "purpose": "Order matters: removing unproductive symbols can leave others unreachable.",
+          "purpose": "Removing unproductive symbols can leave others unreachable, so the order matters.",
           "text": [
             "// Both issues",
             "S -> A | B",
@@ -128,7 +128,7 @@
         },
         {
           "label": "Mixed — all issues",
-          "purpose": "ε-, unit and long rules together: the whole conversion pipeline in one grammar.",
+          "purpose": "ε-, unit and long productions together: the whole conversion in one grammar.",
           "text": [
             "// Mixed: ε, unit, long rules",
             "S -> A B | C",
@@ -191,7 +191,7 @@
         },
         {
           "label": "Multiple NTs",
-          "purpose": "Several left-recursive nonterminals at once: the expression grammar made ready for top-down parsing.",
+          "purpose": "Several left-recursive nonterminals: the expression grammar prepared for top-down parsing.",
           "text": [
             "// Multiple nonterminals — direct and indirect",
             "E -> E + T | T",

@@ -2,17 +2,17 @@
 // Legend colour names: blue, green, red, grey.
 window.TOOL_GUIDE = {
   title: "Grammar derivations",
-  intro: "Build a derivation in a grammar: start from the start symbol and repeatedly rewrite part of the current form. Works for context-free grammars and also for context-sensitive and unrestricted ones, whose rules may have several symbols on the left.",
+  intro: "Builds a derivation: starting from the start symbol, part of the current form is rewritten repeatedly. Handles context-free, context-sensitive and unrestricted grammars (productions with several symbols on the left).",
   use: [
-    "Click a symbol of the last line, or drag across several, to choose the part to rewrite. Then click a production whose left side matches it in the Productions panel.",
+    "Select part of the last line (click a symbol or drag across several), then click a production in the Productions panel whose left side matches.",
     "Esc clears the selection; `z` undoes the last step.",
-    "Random choice applies a random rule at a random place; ▶| keeps going until the derivation ends. Reseed starts again with a new random sequence; the same seed always gives the same derivation.",
+    "Random choice applies a random production at a random place; ▶| continues until the derivation ends. Reseed restarts with a new random sequence; the same seed gives the same derivation.",
   ],
   notation: [
     ["⇒", "one derivation step; the number before it is the production used (hover it for the rule)"],
     ["underlined", "the part that was rewritten in that step"],
-    ["✓ derived", "only terminals are left: the derivation produced a word of the language"],
-    ["dead end", "no rule applies but nonterminals remain; possible in context-sensitive grammars. Go back and choose differently"],
+    ["✓ derived", "only terminals remain: a word of the language"],
+    ["dead end", "no production applies but nonterminals remain (possible in context-sensitive grammars); go back and choose differently"],
   ],
   legend: [
     ["blue", "nonterminal symbols"],
