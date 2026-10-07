@@ -114,3 +114,11 @@ test("tags give every leaf its part", () => {
   assert.equal(parts, "uvyz");
   assert.equal(JSON.stringify(P.pumpYield(tagged)), JSON.stringify(P.pumpYield(t)));
 });
+
+test("v and y when the repeat spans an intermediate nonterminal", () => {
+  const g = gram("S -> a A d | eps\nA -> b S c");
+  const t = treeOf(g, "ababcdcd");
+  const pair = P.pumpPairs(t).find((p) => p.up.length === 0 && p.low.length === 2);
+  const parts = P.pumpDecompose(t, pair);
+  assert.deepEqual([parts.u, parts.v, parts.x, parts.y, parts.z].map((a) => a.join("")), ["", "ab", "abcd", "cd", ""]);
+});

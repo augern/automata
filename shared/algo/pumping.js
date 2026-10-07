@@ -171,6 +171,13 @@ function pumpPairs(tree) {
   return (best.length ? best : all).sort((p, q) => p.size - q.size || q.low.length - p.low.length);
 }
 
+// Does the leaf at `path` lie to the left of the node at `low`? (At the first position where they differ.)
+function pumpLeftOf(path, low) {
+  let k = 0;
+  while (k < low.length && path[k] === low[k]) k++;
+  return path[k] < low[k];
+}
+
 // The five parts of the yield for a pair: { u, v, x, y, z } as arrays of symbols.
 function pumpDecompose(tree, pair) {
   const parts = { u: [], v: [], x: [], y: [], z: [] };
@@ -180,7 +187,7 @@ function pumpDecompose(tree, pair) {
       if (node.eps) return;
       let part;
       if (startsWith(path, pair.low)) part = "x";
-      else if (startsWith(path, pair.up)) part = path[pair.up.length] < pair.low[pair.up.length] ? "v" : "y";
+      else if (startsWith(path, pair.up)) part = pumpLeftOf(path, pair.low) ? "v" : "y";
       else {
         let k = 0;
         while (k < pair.up.length && path[k] === pair.up[k]) k++;
@@ -205,7 +212,7 @@ function pumpTag(tree, pair) {
     if (node.leaf) {
       if (node.eps) return;
       if (startsWith(path, pair.low)) node.part = "x";
-      else if (startsWith(path, pair.up)) node.part = path[pair.up.length] < pair.low[pair.up.length] ? "v" : "y";
+      else if (startsWith(path, pair.up)) node.part = pumpLeftOf(path, pair.low) ? "v" : "y";
       else {
         let k = 0;
         while (k < pair.up.length && path[k] === pair.up[k]) k++;
