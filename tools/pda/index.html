@@ -612,6 +612,7 @@ else: ${kw("reject")}`
       // ── Tree renderer ──────────────────────────────────────
 
       const TREE_NW = 72, TREE_NH = 36;
+      const TREE_EPS_ROW = TREE_NH + 30; // an ε-move moves down only part of the way a read does (TREE_NH + 58)
 
       // Pan/zoom and fit-to-view for the tree (see shared/fit-view.js)
       const _pdaTreeView = createFitView({
@@ -721,6 +722,21 @@ else: ${kw("reject")}`
         });
 
         d3.tree().nodeSize([TREE_NW + 12, TREE_NH + 58])(hier);
+
+        // Vertical position: a level is a number of symbols read. ε-moves read nothing, so they sit part of the
+        // way down inside their level, and a level is only as tall as the longest ε-chain in it.
+        const epsDepth = new Map(), epsMax = [];
+        hier.each(dn => {
+          const e = dn.parent && dn.data.edgeInput === "" ? epsDepth.get(dn.parent) + 1 : 0;
+          epsDepth.set(dn, e);
+          epsMax[dn.data.symDepth] = Math.max(epsMax[dn.data.symDepth] || 0, e);
+        });
+        const levelTop = [];
+        for (let L = 0, y = 0; L < epsMax.length; L++) {
+          levelTop[L] = y;
+          y += (epsMax[L] || 0) * TREE_EPS_ROW + TREE_NH + 58;
+        }
+        hier.each(dn => { dn.y = levelTop[dn.data.symDepth] + epsDepth.get(dn) * TREE_EPS_ROW; });
 
         // ── Edges (drawn before nodes so nodes sit on top) ──
         for (const lnk of hier.links()) {
