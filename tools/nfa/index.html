@@ -429,11 +429,15 @@ else: ${kw("reject")}`
 
       // Hovering links the graph and the definition table: an edge or label <-> the table
       // cell(s) of that transition, a node <-> its state cell.
-      function nfaHoverEdges(ids) {
+      // `own`: the group of a tree edge that is itself being hovered. Then only that edge lights up in the tree
+      // (other edges use the same transitions too, but they are not the one pointed at); hovering a transition
+      // in the graph or the table lights up every tree edge that uses it.
+      function nfaHoverEdges(ids, own) {
         setGraphHot("nfa", ids);
         const want = new Set(ids || []);
-        // tree edges (and their labels) that use one of the transitions
-        for (const el of document.querySelectorAll("#sim-tree-root [data-cells]")) el.classList.toggle("is-hot", JSON.parse(el.dataset.cells).some((c) => want.has(c)));
+        for (const el of document.querySelectorAll("#sim-tree-root [data-cells]")) {
+          el.classList.toggle("is-hot", own ? el.parentNode === own : JSON.parse(el.dataset.cells).some((c) => want.has(c)));
+        }
         for (const inp of document.querySelectorAll("#def-table-scroll input[data-sym]")) {
           inp.closest("td").classList.toggle("is-hot", want.has(inp.dataset.state + "|" + inp.dataset.sym));
         }
@@ -612,7 +616,7 @@ else: ${kw("reject")}`
           // Hovering the edge shows the transitions it uses in the graph and the table
           const cells = nfaEdgeCells(currentNFA(), inputChars, child);
           const hover = (sel) => {
-            if (cells.length) sel.attr("data-cells", JSON.stringify(cells)).on("mouseenter", () => nfaHoverEdges(cells)).on("mouseleave", () => nfaHoverEdges(null));
+            if (cells.length) sel.attr("data-cells", JSON.stringify(cells)).on("mouseenter", function () { nfaHoverEdges(cells, this.parentNode); }).on("mouseleave", () => nfaHoverEdges(null));
             return sel;
           };
           const edgeG = root.append("g");
