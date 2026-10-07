@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Why long strings can be pumped: a repeated state in a DFA, a repeated nonterminal in a parse tree. Pump the loop, and refute machines and grammars that claim languages that cannot be pumped." />
+    <meta name="description" content="Why long strings can be pumped: a repeated state in a DFA, a repeated nonterminal in a parse tree. Pump the loop to see that the verdict never changes." />
     <title>Pumping Explorer | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
@@ -13,8 +13,7 @@
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 290; --pmin: 200px; }
-      #p-view { --pw: 640; --pmin: 300px; }
-      #p-ctl { --pw: 400; --pmin: 280px; }
+      #p-main { --pw: 1050; --pmin: 360px; }
 
       /* The three parts of a pumped string: x blue, y (the part that is repeated) orange, z green; for trees u grey, v and y orange, x blue, z green */
       [hidden] { display: none !important; }
@@ -25,7 +24,16 @@
             #def-note { flex-shrink: 0; padding: 0 var(--sp-5) var(--sp-3); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
       #def-note:empty { display: none; }
 
-      /* ── The string and its path ── */
+      /* ── The explorer: controls on top, the drawing and the reading side by side ── */
+      #ctl-top { flex-shrink: 0; border-bottom: 1.5px solid var(--border-hi); background: var(--bg-panel); display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-6); }
+      #ctl-top > * { flex: 1 1 300px; min-width: 0; }
+      #ctl-top .ui-sim__row, #ctl-top .ui-bar { border-bottom: 0; }
+      #pump-bar { gap: var(--sp-4); flex-wrap: nowrap; }
+      #pump-i { flex: 1; min-width: 80px; accent-color: var(--pp-y); }
+      #pump-i-val { font-family: var(--font-serif); font-style: italic; min-width: 3.4em; }
+      #work { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; overflow: auto; }
+      #canvases { flex: 3 1 380px; position: relative; min-height: 300px; display: flex; flex-direction: column; }
+      #side { flex: 2 1 320px; min-width: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
       #strip { flex-shrink: 0; border-bottom: 1.5px solid var(--border-hi); background: var(--bg-panel); }
       .pp-row { display: flex; align-items: baseline; gap: var(--sp-4); padding: var(--sp-2) var(--sp-5); }
       .pp-row + .pp-row { border-top: 1px solid var(--border-lo); }
@@ -43,7 +51,6 @@
       .pp-arrow { color: var(--text-lo); font-size: var(--fs-2xs); }
 
       /* ── The drawings ── */
-      #canvases { flex: 1; position: relative; min-height: 120px; display: flex; flex-direction: column; }
       #canvases .ui-canvas { flex: 1; }
       .ag-edge.pump-x path { stroke: var(--pp-x); stroke-width: 2.2; }
       .ag-edge.pump-y path { stroke: var(--pp-y); stroke-width: 2.6; }
@@ -63,20 +70,8 @@
       .pt-n.pt-both circle { stroke: var(--pp-y); stroke-width: 3; fill: var(--st-active-bg); }
       .pt-e { fill: none; stroke: var(--border-hi); stroke-width: 1.2; }
 
-      /* ── Controls ── */
-      #ctl-top { flex-shrink: 0; border-bottom: 1.5px solid var(--border-hi); background: var(--bg-panel); }
-      #pump-bar { gap: var(--sp-4); flex-wrap: wrap; }
-      #pump-i { flex: 1; min-width: 80px; accent-color: var(--pp-y); }
-      #pump-i-val { font-family: var(--font-serif); font-style: italic; min-width: 3.4em; }
-      #ctl-body { flex: 1; overflow: auto; padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
-      #ctl-body p { margin: 0 0 var(--sp-4); }
-      .pp-card { border: 1px solid var(--border); background: var(--bg-panel); padding: var(--sp-4) var(--sp-5); margin-top: var(--sp-5); }
-      .pp-card h3 { margin: 0 0 var(--sp-3); font-size: var(--fs-md); font-weight: normal; font-style: italic; }
-      .pp-card .row { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-3); }
-      #refute-result { margin-top: var(--sp-3); }
-      #refute-result:empty { display: none; }
-      #refute-result.is-bad { border-left: 3px solid var(--st-reject); padding-left: var(--sp-4); }
-      #refute-result.is-ok { border-left: 3px solid var(--st-accept); padding-left: var(--sp-4); }
+      #explain { padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
+      #explain p { margin: 0 0 var(--sp-4); }
     </style>
   </head>
   <body>
@@ -112,34 +107,10 @@
 
       <div class="resize-handle" id="rh-1"></div>
 
-      <!-- 2. The drawing -->
-      <div class="panel" id="p-view" data-priority="3">
+      <!-- 2. Pump: the controls, the drawing and the reading in one panel -->
+      <div class="panel" id="p-main" data-priority="4">
         <div class="panel-header">
           <span class="panel-title" id="view-title">Why a long string can be pumped</span>
-          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-view');">&#8250;</button>
-        </div>
-        <div class="panel-body">
-          <div id="strip"></div>
-          <div id="canvases">
-            <div id="canvas-dfa" class="ui-canvas">
-              <svg id="dfa-svg"><g id="dfa-graph-root"></g></svg>
-              <div id="dfa-graph-empty" class="ui-canvas__empty">Define a DFA.</div>
-            </div>
-            <div id="canvas-tree" class="ui-canvas" hidden>
-              <svg id="tree-svg"><g id="tree-root"></g></svg>
-              <div id="tree-empty" class="ui-canvas__empty">Enter a string the grammar generates.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="resize-handle" id="rh-2"></div>
-
-      <!-- 3. Pump and refute -->
-      <div class="panel" id="p-ctl" data-priority="4">
-        <div class="panel-header">
-          <span class="panel-title">Pump and refute</span>
-          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-ctl');">&#8250;</button>
         </div>
         <div class="panel-body">
           <div id="ctl-top">
@@ -164,16 +135,20 @@
               <button class="btn" id="btn-other" onclick="otherRepeat()" title="Use another repeated nonterminal on the path" hidden>Another repeat</button>
             </div>
           </div>
-          <div id="ctl-body">
-            <div id="explain"></div>
-            <div class="pp-card" id="refute-card">
-              <h3>Refute a claim</h3>
-              <p id="refute-intro">This DFA claims to recognise a language. Pick the language: if it cannot be pumped, pumping the machine proves the claim wrong.</p>
-              <div class="row">
-                <select id="target-select" class="ui-select"></select>
-                <button class="btn primary" onclick="findRefutation()">Find a refutation</button>
+          <div id="work">
+            <div id="canvases">
+              <div id="canvas-dfa" class="ui-canvas">
+                <svg id="dfa-svg"><g id="dfa-graph-root"></g></svg>
+                <div id="dfa-graph-empty" class="ui-canvas__empty">Define a DFA.</div>
               </div>
-              <div id="refute-result"></div>
+              <div id="canvas-tree" class="ui-canvas" hidden>
+                <svg id="tree-svg"><g id="tree-root"></g></svg>
+                <div id="tree-empty" class="ui-canvas__empty">Enter a string the grammar generates.</div>
+              </div>
+            </div>
+            <div id="side">
+              <div id="strip"></div>
+              <div id="explain"></div>
             </div>
           </div>
         </div>
@@ -187,19 +162,18 @@
     <script src="../../shared/algo/strings.js?v=2449eeb3"></script>
     <script src="../../shared/algo/regex.js?v=311ec5b3"></script>
     <script src="../../shared/algo/rdp.js?v=9fe07733"></script>
-    <script src="../../shared/algo/pumping.js?v=9a5d3ab4"></script>
+    <script src="../../shared/algo/pumping.js?v=dc36472b"></script>
     <script src="../../shared/shared.js?v=15943b26"></script>
     <script src="../../shared/fit-view.js?v=0b11c570"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/view-menu.js?v=d1c37b50"></script>
-    <script src="guide.js?v=c02c1b13"></script>
+    <script src="guide.js?v=85154bbd"></script>
     <script src="../../shared/guide.js?v=f731818c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=de0e3ae0"></script>
     <script>
       initResize("rh-1", "p-def", +1);
-      initResize("rh-2", "p-ctl", -1);
 
       const EXAMPLES = {};
       const $ = (id) => document.getElementById(id);
@@ -210,13 +184,7 @@
       let ppStrings = []; // sample strings of the loaded example
       let ppReg = null; // regular explorer: { w, run, loop, parts }
       let ppCF = null; // context-free explorer: { tokens, tree, tagged, pairs, pairIdx, parts }
-      let ppRefutation = null; // the result shown in the refute card, so "Show it" can load it
       const ppSep = () => (ppG && [...ppG.terminals].some((t) => [...t].length > 1) ? " " : "");
-
-      const TARGET_NOTE = {
-        regular: "This DFA claims to recognise a language. Pick the language: if it cannot be pumped, pumping the machine proves the claim wrong.",
-        cf: "This grammar claims to generate a language. Pick the language: if it cannot be pumped, pumping a parse tree proves the claim wrong.",
-      };
 
       // ── Mode ──────────────────────────────────────────────────
       function setMode(m) {
@@ -233,11 +201,6 @@
         $("pump-label").textContent = m === "regular" ? "repeat y" : "repeat v, y";
         $("pump-i").max = m === "regular" ? 6 : 4;
         $("grammar-input").placeholder = m === "regular" ? "start: q0\naccept: q1\nq0 a q1\nq1 b q0" : "S -> a S b | eps";
-        $("refute-intro").textContent = TARGET_NOTE[m];
-        $("target-select").innerHTML = Object.entries(PUMP_TARGETS).map(([k, t]) => '<option value="' + k + '">' + esc(t.label) + (t.regular ? " (regular)" : "") + "</option>").join("");
-        $("refute-result").textContent = "";
-        $("refute-result").className = "";
-        ppRefutation = null;
         saveShare();
         buildDef();
       }
@@ -273,12 +236,7 @@
       }
 
       // ── Exploring ─────────────────────────────────────────────
-      function explore(keepResult) {
-        if (!keepResult) {
-          $("refute-result").textContent = "";
-          $("refute-result").className = "";
-          ppRefutation = null;
-        }
+      function explore() {
         if (ppMode === "regular") exploreRegular(); else exploreCF();
       }
 
@@ -497,79 +455,12 @@
         treeView.refit();
       }
 
-      // ── Refuting ──────────────────────────────────────────────
-      function findRefutation() {
-        const key = $("target-select").value, T = PUMP_TARGETS[key];
-        const out = $("refute-result");
-        out.className = "";
-        ppRefutation = null;
-        if (ppMode === "regular") {
-          if (!ppDFA) { out.textContent = "Define a DFA first."; return; }
-          const r = pumpRefuteDFA(ppDFA, key);
-          ppRefutation = r;
-          const k = ppDFA.states.length, nm = (s) => ppDFA.states[s];
-          if (r.kind === "pumped") {
-            out.className = "is-bad";
-            out.innerHTML = "<p>The DFA has <b>" + k + "</b> states. The string <b>" + esc(r.w) + "</b> has " + r.w.length + " ≥ " + k + " symbols, is in " + esc(T.label) + ", and the DFA accepts it.</p>" +
-              "<p>Its path visits <b>" + esc(nm(r.path[r.loop.s])) + "</b> twice, after " + r.loop.s + " and " + r.loop.t + " symbols, so <b class=\"pp-x\">x</b> = " + q(r.parts.x) + ", <b class=\"pp-y\">y</b> = " + q(r.parts.y) + ", <b class=\"pp-z\">z</b> = " + q(r.parts.z) + ".</p>" +
-              "<p>Repeating y " + r.i + " times gives <b>" + esc(r.pumped || "ε") + "</b>. The DFA accepts it too, since it ends in the same state, but it is <b>not</b> in " + esc(T.label) + ". So this DFA does not recognise " + esc(T.label) + ".</p>" +
-              '<button class="btn" onclick="showRefutation()">Show it on the left</button>';
-          } else if (r.kind === "misses") {
-            out.className = "is-bad";
-            out.innerHTML = "<p>The DFA <b>rejects</b> <b>" + esc(r.w) + "</b>, which is in " + esc(T.label) + ". No pumping needed: it does not recognise " + esc(T.label) + ".</p>";
-          } else if (r.kind === "differs") {
-            out.className = "is-bad";
-            out.innerHTML = "<p>No pumping argument applies, but the DFA and " + esc(T.label) + " disagree on <b>" + esc(r.w || "ε") + "</b>: " + (r.inLanguage ? "it is in the language, but the DFA rejects it." : "it is not in the language, but the DFA accepts it.") + "</p>";
-          } else {
-            out.className = "is-ok";
-            out.innerHTML = "<p>No refutation found" + (T.regular ? ". " + esc(T.label) + " <i>is</i> regular, so pumping can never refute a correct DFA for it, and this one agrees with it on all short strings" : ": the DFA agrees with " + esc(T.label) + " on all the strings tried") + ". That is not a proof that it is right.</p>";
-          }
-        } else {
-          if (!ppG) { out.textContent = "Define a grammar first."; return; }
-          const r = pumpRefuteGrammar(ppG, key);
-          ppRefutation = r;
-          if (r.kind === "pumped") {
-            const sep = "";
-            out.className = "is-bad";
-            out.innerHTML = "<p>The grammar generates <b>" + esc(r.w) + "</b>, which is in " + esc(T.label) + ". Its parse tree has a repeated nonterminal, which gives <b class=\"pp-u\">u</b> = " + q(r.parts.u.join(sep)) + ", <b class=\"pp-v\">v</b> = " + q(r.parts.v.join(sep)) + ", <b class=\"pp-x\">x</b> = " + q(r.parts.x.join(sep)) + ", <b class=\"pp-y\">y</b> = " + q(r.parts.y.join(sep)) + ", <b class=\"pp-z\">z</b> = " + q(r.parts.z.join(sep)) + ".</p>" +
-              "<p>Repeating v and y " + r.i + " times gives <b>" + esc(r.pumped || "ε") + "</b>. The grammar generates it too (the pumped tree is a parse tree of it), but it is <b>not</b> in " + esc(T.label) + ". So this grammar does not generate " + esc(T.label) + ".</p>" +
-              '<button class="btn" onclick="showRefutation()">Show it on the left</button>';
-          } else if (r.kind === "misses") {
-            out.className = "is-bad";
-            out.innerHTML = "<p>The grammar does <b>not</b> generate <b>" + esc(r.w) + "</b>, which is in " + esc(T.label) + ", so it does not generate " + esc(T.label) + ".</p>";
-          } else if (r.kind === "differs") {
-            out.className = "is-bad";
-            out.innerHTML = "<p>Pumping the trees of members shows nothing here, but the grammar generates <b>" + esc(r.w) + "</b>, which is not in " + esc(T.label) + ".</p>";
-          } else if (r.kind === "unsupported") {
-            out.textContent = r.reason;
-          } else {
-            out.className = "is-ok";
-            out.innerHTML = "<p>No refutation found: the grammar agrees with " + esc(T.label) + " on everything tried. That is not a proof that it is right.</p>";
-          }
-        }
-      }
-
-      // Load the refutation into the explorer: the string, and the number of repetitions.
-      function showRefutation() {
-        const r = ppRefutation;
-        if (!r || r.kind !== "pumped") return;
-        $("w-input").value = r.w;
-        $("pump-i").value = Math.min(+$("pump-i").max, r.i);
-        explore(true);
-        if (ppMode === "cf") {
-          // the pair of the refutation, if it is among the offered ones
-          const k = ppCF.pairs.findIndex((p) => JSON.stringify(p.up) === JSON.stringify(r.pair.up) && JSON.stringify(p.low) === JSON.stringify(r.pair.low));
-          if (k >= 0) setPair(k);
-        }
-        ppRefutation = r;
-      }
-
       // ── Wiring ────────────────────────────────────────────────
       $("grammar-input").addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
       let ppTimer = null;
       $("w-input").addEventListener("input", () => { explore(); saveShare(); });
       $("pump-i").addEventListener("input", () => { if (ppMode === "regular") renderRegular(); else renderCF(); });
-      registerStepper("p-ctl", { step: () => walk.next(), back: () => walk.prev(), reset: () => walk.reset(), end: () => walk.end() }, { primary: true });
+      registerStepper("p-main", { step: () => walk.next(), back: () => walk.prev(), reset: () => walk.reset(), end: () => walk.end() }, { primary: true });
 
       UI.stringInput("w-input", {
         examples: () => ppStrings,
@@ -605,7 +496,6 @@
         $("pump-i").value = ex.i === undefined ? 2 : ex.i;
         if ((ex.mode || "regular") !== ppMode) setMode(ex.mode || "regular");
         else buildDef();
-        if (ex.target) $("target-select").value = ex.target;
       }
 
       const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("w-input").value, m: ppMode }));
@@ -619,7 +509,7 @@
         if (st.m) ppMode = st.m;
       }
 
-      initPanelStorage("pumping-tool-v1", ["p-def", "p-view", "p-ctl"]);
+      initPanelStorage("pumping-tool-v2", ["p-def", "p-main"]);
       loadPanelState();
       initAlgoModal();
       applyShareState();

@@ -68,14 +68,14 @@ test("recursive-descent examples parse, and their sample strings run in the exam
   assert.deepEqual([...rec].sort(), ["Hidden left recursion", "Left recursion"]);
 });
 
-test("pumping examples: the machine or grammar parses and the refutation is the one the example says", () => {
+test("pumping examples: the machine or grammar parses and every sample string has something to pump", () => {
   for (const ex of examples("pumping")) {
     assert.ok(ex.mode === "regular" || ex.mode === "cf", ex.label);
     const r = ex.mode === "regular" ? A.pumpParseDFA(textOf(ex)) : A.rdpParseGrammar(textOf(ex));
-    if (!ex.target) { assert.equal(ex.verdict, undefined, ex.label); continue; }
-    assert.ok(A.PUMP_TARGETS[ex.target], `${ex.label}: unknown target`);
-    const out = ex.mode === "regular" ? A.pumpRefuteDFA(r, ex.target) : A.pumpRefuteGrammar(r, ex.target);
-    assert.equal(out.kind, ex.verdict, ex.label);
+    for (const w of ex.strings || []) {
+      if (ex.mode === "regular") assert.ok(A.pumpFindLoop(A.pumpDFARun(r, w).path), `${ex.label}: "${w}"`);
+      else assert.ok(A.pumpPairs(A.pumpParseTree(r, A.rdpTokenise(r, w)).tree).length > 0, `${ex.label}: "${w}"`);
+    }
   }
 });
 

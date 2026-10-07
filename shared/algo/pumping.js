@@ -1,7 +1,6 @@
 // Pure helpers for the pumping explorer: why long strings of a regular language can be pumped
 // (a repeated state in a DFA's path) and why long strings of a context-free language can be pumped
-// (a repeated nonterminal on a path of a parse tree), and how to turn that around to refute a
-// machine or grammar that claims to recognise a language that cannot be pumped. No DOM access.
+// (a repeated nonterminal on a path of a parse tree). No DOM access.
 // Depends on grammar.js and rdp.js (the parse trees come from its parser) and, for the regular
 // expression → DFA conversion in the tool, regex.js.
 
@@ -103,101 +102,6 @@ function pumpSplit(w, loop) {
 
 function pumpJoin(parts, i) {
   return parts.x + parts.y.repeat(i) + parts.z;
-}
-
-// ── Languages to refute ──────────────────────────────────────────────
-
-const PUMP_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
-const pumpCount = (s, ch) => [...s].filter((c) => c === ch).length;
-const pumpRep = (ch, n) => ch.repeat(n);
-
-// Each language: label, regular (true for the one that can be pumped), member(string),
-// samples(n) → strings of the language that grow with n.
-const PUMP_TARGETS = {
-  anbn: {
-    label: "aⁿbⁿ", regular: false,
-    member: (s) => /^a*b*$/.test(s) && pumpCount(s, "a") === pumpCount(s, "b"),
-    samples: (n) => [pumpRep("a", n) + pumpRep("b", n)],
-  },
-  equal: {
-    label: "equal numbers of a and b", regular: false,
-    member: (s) => /^[ab]*$/.test(s) && pumpCount(s, "a") === pumpCount(s, "b"),
-    samples: (n) => [pumpRep("a", n) + pumpRep("b", n), pumpRep("ab", n)],
-  },
-  anbncn: {
-    label: "aⁿbⁿcⁿ", regular: false,
-    member: (s) => /^a*b*c*$/.test(s) && pumpCount(s, "a") === pumpCount(s, "b") && pumpCount(s, "b") === pumpCount(s, "c"),
-    samples: (n) => [pumpRep("a", n) + pumpRep("b", n) + pumpRep("c", n)],
-  },
-  ww: {
-    label: "ww (a word repeated)", regular: false,
-    member: (s) => s.length % 2 === 0 && s.slice(0, s.length / 2) === s.slice(s.length / 2),
-    samples: (n) => [pumpRep("a", n) + "b" + pumpRep("a", n) + "b", pumpRep("a", n) + "b" + pumpRep("a", 2 * n) + "b" + pumpRep("a", n), pumpRep("a", 2 * n)],
-  },
-  squares: {
-    label: "aⁿ with n a perfect square", regular: false,
-    member: (s) => /^a*$/.test(s) && Number.isInteger(Math.sqrt(s.length)),
-    samples: (n) => [pumpRep("a", n * n)],
-  },
-  primes: {
-    label: "aⁿ with n prime", regular: false,
-    member: (s) => { const n = s.length; if (!/^a*$/.test(s) || n < 2) return false; for (let d = 2; d * d <= n; d++) if (n % d === 0) return false; return true; },
-    samples: (n) => [pumpRep("a", PUMP_PRIMES[Math.min(n - 1, PUMP_PRIMES.length - 1)])],
-  },
-  evena: {
-    label: "an even number of a's", regular: true,
-    member: (s) => pumpCount(s, "a") % 2 === 0,
-    samples: (n) => [pumpRep("a", 2 * n), pumpRep("ab", 2 * n)],
-  },
-};
-
-// ── Refuting a DFA ───────────────────────────────────────────────────
-
-// Does the DFA recognise the language `key` of PUMP_TARGETS? Looks for a proof that it does not:
-//   kind "misses"  — a string of the language that the DFA rejects: { w }
-//   kind "pumped"  — a string w of the language that the DFA accepts, at least as long as the DFA has
-//                    states; its path repeats a state, and pumping the loop gives a string the DFA
-//                    accepts (it ends in the same state) that is not in the language:
-//                    { w, loop, parts, i, pumped }
-//   kind "differs" — neither, but a short string on which they disagree: { w, inLanguage }
-//   kind "none"    — nothing found: the DFA may be right.
-function pumpRefuteDFA(dfa, key) {
-  const T = PUMP_TARGETS[key];
-  const k = dfa.states.length;
-  const MAX_N = 40, MAX_LEN = 80;
-  for (let n = 1; n <= MAX_N; n++) {
-    for (const w of T.samples(n)) {
-      if (w.length > MAX_LEN) continue;
-      if (!pumpDFARun(dfa, w).accepted) return { kind: "misses", w };
-    }
-  }
-  for (let n = 1; n <= MAX_N; n++) {
-    for (const w of T.samples(n)) {
-      if (w.length < k || w.length > MAX_LEN) continue;
-      const run = pumpDFARun(dfa, w);
-      const loop = pumpFindLoop(run.path);
-      if (!loop) continue;
-      const parts = pumpSplit(w, loop);
-      const top = Math.max(4, w.length + 2);
-      for (const i of [2, 0, ...Array.from({ length: top - 2 }, (_, k) => k + 3)]) {
-        const pumped = pumpJoin(parts, i);
-        if (pumped.length > 4000) break;
-        if (!T.member(pumped) && pumpDFARun(dfa, pumped).accepted) return { kind: "pumped", w, loop, parts, i, pumped, path: run.path };
-      }
-    }
-  }
-  // Short disagreements, by brute force.
-  const alpha = dfa.alpha.length ? dfa.alpha : ["a"];
-  let level = [""];
-  for (let len = 0; len <= 7; len++) {
-    for (const s of level) {
-      const inM = pumpDFARun(dfa, s).accepted, inT = T.member(s);
-      if (inM !== inT) return { kind: "differs", w: s, inLanguage: inT };
-    }
-    level = level.flatMap((s) => alpha.map((a) => s + a));
-    if (level.length > 20000) break;
-  }
-  return { kind: "none" };
 }
 
 // ── Parse trees ──────────────────────────────────────────────────────
@@ -322,48 +226,4 @@ function pumpTree(tree, pair, i) {
   let cur = pumpClone(pumpGet(tree, pair.low));
   for (let k = 0; k < i; k++) cur = pumpReplace(pumpClone(up), rel, cur);
   return pumpReplace(tree, pair.up, cur);
-}
-
-// ── Refuting a grammar ───────────────────────────────────────────────
-
-// Does the grammar generate the language `key`? As pumpRefuteDFA, for single-letter terminals:
-//   kind "misses"      — a string of the language that the grammar does not generate: { w }
-//   kind "pumped"      — a string w of the language that the grammar generates, with a parse tree that repeats a
-//                        nonterminal on a path; pumping the repeat gives a string the grammar generates that is
-//                        not in the language: { w, tree, pair, parts, i, pumped }
-//   kind "differs"     — no pumping found, but a short string the grammar generates that is not in the language: { w }
-//   kind "unsupported" — the grammar cannot be handled: { reason }
-//   kind "none"        — nothing found.
-function pumpRefuteGrammar(g, key) {
-  const T = PUMP_TARGETS[key];
-  if ([...g.terminals].some((t) => [...t].length !== 1)) return { kind: "unsupported", reason: "The languages to refute are over the letters a, b and c: use single-letter terminals." };
-  const rec = rdpLeftRecursive(g);
-  if (rec.length) return { kind: "unsupported", reason: "The grammar is left-recursive (" + rec.join(", ") + "), which the parser used here cannot handle. Remove the left recursion first." };
-  let misses = null;
-  for (let n = 1; n <= 8; n++) {
-    for (const w of T.samples(n)) {
-      const r = pumpParseTree(g, [...w]);
-      if (!r.tree) { if (!r.aborted && misses === null) misses = w; continue; }
-      for (const pair of pumpPairs(r.tree).slice(0, 6)) {
-        for (const i of [2, 0, 3, 4]) {
-          const pumped = pumpYield(pumpTree(r.tree, pair, i)).join("");
-          if (!T.member(pumped)) return { kind: "pumped", w, tree: r.tree, pair, parts: pumpDecompose(r.tree, pair), i, pumped };
-        }
-      }
-    }
-  }
-  if (misses !== null) return { kind: "misses", w: misses };
-  // Pumping the trees of members found nothing (the grammar may generate too much in a way these trees do
-  // not show): look for a short string the grammar generates that is not in the language.
-  const alpha = [...g.terminals].sort();
-  let level = [""];
-  for (let len = 1, tried = 0; len <= 6 && tried < 3000; len++) {
-    level = level.flatMap((s) => alpha.map((a) => s + a));
-    for (const w of level) {
-      tried++;
-      if (T.member(w)) continue;
-      if (pumpParseTree(g, [...w]).tree) return { kind: "differs", w, inLanguage: false };
-    }
-  }
-  return { kind: "none" };
 }

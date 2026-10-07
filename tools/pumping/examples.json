@@ -46,94 +46,6 @@
       ]
     },
     {
-      "label": "DFAs that claim too much",
-      "examples": [
-        {
-          "label": "a*b* claims aⁿbⁿ",
-          "purpose": "Three states that accept every aⁿbⁿ, and a lot more. Pumping the a's gives aᵐbⁿ with m ≠ n, which the DFA accepts and aⁿbⁿ does not contain.",
-          "mode": "regular",
-          "target": "anbn",
-          "strings": [
-            "aaabbb"
-          ],
-          "text": [
-            "start: s",
-            "accept: s t",
-            "s a s",
-            "s b t",
-            "t b t",
-            "t a dead",
-            "dead a,b dead"
-          ],
-          "verdict": "pumped"
-        },
-        {
-          "label": "Difference mod 3 claims aⁿbⁿ",
-          "purpose": "Counts a's minus b's modulo 3. The loop has length 3, so pumping adds three a's at a time: a⁷b⁴ is accepted but is not aⁿbⁿ.",
-          "mode": "regular",
-          "target": "anbn",
-          "strings": [
-            "aaabbb"
-          ],
-          "text": [
-            "start: A0",
-            "accept: A0 B0",
-            "A0 a A1",
-            "A1 a A2",
-            "A2 a A0",
-            "A0 b B2",
-            "A1 b B0",
-            "A2 b B1",
-            "B0 b B2",
-            "B1 b B0",
-            "B2 b B1",
-            "B0 a dead",
-            "B1 a dead",
-            "B2 a dead",
-            "dead a,b dead"
-          ],
-          "verdict": "pumped"
-        },
-        {
-          "label": "Length mod 5 claims squares",
-          "purpose": "Squares are 0, 1 or 4 modulo 5, so this DFA accepts every square length. It also accepts lengths like 14, which are not squares: pumping finds one.",
-          "mode": "regular",
-          "target": "squares",
-          "strings": [
-            "aaaaaaaaa"
-          ],
-          "text": [
-            "start: r0",
-            "accept: r0 r1 r4",
-            "r0 a r1",
-            "r1 a r2",
-            "r2 a r3",
-            "r3 a r4",
-            "r4 a r0"
-          ],
-          "verdict": "pumped"
-        },
-        {
-          "label": "A correct DFA",
-          "purpose": "Even number of a's, claimed to be exactly that. The language is regular, so no pumping argument can refute it, and the tool finds nothing.",
-          "mode": "regular",
-          "target": "evena",
-          "strings": [
-            "abab"
-          ],
-          "text": [
-            "start: e",
-            "accept: e",
-            "e a o",
-            "o a e",
-            "e b e",
-            "o b o"
-          ],
-          "verdict": "none"
-        }
-      ]
-    },
-    {
       "label": "Why grammars can be pumped",
       "examples": [
         {
@@ -169,73 +81,10 @@
             "a*(a+a)"
           ],
           "text": [
-            "E -> E + T | T",
-            "T -> T * F | F",
+            "E -> T + E | T",
+            "T -> F * T | F",
             "F -> ( E ) | a"
           ]
-        }
-      ]
-    },
-    {
-      "label": "Grammars that claim too much",
-      "examples": [
-        {
-          "label": "aⁿbⁿ c* claims aⁿbⁿcⁿ",
-          "purpose": "Generates every aⁿbⁿcⁿ, but the c's are not counted. Repeating a c from the C part gives aⁿbⁿcᵐ with m ≠ n.",
-          "mode": "cf",
-          "target": "anbncn",
-          "strings": [
-            "abc",
-            "aabbcc"
-          ],
-          "text": [
-            "S -> X C",
-            "X -> a X b | eps",
-            "C -> c C | eps"
-          ],
-          "verdict": "pumped"
-        },
-        {
-          "label": "aⁿ b* cⁿ claims aⁿbⁿcⁿ",
-          "purpose": "Counts a's against c's but not b's. Pumping the outer S adds an a and a c, not a b, and leaves aⁿbⁿcⁿ.",
-          "mode": "cf",
-          "target": "anbncn",
-          "strings": [
-            "abc",
-            "aabbcc"
-          ],
-          "text": [
-            "S -> a S c | B",
-            "B -> b B | eps"
-          ],
-          "verdict": "pumped"
-        },
-        {
-          "label": "Palindromes claim ww",
-          "purpose": "Even palindromes and the copy language ww overlap, for example in abbaabba. Pumping a tree for such a string breaks the copy but not the palindrome.",
-          "mode": "cf",
-          "target": "ww",
-          "strings": [
-            "abaaba",
-            "aabaaaabaa"
-          ],
-          "text": [
-            "S -> a S a | b S b | eps"
-          ],
-          "verdict": "pumped"
-        },
-        {
-          "label": "Extra a's claim aⁿbⁿ",
-          "purpose": "S → a S lets any number of a's be added. The trees of aⁿbⁿ do not show it, so the tool falls back on a short string the grammar generates but aⁿbⁿ lacks.",
-          "mode": "cf",
-          "target": "anbn",
-          "strings": [
-            "aabb"
-          ],
-          "text": [
-            "S -> a S b | a S | eps"
-          ],
-          "verdict": "differs"
         }
       ]
     }
