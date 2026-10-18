@@ -146,6 +146,29 @@
             "old snores"
           ],
           "grammar": "sentences"
+        },
+        {
+          "label": "Java excerpt (LL(1) form)",
+          "purpose": "Ordered choice resolves the dangling else: the else part is tried first, so else binds to the nearest if.",
+          "grammar": "java-statements-expressions-ll",
+          "mode": "ordered",
+          "strings": [
+            "{ int <id> = <num> ; }",
+            "{ if ( <id> < <num> ) <id> = <num> ; else return ; }",
+            "{ if ( <id> ) if ( <id> ) return ; else return ; }",
+            "{ while ( <id> ) { <id> = <id> - <num> ; } }"
+          ]
+        },
+        {
+          "label": "Python excerpt (LL(1) form)",
+          "purpose": "A parser for Python-style blocks: NEWLINE, INDENT and DEDENT arrive from the scanner as ordinary tokens.",
+          "grammar": "python-statements-expressions-ll",
+          "strings": [
+            "<id> = <num> NEWLINE",
+            "if <id> : NEWLINE INDENT pass NEWLINE DEDENT else : NEWLINE INDENT pass NEWLINE DEDENT",
+            "def <id> ( <id> , <id> ) : NEWLINE INDENT return <id> + <num> NEWLINE DEDENT",
+            "<id> = <id> ** <id> ** <num> NEWLINE"
+          ]
         }
       ]
     },

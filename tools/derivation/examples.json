@@ -122,6 +122,16 @@
           "label": "Pascal excerpt (declarations)",
           "purpose": "A realistic grammar for derivations: choose among productions for declarations, parameters and procedures.",
           "grammar": "pascal-declarations"
+        },
+        {
+          "label": "Java excerpt (statements and expressions)",
+          "purpose": "Braces, semicolons and typed declarations; the two if productions give one string two derivation trees (dangling else).",
+          "grammar": "java-statements-expressions"
+        },
+        {
+          "label": "Python excerpt (statements and expressions)",
+          "purpose": "Indentation as the terminals NEWLINE, INDENT and DEDENT instead of braces; an if inside a suite ends where its DEDENT is.",
+          "grammar": "python-statements-expressions"
         }
       ]
     },

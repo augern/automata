@@ -213,6 +213,16 @@
           "label": "Pascal excerpt (declarations)",
           "purpose": "Many left-recursive lists and nullable parts in one grammar: a longer run of the transformations.",
           "grammar": "pascal-declarations"
+        },
+        {
+          "label": "Java excerpt (statements and expressions)",
+          "purpose": "Nine left-recursive nonterminals, the operator layers and the lists, rewritten in one run into the LL-ready form.",
+          "grammar": "java-statements-expressions"
+        },
+        {
+          "label": "Python excerpt (statements and expressions)",
+          "purpose": "Ten left-recursive nonterminals: operator layers, statement list, elif chain and the argument lists.",
+          "grammar": "python-statements-expressions"
         }
       ]
     }

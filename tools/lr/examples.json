@@ -183,6 +183,16 @@
           "label": "Pascal excerpt (declarations)",
           "purpose": "Pascal declarations with left-recursive lists: LR(0) has conflicts that SLR(1) resolves. About a hundred states.",
           "grammar": "pascal-declarations"
+        },
+        {
+          "label": "Java excerpt (statements and expressions)",
+          "purpose": "Operator layers as left-recursive lists. The dangling else leaves one conflict in every method, because the grammar is ambiguous.",
+          "grammar": "java-statements-expressions"
+        },
+        {
+          "label": "Python excerpt (statements and expressions)",
+          "purpose": "Blocks are NEWLINE INDENT … DEDENT tokens, so there is no dangling else: SLR(1) has no conflicts. ** is right-associative.",
+          "grammar": "python-statements-expressions"
         }
       ]
     },

@@ -119,6 +119,16 @@
           "label": "Pascal excerpt (declarations)",
           "purpose": "Program header, declarations and procedures of Pascal: left-recursive lists and nullable parts give 14 conflicts, to be removed by rewriting.",
           "grammar": "pascal-declarations"
+        },
+        {
+          "label": "Java excerpt (LL(1) form)",
+          "purpose": "Left recursion removed. One conflict remains: else can start the optional else part and also follow it (the dangling else).",
+          "grammar": "java-statements-expressions-ll"
+        },
+        {
+          "label": "Python excerpt (LL(1) form)",
+          "purpose": "In the style of Python's original LL(1) grammar: no conflicts. Blocks end at DEDENT, so there is no dangling else.",
+          "grammar": "python-statements-expressions-ll"
         }
       ]
     },
