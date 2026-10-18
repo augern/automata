@@ -19,7 +19,7 @@ window.TOOL_GUIDE = {
     ["ε", "the empty string, or a move that reads no input"],
     ["i, f", "the start and accept state of the fragment being built (Thompson table and diagram)"],
     ["→  *", "start state, accepting state"],
-    ["∅", "no transition: the move leads to the empty set"],
+    ["blank cell", "no transition (the move leads to the empty set)"],
     ["✗  ≡", "in the minimisation table: a pair of states that can be told apart / that are equivalent"],
   ],
   legend: [

@@ -364,7 +364,7 @@ else: ${kw("reject")}`
         h += T.th("") + T.th("from") + T.th("input") + T.th("pop") + T.th("→", { muted: true }) + T.th("to") + T.th("push");
         h += "</tr></thead><tbody>";
         const field = (i, f, value, extra, opts) =>
-          T.input(value, `placeholder="${opts.muted ? "ε" : "–"}" data-ri="${i}" data-field="${f}"${extra}`, opts);
+          T.input(value, `placeholder="${opts.muted ? "ε" : ""}" data-ri="${i}" data-field="${f}"${extra}`, opts);
         for (let i = 0; i < pdaRules.length; i++) {
           const r = pdaRules[i];
           const fromValid = pdaStates.includes(r.from) || r.from === "";

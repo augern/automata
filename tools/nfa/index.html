@@ -88,7 +88,7 @@
           <div class="ui-footer">
             <button class="btn" onclick="addState()">+ State</button>
             <button class="btn" onclick="addSymbol()">+ Symbol</button>
-            <span class="ui-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for ∅.</span>
+            <span class="ui-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for no transition.</span>
           </div>
         </div>
       </div>
@@ -376,7 +376,7 @@ else: ${kw("reject")}`
           for (const sym of allSyms) {
             const val = (nfaTrans[sn] && nfaTrans[sn][sym]) ? nfaTrans[sn][sym].join(", ") : "";
             h += T.input(val,
-              `placeholder="${errSyms.includes(sym) ? esc(errN) : "–"}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
+              `placeholder="${errSyms.includes(sym) ? esc(errN) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
               ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"`,
               { muted: sym === "ε" });
           }
@@ -386,7 +386,7 @@ else: ${kw("reject")}`
         if (nfaErr) {
           h += `<tr class="is-error-row"><td class="ui-td--rm"></td><td class="ui-td--marker"></td><td class="ui-td--marker"></td>` + T.state(errN, "reject");
           for (const sym of nfaAlphabet) h += T.cell(esc(errN), "is-error").replace("<td", `<td data-state="${esc(errN)}" data-sym="${esc(sym)}"`);
-          h += T.cell("–", "is-muted");
+          h += T.cell("", "is-muted");
           h += T.cell(esc(errN), "is-error").replace("<td", `<td data-state="${esc(errN)}" data-sym="${NFA_WILD}"`);
           h += "</tr>";
         }

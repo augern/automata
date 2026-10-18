@@ -564,7 +564,7 @@ ${kw("loop")}:
             const t = tmTrans[sn]?.[sym];
             const isBlankCol = sym === BLANK;
             h += T.input(t ? transToString(t) : "",
-              `placeholder="—" data-state="${esc(sn)}" data-sym="${isBlankCol ? "_blank_" : esc(sym)}"` +
+              `placeholder="" data-state="${esc(sn)}" data-sym="${isBlankCol ? "_blank_" : esc(sym)}"` +
               ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"`,
               { muted: isBlankCol, size: "wide" });
           }
