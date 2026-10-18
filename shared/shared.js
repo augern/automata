@@ -789,8 +789,10 @@ function treeChooseDir(vr, nodes) {
 // The edge from parent p to child c, as an SVG path, for direction dir.
 function treeEdgePath(p, c, dir) {
   if (dir === "side") {
-    const x1 = p._x + treeNodeW(p.symbol) / 2, x2 = c._x - treeNodeW(c.symbol) / 2, m = (x1 + x2) / 2;
-    return `M ${x1},${p._y} L ${m},${p._y} L ${m},${c._y} L ${x2},${c._y}`;
+    // like the top-down fan-out, turned: a diagonal from the parent to a point a fixed distance to its right (the
+    // same for all siblings, so they fan out together), then straight into the child
+    const x1 = p._x + treeNodeW(p.symbol) / 2, x2 = c._x - treeNodeW(c.symbol) / 2, xm = Math.min(x1 + 18, x2);
+    return `M ${x2},${c._y} L ${xm},${c._y} L ${x1},${p._y}`;
   }
   const ey = p._y + TLH / 2;
   return `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`;
