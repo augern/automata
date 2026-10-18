@@ -52,6 +52,12 @@
           "label": "(0|1|...|9)+",
           "purpose": "A practical token, unsigned decimal numbers, built from a wide union.",
           "text": "(0|1|2|3|4|5|6|7|8|9)+"
+        },
+        {
+          "label": "baⁿbᵐ (n, m ≥ 1) — ba+b+",
+          "purpose": "A b, one or more a, then one or more b. With the error state, strings such as ab or bb end in err.",
+          "text": "ba+b+",
+          "errorState": true
         }
       ]
     },

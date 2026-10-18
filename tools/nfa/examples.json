@@ -616,6 +616,65 @@
       "label": "Error state",
       "examples": [
         {
+          "label": "baⁿbᵐ (n, m ≥ 1) — ba+b+",
+          "purpose": "A b, one or more a, then one or more b. Every other string, such as ab, bb or baba, ends in the error state.",
+          "errorState": true,
+          "states": [
+            "q0",
+            "q1",
+            "q2",
+            "q3"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
+          "start": "q0",
+          "accepts": [
+            "q3"
+          ],
+          "strings": [
+            "baab",
+            "bab",
+            "baabbb",
+            "bb",
+            "ab",
+            "baba"
+          ],
+          "trans": {
+            "q0": {
+              "a": [],
+              "b": [
+                "q1"
+              ],
+              "ε": []
+            },
+            "q1": {
+              "a": [
+                "q2"
+              ],
+              "b": [],
+              "ε": []
+            },
+            "q2": {
+              "a": [
+                "q2"
+              ],
+              "b": [
+                "q3"
+              ],
+              "ε": []
+            },
+            "q3": {
+              "a": [],
+              "b": [
+                "q3"
+              ],
+              "ε": []
+            }
+          }
+        },
+        {
           "label": "Identifier — l letter, d digit",
           "purpose": "A name starts with a letter. A digit first, or a symbol outside the alphabet, leads to the explicit error state, which absorbs the rest of the input.",
           "errorState": true,
