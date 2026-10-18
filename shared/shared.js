@@ -276,6 +276,7 @@ function panelSummaries() {
 // Each panel header's secondary buttons (Algorithm, view toggles...) move into
 // a "…" menu, next to the standard panel actions; the original buttons stay in
 // the DOM (hidden) so existing handlers and state keep working.
+var panelMenuExtras = {};
 function installPanelMenus() {
   if (typeof UI === "undefined") return;
   _panels().forEach((el) => {
@@ -298,6 +299,9 @@ function installPanelMenus() {
         checked: b.classList.contains("min-toggle") ? b.classList.contains("active") : undefined,
         onSelect: () => b.click(),
       }));
+      // items a tool or shared code adds to one panel's menu: panelMenuExtras[panelId] = () => [menu items]
+      const extra = panelMenuExtras[el.id] ? panelMenuExtras[el.id]() : [];
+      if (extra.length) items.push(...(items.length ? [{ separator: true }] : []), ...extra);
       if (items.length) items.push({ separator: true });
       if (panelFocusedId() === el.id) {
         items.push({ label: "Restore layout", hint: "F", title: "Undo \"Focus on this panel\": bring back the panels as they were", onSelect: panelRestoreFocus });
@@ -718,6 +722,17 @@ function setTreeDirMode(m) {
   try { localStorage.setItem("parser-tools-treedir", m); } catch (e) { /* storage blocked */ }
   if (typeof renderTree === "function") renderTree();
 }
+
+// The parse tree panel's menu offers the direction.
+panelMenuExtras["p-tree"] = function () {
+  if (!document.getElementById("tree-svg")) return [];
+  return [
+    { heading: "Tree direction" },
+    { label: "Automatic", checked: treeDirMode === "auto", title: "Top-down, or sideways when that fits the pane better", onSelect: () => setTreeDirMode("auto") },
+    { label: "Top-down", checked: treeDirMode === "down", onSelect: () => setTreeDirMode("down") },
+    { label: "Sideways", checked: treeDirMode === "side", title: "Root on the left, children to its right", onSelect: () => setTreeDirMode("side") },
+  ];
+};
 
 // Sets n._x and n._y of every node of the forest (vr is the virtual root, nodes the real ones) for direction
 // dir, and returns { w, h } of the drawing.
