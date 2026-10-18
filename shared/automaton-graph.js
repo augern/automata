@@ -43,11 +43,22 @@ function createGraphView(prefix, { hasNodes = () => true, onRelayout = null } = 
 
 // The dagre layout of a spec in one direction ("LR" or "TB").
 function graphLayout(spec, dir) {
-  const { nodes, edges, radius: R = 16, ranksep = 64 } = spec;
+  const { nodes, edges, loops = [], radius: R = 16, ranksep = 64 } = spec;
   const dg = new dagre.graphlib.Graph();
   dg.setGraph({ rankdir: dir, nodesep: 36, ranksep, marginx: 50, marginy: 40 });
   dg.setDefaultEdgeLabel(() => ({}));
-  for (let i = 0; i < nodes.length; i++) dg.setNode(i, { width: R * 2 + 4, height: R * 2 + 4 });
+  // A state with a self-loop reserves room for the loop and its label (above it in left-to-right layouts, to its
+  // right in top-to-bottom ones), so that other edges are routed around it. The box is symmetric: dagre centres it.
+  const loopLabelW = new Map(loops.map((lp) => [lp.node, lp.labels.join(", ").length * 5.6]));
+  for (let i = 0; i < nodes.length; i++) {
+    let w = R * 2 + 4, h = R * 2 + 4;
+    if (loopLabelW.has(i)) {
+      const lw = loopLabelW.get(i);
+      if (dir === "TB") w += 2 * (36 + lw);
+      else { w = Math.max(w, lw + 12); h += 2 * 46; }
+    }
+    dg.setNode(i, { width: w, height: h });
+  }
   for (const e of edges) dg.setEdge(e.from, e.to, {});
   dagre.layout(dg);
   return dg;
