@@ -1,7 +1,7 @@
 // The Guide pop-up for this tool (see shared/guide.js): what it does, how to use it, notation and colours.
 // Legend colour names: blue, green, red, grey, orange.
 window.TOOL_GUIDE = {
-  title: "Pumping explorer",
+  title: "Pumping",
   intro: "Shows why the pumping lemmas hold. A long path in a DFA visits some state twice; a tall path in a parse tree repeats some nonterminal. Repeating the loop, or the part between the two nonterminals, gives more strings of the same language.",
   use: [
     "Regular: define a DFA as text (`q0 a q1` is a transition; `start:` and `accept:` name states) or convert a regular expression to its minimal DFA. For a string, the path through the DFA is shown; the first state visited twice splits the string into x, y and z.",

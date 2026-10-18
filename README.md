@@ -10,7 +10,7 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination, Greibach Normal Form (GNF) |
 | **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step, or let a seeded "Random choice" stepper derive for you (Back/forward, Reseed, ←/→ keys, seed kept in share links) |
 | **PDA Simulator** | Nondeterministic PDA / ε-PDA — transition rule list, automaton graph, configuration-set simulation |
-| **Pumping Explorer** | Why the pumping lemmas hold: a repeated state on a DFA's path and a repeated nonterminal on a parse tree's path, pumped step by step |
+| **Pumping** | Why the pumping lemmas hold: a repeated state on a DFA's path and a repeated nonterminal on a parse tree's path, pumped step by step |
 | **Backtracking Recursive Descent** | The procedures generated from a grammar and the search for a parse — guesses, backtracking and dead ends as a call tree, the read position over time, linked to the highlighted code; complete search, ordered choice or packrat (memoised), left recursion detected |
 | **LL(1) Parser Tool** | Predictive parsing — FIRST/FOLLOW sets, predictive table M[A,a], derivation steps, string simulation, parse tree |
 | **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
