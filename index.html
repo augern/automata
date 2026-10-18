@@ -70,13 +70,9 @@ body[data-view="list"] #view-map { display: none; }
 #tip .tip-builds { display: block; margin-top: var(--sp-2); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); }
 
 /* ── List ── */
-.index-card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  padding: 32px 40px;
-  max-width: 520px;
-  width: 100%;
-}
+/* The list and the compiler section share one width, so that every tool box is equally wide */
+#view-list, #view-compiler { width: 100%; max-width: 560px; box-sizing: border-box; }
+.index-card { width: 100%; }
 .tool-group { margin-bottom: 22px; }
 .tool-group:last-child { margin-bottom: 0; }
 .group-label {
@@ -101,8 +97,6 @@ body[data-view="list"] #view-map { display: none; }
 .tool-link .tl-desc { font-size: var(--fs-sm); line-height: 1.4; color: var(--text-dim); }
 .tool-link .tl-needs { margin-top: var(--sp-2); font-size: var(--fs-xs); font-style: italic; color: var(--text-lo); }
 
-#view-compiler { display: flex; justify-content: center; width: 100%; padding: 0 var(--sp-6); box-sizing: border-box; }
-#view-compiler .index-card { max-width: 720px; }
 .cc-intro { margin: 0 0 var(--sp-5); font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.4; }
 .footer { font-size: var(--fs-xs); color: var(--text-lo); text-align: center; max-width: 720px; }
 .footer p { margin: var(--sp-2) 0; }
