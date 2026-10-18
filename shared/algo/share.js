@@ -135,6 +135,8 @@ function shareValidateTextState(obj, field, modes) {
     if (!shareIsStr(obj.m) || (modes && !modes.includes(obj.m))) return null;
     out.m = obj.m;
   }
+  // Optional flag (the error state shown in the NFA and regex tools).
+  if (obj.e === true) out.e = true;
   // Optional random seed (the derivation tool's random choices): a 32-bit unsigned integer.
   if (obj.sd !== undefined) {
     if (!Number.isInteger(obj.sd) || obj.sd < 0 || obj.sd > 4294967295) return null;

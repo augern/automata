@@ -9,6 +9,7 @@ window.TOOL_GUIDE = {
     "Thompson stage: the expression marks what each step builds (operator boxed, operands tinted). The diagram under the table shows the fragments being combined; the transitions added by the step are amber, and boxed in the table.",
     "Simulation panel: enter a string, or pick one with the dice (random accepted string) or ▾ (examples).",
     "Apply / Skip in the Minimisation panel selects whether the graph and the simulation use the minimal DFA.",
+    "Error state (Simulation panel) adds an explicit state err to the graph and the simulation: a state with no transition on a symbol goes to err, which absorbs the rest of the input. The red ? stands for every symbol outside the alphabet.",
     "The DFA graph appears when subset construction is complete. Hovering a state or edge marks the matching row or cell of the subset-construction table.",
   ],
   notation: [
