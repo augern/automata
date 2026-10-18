@@ -110,14 +110,18 @@ const CompilerTool = (() => {
     const chars = [...$("sim-input").value];
     el.innerHTML = "";
     if (!chars.length) { el.innerHTML = '<span class="cm-empty">empty input</span>'; return; }
+    // Blue: the lexeme the scanner has just consumed, and, until the parser shifts it, the look-ahead token's lexeme.
+    // Orange: characters read beyond it and given back. Faded: everything consumed before. The rest is normal.
     const lex = f && f.lex;
+    const pending = f && !lex && f.la !== null && f.tokens.length ? f.tokens[f.tokens.length - 1] : null;
+    const blue = lex ? [lex.start, lex.end] : pending ? [pending.start, pending.end] : null;
     chars.forEach((ch, i) => {
       const s = document.createElement("span");
       let cls = "cm-ch";
       if (f) {
-        if (lex && i >= lex.start && i < lex.end) cls += " is-lex";
+        if (blue && i >= blue[0] && i < blue[1]) cls += " is-lex";
         else if (lex && i >= lex.end && i < lex.readTo) cls += " is-peek";
-        else if (i < (lex ? lex.start : f.cursor)) cls += " is-done";
+        else if (i < (blue ? blue[0] : f.cursor)) cls += " is-done";
       }
       if (ch === " ") cls += " is-sp";
       s.className = cls;

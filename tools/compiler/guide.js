@@ -6,7 +6,7 @@ window.TOOL_GUIDE = {
   use: [
     "Token rules, one per line: `name  pattern`. The name is the terminal the grammar uses (quoted when it has special characters, as `'+'`). Patterns are regular expressions as in the Regular Expression tool, with character classes such as `[0-9]`. `-> skip` marks rules whose lexemes are discarded. The longest match wins; on a tie the earlier rule does.",
     "The grammar is written as in the other grammar tools; a terminal needs a token rule of the same name. An action goes in `{{ … }}` after the symbols of an alternative. A grammar without actions only parses.",
-    "Step through the run. The Input row shows the scanner at work: the lexeme it consumes, and the characters it looked at beyond it and gave back. The parser is a table-driven SLR(1) parser; when its next action is a reduction whatever the next token is, it reduces first and fetches no token. A lexical error is a position where no token rule matches; a syntax error is a token the parser cannot use in its current state.",
+    "Step through the run. The Input row shows the scanner at work: the lexeme it consumes (blue), the characters it looked at beyond it and gave back (orange), and, faded, everything consumed before; what is not faded remains to be read. The parser is a table-driven SLR(1) parser; when its next action is a reduction whatever the next token is, it reduces first and fetches no token. A lexical error is a position where no token rule matches; a syntax error is a token the parser cannot use in its current state.",
     "In an action, `$1`, `$2`, … are the attribute values of the right-hand side symbols and `$$` is the value of the left side. `$$.name` and `$1.name` are named attributes; a bare `$1` is the attribute `val`; a token has `lexeme` and `val` (and `type` for int and float tokens). A rule without an action copies the attributes of `$1`.",
     "An action is a list of statements separated by `;`: assignments to `$$`, `$$.name` or a local name; calls; arithmetic, comparison, `and`, `or`, `not` and `c ? a : b`. A bare word such as `float` is a string.",
     "Functions: `newtemp()` a fresh temporary, `emit(op, a, b, result)` append a quadruple, `lookup(name)` and `install(name, type)` for the symbol table, `widen(t1, t2)`, `coerce(place, from, to)` (emits a conversion such as `int2float`), `require(condition, message)`, `error(message)`, `trunc(x)`.",
@@ -22,7 +22,8 @@ window.TOOL_GUIDE = {
     ["temporary", "a name tN for an intermediate result"],
   ],
   legend: [
-    ["grey", "text the scanner has consumed"],
+    ["blue", "the lexeme the scanner has just consumed, and the look-ahead token's lexeme until the parser shifts it"],
+    ["grey", "faded: everything consumed earlier; the text that is not faded remains to be read"],
     ["orange", "characters the scanner looked at beyond the lexeme, and gave back; the look-ahead token"],
     ["green", "the input was accepted"],
     ["red", "a lexical or syntax error"],
