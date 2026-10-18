@@ -181,7 +181,7 @@ function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES, opts = {}
 // ── The error state ──────────────────────────────────────────────────
 // Optionally a branch that cannot move enters an explicit error state instead of just ending. A state s
 // has an error move on a symbol when no state of its ε-closure has a move on it. "Any symbol outside the
-// alphabet" is written NFA_WILD (a private-use character that the views draw as a red-backed "?").
+// alphabet" is written NFA_WILD (a private-use character that the views draw as a red "?").
 const NFA_WILD = "\uE000";
 
 // A name for the error state that no state of the automaton uses.

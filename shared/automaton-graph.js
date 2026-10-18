@@ -78,7 +78,7 @@ function drawAutomatonGraph(prefix, view, spec) {
 
   // Label text: joined on one line, or one <text> per label stacked and centred on (x, y).
   // With ids, each stacked label remembers its id and the edge group reports hovers.
-  // A label equal to the private-use wildcard (NFA_WILD, "any other symbol") is drawn as a red-backed "?".
+  // A label equal to the private-use wildcard (NFA_WILD, "any other symbol") is drawn as a red "?".
   const WILD = "\uE000";
   function addLabel(g, labels, x, y, ids) {
     if (joinLabels) {
