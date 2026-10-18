@@ -67,18 +67,24 @@ const CompilerTool = (() => {
   }
 
   // ── Rendering a frame ─────────────────────────────────────
-  function attrText(attrs) {
+  // The attributes of a node or stack entry as short items ("val" without its name). A token whose lexeme is its own
+  // name (an operator, a keyword) says nothing more than the node itself, and a lexeme equal to the value is not
+  // repeated.
+  function attrParts(attrs) {
+    if (!attrs) return [];
+    if (attrs.name !== undefined && attrs.lexeme === attrs.name) return [];
     const parts = [];
-    for (const k of Object.keys(attrs || {})) {
+    for (const k of Object.keys(attrs)) {
       if (k === "name" || k === "start" || k === "end" || k === "entry") continue;
-      if (k === "lexeme" && attrs.val === attrs.lexeme) continue;
+      if (k === "lexeme" && String(attrs.val) === attrs.lexeme) continue;
       let v = attrs[k];
       if (typeof v === "number") v = Math.round(v * 1e6) / 1e6;
       if (v === "" || v === undefined || v === null) continue;
       parts.push((k === "val" ? "" : k + "=") + v);
     }
-    return parts.join("  ");
+    return parts;
   }
+  const attrText = (attrs) => attrParts(attrs).join("  ");
 
   function render() {
     const f = run ? run.frames[Math.min(sim.pos, run.frames.length - 1)] : null;
@@ -168,9 +174,12 @@ const CompilerTool = (() => {
     const nodes = [], edges = [];
     (function col(n) { if (n.id !== -1) nodes.push(n); n.children.forEach((c) => { if (n.id !== -1) edges.push({ p: n, c }); col(c); }); })(vr);
     const nt = comp ? comp.grammar.nonterminals : new Set();
-    const label2 = (n) => (feat.annotate ? attrText(n.node.attrs) : "");
+    // with actions, a node shows its attributes, one per line under the symbol
+    const lines = (n) => (feat.annotate ? attrParts(n.node.attrs) : []);
+    const maxLines = Math.max(0, ...nodes.map((n) => lines(n).length));
+    const half = Math.max(18, 9 + 6 * (1 + maxLines));
     const lay = {
-      width: (n) => Math.max(treeNodeW(n.symbol), label2(n).length * 6 + 16), half: feat.annotate ? 20 : 18, row: feat.annotate ? 74 : 60,
+      width: (n) => Math.max(treeNodeW(n.symbol), ...lines(n).map((l) => l.length * 6 + 16)), half, row: 2 * half + 34,
     };
     const dir = treeChooseDir(vr, nodes, lay, "tree-svg");
     treePlace(vr, nodes, dir, lay);
@@ -180,9 +189,10 @@ const CompilerTool = (() => {
       const isNt = nt.has(n.symbol);
       const ng = g.append("g").attr("class", "tree-node" + (isNt ? "" : " terminal")).attr("transform", "translate(" + n._x + "," + n._y + ")");
       ng.append("rect").attr("class", "tn-shape").attr("x", -n._w / 2).attr("y", -n._half).attr("width", n._w).attr("height", 2 * n._half).attr("rx", Math.min(n._half, 14));
-      const second = label2(n);
-      ng.append("text").attr("dy", second ? "-4" : "0").text(n.symbol);
-      if (second) ng.append("text").attr("class", "rule-label").attr("dy", "10").text(second);
+      const ls = lines(n);
+      const top = -(ls.length * 6.5) + 1; // the symbol, then the attributes, centred as a block
+      ng.append("text").attr("dy", top).text(n.symbol);
+      ls.forEach((l, i) => ng.append("text").attr("class", "rule-label").attr("dy", top + 12 + i * 11).text(l));
     });
     view.refit();
   }
