@@ -70,20 +70,23 @@ const CompilerTool = (() => {
   // The attributes of a node or stack entry as short items ("val" without its name). A token whose lexeme is its own
   // name (an operator, a keyword) says nothing more than the node itself, and a lexeme equal to the value is not
   // repeated.
-  function attrParts(attrs) {
-    if (!attrs) return [];
-    if (attrs.name !== undefined && attrs.lexeme === attrs.name) return [];
-    const parts = [];
+  // Split into what the scanner provides (a token's lexeme and value) and what the actions compute.
+  function attrGroups(attrs) {
+    const g = { scanner: [], sem: [] };
+    if (!attrs) return g;
+    if (attrs.name !== undefined && attrs.lexeme === attrs.name) return g;
+    const isToken = attrs.name !== undefined;
     for (const k of Object.keys(attrs)) {
       if (k === "name" || k === "start" || k === "end" || k === "entry") continue;
       if (k === "lexeme" && String(attrs.val) === attrs.lexeme) continue;
       let v = attrs[k];
       if (typeof v === "number") v = Math.round(v * 1e6) / 1e6;
       if (v === "" || v === undefined || v === null) continue;
-      parts.push((k === "val" ? "" : k + "=") + v);
+      (isToken && (k === "val" || k === "lexeme") ? g.scanner : g.sem).push((k === "val" ? "" : k + "=") + v);
     }
-    return parts;
+    return g;
   }
+  function attrParts(attrs) { const g = attrGroups(attrs); return g.scanner.concat(g.sem); }
   const attrText = (attrs) => attrParts(attrs).join("  ");
 
   function render() {
@@ -175,9 +178,12 @@ const CompilerTool = (() => {
     (function col(n) { if (n.id !== -1) nodes.push(n); n.children.forEach((c) => { if (n.id !== -1) edges.push({ p: n, c }); col(c); }); })(vr);
     const nt = comp ? comp.grammar.nonterminals : new Set();
     // with actions, a node shows its attributes, one per line under the symbol
-    const lines = (n) => (feat.annotate ? attrParts(n.node.attrs) : []);
-    const maxLines = Math.max(0, ...nodes.map((n) => lines(n).length));
-    const half = Math.max(18, 9 + 6 * (1 + maxLines));
+    const groups = (n) => (feat.annotate ? attrGroups(n.node.attrs) : { scanner: [], sem: [] });
+    const lines = (n) => { const g = groups(n); return g.scanner.concat(g.sem); };
+    const divided = (n) => { const g = groups(n); return g.scanner.length > 0 && g.sem.length > 0; };
+    const height = (n) => lines(n).length * 11 + (divided(n) ? 7 : 0);
+    const maxH = Math.max(0, ...nodes.map(height));
+    const half = Math.max(18, 14 + (maxH + 13) / 2);
     const lay = {
       width: (n) => Math.max(treeNodeW(n.symbol), ...lines(n).map((l) => l.length * 6 + 16)), half, row: 2 * half + 34,
     };
@@ -189,10 +195,18 @@ const CompilerTool = (() => {
       const isNt = nt.has(n.symbol);
       const ng = g.append("g").attr("class", "tree-node" + (isNt ? "" : " terminal")).attr("transform", "translate(" + n._x + "," + n._y + ")");
       ng.append("rect").attr("class", "tn-shape").attr("x", -n._w / 2).attr("y", -n._half).attr("width", n._w).attr("height", 2 * n._half).attr("rx", Math.min(n._half, 14));
-      const ls = lines(n);
-      const top = -(ls.length * 6.5) + 1; // the symbol, then the attributes, centred as a block
-      ng.append("text").attr("dy", top).text(n.symbol);
-      ls.forEach((l, i) => ng.append("text").attr("class", "rule-label").attr("dy", top + 12 + i * 11).text(l));
+      const gr = groups(n), ls = lines(n);
+      const block = 13 + height(n); // the symbol, then the scanner's items, a divider, then the actions' items
+      let y = -block / 2 + 8;
+      ng.append("text").attr("dy", y).text(n.symbol);
+      ls.forEach((l, i) => {
+        if (divided(n) && i === gr.scanner.length) {
+          ng.append("line").attr("class", "cm-divider").attr("x1", -n._w / 2 + 6).attr("x2", n._w / 2 - 6).attr("y1", y + 8).attr("y2", y + 8);
+          y += 7;
+        }
+        y += 11;
+        ng.append("text").attr("class", "rule-label").attr("dy", i === 0 ? y + 2 : y + 2).text(l);
+      });
     });
     view.refit();
   }

@@ -47,3 +47,5 @@
 #cm-out h3 { margin: var(--sp-4) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: normal; font-style: italic; font-family: var(--font-serif); color: var(--text-dim); }
 .cm-value { font-family: var(--font-mono); font-size: var(--fs-lg); margin: 0; }
 .cm-msgs { margin: 0; padding-left: 18px; font-size: var(--fs-sm); color: var(--st-reject); }
+
+.tree-node .cm-divider { stroke: var(--border-hi); stroke-width: 1; }
