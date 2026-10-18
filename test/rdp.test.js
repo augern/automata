@@ -264,3 +264,21 @@ test("packrat procedures start with a memo lookup and store their result", () =>
   assert.match(text(lines.at(-1)), /^memo\(S, i\) ← ✗/);
   assert.equal(L.rdpKeyParts(L.rdpKey("S", "memo")).part, "memo");
 });
+
+test("rdpRuleSpans: quoted symbols (with | and spaces inside) are one symbol each", () => {
+  const text = "R -> R '|' C | C\nC -> 'a b' x";
+  const sp = L.rdpRuleSpans(text);
+  assert.equal(sp.length, 3);
+  const at = (t) => text.slice(t[0], t[1]);
+  assert.deepEqual(arr(sp[0].toks.map(at)), ["R", "'|'", "C"]);
+  assert.equal(at(sp[0].rhs), "R '|' C");
+  assert.equal(at(sp[1].rhs), "C");
+  assert.deepEqual(arr(sp[2].toks.map(at)), ["'a b'", "x"]);
+});
+
+test("recursive descent: a grammar with quoted operators parses unspaced input", () => {
+  const g = L.rdpParseGrammar("A -> '(' A ')' | a");
+  assert.deepEqual(arr(rdpTokenise(g, "((a))")), ["(", "(", "a", ")", ")"]);
+  assert.equal(L.rdpRun(g, rdpTokenise(g, "((a))"), { mode: "full" }).accepted, true);
+  assert.equal(L.rdpRun(g, rdpTokenise(g, "((a)"), { mode: "full" }).accepted, false);
+});

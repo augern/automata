@@ -224,3 +224,11 @@ test("random derivations of S -> S S | a | ( S ) usually finish within the run c
   }
   assert.ok(done >= 195, "finished " + done);
 });
+
+test("derivation grammar: quoted terminals and <name> nonterminals", () => {
+  const g = parseDerivationGrammar("<s> -> '|' <a> | eps\n<a> -> 'x y' | ''");
+  assert.deepEqual(JSON.parse(JSON.stringify(g.rules.map((r) => r.rhs))), [["|", "<a>"], [], ["x y"], []]);
+  assert.deepEqual([...g.nonterminals].sort(), ["<a>", "<s>"]);
+  // an <name> that only appears on a right-hand side is still a nonterminal
+  assert.ok(parseDerivationGrammar("S -> <t> a").nonterminals.has("<t>"));
+});

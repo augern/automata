@@ -17,7 +17,8 @@ function esc(s) {
 // The alternatives of a right-hand side, with the offsets of everything (relative to the text):
 //   [{ from, to, toks: [{ sym, from, to }] }]   an alternative with no tokens is ε.
 // Symbols are separated by whitespace and alternatives by "|". A symbol in single or double quotes is a terminal
-// written literally: '|' is the terminal |, 'a b' one terminal with a space in it, and '' (or "") is ε. Unquoted,
+// written literally: '|' is the terminal |, 'a b' one terminal with a space in it, and '' (or "") is ε. Inside the
+// quotes the quote character doubled is itself ('''' is the terminal ', 'it''s' is it's; or write "'"). Unquoted,
 // eps, epsilon and ε are ε.
 function bnfAlternatives(rhs) {
   const alts = [];
