@@ -235,6 +235,8 @@
         background: var(--bg-cell);
         font-style: italic;
       }
+      .parse-table td.min-state-cell.is-hot { background: var(--hot-bg); }
+      .min-result-title { margin-top: var(--sp-5); font-family: var(--font-serif); font-style: italic; color: var(--text-dim); }
       /* NFA-set column in DFA table */
       .parse-table th.dfa-set-hdr {
         font-weight: normal;
@@ -1289,9 +1291,74 @@
           });
           wrap.appendChild(groupsEl);
         }
+        if (isDone) renderMinResult(document.getElementById("min-table-wrap"));
 
         mcSetBtns();
       }
+
+      // The minimal DFA as a transition table under the pair table (states M0, M1, … as in the graph). Hovering
+      // links it to the graph (when the graph shows the minimal DFA) and to the states of the subset table.
+      function renderMinResult(wrap) {
+        const { dfaStates, dfaAccepts, dfaTrans, alpha } = _minData;
+        const tbl = document.createElement("table");
+        tbl.className = "parse-table min-result";
+        tbl.innerHTML = '<thead><tr><th class="state-col">State</th>' + alpha.map((a) => "<th>" + esc(a) + "</th>").join("") + "</tr></thead>";
+        const tb = document.createElement("tbody");
+        for (let i = 0; i < dfaStates.length; i++) {
+          const isStart = i === 0, isAccept = dfaAccepts.has(i);
+          const tr = document.createElement("tr");
+          const sc = document.createElement("td");
+          sc.dataset.s = i;
+          sc.className = "min-state-cell " + (isStart && isAccept ? "dfa-both" : isStart ? "dfa-start" : isAccept ? "dfa-accept" : "dfa-plain");
+          sc.textContent = (isStart && isAccept ? "→* " : isStart ? "→  " : isAccept ? "*  " : "   ") + "M" + i;
+          tr.appendChild(sc);
+          for (const sym of alpha) {
+            const td = document.createElement("td");
+            td.dataset.s = i;
+            td.dataset.sym = sym;
+            const tx = dfaTrans.find((t) => t.from === i && t.sym === sym);
+            td.textContent = tx !== undefined ? "M" + tx.to : _errOn ? ERR_NAME : "∅";
+            td.dataset.hov = tx !== undefined || _errOn ? "1" : "";
+            tr.appendChild(td);
+          }
+          tb.appendChild(tr);
+        }
+        tbl.appendChild(tb);
+        const title = document.createElement("div");
+        title.className = "min-result-title";
+        title.textContent = "Minimal DFA";
+        wrap.append(title, tbl);
+      }
+      // Minimal-DFA state of a subset-construction state, and the subset states of a minimal one.
+      const minOf = (o) => { const gi = _minData.groups.findIndex((g) => g.includes(o)); return gi < 0 ? null : _minData.renumMap[gi]; };
+      const subsetOf = (j) => { const gi = _minData.renumMap.indexOf(j); return gi < 0 ? [] : _minData.groups[gi]; };
+      // `cells`: keys "M|sym" to mark in the minimal table; `rows`: M states to mark there. (Separate, because the
+      // cell handler and the state handler of one container clear each other's items otherwise.)
+      function hotMinCells(cells) {
+        for (const td of document.querySelectorAll("#min-table-wrap .min-result td[data-sym]")) td.classList.toggle("is-hot", cells.has(td.dataset.s + "|" + td.dataset.sym));
+      }
+      function hotMinRows(rows) {
+        for (const td of document.querySelectorAll("#min-table-wrap .min-result td.min-state-cell")) td.classList.toggle("is-hot", rows.has(+td.dataset.s));
+      }
+      function mcHoverEdges(ids) {
+        const cells = new Set(ids || []), d = new Set();
+        for (const id of ids || []) { const [j, sym] = id.split("|"); for (const o of subsetOf(+j)) d.add(o + "|" + sym); }
+        hotMinCells(cells);
+        if (dfaMinimised()) setGraphHot("dfa", ids);
+        for (const td of document.querySelectorAll("#dfa-table-wrap td[data-sym]")) td.classList.toggle("is-hot", d.has(td.dataset.s + "|" + td.dataset.sym));
+      }
+      function mcHoverState(j) {
+        hotMinRows(new Set(j === null ? [] : [j]));
+        if (dfaMinimised()) setGraphNodeHot("dfa", j);
+        const rows = new Set(j === null ? [] : subsetOf(j));
+        for (const td of document.querySelectorAll("#dfa-table-wrap td.dfa-state-cell")) td.classList.toggle("is-hot", rows.has(+td.dataset.s));
+        if (_minData && _minDone) {
+          const m = j === null ? null : dfaMinimised() ? j : minOf(j);
+          hotMinRows(new Set(m === null ? [] : [m]));
+        }
+      }
+      UI.hoverItems("min-table-wrap", ".min-result td[data-sym]", (td) => (td.dataset.hov ? [td.dataset.s + "|" + td.dataset.sym] : null), mcHoverEdges);
+      UI.hoverItems("min-table-wrap", ".min-result td.min-state-cell", (td) => +td.dataset.s, mcHoverState);
 
       // The graph and the simulation use the Thompson NFA until the subset construction has been stepped to its
       // end, and always when it is skipped (the same rule as for minimisation).
@@ -1514,6 +1581,7 @@
         document.getElementById("opt-err").checked = on;
         saveShare();
         refreshActiveDFA();
+        if (_minData && _minDone) mcRenderStep();
       }
       function graphStateOf(o) {
         if (!dfaMinimised()) return o;
@@ -1533,6 +1601,12 @@
           for (const o of tableStatesOf(+j)) want.add(o + "|" + sym);
         }
         for (const td of document.querySelectorAll("#dfa-table-wrap td[data-sym]")) td.classList.toggle("is-hot", want.has(td.dataset.s + "|" + td.dataset.sym));
+        if (_minData && _minDone) {
+          // the same transitions in the minimal table (graph ids are minimal-DFA states when it is applied, else subset states)
+          const cells = new Set();
+          for (const id of ids || []) { const [j, sym] = id.split("|"); const m = dfaMinimised() ? +j : minOf(+j); if (m !== null) cells.add(m + "|" + sym); }
+          hotMinCells(cells);
+        }
       }
       function dfaHoverState(j) {
         if (!nfaDirect()) setGraphNodeHot("dfa", j);
