@@ -7,7 +7,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=f3a71061" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../../shared/ui.css?v=9129206a" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-def { --pw: 360; --pmin: 280px; }
@@ -189,7 +189,7 @@
     <script src="guide.js?v=a22485ff"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/automaton-graph.js?v=39422e12"></script>
+    <script src="../../shared/automaton-graph.js?v=69c0e607"></script>
     <script>
       // shared.js stubs
       function renderTree() {}
@@ -449,7 +449,7 @@ else: ${kw("reject")}`
           // Every state that can get stuck gets one edge to the error state: the alphabet symbols it lacks, and
           // the wildcard for every symbol outside the alphabet. The error state loops on everything.
           const ei = nodes.length, en = errName(), cur = currentNFA();
-          nodes.push({ label: en, rejecting: true });
+          nodes.push({ label: en, error: true });
           nfaStates.forEach((sn, fi) => {
             const miss = nfaErrorSymbols(cur, nfaAlphabet, sn);
             edges.push({ from: fi, to: ei, labels: [...miss, NFA_WILD], ids: [...miss.map((a) => sn + "|" + a), sn + "|" + NFA_WILD], eps: false });
@@ -717,6 +717,11 @@ else: ${kw("reject")}`
             .on("click", (ev) => { ev.stopPropagation(); selectConfig(node.id); });
           ng.append("title").text("Click to explain this configuration");
           ng.append("circle").attr("r", TREE_R);
+          if (node.error) {
+            const k = TREE_R * Math.SQRT1_2;
+            ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", -k).attr("x2", k).attr("y2", k);
+            ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", k).attr("x2", k).attr("y2", -k);
+          }
           if (node.accepted) {
             ng.append("circle").attr("class", "ct-ring").attr("r", TREE_R - 3);
           }
@@ -917,6 +922,7 @@ else: ${kw("reject")}`
         renderDefTable();
         onNFAChange();
         _strExamples = ex.strings || [];
+        if (ex.errorState && !nfaErr) setErrorState(true);
       }
 
       let sharedStateApplied = false; // set when the page was restored from a shareable link

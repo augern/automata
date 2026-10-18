@@ -611,6 +611,52 @@
           }
         }
       ]
+    },
+    {
+      "label": "Error state",
+      "examples": [
+        {
+          "label": "Identifier — l letter, d digit",
+          "purpose": "A name starts with a letter. A digit first, or a symbol outside the alphabet, leads to the explicit error state, which absorbs the rest of the input.",
+          "errorState": true,
+          "states": [
+            "q0",
+            "q1"
+          ],
+          "alphabet": [
+            "l",
+            "d"
+          ],
+          "start": "q0",
+          "accepts": [
+            "q1"
+          ],
+          "strings": [
+            "ldl",
+            "dl",
+            "l_d",
+            "ll"
+          ],
+          "trans": {
+            "q0": {
+              "l": [
+                "q1"
+              ],
+              "d": [],
+              "ε": []
+            },
+            "q1": {
+              "l": [
+                "q1"
+              ],
+              "d": [
+                "q1"
+              ],
+              "ε": []
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -92,6 +92,12 @@
           "label": "Number literal with fraction and exponent",
           "purpose": "A practical token: optional sign, digits, optional fraction, optional exponent (d is a digit). Nested optional parts give a long ε-chain.",
           "text": "(\\+|-)?d+(\\.d+)?(e(\\+|-)?d+)?"
+        },
+        {
+          "label": "Identifier with error state (l letter, d digit)",
+          "purpose": "A name starts with a letter. The error state shows where a digit first, or any other symbol, ends the run.",
+          "text": "l(l|d)*",
+          "errorState": true
         }
       ]
     }

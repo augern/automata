@@ -44,7 +44,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 }
 
 // Lay out and draw the graph described by spec:
-//   nodes: [{ label, accepting?, rejecting? }]   (node i has id "P-state-i")
+//   nodes: [{ label, accepting?, rejecting?, error? }]   (error: the error state, drawn with a cross)   (node i has id "P-state-i")
 //   start: index of the start state
 //   edges: [{ from, to, labels: string[], eps?: boolean, ids?: any[] }]   non-self edges, one per (from, to)
 //   loops: [{ node, labels: string[], eps?: boolean, ids?: any[] }]       self-loops
@@ -135,12 +135,18 @@ function drawAutomatonGraph(prefix, view, spec) {
     const nd = nodes[i];
     let cls = "ag-node";
     if (nd.accepting) cls += " is-accepting";
-    if (nd.rejecting) cls += " is-rejecting";
+    if (nd.rejecting || nd.error) cls += " is-rejecting";
     const ng = root.append("g").attr("class", cls).attr("id", prefix + "-state-" + i).attr("transform", `translate(${dn.x},${dn.y})`);
     if (onNodeHover) ng.on("mouseenter", () => onNodeHover(i)).on("mouseleave", () => onNodeHover(null));
     ng.append("circle").attr("r", R);
     if (nd.accepting) ng.append("circle").attr("class", "ag-ring").attr("r", R - 3);
     if (nd.rejecting) ng.append("circle").attr("class", "ag-ring").attr("r", R - 3);
+    if (nd.error) {
+      // The error state: two crossing bars inside the single circle, under the label.
+      const k = R * Math.SQRT1_2;
+      ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", -k).attr("x2", k).attr("y2", k);
+      ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", k).attr("x2", k).attr("y2", -k);
+    }
     ng.append("text").attr("class", "ag-label").attr("text-anchor", "middle").attr("dominant-baseline", "middle").text(nd.label);
     if (i === start) {
       root.append("line")
