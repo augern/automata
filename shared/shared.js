@@ -767,15 +767,34 @@ function treePlace(vr, nodes, dir, o) {
   (function dd(n, d) { depthOf.set(n, d); n.children.forEach((c) => dd(c, d + 1)); })(vr, vr.id === -1 ? -1 : 0);
   nodes.forEach((n) => { n._depth = depthOf.get(n); });
   const maxD = Math.max.apply(null, nodes.map((n) => n._depth));
+  // halfOf(n): a node's own half height. Top-down, every node of a row (a depth; the leaves on the baseline are
+  // a row of their own) is as tall as the tallest of its row, and the rows are spaced by their heights.
+  const gap = o.gap || 34;
+  const rowKey = (n) => (align && !n.children.length ? "leaf" : n._depth);
+  let rowHalf = null, keys = null;
+  if (o.halfOf) {
+    rowHalf = new Map();
+    nodes.forEach((n) => { const k = rowKey(n); rowHalf.set(k, Math.max(rowHalf.get(k) || 0, o.halfOf(n))); });
+    nodes.forEach((n) => { n._half = rowHalf.get(rowKey(n)); n._row = 2 * n._half + gap; });
+    keys = [...rowHalf.keys()].sort((a, b) => (a === "leaf" ? 1 : b === "leaf" ? -1 : a - b));
+  }
   if (dir === "down") {
     treeLayoutX(vr, align);
+    if (rowHalf) {
+      const yOf = new Map();
+      keys.forEach((k, i) => yOf.set(k, i === 0 ? 0 : yOf.get(keys[i - 1]) + rowHalf.get(keys[i - 1]) + gap + rowHalf.get(k)));
+      nodes.forEach((n) => { n._y = yOf.get(rowKey(n)); });
+      const last = keys[keys.length - 1];
+      const xs0 = nodes.map((n) => n._x);
+      return { w: Math.max.apply(null, xs0) - Math.min.apply(null, xs0) + 80, h: yOf.get(last) + rowHalf.get(last) + rowHalf.get(keys[0]) };
+    }
     const BL = maxD * row;
     nodes.forEach((n) => { n._y = !align || n.children.length ? n._depth * row : BL; });
     const xs = nodes.map((n) => n._x);
     return { w: Math.max.apply(null, xs) - Math.min.apply(null, xs) + 80, h: BL + 2 * half };
   }
   // sideways: the leaves in order, one row each; a parent in the middle of its children; a column per depth
-  const RH = 2 * half + 8;
+  const RH = 2 * (rowHalf ? Math.max.apply(null, [...rowHalf.values()]) : half) + 8;
   let rowNo = 0;
   (function ay(n) {
     if (!n.children.length) { n._y = rowNo++ * RH; return; }

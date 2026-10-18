@@ -182,11 +182,8 @@ const CompilerTool = (() => {
     const lines = (n) => { const g = groups(n); return g.scanner.concat(g.sem); };
     const divided = (n) => { const g = groups(n); return g.scanner.length > 0 && g.sem.length > 0; };
     const height = (n) => lines(n).length * 11 + (divided(n) ? 7 : 0);
-    const maxH = Math.max(0, ...nodes.map(height));
-    const half = Math.max(18, 14 + (maxH + 13) / 2);
-    const lay = {
-      width: (n) => Math.max(treeNodeW(n.symbol), ...lines(n).map((l) => l.length * 6 + 16)), half, row: 2 * half + 34,
-    };
+    const halfOf = (n) => Math.max(18, 14 + (height(n) + 13) / 2);
+    const lay = { width: (n) => Math.max(treeNodeW(n.symbol), ...lines(n).map((l) => l.length * 6 + 16)), halfOf };
     const dir = treeChooseDir(vr, nodes, lay, "tree-svg");
     treePlace(vr, nodes, dir, lay);
     treeBaseline(g, nodes, dir);
