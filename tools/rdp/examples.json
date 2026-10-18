@@ -6,15 +6,13 @@
         {
           "label": "aⁿbⁿ",
           "purpose": "Each failed alternative is undone at once; nothing deeper is revisited.",
-          "text": [
-            "S -> a S b | eps"
-          ],
           "strings": [
             "aabb",
             "aaabbb",
             "aab",
             ""
-          ]
+          ],
+          "grammar": "anbn"
         },
         {
           "label": "Wrong first guess",
@@ -32,15 +30,13 @@
         {
           "label": "Palindromes",
           "purpose": "Guessing the middle: lookahead cannot tell where a palindrome turns, so each position is tried.",
-          "text": [
-            "S -> a S a | b S b | a | b | eps"
-          ],
           "strings": [
             "abbba",
             "aaaa",
             "abba",
             "ab"
-          ]
+          ],
+          "grammar": "palindromes"
         },
         {
           "label": "Dangling else",
@@ -132,39 +128,24 @@
         {
           "label": "Regular expressions",
           "purpose": "The regex language, LL-ready, parsed by recursive descent. Input such as (a|b)*abb needs no spaces.",
-          "text": [
-            "R -> C R'",
-            "R' -> '|' C R' | eps",
-            "C -> P C'",
-            "C' -> P C' | eps",
-            "P -> A P'",
-            "P' -> '*' P' | '+' P' | '?' P' | eps",
-            "A -> '(' R ')' | a | b | c | d"
-          ],
           "strings": [
             "(a|b)*abb",
             "ab*",
             "a|b",
             "(ab"
-          ]
+          ],
+          "grammar": "regex-language-ll"
         },
         {
           "label": "Sentences (running example)",
           "purpose": "Every alternative starts with a different word, so no alternative is ever undone. old snores is rejected: the noun is missing.",
-          "text": [
-            "<sentence> → <subject> <predicate>",
-            "<subject> → <adjective> <noun>",
-            "<predicate> → <verb>",
-            "<adjective> → old | big | strong",
-            "<noun> → Harry | brother",
-            "<verb> → jogs | snores | sleeps"
-          ],
           "strings": [
             "old Harry snores",
             "big brother sleeps",
             "strong Harry jogs",
             "old snores"
-          ]
+          ],
+          "grammar": "sentences"
         }
       ]
     },
@@ -227,18 +208,10 @@
         {
           "label": "Sentences with an adjective list (left-recursive)",
           "purpose": "The adjective list calls itself before reading a word, so the run stops at the first repeat.",
-          "text": [
-            "<sentence> → <subject> <predicate>",
-            "<subject> → <adjectives> <noun>",
-            "<adjectives> → <adjectives> <adjective> | <adjective>",
-            "<predicate> → <verb>",
-            "<adjective> → old | big | strong",
-            "<noun> → Harry | brother",
-            "<verb> → jogs | snores | sleeps"
-          ],
           "strings": [
             "old big Harry snores"
-          ]
+          ],
+          "grammar": "sentences-adjective-list"
         }
       ]
     }

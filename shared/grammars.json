@@ -1,0 +1,108 @@
+{
+  "anbn": {
+    "label": "aⁿbⁿ",
+    "text": [
+      "S -> a S b | eps"
+    ]
+  },
+  "palindromes": {
+    "label": "Palindromes over {a, b}",
+    "text": [
+      "S -> a S a | b S b | a | b | eps"
+    ]
+  },
+  "parentheses-nested": {
+    "label": "Matched parentheses",
+    "text": [
+      "S -> ( S ) S | eps"
+    ]
+  },
+  "regex-language": {
+    "label": "The regex tool's language (left-recursive)",
+    "text": [
+      "R -> R '|' C | C",
+      "C -> C P | P",
+      "P -> P '*' | P '+' | P '?' | A",
+      "A -> '(' R ')' | a | b | c | d"
+    ]
+  },
+  "sentences": {
+    "label": "Sentences (the lecture's running example)",
+    "text": [
+      "<sentence> → <subject> <predicate>",
+      "<subject> → <adjective> <noun>",
+      "<predicate> → <verb>",
+      "<adjective> → old | big | strong",
+      "<noun> → Harry | brother",
+      "<verb> → jogs | snores | sleeps"
+    ]
+  },
+  "pascal-declarations": {
+    "label": "Pascal excerpt (declarations)",
+    "text": [
+      "<goal> → <progdecl> .",
+      "<progdecl> → <prog_hedr> ; <block>",
+      "<prog_hedr> → program <idname> ( <idname_list> ) | program <idname>",
+      "<block> → <decls> begin <stat_list> end",
+      "<decls> → <labels> <consts> <types> <vars> <procs>",
+      "<labels> → label <label_decl> ; | ε",
+      "<label_decl> → <label_decl> , <labelid> | <labelid>",
+      "<labelid> → <int> | <id>",
+      "<consts> → const <const_decls> | ε",
+      "<const_decls> → <const_decls> <const_decl_c> | <const_decl_c>",
+      "<const_decl_c> → <const_decl> ;",
+      "<const_decl> → <idname> = <const>",
+      "<types> → type <type_decls> | ε",
+      "<type_decls> → <type_decls> <type_decl_c> | <type_decl_c>",
+      "<type_decl_c> → <type_decl> ;",
+      "<type_decl> → <idname> = <type>",
+      "<vars> → var <var_decls> | ε",
+      "<var_decls> → <var_decls> <var_decl_c> | <var_decl_c>",
+      "<var_decl_c> → <var_decl> ;",
+      "<var_decl> → <id_list> : <type>",
+      "<procs> → <proc_decls> | ε",
+      "<proc_decls> → <proc_decls> <proc> | <proc>",
+      "<proc> → procedure <phead_c> forward ; | procedure <phead_c> <block> ; | function <fhead_c> forward ; | function <fhead_c> <block> ;",
+      "<fhead_c> → <fhead> ;",
+      "<fhead> → <idname> <params> : <type_id>",
+      "<phead_c> → <phead> ;",
+      "<phead> → <idname> <params> | ε",
+      "<params> → ( <param_list> ) | ε",
+      "<param> → var <par_decl> | <par_decl> | ε",
+      "<par_decl> → <id_list> : <type_id>",
+      "<param_list> → <param_list> ; <param> | <param>",
+      "<id_list> → <id_list> , <id> | <id>"
+    ]
+  },
+  "sentences-adjective-list": {
+    "label": "Sentences with an adjective list (left-recursive)",
+    "text": [
+      "<sentence> → <subject> <predicate>",
+      "<subject> → <adjectives> <noun>",
+      "<adjectives> → <adjectives> <adjective> | <adjective>",
+      "<predicate> → <verb>",
+      "<adjective> → old | big | strong",
+      "<noun> → Harry | brother",
+      "<verb> → jogs | snores | sleeps"
+    ]
+  },
+  "parentheses-eps": {
+    "label": "Balanced parentheses",
+    "text": [
+      "// Balanced parentheses",
+      "S -> ( S ) S | eps"
+    ]
+  },
+  "regex-language-ll": {
+    "label": "The regex tool's language (LL(1))",
+    "text": [
+      "R -> C R'",
+      "R' -> '|' C R' | eps",
+      "C -> P C'",
+      "C' -> P C' | eps",
+      "P -> A P'",
+      "P' -> '*' P' | '+' P' | '?' P' | eps",
+      "A -> '(' R ')' | a | b | c | d"
+    ]
+  }
+}

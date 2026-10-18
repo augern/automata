@@ -100,9 +100,7 @@
             "aaabbb",
             "aabb"
           ],
-          "text": [
-            "S -> a S b | eps"
-          ]
+          "grammar": "anbn"
         },
         {
           "label": "Balanced parentheses",
@@ -112,9 +110,7 @@
             "(()())",
             "(())()"
           ],
-          "text": [
-            "S -> ( S ) S | eps"
-          ]
+          "grammar": "parentheses-nested"
         },
         {
           "label": "Expressions",

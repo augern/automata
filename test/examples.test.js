@@ -7,11 +7,24 @@ const { load } = require("./load.js");
 
 const A = load("grammar.js", "strings.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js", "rdp.js", "pumping.js");
 
+// The shared grammar library: examples may give "grammar": key instead of "text".
+const LIBRARY = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "shared", "grammars.json"), "utf8"));
+
 function examples(name) {
   const file = path.join(__dirname, "..", "tools", name, "examples.json");
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
   const out = [];
-  for (const g of data.groups) for (const ex of g.examples) out.push({ group: g.label, ...ex });
+  for (const g of data.groups) {
+    for (const ex of g.examples) {
+      const e = { group: g.label, ...ex };
+      if (e.grammar) {
+        assert.ok(LIBRARY[e.grammar], `${name}/${e.label}: unknown grammar "${e.grammar}"`);
+        e.text = LIBRARY[e.grammar].text;
+        if (!e.label) e.label = LIBRARY[e.grammar].label;
+      }
+      out.push(e);
+    }
+  }
   assert.ok(out.length > 0, name);
   return out;
 }
@@ -156,4 +169,18 @@ test("new example kinds: every sample string of a PDA/NFA example gets a boolean
     const first = A.computeFirst(g);
     assert.ok(A.buildLL1Table(g, first, A.computeFollow(g, first)).conflicts.length > 0, `${ex.label} should not be LL(1)`);
   }
+});
+
+test("the grammar library: every entry parses, is used by at least two examples, and has a label", () => {
+  const used = new Map();
+  for (const name of fs.readdirSync(path.join(__dirname, "..", "tools"))) {
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "tools", name, "examples.json"), "utf8"));
+    for (const g of data.groups) for (const ex of g.examples) if (ex.grammar) used.set(ex.grammar, (used.get(ex.grammar) || 0) + 1);
+  }
+  for (const [key, g] of Object.entries(LIBRARY)) {
+    assert.ok(g.label && Array.isArray(g.text) && g.text.length, `${key}: label and text`);
+    A.parseBNF(g.text.join("\n"), false);
+    assert.ok((used.get(key) || 0) >= 2, `${key}: used by ${used.get(key) || 0} example(s); a grammar used once belongs in its tool's examples.json`);
+  }
+  for (const key of used.keys()) assert.ok(LIBRARY[key], `unknown grammar ${key}`);
 });

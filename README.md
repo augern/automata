@@ -121,6 +121,9 @@ Each file has the structure:
 }
 ```
 
+- **`grammar`** (grammar tools): a key of `shared/grammars.json`, the grammar library, in place of `text`. The
+  tool keeps its own `label`, `purpose`, `strings` and `mode`; the library supplies the grammar text (and the label
+  if none is given). A grammar used by only one example stays in that tool's `text`; the tests require two uses.
 - **`groups`** maps to `<optgroup>` elements in the dropdown.
 - **`label`** is the display text shown in the dropdown.
 - **`text`** is an array of lines; the loader joins them with `\n` before passing the grammar to the tool. No `\n` escapes needed.

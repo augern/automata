@@ -1142,9 +1142,36 @@ function quickLinkApply(fnName) {
   }
 }
 
+// The shared grammar library (shared/grammars.json): { key: { label, text: [lines] } }. An example of any tool may
+// give "grammar": key instead of "text"; the tool keeps its own label, purpose, strings and mode. Fetched once.
+var _grammarLibrary = null;
+var _sharedBase = document.currentScript ? new URL(".", document.currentScript.src).href : "../../shared/";
+function loadGrammarLibrary() {
+  if (!_grammarLibrary) {
+    _grammarLibrary = fetch(_sharedBase + "grammars.json").then(function (r) { return r.json(); });
+  }
+  return _grammarLibrary;
+}
+// Fill in `text` (and a missing label) of the examples that refer to the library.
+function resolveGrammarRefs(data) {
+  var refs = [];
+  data.groups.forEach(function (g) { g.examples.forEach(function (ex) { if (ex.grammar) refs.push(ex); }); });
+  if (!refs.length) return Promise.resolve(data);
+  return loadGrammarLibrary().then(function (lib) {
+    refs.forEach(function (ex) {
+      var g = lib[ex.grammar];
+      if (!g) { console.error("Unknown grammar in the library: " + ex.grammar); ex.text = ""; return; }
+      ex.text = g.text;
+      if (!ex.label) ex.label = g.label;
+    });
+    return data;
+  });
+}
+
 function loadExamplesInto(url, selectId, examplesObj, onReady) {
   fetch(url)
     .then(function (r) { return r.json(); })
+    .then(resolveGrammarRefs)
     .then(function (data) {
       var sel = document.getElementById(selectId);
       if (!sel) return;
