@@ -17,6 +17,15 @@
       },
       { label: themeIsDark() ? "Switch to light theme" : "Switch to dark theme", onSelect: themeToggle },
     ];
+    if (typeof fitViewUsed !== "undefined" && fitViewUsed) {
+      list.push(
+        { separator: true },
+        { heading: "Scroll wheel on graphs" },
+        { label: "Detect mouse or trackpad", checked: fitWheelMode === "auto", title: "A mouse wheel zooms, a two-finger trackpad scroll pans; pinch always zooms", onSelect: () => setFitWheelMode("auto") },
+        { label: "Always zoom", checked: fitWheelMode === "zoom", title: "For a mouse that is mistaken for a trackpad", onSelect: () => setFitWheelMode("zoom") },
+        { label: "Always pan", checked: fitWheelMode === "pan", onSelect: () => setFitWheelMode("pan") }
+      );
+    }
     const steppers = typeof keyPanelSummaries === "function" ? keyPanelSummaries() : [];
     if (steppers.length > 1) {
       list.push(
