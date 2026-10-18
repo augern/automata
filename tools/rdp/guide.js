@@ -4,7 +4,7 @@ window.TOOL_GUIDE = {
   title: "Backtracking recursive descent",
   intro: "A recursive-descent parser has one procedure per nonterminal and tries its alternatives in the written order. A wrong guess is undone (backtracking) and the next alternative is tried. The tool shows the procedures generated from a grammar and the search for a parse.",
   use: [
-    "Enter one production per line, `A -> α | β`, symbols separated by spaces. Alternatives are tried in the written order. `eps` is the empty string. A symbol in quotes is a terminal written literally, such as `'|'` or `'('`. Input strings may be written without spaces.",
+    "Enter one production per line, `A -> α | β`, symbols separated by spaces. Alternatives are tried in the written order. `eps` is the empty string. A symbol in quotes is a terminal written literally, such as `'|'` (a doubled quote inside quotes is the quote itself: `''''` is `'`) or `'('`. Input strings may be written without spaces.",
     "Enter a string (the dice gives a random one) and step through the run. The highlighted line is the current action; dimmer lines are the calls waiting for an answer.",
     "The grammar text marks the current step: the left and right side of the production being tried, and the symbol being matched or called. Matched symbols of the current alternative are green; abandoned alternatives are grey, in the grammar and in the code. Hovering a code line or a tree node marks its production.",
     "The tree shows every call and every alternative tried. Abandoned attempts stay in the tree, greyed; the checkbox hides them. Click a node to explain it.",

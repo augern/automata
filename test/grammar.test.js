@@ -88,3 +88,9 @@ test("parseBNF: a <name> in angle brackets must have a rule; quoted or bare < > 
   const g = parseBNF("E -> E < E | '<a>' | >", false);
   assert.deepEqual(sorted(g.terminals), ["$", "<", "<a>", ">"]);
 });
+
+test("parseBNF: a doubled quote inside quotes is the quote itself; '' stays ε", () => {
+  const g = parseBNF("S -> '''' | 'it''s' | \"'\" | '\"' | ''", false);
+  assert.deepEqual(JSON.parse(JSON.stringify(g.rules.map((r) => r.rhs))), [["'"], ["it's"], ["'"], ['"'], []]);
+  assert.throws(() => parseBNF("S -> 'a''", false), /Unterminated quote/);
+});

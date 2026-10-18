@@ -29,9 +29,12 @@ function bnfAlternatives(rhs) {
     if (c === "|") { close(i); cur = { from: i + 1, to: i + 1, toks: [] }; i++; continue; }
     if (/\s/.test(c)) { i++; continue; }
     if (c === "'" || c === '"') {
-      const end = rhs.indexOf(c, i + 1);
+      // the quote character doubled inside the quotes is that character: four quotes in a row are the terminal ',
+      // and 'it''s' is the terminal it's
+      let end = rhs.indexOf(c, i + 1);
+      while (end >= 0 && rhs[end + 1] === c) end = rhs.indexOf(c, end + 2);
       if (end < 0) throw new Error("Unterminated quote in: " + rhs.trim());
-      cur.toks.push({ sym: rhs.slice(i + 1, end), quoted: true, from: i, to: end + 1 });
+      cur.toks.push({ sym: rhs.slice(i + 1, end).split(c + c).join(c), quoted: true, from: i, to: end + 1 });
       i = end + 1;
       continue;
     }
