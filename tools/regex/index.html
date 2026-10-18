@@ -796,12 +796,16 @@
             sc.className = "state-plain";
             sc.textContent = "   q" + i;
           }
+          sc.classList.add("nfa-state-cell");
+          sc.dataset.s = i;
           tr.appendChild(sc);
 
           // Transition cells
           for (const c of cols) {
             const td = document.createElement("td");
             const targets = tmap[i][c] || [];
+            td.dataset.s = i;
+            td.dataset.sym = c;
             if (targets.length) {
               td.className = c === EPS ? "nfa-eps" : "nfa-sym";
               td.textContent = targets.length === 1 ? "q" + targets[0] : "{ " + targets.map((x) => "q" + x).join(", ") + " }";
@@ -1404,18 +1408,17 @@
         if (tooLarge(n + (_errOn ? 1 : 0), nfa.trans.length + (_errOn ? n : 0))) return graphMessage(tooLargeMsg("NFA", n, nfa.trans.length));
         const edgeMap = new Map(), loopMap = new Map();
         const add = (from, to, sym) => {
+          let e;
           if (from === to) {
-            if (!loopMap.has(from)) loopMap.set(from, { node: from, labels: [], eps: true });
-            const e = loopMap.get(from);
-            if (!e.labels.includes(sym)) e.labels.push(sym);
-            if (sym !== EPS) e.eps = false;
+            if (!loopMap.has(from)) loopMap.set(from, { node: from, labels: [], ids: [], eps: true });
+            e = loopMap.get(from);
           } else {
             const k = from + "-" + to;
-            if (!edgeMap.has(k)) edgeMap.set(k, { from, to, labels: [], eps: true });
-            const e = edgeMap.get(k);
-            if (!e.labels.includes(sym)) e.labels.push(sym);
-            if (sym !== EPS) e.eps = false;
+            if (!edgeMap.has(k)) edgeMap.set(k, { from, to, labels: [], ids: [], eps: true });
+            e = edgeMap.get(k);
           }
+          if (!e.labels.includes(sym)) { e.labels.push(sym); e.ids.push(from + "|" + sym); }
+          if (sym !== EPS) e.eps = false;
         };
         for (const t of nfa.trans) add(t.from, t.to, t.sym);
         const nodes = Array.from({ length: n }, (_, i) => ({ label: "q" + i, accepting: i === nfa.accept }));
@@ -1426,12 +1429,26 @@
           for (let i = 0; i < n; i++) {
             const cl = closure(i);
             const miss = alpha.filter((a) => !nfa.trans.some((t) => cl.has(t.from) && t.sym === a));
-            edges.push({ from: i, to: n, labels: [...miss, NFA_WILD], eps: false });
+            edges.push({ from: i, to: n, labels: [...miss, NFA_WILD], ids: [...miss.map((a) => i + "|" + a), i + "|" + NFA_WILD], eps: false });
           }
-          loops.push({ node: n, labels: [...alpha, NFA_WILD], eps: false });
+          loops.push({ node: n, labels: [...alpha, NFA_WILD], ids: [...alpha.map((a) => n + "|" + a), n + "|" + NFA_WILD], eps: false });
         }
-        drawAutomatonGraph("dfa", dfaGraph, { nodes, start: nfa.start, edges, loops, ranksep: 54, joinLabels: true });
+        drawAutomatonGraph("dfa", dfaGraph, { nodes, start: nfa.start, edges, loops, ranksep: 54, joinLabels: true, onHover: nfaHoverEdges, onNodeHover: nfaHoverState });
       }
+
+      // Hovering links the NFA graph and the Thompson transition table: an edge <-> the cell(s) of its transitions
+      // (a cell lists all targets on one symbol), a node <-> its state cell.
+      function nfaHoverEdges(ids) {
+        setGraphHot("dfa", ids);
+        const want = new Set(ids || []);
+        for (const td of document.querySelectorAll("#nfa-table-wrap td[data-sym]")) td.classList.toggle("is-hot", want.has(td.dataset.s + "|" + td.dataset.sym));
+      }
+      function nfaHoverState(i) {
+        setGraphNodeHot("dfa", i);
+        for (const td of document.querySelectorAll("#nfa-table-wrap td.nfa-state-cell")) td.classList.toggle("is-hot", i !== null && +td.dataset.s === i);
+      }
+      UI.hoverItems("nfa-table-wrap", "td[data-sym]", (td) => (nfaDirect() && td.textContent ? [td.dataset.s + "|" + td.dataset.sym] : null), nfaHoverEdges);
+      UI.hoverItems("nfa-table-wrap", "td.nfa-state-cell", (td) => (nfaDirect() ? +td.dataset.s : null), nfaHoverState);
 
       function renderDFA(scData) {
         if (nfaDirect()) return renderNfaGraph();
