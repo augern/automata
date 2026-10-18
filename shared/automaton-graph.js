@@ -16,11 +16,14 @@
 // larger (see drawAutomatonGraph). When the pane is resized so that the other direction fits clearly better, the
 // graph is laid out again: relayout() redraws it (a tool that marks states after drawing passes onRelayout, which
 // redraws and marks them again).
+// A graph is fitted to its pane and may be enlarged up to this factor (so small graphs fill the pane too).
+const AG_MAX_SCALE = 1.8, AG_PAD_X = 28, AG_PAD_Y = 24;
+
 function createGraphView(prefix, { hasNodes = () => true, onRelayout = null } = {}) {
   ensureArrowMarkers(d3.select("#" + prefix + "-svg"), prefix);
   const fv = createFitView({
     svg: prefix + "-svg", root: prefix + "-graph-root", scaleExtent: [0.1, 8],
-    maxScale: 0.92, padX: 40, padY: 30, hasContent: hasNodes,
+    maxScale: AG_MAX_SCALE, padX: AG_PAD_X, padY: AG_PAD_Y, hasContent: hasNodes,
     sticky: false, // a redrawn definition is always fitted again
   });
   const view = { fit: fv.fit, zoom: fv.zoom, dir: null, spec: null };
@@ -51,7 +54,7 @@ function graphLayout(spec, dir) {
 }
 
 // Which direction draws the graph larger in the pane? Both layouts are computed and compared by the scale at
-// which they fit (capped like the fit itself, so small graphs stay left-to-right). The current direction is
+// which they fit (capped like the fit itself). The current direction is
 // kept unless the other is clearly better (15 %), so the graph does not flip back and forth while resizing.
 // Returns { dir, dg } for the chosen direction (dg is null when no layout was needed).
 function graphChooseDir(prefix, view, spec) {
@@ -61,7 +64,7 @@ function graphChooseDir(prefix, view, spec) {
   const cur = view.dir || "LR";
   if (!vw || !vh || !spec.nodes.length) return { dir: cur, dg: null };
   const dgs = { LR: graphLayout(spec, "LR"), TB: graphLayout(spec, "TB") };
-  const fitScale = (g) => Math.min(0.92, Math.max(vw - 80, 20) / (g.graph().width || 1), Math.max(vh - 60, 20) / (g.graph().height || 1));
+  const fitScale = (g) => Math.min(AG_MAX_SCALE, Math.max(vw - 2 * AG_PAD_X, 20) / Math.max((g.graph().width || 0) - 100, 1), Math.max(vh - 2 * AG_PAD_Y, 20) / Math.max((g.graph().height || 0) - 80, 1));
   const s = { LR: fitScale(dgs.LR), TB: fitScale(dgs.TB) };
   const other = cur === "LR" ? "TB" : "LR";
   const dir = view.dir && s[other] <= s[cur] * 1.15 ? cur : s[other] > s[cur] ? other : cur;
