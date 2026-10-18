@@ -16,14 +16,12 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
 | **Turing Machine Simulator** | Deterministic TM — editable transition table, tape simulation, step-by-step execution |
 
-Compiler construction (a section of its own on the index page, not on the map; they share `shared/algo/compiler.js`
-and `shared/compiler-ui.js`):
+Compiler construction (a section of its own on the index page, not on the map; the engine is
+`shared/algo/compiler.js`, the view `shared/compiler-ui.js`):
 
 | Tool | Coverage |
 |---|---|
-| **Scanner and Parser** | A longest-match scanner and an SLR(1) parser run together as one list of events: the parser pulls tokens, the scanner bites off lexemes (look-ahead and back-up shown), default reductions fetch no token |
-| **Syntax-Directed Translation** | `{{ … }}` actions on grammar rules (a small, safely interpreted action language), run at reductions: evaluation, quadruples, postfix; value attributes on the parse tree |
-| **Types and Symbol Table** | Type attributes computed bottom-up (int/float), a symbol table, `int2float` conversions in the quadruples, scope and type errors |
+| **Compiler Front End** | A longest-match scanner and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner bites off lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, types and a symbol table |
 
 All tools share a common visual language (academic, high-contrast) and support
 step-by-step algorithm visualisation with Back/Forward controls.

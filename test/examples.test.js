@@ -187,7 +187,7 @@ test("the grammar library: every entry parses, is used by at least two examples,
 
 test("compiler-construction examples: token rules and grammar compile without gaps or conflicts, and every string runs", () => {
   const A2 = load("grammar.js", "strings.js", "regex.js", "lr.js", "compiler.js");
-  for (const tool of ["lexer-parser", "sdt", "types"]) {
+  for (const tool of ["compiler"]) {
     for (const ex of examples(tool)) {
       const tokens = Array.isArray(ex.tokens) ? ex.tokens.join("\n") : ex.tokens;
       const comp = A2.cmpCompile(tokens, textOf(ex));
@@ -202,18 +202,18 @@ test("compiler-construction examples: the strings give the results their descrip
   const A2 = load("grammar.js", "strings.js", "regex.js", "lr.js", "compiler.js");
   const comp = (tool, label) => { const ex = examples(tool).find((e) => e.label === label); return A2.cmpCompile(Array.isArray(ex.tokens) ? ex.tokens.join("\n") : ex.tokens, textOf(ex)); };
   const last = (c, s) => { const r = A2.cmpRun(c, s); return { ok: r.accepted, f: r.frames[r.frames.length - 1] }; };
-  const ev = comp("sdt", "Evaluate expressions");
+  const ev = comp("compiler", "Evaluate expressions");
   assert.equal(last(ev, "2 + 3 * 4").f.stack[1].attrs.val, 14);
   assert.equal(last(ev, "10 - 4 - 3").f.stack[1].attrs.val, 3);
   assert.equal(last(ev, "8 / 2 / 2").f.stack[1].attrs.val, 2);
-  assert.equal(last(comp("sdt", "Translation to postfix"), "(a + b) * c").f.stack[1].attrs.val, "a b + c *");
-  const q = last(comp("sdt", "Three-address code (quadruples)"), "a + b * c").f;
+  assert.equal(last(comp("compiler", "Translation to postfix"), "(a + b) * c").f.stack[1].attrs.val, "a b + c *");
+  const q = last(comp("compiler", "Three-address code (quadruples)"), "a + b * c").f;
   assert.deepEqual(JSON.parse(JSON.stringify(q.quads)), [["*", "b", "c", "t1"], ["+", "a", "t1", "t2"]]);
-  const lp = comp("lexer-parser", "Keywords and identifiers");
+  const lp = comp("compiler", "Keywords and identifiers");
   assert.equal(last(lp, "printer = 2;").ok, true);
   assert.equal(last(lp, "x = print;").ok, false);
-  assert.equal(last(comp("lexer-parser", "Integer and real literals"), "1.+2").f.type, "error");
-  const ty = comp("types", "Declarations and assignments");
+  assert.equal(last(comp("compiler", "Integer and real literals"), "1.+2").f.type, "error");
+  const ty = comp("compiler", "Declarations and assignments");
   assert.deepEqual(JSON.parse(JSON.stringify(last(ty, "integer n; n = 2.5;").f.messages)), ["cannot assign a real to the integer n"]);
   assert.deepEqual(JSON.parse(JSON.stringify(last(ty, "x = 1;").f.messages)), ["undeclared variable x"]);
   assert.equal(last(ty, "integer x; real y; x = 1; y = x * 2.5;").f.messages.length, 0);

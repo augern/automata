@@ -3,12 +3,13 @@
 // token stream, the parser stack), p-tree (the parse tree) and p-out (results); CompilerTool.init(cfg) wires them to
 // the engine in algo/compiler.js. Needs d3, shared.js, ui.js, stepper.js and fit-view.js.
 //
-//   cfg.annotate   show the attributes in the tree nodes and on the stack
-//   cfg.out        the sections of the results panel: any of "symtab", "types", "quads", "value", "messages"
+// What the views show follows from the definition (see features below): attributes on the tree and the stack when
+// the grammar has actions, and the results sections the actions use.
 //   cfg.examples   the url of the tool's examples.json
 //   cfg.storage    the key of the panel layout in localStorage
 const CompilerTool = (() => {
   let comp = null, run = null, strings = [], view = null, cfg = null;
+  let feat = { annotate: false, out: [] };
   const $ = (id) => document.getElementById(id);
   let sim = null;
 
@@ -17,6 +18,20 @@ const CompilerTool = (() => {
     const el = $("error-msg");
     el.textContent = msg || "";
     el.classList.toggle("is-note", !!note);
+  }
+
+  // From the actions: attributes are shown when there are any; quadruples when they use emit; the symbol table when
+  // there is an id token (with a type column when the actions use types); values when the actions only compute them.
+  function features(c) {
+    const src = c.grammar.rules.map((r) => r.action || "").join("\n");
+    const has = c.grammar.rules.some((r) => r.action);
+    const quads = /\bemit\(/.test(src), types = /\b(install|lookup)\(|\.type\b/.test(src);
+    const out = [];
+    if (has && !quads && !types) out.push("value");
+    if (quads) out.push("quads");
+    if (c.tokenRules.some((r) => r.name === "id") || types) out.push(types ? "types" : "symtab");
+    if (types) out.push("messages");
+    return { annotate: has, out };
   }
 
   function build() {
@@ -29,6 +44,7 @@ const CompilerTool = (() => {
       render();
       return;
     }
+    feat = features(comp);
     const notes = [];
     if (comp.missing.length) notes.push("No token rule for: " + comp.missing.join(", ") + ".");
     if (comp.tables.conflicts.length) notes.push(comp.tables.conflicts.length + " SLR(1) conflict(s): the parser prefers shift.");
@@ -124,10 +140,10 @@ const CompilerTool = (() => {
   function renderStack(f) {
     const el = $("cm-stack");
     if (!f) { el.innerHTML = ""; return; }
-    let h = "<table class='cm-table'><thead><tr><th>state</th><th>symbol</th>" + (cfg.annotate ? "<th>attributes</th>" : "") + "</tr></thead><tbody>";
+    let h = "<table class='cm-table'><thead><tr><th>state</th><th>symbol</th>" + (feat.annotate ? "<th>attributes</th>" : "") + "</tr></thead><tbody>";
     f.stack.forEach((s, i) => {
       const top = i === f.stack.length - 1;
-      h += "<tr" + (top ? " class='is-top'" : "") + "><td>" + s.state + "</td><td>" + (s.sym === null ? "" : esc(s.sym)) + "</td>" + (cfg.annotate ? "<td>" + esc(attrText(s.attrs)) + "</td>" : "") + "</tr>";
+      h += "<tr" + (top ? " class='is-top'" : "") + "><td>" + s.state + "</td><td>" + (s.sym === null ? "" : esc(s.sym)) + "</td>" + (feat.annotate ? "<td>" + esc(attrText(s.attrs)) + "</td>" : "") + "</tr>";
     });
     el.innerHTML = h + "</tbody></table>";
     el.scrollTop = el.scrollHeight;
@@ -152,9 +168,9 @@ const CompilerTool = (() => {
     const nodes = [], edges = [];
     (function col(n) { if (n.id !== -1) nodes.push(n); n.children.forEach((c) => { if (n.id !== -1) edges.push({ p: n, c }); col(c); }); })(vr);
     const nt = comp ? comp.grammar.nonterminals : new Set();
-    const label2 = (n) => (cfg.annotate ? attrText(n.node.attrs) : "");
+    const label2 = (n) => (feat.annotate ? attrText(n.node.attrs) : "");
     const lay = {
-      width: (n) => Math.max(treeNodeW(n.symbol), label2(n).length * 6 + 16), half: cfg.annotate ? 20 : 18, row: cfg.annotate ? 74 : 60,
+      width: (n) => Math.max(treeNodeW(n.symbol), label2(n).length * 6 + 16), half: feat.annotate ? 20 : 18, row: feat.annotate ? 74 : 60,
     };
     const dir = treeChooseDir(vr, nodes, lay, "tree-svg");
     treePlace(vr, nodes, dir, lay);
@@ -176,21 +192,21 @@ const CompilerTool = (() => {
     if (!f) { el.innerHTML = ""; return; }
     let h = "";
     const top = f.stack[f.stack.length - 1];
-    if (cfg.out.includes("value")) {
+    if (feat.out.includes("value")) {
       const done = f.type === "accept";
       const val = done && f.stack.length >= 2 ? f.stack[f.stack.length - 1].attrs.val : undefined;
       h += "<h3>Value</h3><p class='cm-value'>" + (done ? (val === undefined ? "<i>none</i>" : esc(typeof val === "number" ? String(Math.round(val * 1e6) / 1e6) : String(val))) : "<span class='cm-empty'>when the parse is accepted</span>") + "</p>";
     }
-    if (cfg.out.includes("quads")) {
+    if (feat.out.includes("quads")) {
       h += "<h3>Quadruples</h3>";
       h += f.quads.length ? "<table class='cm-table'><thead><tr><th>#</th><th>op</th><th>arg 1</th><th>arg 2</th><th>result</th></tr></thead><tbody>" + f.quads.map((q, i) => "<tr><td>" + i + "</td>" + q.map((x) => "<td>" + esc(x) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "<p class='cm-empty'>none yet</p>";
     }
-    if (cfg.out.includes("symtab") || cfg.out.includes("types")) {
+    if (feat.out.includes("symtab") || feat.out.includes("types")) {
       h += "<h3>Symbol table</h3>";
-      const types = cfg.out.includes("types");
+      const types = feat.out.includes("types");
       h += f.symtab.length ? "<table class='cm-table'><thead><tr><th>#</th><th>name</th>" + (types ? "<th>type</th>" : "") + "</tr></thead><tbody>" + f.symtab.map((e, i) => "<tr><td>" + i + "</td><td>" + esc(e.name) + "</td>" + (types ? "<td>" + esc(e.type || "") + "</td>" : "") + "</tr>").join("") + "</tbody></table>" : "<p class='cm-empty'>none yet</p>";
     }
-    if (cfg.out.includes("messages") && f.messages.length) h += "<h3>Messages</h3><ul class='cm-msgs'>" + f.messages.map((m) => "<li>" + esc(m) + "</li>").join("") + "</ul>";
+    if (feat.out.includes("messages") && f.messages.length) h += "<h3>Messages</h3><ul class='cm-msgs'>" + f.messages.map((m) => "<li>" + esc(m) + "</li>").join("") + "</ul>";
     el.innerHTML = h;
   }
 

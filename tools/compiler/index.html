@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Actions on grammar rules, run when the parser reduces: expression evaluation, three-address code (quadruples) and translation to postfix." />
-    <title>Syntax-Directed Translation | Parser Tools</title>
+    <meta name="description" content="Scanner, parser and semantic actions working together: the parser asks the scanner for a token when it needs one; actions on grammar rules compute values, types and three-address code." />
+    <title>Compiler Front End | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=f20da596" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
@@ -20,7 +20,7 @@
   </head>
   <body>
     <div id="topbar">
-      <h1>Syntax-Directed Translation</h1>
+      <h1>Compiler Front End</h1>
     </div>
 
     <div id="panels">
@@ -39,7 +39,7 @@
           <div class="cm-fields">
             <div class="ui-label cm-label">Token rules (name, pattern)</div>
             <textarea id="token-input" class="cm-text" spellcheck="false"></textarea>
-            <div class="ui-label cm-label">Grammar with actions {{ … }}</div>
+            <div class="ui-label cm-label">Grammar, with actions {{ … }}</div>
             <textarea id="grammar-input" class="cm-text" spellcheck="false"></textarea>
           </div>
           <div id="grammar-footer"><div id="error-msg"></div></div>
@@ -104,7 +104,7 @@
       <!-- 4. Results -->
       <div class="panel" id="p-out" data-priority="1">
         <div class="panel-header">
-          <span class="panel-title">Translation</span>
+          <span class="panel-title">Results</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-out');">&#8250;</button>
         </div>
         <div class="panel-body">
@@ -129,14 +129,14 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=c7c9827a"></script>
+    <script src="guide.js?v=c50ac9ef"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/compiler-ui.js?v=753158db"></script>
+    <script src="../../shared/compiler-ui.js?v=a4dc43d9"></script>
     <script>
       const EXAMPLES = {};
       function loadExample(k) { CompilerTool.loadExample(k); }
-      CompilerTool.init({ examples: "examples.json", storage: "sdt-tool-v1", annotate: true, out: ["value", "quads"] });
+      CompilerTool.init({ examples: "examples.json", storage: "compiler-tool-v1" });
     </script>
   </body>
 </html>
