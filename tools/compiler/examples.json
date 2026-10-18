@@ -5,7 +5,7 @@
       "examples": [
         {
           "label": "Expressions",
-          "purpose": "The parser asks for one token at a time; the scanner bites off the next lexeme and skips white space. The look-ahead shows when it is called.",
+          "purpose": "The parser asks for one token at a time; the scanner consumes the next lexeme and skips white space. The look-ahead shows when it is called.",
           "tokens": [
             "skip [ \\t\\n]+ -> skip",
             "num [0-9]+(\\.[0-9]+)?",

@@ -1,5 +1,5 @@
-/* The compiler-construction tools (shared/compiler-ui.js): definition fields, the input strip with the scanner's
-   bites, the token stream, the parser stack and the results tables. */
+/* The compiler-construction tools (shared/compiler-ui.js): definition fields, the input strip with the
+   consumed text, the token stream, the parser stack and the results tables. */
 
 .cm-label { padding: var(--sp-3) var(--sp-5) 0; }
 .cm-text {
@@ -20,13 +20,12 @@
 .cm-section > .ui-label { display: block; margin-bottom: var(--sp-2); }
 .cm-chars { display: flex; flex-wrap: wrap; font-family: var(--font-mono); font-size: var(--fs-lg); line-height: 1.4; }
 .cm-ch { min-width: 0.7em; text-align: center; padding: 1px 1px; border-bottom: 3px solid transparent; }
-.cm-ch.is-done { color: var(--text-lo); }
+.cm-ch.is-done, .cm-ch.is-lex { color: var(--text-lo); }
 .cm-ch.is-sp { color: var(--text-lo); }
-.cm-ch.is-lex { background: var(--st-active-bg); color: var(--st-active); border-bottom-color: var(--st-active); }
 .cm-ch.is-peek { background: var(--hot-bg); border-bottom-color: var(--hot); }
 .cm-key { font-size: var(--fs-2xs); color: var(--text-lo); margin-top: var(--sp-2); }
 .cm-key .is-lex, .cm-key .is-peek { padding: 0 4px; margin-right: 6px; }
-.cm-key .is-lex { background: var(--st-active-bg); color: var(--st-active); }
+.cm-key .is-lex { color: var(--text-lo); }
 .cm-key .is-peek { background: var(--hot-bg); }
 .cm-empty { color: var(--text-lo); font-style: italic; font-size: var(--fs-xs); }
 

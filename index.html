@@ -223,7 +223,7 @@ body[data-view="list"] #view-map { display: none; }
 
   // ── Compiler construction section, below the map and the list ──
   const COMPILER_TOOLS = [
-    { href: "tools/compiler/", title: "Compiler Front End", desc: "A scanner, an LR parser and semantic actions on one input: the parser asks for a token when it needs one, the scanner bites off the next lexeme, and actions compute values, types and three-address code.", builds: "Regular Expressions, LR Parser" },
+    { href: "tools/compiler/", title: "Compiler Front End", desc: "A scanner, an LR parser and semantic actions on one input: the parser asks for a token when it needs one, the scanner consumes the next lexeme, and actions compute values, types and three-address code.", builds: "Regular Expressions, LR Parser" },
   ];
   const ccLinks = document.getElementById("compiler-links");
   for (const t of COMPILER_TOOLS) {

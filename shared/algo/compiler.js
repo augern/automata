@@ -401,13 +401,13 @@ function cmpRun(comp, input) {
       const beyond = chars.slice(r.end, r.readTo).join("");
       const ahead = beyond ? " To see where it ends the scanner also read " + JSON.stringify(beyond) + " and backed up." : "";
       cursor = r.end;
-      if (rule.skip) { snapshot("skip", "The scanner bites off " + JSON.stringify(lexeme) + " by the rule " + rule.name + " and discards it." + ahead); continue; }
+      if (rule.skip) { snapshot("skip", "The scanner consumes " + JSON.stringify(lexeme) + " by the rule " + rule.name + " and discards it." + ahead); continue; }
       const tok = { name: rule.name, lexeme, start: r.start, end: r.end, val: lexeme };
       if (rule.name === "int" || rule.name === "float" || rule.name === "num") { tok.val = Number(lexeme); if (rule.name !== "num") tok.type = rule.name; }
       if (rule.name === "id") tok.entry = entryOf(lexeme);
       tokens.push(tok);
       la = rule.name;
-      snapshot("scan", "The scanner bites off " + JSON.stringify(lexeme) + " and returns the token " + rule.name + "." + ahead);
+      snapshot("scan", "The scanner consumes " + JSON.stringify(lexeme) + " and returns the token " + rule.name + "." + ahead);
       return tok;
     }
   };

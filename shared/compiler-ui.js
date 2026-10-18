@@ -1,5 +1,5 @@
 // The view shared by the compiler-construction tools (Scanner and Parser, Syntax-Directed Translation, Types and
-// Symbol Table). A page has the panels p-def (token rules, grammar), p-run (input, stepper, the scanner's bites, the
+// Symbol Table). A page has the panels p-def (token rules, grammar), p-run (input, stepper, what the scanner has consumed, the
 // token stream, the parser stack), p-tree (the parse tree) and p-out (results); CompilerTool.init(cfg) wires them to
 // the engine in algo/compiler.js. Needs d3, shared.js, ui.js, stepper.js and fit-view.js.
 //
