@@ -54,14 +54,30 @@ function graphLayout(spec, dir) {
     let w = R * 2 + 4, h = R * 2 + 4;
     if (loopLabelW.has(i)) {
       const lw = loopLabelW.get(i);
-      if (dir === "TB") w += 2 * (36 + lw);
-      else { w = Math.max(w, lw + 12); h += 2 * 46; }
+      // dagre keeps edges about 28px from a box, so the box itself needs to reach only part of the way
+      if (dir === "TB") w += 2 * (14 + lw);
+      else { w = Math.max(w, lw + 8); h += 2 * 22; }
     }
     dg.setNode(i, { width: w, height: h });
   }
   for (const e of edges) dg.setEdge(e.from, e.to, {});
   dagre.layout(dg);
   return dg;
+}
+
+// dagre ends an edge on the border of the node's layout box, which is larger than the circle for a state that
+// reserves room for a self-loop: move the ends onto the circles (towards the neighbouring point of the edge).
+function clipToCircles(points, from, to, R) {
+  const pts = points.map((p) => ({ x: p.x, y: p.y }));
+  const clip = (i, j, c) => {
+    const dx = pts[j].x - c.x, dy = pts[j].y - c.y, d = Math.hypot(dx, dy);
+    if (d > R) { pts[i] = { x: c.x + (dx / d) * R, y: c.y + (dy / d) * R }; }
+  };
+  if (pts.length >= 2) {
+    clip(0, 1, from);
+    clip(pts.length - 1, pts.length - 2, to);
+  }
+  return pts;
 }
 
 // Which direction draws the graph larger in the pane? Both layouts are computed and compared by the scale at
@@ -176,7 +192,7 @@ function drawAutomatonGraph(prefix, view, spec) {
   for (const e of edges) {
     const ed = dg.edge(e.from, e.to);
     if (!ed) continue;
-    const pts = ed.points;
+    const pts = clipToCircles(ed.points, dg.node(e.from), dg.node(e.to), R);
     const mid = pts[Math.floor(pts.length / 2)];
     const eg = root.append("g").attr("class", edgeClass(e.eps)).attr("data-edge", e.from + "-" + e.to);
     eg.append("path").attr("d", pathLine(pts));
