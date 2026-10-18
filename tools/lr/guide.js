@@ -7,6 +7,7 @@ window.TOOL_GUIDE = {
     "Write one rule per line, `A -> α | β`, with symbols separated by spaces. `eps` is the empty string. A symbol in quotes is a terminal written literally, such as `'|'` (a doubled quote inside quotes is the quote itself: `''''` is `'`) or `'('`. Input strings may be written without spaces when the terminals are single characters.",
     "Step through the construction of the automaton, then of the tables. Coarse / Fine sets the size of each step.",
     "A cell with two actions is a conflict (red): the grammar is outside the chosen class. A stronger method may remove it.",
+    "Above 40 states the automaton shows only state numbers (a note says so). The Characteristic Automaton panel menu (⋯) can force item sets or numbers only.",
     "Simulation panel: enter a string (the dice gives a random sentence).",
   ],
   notation: [
