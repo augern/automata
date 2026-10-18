@@ -71,6 +71,9 @@ body[data-view="list"] #view-map { display: none; }
 /* ── List ── */
 /* The list and the compiler section share one width, so that every tool box is equally wide */
 #view-list, #view-compiler { width: 100%; max-width: 560px; box-sizing: border-box; }
+/* below the list the compiler group is spaced like the groups of the list (the body's own gap is smaller) */
+body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
+@media (max-width: 720px) { body #view-compiler { margin-top: calc(22px - var(--sp-5)); } }
 .index-card { width: 100%; }
 .tool-group { margin-bottom: 22px; }
 .tool-group:last-child { margin-bottom: 0; }
