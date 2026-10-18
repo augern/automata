@@ -708,6 +708,92 @@ function treeLayoutX(vr) {
   h.each((d) => { if (d.data.n) d.data.n._x = d.x; });
 }
 
+// ── Tree direction: top-down (root on top, leaves on a baseline below) or sideways (root on the left, children to
+// its right). "auto" takes whichever lets the tree be drawn larger in the pane.
+var treeDirMode = "auto"; // auto | down | side
+try { treeDirMode = localStorage.getItem("parser-tools-treedir") || "auto"; } catch (e) { /* storage blocked */ }
+var _treeDir = "down";
+function setTreeDirMode(m) {
+  treeDirMode = m;
+  try { localStorage.setItem("parser-tools-treedir", m); } catch (e) { /* storage blocked */ }
+  if (typeof renderTree === "function") renderTree();
+}
+
+// Sets n._x and n._y of every node of the forest (vr is the virtual root, nodes the real ones) for direction
+// dir, and returns { w, h } of the drawing.
+function treePlace(vr, nodes, dir) {
+  const depthOf = new Map();
+  (function dd(n, d) { depthOf.set(n, d); n.children.forEach((c) => dd(c, d + 1)); })(vr, vr.id === -1 ? -1 : 0);
+  nodes.forEach((n) => { n._depth = depthOf.get(n); });
+  const maxD = Math.max.apply(null, nodes.map((n) => n._depth));
+  if (dir === "down") {
+    treeLayoutX(vr);
+    const BL = maxD * TLH;
+    nodes.forEach((n) => { n._y = n.children.length ? n._depth * TLH : BL; });
+    const xs = nodes.map((n) => n._x);
+    return { w: Math.max.apply(null, xs) - Math.min.apply(null, xs) + 80, h: BL + 2 * TR };
+  }
+  // sideways: the leaves in order, one row each; a parent in the middle of its children; a column per depth
+  // (a leaf sits right of its parent, not on a common line, so that edges do not cross the drawing)
+  const RH = 2 * TR + 8;
+  let row = 0;
+  (function ay(n) {
+    if (!n.children.length) { n._y = row++ * RH; return; }
+    n.children.forEach(ay);
+    n._y = (n.children[0]._y + n.children[n.children.length - 1]._y) / 2;
+  })(vr);
+  const colW = [];
+  nodes.forEach((n) => { colW[n._depth] = Math.max(colW[n._depth] || 0, treeNodeW(n.symbol)); });
+  const GAP = 36;
+  const x0 = [];
+  let x = 0;
+  for (let d = 0; d <= maxD; d++) {
+    const w = colW[d] || 0;
+    x0[d] = x + w / 2;
+    x += w + (w ? GAP : 0);
+  }
+  nodes.forEach((n) => { n._x = x0[n._depth]; });
+  return { w: x, h: row * RH };
+}
+
+// Which direction for this tree in the pane? Both are laid out and compared by the scale at which they fit; the
+// current one is kept unless the other is clearly better (15 %); a tie goes to top-down.
+function treeChooseDir(vr, nodes) {
+  if (treeDirMode === "down" || treeDirMode === "side") { _treeDir = treeDirMode === "side" ? "side" : "down"; return _treeDir; }
+  const svg = document.getElementById("tree-svg");
+  const vw = svg ? svg.clientWidth : 0, vh = svg ? svg.clientHeight : 0;
+  if (!vw || !vh) return _treeDir;
+  const fit = (dir) => { const e = treePlace(vr, nodes, dir); return Math.min(1, (vw - 48) / Math.max(e.w, 1), (vh - 48) / Math.max(e.h, 1)); };
+  const sd = fit("down"), ss = fit("side");
+  const cur = _treeDir, other = cur === "down" ? "side" : "down";
+  const sc = { down: sd, side: ss };
+  _treeDir = sc[other] > sc[cur] * 1.15 ? other : cur;
+  return _treeDir;
+}
+
+// The edge from parent p to child c, as an SVG path, for direction dir.
+function treeEdgePath(p, c, dir) {
+  if (dir === "side") {
+    const x1 = p._x + treeNodeW(p.symbol) / 2, x2 = c._x - treeNodeW(c.symbol) / 2, m = (x1 + x2) / 2;
+    return `M ${x1},${p._y} L ${m},${p._y} L ${m},${c._y} L ${x2},${c._y}`;
+  }
+  const ey = p._y + TLH / 2;
+  return `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`;
+}
+
+// The dashed rule under the terminals (top-down trees only).
+function treeBaseline(g, nodes, dir) {
+  const lvs = nodes.filter((n) => !n.children.length);
+  if (!lvs.length || dir === "side") return;
+  const line = g.append("line").attr("stroke", "var(--border)").attr("stroke-width", 1).attr("stroke-dasharray", "4,4");
+  {
+    const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
+    const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
+    const y = lvs[0]._y + TR + 6;
+    line.attr("x1", lx1).attr("y1", y).attr("x2", lx2).attr("y2", y);
+  }
+}
+
 // renderTree handles the LL(1) parse tree (treeRoot / treeLastNew).
 // lr-tool.html intentionally shadows this with its own version for the LR
 // bottom-up forest (tForest / tRoots / tLast), which has a different structure.
@@ -727,7 +813,6 @@ function renderTree() {
   if (emp) emp.style.display = "none";
 
   const vr = dr.length === 1 ? dr[0] : { id: -1, symbol: "", children: dr };
-  treeLayoutX(vr);
 
   const nodes = [],
     edges2 = [];
@@ -740,20 +825,8 @@ function renderTree() {
   }
   col(vr);
 
-  function aD(n, d) {
-    n._depth = d;
-    n.children.forEach((c) => aD(c, d + 1));
-  }
-  aD(vr, dr.length === 1 ? 0 : -1);
-
-  const maxD = Math.max.apply(
-    null,
-    nodes.map((n) => n._depth),
-  );
-  const BL = maxD * TLH;
-  nodes.forEach((n) => {
-    n._y = n.children.length ? n._depth * TLH : BL;
-  });
+  const dir = treeChooseDir(vr, nodes);
+  treePlace(vr, nodes, dir);
 
   const ns = new Set(lastN);
   if (!nodes.length) return;
@@ -762,26 +835,12 @@ function renderTree() {
   root.selectAll("*").remove();
   const g = root.append("g"); // no transform here; zoom owns #tree-root transform
 
-  // Baseline dashed rule under terminal nodes
-  const lvs = nodes.filter((n) => !n.children.length);
-  if (lvs.length) {
-    const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
-    const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
-    g.append("line")
-      .attr("x1", lx1)
-      .attr("y1", BL + TR + 6)
-      .attr("x2", lx2)
-      .attr("y2", BL + TR + 6)
-      .attr("stroke", "var(--border)")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "4,4");
-  }
+  treeBaseline(g, nodes, dir);
 
   edges2.forEach(({ p, c }) => {
-    const ey = p._y + TLH / 2;
     g.append("path")
       .attr("class", "tree-edge" + (ns.has(c.id) ? " new-edge" : ""))
-      .attr("d", `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`);
+      .attr("d", treeEdgePath(p, c, dir));
   });
 
   nodes.forEach((node) => {
@@ -815,6 +874,14 @@ function initTreeZoom() {
     svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 8], maxScale: 0.95, pad: 24,
     hasContent: function () { return typeof treeRoot !== "undefined" && !!treeRoot; },
   });
+  // A resized pane may suit the other direction better: lay the tree out again when the choice would change.
+  var timer = null;
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { if (treeDirMode === "auto" && typeof renderTree === "function") renderTree(); }, 200);
+    }).observe(document.getElementById("tree-svg").parentElement);
+  }
 }
 
 function fitTree() {

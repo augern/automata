@@ -526,14 +526,14 @@
     <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=81ac83ae"></script>
+    <script src="../../shared/shared.js?v=561e44ca"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
-    <script src="../../shared/view-menu.js?v=eada4185"></script>
+    <script src="../../shared/view-menu.js?v=196cf1e6"></script>
     <script src="guide.js?v=41b097cb"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
@@ -910,7 +910,6 @@
 
         // X layout — natural pixel coordinates, no internal scaling
         const vr = dr.length === 1 ? dr[0] : { id: -1, symbol: "", children: dr };
-        treeLayoutX(vr);
 
         const nodes = [],
           edges2 = [];
@@ -923,20 +922,8 @@
         }
         col(vr);
 
-        function aD(n, d) {
-          n._depth = d;
-          n.children.forEach((c) => aD(c, d + 1));
-        }
-        aD(vr, dr.length === 1 ? 0 : -1);
-
-        const maxD = Math.max.apply(
-          null,
-          nodes.map((n) => n._depth),
-        );
-        const BL = maxD * TLH;
-        nodes.forEach((n) => {
-          n._y = n.children.length ? n._depth * TLH : BL;
-        });
+        const dir = treeChooseDir(vr, nodes);
+        treePlace(vr, nodes, dir);
 
         const ns = new Set(tLast);
         if (!nodes.length) return;
@@ -945,26 +932,12 @@
         root.selectAll("*").remove();
         const g = root.append("g"); // no transform — the fit view owns the transform on #tree-root
 
-        // Baseline rule under terminals
-        const lvs = nodes.filter((n) => !n.children.length);
-        if (lvs.length) {
-          const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
-          const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
-          g.append("line")
-            .attr("x1", lx1)
-            .attr("y1", BL + TR + 6)
-            .attr("x2", lx2)
-            .attr("y2", BL + TR + 6)
-            .attr("stroke", "var(--border)")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "4,4");
-        }
+        treeBaseline(g, nodes, dir);
 
         edges2.forEach(({ p, c }) => {
-          const ey = p._y + TLH / 2;
           g.append("path")
             .attr("class", "tree-edge" + (ns.has(p.id) ? " new-edge" : ""))
-            .attr("d", `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`);
+            .attr("d", treeEdgePath(p, c, dir));
         });
 
         nodes.forEach((node) => {

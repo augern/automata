@@ -26,6 +26,15 @@
         { label: "Always pan", checked: fitWheelMode === "pan", onSelect: () => setFitWheelMode("pan") }
       );
     }
+    if (typeof treeDirMode !== "undefined" && document.getElementById("tree-svg")) {
+      list.push(
+        { separator: true },
+        { heading: "Parse tree direction" },
+        { label: "Automatic", checked: treeDirMode === "auto", title: "Top-down, or sideways when that fits the pane better", onSelect: () => setTreeDirMode("auto") },
+        { label: "Top-down", checked: treeDirMode === "down", onSelect: () => setTreeDirMode("down") },
+        { label: "Sideways", checked: treeDirMode === "side", title: "Root on the left, children to its right", onSelect: () => setTreeDirMode("side") }
+      );
+    }
     const steppers = typeof keyPanelSummaries === "function" ? keyPanelSummaries() : [];
     if (steppers.length > 1) {
       list.push(
