@@ -59,20 +59,29 @@ function createFitView(o) {
     return e.__pan;
   }
 
+  const wheelDelta = (e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002) * (e.ctrlKey ? 10 : 1);
   const zoom = d3.zoom()
     .scaleExtent(o.scaleExtent || [0.08, 8])
     .filter((e) => (e.type === "wheel" ? !isTrackpadPan(e) : !e.ctrlKey && !e.button))
-    .wheelDelta((e) => -e.deltaY * (e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002) * (e.ctrlKey ? 10 : 1))
+    .wheelDelta(wheelDelta)
     .on("zoom", (e) => {
       d3.select("#" + o.root).attr("transform", e.transform);
       if (e.sourceEvent && (fitK === null || Math.abs(e.transform.k - fitK) > 1e-6)) held = true;
     });
-  svgSel.call(zoom).on("dblclick.zoom", null); // double-click fits instead of zooming in
-  svgEl.addEventListener("wheel", (e) => {
-    if (!isTrackpadPan(e)) return;
+  svgSel.call(zoom).on("dblclick.zoom", null).on("wheel.zoom", null); // double-click fits instead of zooming in; the wheel is handled below
+  // The wheel is handled on the container, not on the svg, so it works anywhere in the view (also where the
+  // svg itself is not the event target, such as between the drawing's items in some browsers).
+  const host = svgEl.parentElement || svgEl;
+  host.addEventListener("wheel", (e) => {
     e.preventDefault();
-    const k = d3.zoomTransform(svgEl).k;
-    svgSel.call(zoom.translateBy, -e.deltaX / k, -e.deltaY / k);
+    if (isTrackpadPan(e)) {
+      const k = d3.zoomTransform(svgEl).k;
+      svgSel.call(zoom.translateBy, -e.deltaX / k, -e.deltaY / k);
+      return;
+    }
+    // zoom about the pointer
+    held = true;
+    svgSel.call(zoom.scaleBy, Math.pow(2, wheelDelta(e)), d3.pointer(e, svgEl));
   }, { passive: false });
 
   function fit() {
