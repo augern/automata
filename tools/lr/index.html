@@ -526,7 +526,7 @@
     <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=2bf3cf9f"></script>
+    <script src="../../shared/shared.js?v=3093506f"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -850,6 +850,7 @@
       });
       function fitAutomaton() { _autoView.fit(); }
       _treeView = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.1, 8], maxScale: 0.95, pad: 24 });
+      treeRegisterPanel("p-tree", "tree-svg", () => renderTree());
 
       // The forest is redrawn when its pane resizes (the view refits by itself)
       if (typeof ResizeObserver !== "undefined") {

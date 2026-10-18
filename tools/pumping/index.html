@@ -163,7 +163,7 @@
     <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
     <script src="../../shared/algo/rdp.js?v=5a7e9a43"></script>
     <script src="../../shared/algo/pumping.js?v=9850ae52"></script>
-    <script src="../../shared/shared.js?v=2bf3cf9f"></script>
+    <script src="../../shared/shared.js?v=3093506f"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -442,21 +442,30 @@
 
       let treeView = null;
       function drawTree(tree) {
-        if (!treeView) treeView = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 3], maxScale: 1, pad: 16, hasContent: () => ppMode === "cf" });
+        if (!treeView) { treeView = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 3], maxScale: 1, pad: 16, hasContent: () => ppMode === "cf" });
+          treeRegisterPanel("p-main", "tree-svg", () => { if (ppMode === "cf") renderCF(); }, () => ppMode === "cf");
+        }
         const g = d3.select("#tree-root");
         g.selectAll("*").remove();
         $("tree-empty").style.display = tree ? "none" : "";
         if (!tree) return;
-        const h = d3.hierarchy(tree, (d) => d.children);
-        const nw = (d) => Math.max(26, [...String(d.data.sym)].length * 7 + 14); // wide names such as <adjective> need wider nodes
-        d3.tree().nodeSize([30, 56]).separation((a, b) => ((nw(a) + nw(b)) / 2 + 8) / 30)(h);
-        g.append("g").selectAll("path").data(h.links()).join("path").attr("class", "pt-e")
-          .attr("d", (l) => "M" + l.source.x + "," + (l.source.y + 12) + "C" + l.source.x + "," + (l.source.y + 30) + " " + l.target.x + "," + (l.target.y - 30) + " " + l.target.x + "," + (l.target.y - 12));
-        const cls = (d) => "pt-n" + (d.data.leaf ? " pt-leaf" : "") + (d.data.eps ? " pt-eps" : "") + (d.data.part ? " pt-" + d.data.part : "") + (d.data.mark ? " pt-" + d.data.mark : "");
-        const ns = g.append("g").selectAll("g").data(h.descendants()).join("g").attr("class", cls).attr("transform", (d) => "translate(" + d.x + "," + d.y + ")");
-        ns.append("rect").attr("class", "pt-shape").attr("x", (d) => (d.data.leaf ? 0 : -nw(d) / 2)).attr("y", -13).attr("rx", 13)
-          .attr("width", (d) => (d.data.leaf ? 0 : nw(d))).attr("height", (d) => (d.data.leaf ? 0 : 26));
-        ns.append("text").attr("dy", "0.35em").text((d) => d.data.sym);
+        // The shared tree layout (top-down or sideways, see treePlace in shared.js) on a copy of the tree.
+        let k = 0;
+        const wnodes = [];
+        const wrap = (d) => { const w = { id: k++, d, children: [] }; wnodes.push(w); w.children = (d.children || []).map(wrap); return w; };
+        const wroot = wrap(tree);
+        const nw = (w) => (w.d.leaf ? Math.max(14, [...String(w.d.sym)].length * 8) : Math.max(26, [...String(w.d.sym)].length * 7 + 14)); // wide names such as <adjective>
+        const lay = { width: nw, half: 13, row: 56 };
+        const dir = treeChooseDir(wroot, wnodes, lay, "tree-svg");
+        treePlace(wroot, wnodes, dir, lay);
+        treeBaseline(g, wnodes, dir);
+        g.append("g").selectAll("path").data(wnodes.filter((w) => w !== wroot)).join("path").attr("class", "pt-e")
+          .attr("d", (w) => treeEdgePath(wnodes.find((p) => p.children.includes(w)), w, dir));
+        const cls = (d) => "pt-n" + (d.leaf ? " pt-leaf" : "") + (d.eps ? " pt-eps" : "") + (d.part ? " pt-" + d.part : "") + (d.mark ? " pt-" + d.mark : "");
+        const ns = g.append("g").selectAll("g").data(wnodes).join("g").attr("class", (w) => cls(w.d)).attr("transform", (w) => "translate(" + w._x + "," + w._y + ")");
+        ns.append("rect").attr("class", "pt-shape").attr("x", (w) => (w.d.leaf ? 0 : -w._w / 2)).attr("y", -13).attr("rx", 13)
+          .attr("width", (w) => (w.d.leaf ? 0 : w._w)).attr("height", (w) => (w.d.leaf ? 0 : 26));
+        ns.append("text").attr("dy", "0.35em").text((w) => w.d.sym);
         treeView.refit();
       }
 

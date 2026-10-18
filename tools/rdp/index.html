@@ -246,7 +246,7 @@
     <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/rdp.js?v=5a7e9a43"></script>
-    <script src="../../shared/shared.js?v=2bf3cf9f"></script>
+    <script src="../../shared/shared.js?v=3093506f"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -556,6 +556,7 @@
 
       // Pan/zoom and fit-to-view for the tree (see shared/fit-view.js): it refits as the search tree grows.
       const rdView = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 3], maxScale: 1, pad: 12, hasContent: () => !!rdTrace });
+      treeRegisterPanel("p-search", "tree-svg", () => { if (rdTrace && rdState) { drawSearchTree(); applyHot(); } });
       d3.select("#tree-svg").on("click", () => { if (rdSel !== null) selectNode(rdSel); });
 
       function drawSearchTree() {
@@ -582,25 +583,29 @@
         }
         if (!root) { empty.style.display = ""; return; }
         empty.style.display = "none";
-        const h = d3.hierarchy(root, (d) => kids.get(d.id) || []);
-        d3.tree().nodeSize([40, 66]).separation((a, b) => Math.max(0.9, (nodeWidth(a.data) + nodeWidth(b.data)) / 2 / 40 + 0.2))(h);
+        // The shared tree layout (top-down or sideways, see treePlace in shared.js) on a copy of the visible tree.
+        const wrap = (nd) => ({ id: nd.id, nd, children: (kids.get(nd.id) || []).map(wrap) });
+        const wroot = wrap(root), wnodes = [];
+        (function flat(w) { wnodes.push(w); w.children.forEach(flat); })(wroot);
+        const lay = { width: (w) => nodeWidth(w.nd), half: 14, row: 66, align: false };
+        const dir = treeChooseDir(wroot, wnodes, lay, "tree-svg");
+        treePlace(wroot, wnodes, dir, lay);
         const active = rdState.event ? rdState.event.node : -1;
-        const ends = (l) => ({ y1: l.source.y + NODE_H[l.source.data.kind] / 2, y2: l.target.y - NODE_H[l.target.data.kind] / 2 });
-        g.append("g").selectAll("path").data(h.links()).join("path")
-          .attr("class", (l) => "rdp-e" + (st[l.target.data.id].st === "dead" ? " e-dead" : ""))
-          .attr("d", (l) => {
-            const { y1, y2 } = ends(l), m = (y1 + y2) / 2;
-            return "M" + l.source.x + "," + y1 + "C" + l.source.x + "," + m + " " + l.target.x + "," + m + " " + l.target.x + "," + y2;
-          });
-        g.append("g").selectAll("text").data(h.links().filter((l) => altOf.has(l.target.data.id))).join("text")
-          .attr("class", (l) => "rdp-el" + (st[l.target.data.id].st === "dead" ? " e-dead" : ""))
-          .attr("x", (l) => 0.216 * l.source.x + 0.784 * l.target.x) // the edge's point at t = 0.7
-          .attr("y", (l) => { const { y1, y2 } = ends(l), m = (y1 + y2) / 2; return 0.027 * y1 + 0.441 * m + 0.343 * y2 + 0.189 * m; })
-          .text((l) => altOf.get(l.target.data.id).alt + 1)
-          .on("mouseenter", (e, l) => setHot(hotFromAlt(altOf.get(l.target.data.id))))
+        const links = [];
+        wnodes.forEach((p) => p.children.forEach((c) => links.push({ p, c })));
+        g.append("g").selectAll("path").data(links).join("path")
+          .attr("class", (l) => "rdp-e" + (st[l.c.id].st === "dead" ? " e-dead" : ""))
+          .attr("d", (l) => treeEdgePath(l.p, l.c, dir));
+        g.append("g").selectAll("text").data(links.filter((l) => altOf.has(l.c.id))).join("text")
+          .attr("class", (l) => "rdp-el" + (st[l.c.id].st === "dead" ? " e-dead" : ""))
+          .attr("x", (l) => treeEdgeLabelPos(l.p, l.c, dir).x)
+          .attr("y", (l) => treeEdgeLabelPos(l.p, l.c, dir).y)
+          .text((l) => altOf.get(l.c.id).alt + 1)
+          .on("mouseenter", (e, l) => setHot(hotFromAlt(altOf.get(l.c.id))))
           .on("mouseleave", () => setHot(null))
-          .append("title").text((l) => { const a = altOf.get(l.target.data.id); return "Alternative " + (a.alt + 1) + ": " + a.nt + " → " + (rdG.alts[a.nt][a.alt].rhs.join(" ") || "ε"); });
-        const ns = g.append("g").selectAll("g").data(h.descendants()).join("g")
+          .append("title").text((l) => { const a = altOf.get(l.c.id); return "Alternative " + (a.alt + 1) + ": " + a.nt + " → " + (rdG.alts[a.nt][a.alt].rhs.join(" ") || "ε"); });
+        const items = wnodes.map((w) => ({ data: w.nd, x: w._x, y: w._y }));
+        const ns = g.append("g").selectAll("g").data(items).join("g")
           .attr("class", (d) => "rdp-n k-" + d.data.kind + " st-" + st[d.data.id].st + (d.data.id === active ? " is-active" : "") + (d.data.id === rdSel ? " is-sel" : ""))
           .attr("data-id", (d) => d.data.id)
           .attr("transform", (d) => "translate(" + d.x + "," + d.y + ")")

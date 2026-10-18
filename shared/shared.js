@@ -690,21 +690,64 @@ const TR = 18,
   TLH = 60,
   TNW = 46;
 
+// ── Parse-tree layout, shared by every tree view ───────────────────────────────────────────────────────────
+// A tree is { id, children: [...], ... } (the forest of an LR run has a virtual root with id -1). The views draw
+// each node as a pill and call, in this order:
+//   const dir = treeChooseDir(vr, nodes, o);  treePlace(vr, nodes, dir, o);   // sets n._x, n._y, n._w, n._half
+//   treeBaseline(g, nodes, dir);  treeEdgePath(p, c, dir)  (and treeEdgeLabelPos for labels on edges)
+// Options o: width(n) the node's width (default: from n.symbol), half the node's half height (18), row the
+// distance between levels top-down (60), align false to place leaves at their own depth instead of on a common
+// line (a search tree whose leaves are not all terminals).
+// Two directions: "down" (root on top) and "side" (root on the left, children to its right); the leaves are on one
+// line at the bottom or in one column on the right, right-aligned, marked by a dashed rule that ends in an arrow in
+// the reading order.
+
 // Width of a parse-tree node for its label: at least a circle, wider for long names such as <adjective>.
 function treeNodeW(sym) {
   return Math.max(2 * TR, Math.ceil([...String(sym)].length * 6.6) + 16);
 }
+
+var treeDirMode = "auto"; // auto | down | side
+try { treeDirMode = localStorage.getItem("parser-tools-treedir") || "auto"; } catch (e) { /* storage blocked */ }
+var _treeDir = "down";
+var _treeRedraw = []; // the redraw functions of the trees on this page
+function setTreeDirMode(m) {
+  treeDirMode = m;
+  try { localStorage.setItem("parser-tools-treedir", m); } catch (e) { /* storage blocked */ }
+  _treeRedraw.forEach((f) => f());
+}
+// A tree view on the page: its panel's menu offers the direction, and a resized pane redraws it when the
+// automatic direction would change. enabled(): the menu offers the choice only when this is true (default: always).
+function treeRegisterPanel(panelId, svgId, redraw, enabled) {
+  _treeRedraw.push(redraw);
+  panelMenuExtras[panelId] = function () {
+    if (enabled && !enabled()) return [];
+    return [
+      { heading: "Tree direction" },
+      { label: "Automatic", checked: treeDirMode === "auto", title: "Top-down, or sideways when that fits the pane better", onSelect: () => setTreeDirMode("auto") },
+      { label: "Top-down", checked: treeDirMode === "down", onSelect: () => setTreeDirMode("down") },
+      { label: "Sideways", checked: treeDirMode === "side", title: "Root on the left, children to its right", onSelect: () => setTreeDirMode("side") },
+    ];
+  };
+  if (typeof ResizeObserver === "undefined") return;
+  var timer = null;
+  new ResizeObserver(function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { if (treeDirMode === "auto") redraw(); }, 200);
+  }).observe(document.getElementById(svgId).parentElement);
+}
+
 // Horizontal positions (_x) of a forest under the virtual root vr: d3's tidy tree, siblings and cousins kept apart
-// by the widths of their nodes. The leaves are all drawn on one baseline, whatever their depth, so each leaf is
-// given zero-width placeholders down to the deepest row: the tidy tree then keeps all leaves apart from each other.
-function treeLayoutX(vr) {
+// by the widths of their nodes (n._w). With `align`, the leaves are drawn on one line whatever their depth, so each
+// leaf is given zero-width placeholders down to the deepest row: the tidy tree then keeps all leaves apart.
+function treeLayoutX(vr, align) {
   let maxD = 0;
   (function depth(n, d) { maxD = Math.max(maxD, d); n.children.forEach((c) => depth(c, d + 1)); })(vr, 0);
   const wrap = (n, d) => {
-    const w = n.id === -1 ? 0 : treeNodeW(n.symbol);
+    const w = n.id === -1 ? 0 : n._w;
     if (n.children.length) return { n, w, kids: n.children.map((c) => wrap(c, d + 1)) };
     let node = { n, w, kids: [] };
-    for (let k = d; k < maxD; k++) node = { n: null, w: 0, kids: [node] };
+    if (align) for (let k = d; k < maxD; k++) node = { n: null, w: 0, kids: [node] };
     return node;
   };
   const h = d3.hierarchy(wrap(vr, 0), (x) => x.kids);
@@ -712,54 +755,36 @@ function treeLayoutX(vr) {
   h.each((d) => { if (d.data.n) d.data.n._x = d.x; });
 }
 
-// ── Tree direction: top-down (root on top, leaves on a baseline below) or sideways (root on the left, children to
-// its right). "auto" takes whichever lets the tree be drawn larger in the pane.
-var treeDirMode = "auto"; // auto | down | side
-try { treeDirMode = localStorage.getItem("parser-tools-treedir") || "auto"; } catch (e) { /* storage blocked */ }
-var _treeDir = "down";
-function setTreeDirMode(m) {
-  treeDirMode = m;
-  try { localStorage.setItem("parser-tools-treedir", m); } catch (e) { /* storage blocked */ }
-  if (typeof renderTree === "function") renderTree();
-}
-
-// The parse tree panel's menu offers the direction.
-panelMenuExtras["p-tree"] = function () {
-  if (!document.getElementById("tree-svg")) return [];
-  return [
-    { heading: "Tree direction" },
-    { label: "Automatic", checked: treeDirMode === "auto", title: "Top-down, or sideways when that fits the pane better", onSelect: () => setTreeDirMode("auto") },
-    { label: "Top-down", checked: treeDirMode === "down", onSelect: () => setTreeDirMode("down") },
-    { label: "Sideways", checked: treeDirMode === "side", title: "Root on the left, children to its right", onSelect: () => setTreeDirMode("side") },
-  ];
-};
-
-// Sets n._x and n._y of every node of the forest (vr is the virtual root, nodes the real ones) for direction
-// dir, and returns { w, h } of the drawing.
-function treePlace(vr, nodes, dir) {
+// Sets n._x, n._y (and _w, _half, _row) of every node of the forest (vr is the virtual root or the root, nodes the
+// real ones) for direction dir; returns { w, h }, the extent of the drawing.
+function treePlace(vr, nodes, dir, o) {
+  o = o || {};
+  const half = o.half === undefined ? TR : o.half, row = o.row || TLH, align = o.align !== false;
+  const W = o.width || ((n) => treeNodeW(n.symbol));
+  nodes.forEach((n) => { n._w = W(n); n._half = half; n._row = row; });
+  if (vr.id === -1) vr._w = 0;
   const depthOf = new Map();
   (function dd(n, d) { depthOf.set(n, d); n.children.forEach((c) => dd(c, d + 1)); })(vr, vr.id === -1 ? -1 : 0);
   nodes.forEach((n) => { n._depth = depthOf.get(n); });
   const maxD = Math.max.apply(null, nodes.map((n) => n._depth));
   if (dir === "down") {
-    treeLayoutX(vr);
-    const BL = maxD * TLH;
-    nodes.forEach((n) => { n._y = n.children.length ? n._depth * TLH : BL; });
+    treeLayoutX(vr, align);
+    const BL = maxD * row;
+    nodes.forEach((n) => { n._y = !align || n.children.length ? n._depth * row : BL; });
     const xs = nodes.map((n) => n._x);
-    return { w: Math.max.apply(null, xs) - Math.min.apply(null, xs) + 80, h: BL + 2 * TR };
+    return { w: Math.max.apply(null, xs) - Math.min.apply(null, xs) + 80, h: BL + 2 * half };
   }
   // sideways: the leaves in order, one row each; a parent in the middle of its children; a column per depth
-  // (the leaves are right-aligned in a column of their own)
-  const RH = 2 * TR + 8;
-  let row = 0;
+  const RH = 2 * half + 8;
+  let rowNo = 0;
   (function ay(n) {
-    if (!n.children.length) { n._y = row++ * RH; return; }
+    if (!n.children.length) { n._y = rowNo++ * RH; return; }
     n.children.forEach(ay);
     n._y = (n.children[0]._y + n.children[n.children.length - 1]._y) / 2;
   })(vr);
   const colW = [];
-  nodes.forEach((n) => { if (n.children.length) colW[n._depth] = Math.max(colW[n._depth] || 0, treeNodeW(n.symbol)); });
-  const leafW = Math.max.apply(null, nodes.filter((n) => !n.children.length).map((n) => treeNodeW(n.symbol)).concat([2 * TR]));
+  nodes.forEach((n) => { if (n.children.length || !align) colW[n._depth] = Math.max(colW[n._depth] || 0, n._w); });
+  const leafW = Math.max.apply(null, nodes.filter((n) => !n.children.length).map((n) => n._w).concat([2 * half]));
   const GAP = 36;
   const x0 = [];
   let x = 0;
@@ -768,20 +793,20 @@ function treePlace(vr, nodes, dir) {
     x0[d] = x + w / 2;
     x += w + (w ? GAP : 0);
   }
-  // the leaves are right-aligned in a column after the last internal column, like the baseline of a top-down tree
-  const right = x + leafW;
-  nodes.forEach((n) => { n._x = n.children.length ? x0[n._depth] : right - treeNodeW(n.symbol) / 2; });
-  return { w: right, h: row * RH };
+  // with `align`, the leaves are right-aligned in a column after the last internal column
+  const right = align ? x + leafW : x - GAP;
+  nodes.forEach((n) => { n._x = n.children.length || !align ? x0[n._depth] : right - n._w / 2; });
+  return { w: right, h: rowNo * RH };
 }
 
-// Which direction for this tree in the pane? Both are laid out and compared by the scale at which they fit; the
-// current one is kept unless the other is clearly better (15 %); a tie goes to top-down.
-function treeChooseDir(vr, nodes) {
+// Which direction for this tree in the pane (svgId: its <svg>)? Both are laid out and compared by the scale at
+// which they fit; the current one is kept unless the other is clearly better (15 %); a tie goes to top-down.
+function treeChooseDir(vr, nodes, o, svgId) {
   if (treeDirMode === "down" || treeDirMode === "side") { _treeDir = treeDirMode === "side" ? "side" : "down"; return _treeDir; }
-  const svg = document.getElementById("tree-svg");
+  const svg = document.getElementById(svgId || "tree-svg");
   const vw = svg ? svg.clientWidth : 0, vh = svg ? svg.clientHeight : 0;
   if (!vw || !vh) return _treeDir;
-  const fit = (dir) => { const e = treePlace(vr, nodes, dir); return Math.min(1, (vw - 48) / Math.max(e.w, 1), (vh - 48) / Math.max(e.h, 1)); };
+  const fit = (dir) => { const e = treePlace(vr, nodes, dir, o); return Math.min(1, (vw - 48) / Math.max(e.w, 1), (vh - 48) / Math.max(e.h, 1)); };
   const sd = fit("down"), ss = fit("side");
   const cur = _treeDir, other = cur === "down" ? "side" : "down";
   const sc = { down: sd, side: ss };
@@ -789,16 +814,24 @@ function treeChooseDir(vr, nodes) {
   return _treeDir;
 }
 
-// The edge from parent p to child c, as an SVG path, for direction dir.
+// The edge from parent p to child c, as an SVG path, for direction dir. Siblings fan out together: a stub from
+// the child to a point shared by all siblings, then a straight line to the parent.
 function treeEdgePath(p, c, dir) {
   if (dir === "side") {
-    // like the top-down fan-out, turned: a diagonal from the parent to a point a fixed distance to its right (the
-    // same for all siblings, so they fan out together), then straight into the child
-    const x1 = p._x + treeNodeW(p.symbol) / 2, x2 = c._x - treeNodeW(c.symbol) / 2, xm = Math.min(x1 + 18, x2);
+    const x1 = p._x + p._w / 2, x2 = c._x - c._w / 2, xm = Math.min(x1 + 18, x2);
     return `M ${x2},${c._y} L ${xm},${c._y} L ${x1},${p._y}`;
   }
-  const ey = p._y + TLH / 2;
-  return `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`;
+  const ey = p._y + p._row / 2;
+  return `M ${c._x},${c._y - c._half} L ${c._x},${ey} L ${p._x},${p._y + p._half}`;
+}
+// Where to put a short label on that edge (for example the number of an alternative): on the stub into the child.
+function treeEdgeLabelPos(p, c, dir) {
+  if (dir === "side") {
+    const x1 = p._x + p._w / 2, x2 = c._x - c._w / 2, xm = Math.min(x1 + 18, x2);
+    return { x: (xm + x2) / 2, y: c._y - 7 };
+  }
+  const ey = p._y + p._row / 2;
+  return { x: c._x + 8, y: (c._y - c._half + Math.max(ey, c._y - c._half - 20)) / 2 };
 }
 
 // The dashed rule that marks the terminals (a line under them, or a vertical line after them), with an arrowhead
@@ -807,7 +840,7 @@ function treeBaseline(g, nodes, dir) {
   const lvs = nodes.filter((n) => !n.children.length);
   if (!lvs.length) return;
   // an arrowhead at the end shows the reading order of the terminals (left to right, or top to bottom)
-  const svg = d3.select("#tree-svg");
+  const svg = d3.select(g.node().ownerSVGElement);
   if (svg.select("#tree-read-arrow").empty()) {
     (svg.select("defs").empty() ? svg.insert("defs", ":first-child") : svg.select("defs")).append("marker")
       .attr("id", "tree-read-arrow").attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 10).attr("markerHeight", 8)
@@ -816,13 +849,13 @@ function treeBaseline(g, nodes, dir) {
   }
   const line = g.append("line").attr("stroke", "var(--border-hi)").attr("stroke-width", 1).attr("stroke-dasharray", "4,4").attr("marker-end", "url(#tree-read-arrow)");
   if (dir === "side") {
-    const x = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 8;
-    const ys = lvs.map((n) => n._y);
-    line.attr("x1", x).attr("x2", x).attr("y1", Math.min.apply(null, ys) - TR).attr("y2", Math.max.apply(null, ys) + TR + 14);
+    const x = Math.max.apply(null, lvs.map((n) => n._x + n._w / 2)) + 8;
+    const ys = lvs.map((n) => n._y), half = lvs[0]._half;
+    line.attr("x1", x).attr("x2", x).attr("y1", Math.min.apply(null, ys) - half).attr("y2", Math.max.apply(null, ys) + half + 14);
   } else {
-    const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
-    const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
-    const y = lvs[0]._y + TR + 6;
+    const lx1 = Math.min.apply(null, lvs.map((n) => n._x - n._w / 2)) - 4;
+    const lx2 = Math.max.apply(null, lvs.map((n) => n._x + n._w / 2)) + 4;
+    const y = lvs[0]._y + lvs[0]._half + 6;
     line.attr("x1", lx1).attr("y1", y).attr("x2", lx2 + 14).attr("y2", y);
   }
 }
@@ -907,14 +940,7 @@ function initTreeZoom() {
     svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 8], maxScale: 0.95, pad: 24,
     hasContent: function () { return typeof treeRoot !== "undefined" && !!treeRoot; },
   });
-  // A resized pane may suit the other direction better: lay the tree out again when the choice would change.
-  var timer = null;
-  if (typeof ResizeObserver !== "undefined") {
-    new ResizeObserver(function () {
-      clearTimeout(timer);
-      timer = setTimeout(function () { if (treeDirMode === "auto" && typeof renderTree === "function") renderTree(); }, 200);
-    }).observe(document.getElementById("tree-svg").parentElement);
-  }
+  treeRegisterPanel("p-tree", "tree-svg", function () { if (typeof renderTree === "function") renderTree(); });
 }
 
 function fitTree() {
