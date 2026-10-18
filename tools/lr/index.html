@@ -406,6 +406,7 @@
             </div>
             <div id="cstep-log" class="ui-logbar"></div>
             <div id="error-msg"></div>
+            <div id="auto-notice" class="ui-hint" style="display: none"></div>
           </div>
           <div class="automaton-container ui-canvas">
             <svg id="cy" width="100%" height="100%">
@@ -716,7 +717,24 @@
         }
         return core;
       }
+      // Compact states: the state number only, no items. Automatic above COMPACT_AUTO states (the full item sets of a
+      // large automaton cannot be read anyway), or chosen in the panel's menu: auto | on | off.
+      const COMPACT_AUTO = 40;
+      let cCompactMode = "auto";
+      const automatonCompact = (n) => cCompactMode === "on" || (cCompactMode === "auto" && n > COMPACT_AUTO);
+      const COMPACT_W = 46, COMPACT_H = 30;
+      function setCompactMode(m) {
+        cCompactMode = m;
+        if (currentAuto && currentGrammar) renderAutomaton(currentAuto.states, currentAuto.edges, currentGrammar.rules, currentMode);
+      }
+      panelMenuExtras["p-automaton"] = () => [
+        { heading: "State display" },
+        { label: "Automatic", checked: cCompactMode === "auto", title: "Numbers only above " + COMPACT_AUTO + " states", onSelect: () => setCompactMode("auto") },
+        { label: "Items", checked: cCompactMode === "off", title: "The item set of every state", onSelect: () => setCompactMode("off") },
+        { label: "Numbers only", checked: cCompactMode === "on", title: "Compact states: the state number without its items", onSelect: () => setCompactMode("on") },
+      ];
       function nodeSize(state, rules, mode) {
+        if (automatonCompact(currentAuto ? currentAuto.states.length : 0)) return { w: COMPACT_W, h: COMPACT_H };
         const disp = getDisplayItems(state, mode);
         const lines = disp.map((i) => ils(i, rules, mode));
         const maxW = Math.max(...lines.map((l) => l.length * CH), ("State I" + state.id).length * CH);
@@ -729,6 +747,10 @@
       }
       function renderAutomaton(states, edges, rules, mode) {
         document.getElementById("empty-msg").style.display = "none";
+        const compact = automatonCompact(states.length);
+        const notice = document.getElementById("auto-notice");
+        notice.style.display = compact && cCompactMode === "auto" ? "" : "none";
+        notice.textContent = states.length + " states: shown as numbers only. The panel menu (⋯) can show the items.";
         const dg = new dagre.graphlib.Graph({ multigraph: true });
         dg.setGraph({ rankdir: cLayoutDir, nodesep: 36, ranksep: 56, marginx: 40, marginy: 40 });
         dg.setDefaultEdgeLabel(() => ({}));
@@ -790,9 +812,15 @@
           const lines = disp.map((i) => ils(i, rules, mode));
           const ng = root
             .append("g")
-            .attr("class", "node" + (state.kernel ? " kernel" : "") + (state.accepting ? " accepting" : ""))
+            .attr("class", "node" + (state.kernel ? " kernel" : "") + (state.accepting ? " accepting" : "") + (compact ? " compact" : ""))
             .attr("id", "state-" + state.id)
             .attr("transform", "translate(" + tx + "," + ty + ")");
+          if (compact) {
+            ng.append("rect").attr("width", w).attr("height", h).attr("rx", h / 2);
+            if (state.accepting) ng.append("rect").attr("class", "accept-border").attr("x", 3).attr("y", 3).attr("width", w - 6).attr("height", h - 6).attr("rx", h / 2 - 3);
+            ng.append("text").attr("class", "state-label").attr("x", w / 2).attr("y", h / 2).attr("text-anchor", "middle").attr("dy", "0.35em").text("I" + state.id);
+            return;
+          }
           const kc = state.id === 0 ? 1 : disp.filter((i) => i.dot > 0).length;
           const hasSep = kc > 0 && kc < disp.length;
           ng.append("rect").attr("width", w).attr("height", h).attr("rx", 6);
