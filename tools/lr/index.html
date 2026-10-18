@@ -890,6 +890,8 @@
       function treeReduce(lhs, pc, ri) {
         const ch = pc > 0 ? tForest.splice(tForest.length - pc, pc) : [];
         const n = { id: tNid++, symbol: lhs, ruleIdx: ri, parent: null, children: ch };
+        // a reduction by an ε-production has an ε leaf, as in the LL(1) tree
+        if (pc === 0) ch.push({ id: tNid++, symbol: EPSILON, ruleIdx: null, parent: n, children: [] });
         ch.forEach((c) => {
           c.parent = n;
         });
