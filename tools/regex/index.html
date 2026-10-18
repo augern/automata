@@ -447,6 +447,7 @@
         <div class="panel-header">
           <span class="panel-title">DFA — Subset Construction</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('subset');" title="Subset construction algorithm"> Algorithm</button>
+          <button class="algo-btn min-toggle active" id="btn-sc-toggle" onclick="event.stopPropagation(); toggleSubset();" title="Toggle: apply the DFA to simulation and graph (skipped: they use the Thompson NFA, as they do until the construction is complete)">Apply ✓</button>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-dfa');">&#8250;</button>
         </div>
         <div class="panel-body">
@@ -580,7 +581,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=131965d4"></script>
-    <script src="guide.js?v=01d60e53"></script>
+    <script src="guide.js?v=2d4348ad"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=69c0e607"></script>
@@ -1287,6 +1288,19 @@
         mcSetBtns();
       }
 
+      // The graph and the simulation use the Thompson NFA until the subset construction has been stepped to its
+      // end, and always when it is skipped (the same rule as for minimisation).
+      let _scEnabled = true;
+      const nfaDirect = () => !_nfaFinal || !(_scEnabled && _scDone);
+      function toggleSubset() {
+        _scEnabled = !_scEnabled;
+        const btn = document.getElementById("btn-sc-toggle");
+        btn.textContent = _scEnabled ? "Apply ✓" : "Skip ○";
+        btn.classList.toggle("active", _scEnabled);
+        btn.classList.toggle("inactive", !_scEnabled);
+        refreshActiveDFA();
+      }
+
       function toggleMinimize() {
         _minEnabled = !_minEnabled;
         const btn = document.getElementById("btn-min-toggle");
@@ -1370,14 +1384,59 @@
       const dfaGraph = createGraphView("dfa", { hasNodes: () => !!_scData });
       function fitDFA() { dfaGraph.fit(); }
 
-      function renderDFA(scData) {
-        if (!_scDone) {
-          // The DFA has not been constructed yet: show the placeholder instead of the answer.
-          d3.select("#dfa-graph-root").selectAll("*").remove();
-          document.getElementById("dfa-graph-empty").style.display = "";
-          return;
+      // Graphs larger than this are not drawn (layout time and legibility); the simulation still runs.
+      const GRAPH_MAX_NODES = 80, GRAPH_MAX_EDGES = 300;
+      function graphMessage(text) {
+        d3.select("#dfa-graph-root").selectAll("*").remove();
+        const el = document.getElementById("dfa-graph-empty");
+        el.textContent = text;
+        el.style.display = "";
+      }
+      const tooLarge = (nodes, edges) => nodes > GRAPH_MAX_NODES || edges > GRAPH_MAX_EDGES;
+      const tooLargeMsg = (what, nodes, edges) => "The " + what + " is not drawn: " + nodes + " states and " + edges + " transitions (limit " + GRAPH_MAX_NODES + " and " + GRAPH_MAX_EDGES + ").";
+
+      // The Thompson NFA, drawn directly (ε-moves dashed).
+      function renderNfaGraph() {
+        const nfa = _nfaFinal;
+        if (!nfa) return graphMessage("Build the NFA first.");
+        const n = nfa.numStates, closure = nfaClosureOf(nfa);
+        const alpha = [...new Set(nfa.trans.filter((t) => t.sym !== EPS).map((t) => t.sym))].sort();
+        if (tooLarge(n + (_errOn ? 1 : 0), nfa.trans.length + (_errOn ? n : 0))) return graphMessage(tooLargeMsg("NFA", n, nfa.trans.length));
+        const edgeMap = new Map(), loopMap = new Map();
+        const add = (from, to, sym) => {
+          if (from === to) {
+            if (!loopMap.has(from)) loopMap.set(from, { node: from, labels: [], eps: true });
+            const e = loopMap.get(from);
+            if (!e.labels.includes(sym)) e.labels.push(sym);
+            if (sym !== EPS) e.eps = false;
+          } else {
+            const k = from + "-" + to;
+            if (!edgeMap.has(k)) edgeMap.set(k, { from, to, labels: [], eps: true });
+            const e = edgeMap.get(k);
+            if (!e.labels.includes(sym)) e.labels.push(sym);
+            if (sym !== EPS) e.eps = false;
+          }
+        };
+        for (const t of nfa.trans) add(t.from, t.to, t.sym);
+        const nodes = Array.from({ length: n }, (_, i) => ({ label: "q" + i, accepting: i === nfa.accept }));
+        const edges = [...edgeMap.values()], loops = [...loopMap.values()];
+        if (_errOn) {
+          // As in the NFA tool: a state has an error move on a symbol when nothing in its ε-closure moves on it.
+          nodes.push({ label: ERR_NAME, error: true });
+          for (let i = 0; i < n; i++) {
+            const cl = closure(i);
+            const miss = alpha.filter((a) => !nfa.trans.some((t) => cl.has(t.from) && t.sym === a));
+            edges.push({ from: i, to: n, labels: [...miss, NFA_WILD], eps: false });
+          }
+          loops.push({ node: n, labels: [...alpha, NFA_WILD], eps: false });
         }
+        drawAutomatonGraph("dfa", dfaGraph, { nodes, start: nfa.start, edges, loops, ranksep: 54, joinLabels: true });
+      }
+
+      function renderDFA(scData) {
+        if (nfaDirect()) return renderNfaGraph();
         const { dfaStates, dfaAccepts, dfaTrans } = scData;
+        if (tooLarge(dfaStates.length + (_errOn ? 1 : 0), dfaTrans.length)) return graphMessage(tooLargeMsg("DFA", dfaStates.length, dfaTrans.length));
         // One edge per (from, to) pair, labelled with all its symbols; self-loops separately.
         const edgeMap = new Map(); // "f-t" → { from, to, labels[], ids[] }
         const loopMap = new Map(); // stateIdx → { node, labels[], ids[] }
@@ -1423,14 +1482,15 @@
       // Hovering links the DFA graph and the subset-construction table. The graph shows the
       // minimal DFA when minimisation is applied, whose states are groups of the table's
       // states; these map between the two numberings.
-      const dfaMinimised = () => _minEnabled && _minData && _minDone;
+      const dfaMinimised = () => _minEnabled && _minData && _minDone && !nfaDirect();
       // The states of the automaton the graph and simulation use: D0, D1, … from subset construction,
       // M0, M1, … for the minimal DFA, so the two numberings are never confused.
       const simName = (i) => (dfaMinimised() ? "M" : "D") + i;
       // The optional error state (see NFA_WILD in algo/nfa.js) is drawn after the ordinary states.
       let _errOn = false;
       const ERR_NAME = "err";
-      const stateLabel = (i) => (_errOn && _scData && i === activeScData().dfaStates.length ? ERR_NAME : simName(i));
+      const errIndex = () => (nfaDirect() ? _nfaFinal.numStates : activeScData().dfaStates.length);
+      const stateLabel = (i) => (_errOn && _scData && i === errIndex() ? ERR_NAME : nfaDirect() ? "q" + i : simName(i));
       function setErrorState(on) {
         _errOn = on;
         document.getElementById("opt-err").checked = on;
@@ -1448,7 +1508,7 @@
         return gi < 0 ? [] : _minData.groups[gi];
       }
       function dfaHoverEdges(ids) {
-        setGraphHot("dfa", ids);
+        if (!nfaDirect()) setGraphHot("dfa", ids);
         const want = new Set();
         for (const id of ids || []) {
           const [j, sym] = id.split("|");
@@ -1457,7 +1517,7 @@
         for (const td of document.querySelectorAll("#dfa-table-wrap td[data-sym]")) td.classList.toggle("is-hot", want.has(td.dataset.s + "|" + td.dataset.sym));
       }
       function dfaHoverState(j) {
-        setGraphNodeHot("dfa", j);
+        if (!nfaDirect()) setGraphNodeHot("dfa", j);
         const rows = new Set(j === null ? [] : tableStatesOf(j));
         for (const td of document.querySelectorAll("#dfa-table-wrap td.dfa-state-cell")) td.classList.toggle("is-hot", rows.has(+td.dataset.s));
       }
@@ -1468,6 +1528,12 @@
         d3.selectAll("#dfa-graph-root .ag-node").classed("is-active", false).classed("is-rejecting", false);
         d3.selectAll("#dfa-graph-root .ag-edge").classed("is-active", false);
 
+        if (step && step.set) {
+          // On the NFA: every state it may be in.
+          const isReject = step.final && !step.accepted;
+          for (const i of step.set) d3.select("#dfa-state-" + i).classed("is-active", true).classed("is-rejecting", isReject);
+          return;
+        }
         if (!step || step.state === undefined) return;
 
         if (step.state === -1) {
@@ -1533,6 +1599,46 @@
       sim.pos = -1; // -1 = no string run yet
 
       const escHtml = esc; // alias — shared esc() handles the same escaping
+
+      // ε-closure of one NFA state, as a function of the NFA: i → Set of states.
+      function nfaClosureOf(nfa) {
+        const out = new Map();
+        return (i) => {
+          if (out.has(i)) return out.get(i);
+          const seen = new Set([i]), stack = [i];
+          while (stack.length) {
+            const s = stack.pop();
+            for (const t of nfa.trans) if (t.from === s && t.sym === EPS && !seen.has(t.to)) { seen.add(t.to); stack.push(t.to); }
+          }
+          out.set(i, seen);
+          return seen;
+        };
+      }
+
+      // The simulation on the Thompson NFA: the set of states it may be in after each symbol.
+      function buildNfaSimSteps(nfa, input) {
+        const chars = [...input];
+        const ei = nfa.numStates, name = (i) => (i === ei ? ERR_NAME : "q" + i);
+        const setLabel = (xs) => "{" + [...xs].sort((a, b) => a - b).map(name).join(", ") + "}";
+        const closure = nfaClosureOf(nfa);
+        const close = (xs) => { const r = new Set(); for (const x of xs) for (const y of closure(x)) r.add(y); return r; };
+        let set = close([nfa.start]);
+        const steps = [{ set: [...set], pos: 0, sym: null, logHtml: '<span class="lg-op">Start</span>  ε-closure({q' + nfa.start + "}) = " + '<span class="lg-state">' + setLabel(set) + "</span>" + '  input <span class="lg-sym">' + (chars.length === 0 ? "ε" : escHtml(input)) + "</span>" }];
+        for (let i = 0; i < chars.length; i++) {
+          const a = chars[i], prev = set;
+          const mv = new Set();
+          if (!(_errOn && prev.has(ei))) for (const s of prev) for (const t of nfa.trans) if (t.from === s && t.sym === a) mv.add(t.to);
+          set = close(mv);
+          let note = "";
+          if (_errOn && prev.has(ei)) { set = new Set([ei]); }
+          else if (set.size === 0 && _errOn) { set = new Set([ei]); note = '  <span class="lg-dim">(no transition on ' + escHtml(a) + ")</span>"; }
+          steps.push({ set: [...set], pos: i + 1, sym: a, prevSet: [...prev], logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>  " + setLabel(prev) + " &#8594; " + (set.size ? '<span class="lg-state">' + setLabel(set) + "</span>" : '<span style="color:var(--red)">∅</span>') + note });
+          if (set.size === 0) break;
+        }
+        const accepted = set.has(nfa.accept);
+        steps.push({ set: [...set], pos: chars.length, sym: null, final: true, accepted, logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>  &#8212; q' + nfa.accept + " is in " + setLabel(set) : '<span style="color:var(--red);font-weight:bold">REJECT</span>  &#8212; ' + (set.size ? "the accepting state q" + nfa.accept + " is not in " + setLabel(set) : "no state left (dead)") });
+        return { steps, chars };
+      }
 
       function buildSimSteps(scData, input) {
         const { dfaAccepts, dfaTrans } = scData;
@@ -1621,7 +1727,7 @@
         // State badge
         const badge = document.getElementById("sim-state-badge");
         badge.className = "ui-badge ui-badge--lg ui-badge--" + (step.final ? (step.accepted ? "accept" : "reject") : "active");
-        badge.textContent = step.state === -1 ? "∅" : stateLabel(step.state);
+        badge.textContent = step.set ? (step.set.length ? "{" + [...step.set].sort((a, b) => a - b).map(stateLabel).join(", ") + "}" : "∅") : step.state === -1 ? "∅" : stateLabel(step.state);
 
         // Tape
         const tape = document.getElementById("sim-tape");
@@ -1663,7 +1769,7 @@
       function simRun() {
         if (!_scData) return;
         const input = document.getElementById("sim-string-input").value;
-        _simSteps = buildSimSteps(activeScData(), input);
+        _simSteps = nfaDirect() ? buildNfaSimSteps(_nfaFinal, input) : buildSimSteps(activeScData(), input);
         sim.pos = 0;
         simRenderStep();
       }
