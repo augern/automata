@@ -115,35 +115,35 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
 
 <!-- Map view: the tools placed on the Chomsky hierarchy -->
 <section id="view-map" aria-label="Map of the tools">
-<svg id="map" viewBox="0 0 700 530" role="group" aria-label="The tools placed on the Chomsky hierarchy">
+<svg id="map" viewBox="0 0 700 490" role="group" aria-label="The tools placed on the Chomsky hierarchy">
   <!-- Rings, outermost first. Solid: Chomsky's classes; dashed: subclasses of the context-free languages. -->
-  <rect class="ring ring-0" data-ring="re" x="10" y="10" width="680" height="510" rx="64"/>
-  <rect class="ring ring-1" data-ring="cs" x="38" y="66" width="624" height="438" rx="54"/>
-  <rect class="ring ring-2" data-ring="cf" x="66" y="122" width="568" height="366" rx="46"/>
-  <rect class="ring ring-3 ring-sub" data-ring="dcf" x="94" y="218" width="512" height="254" rx="38"/>
-  <rect class="ring ring-4 ring-sub" data-ring="ll1" x="122" y="274" width="456" height="182" rx="30"/>
-  <rect class="ring ring-5" data-ring="reg" x="150" y="330" width="400" height="110" rx="22"/>
+  <rect class="ring ring-0" data-ring="re" x="10" y="10" width="680" height="470" rx="64"/>
+  <rect class="ring ring-1" data-ring="cs" x="38" y="66" width="624" height="398" rx="54"/>
+  <rect class="ring ring-2" data-ring="cf" x="66" y="122" width="568" height="326" rx="46"/>
+  <rect class="ring ring-3 ring-sub" data-ring="dcf" x="94" y="178" width="512" height="254" rx="38"/>
+  <rect class="ring ring-4 ring-sub" data-ring="ll1" x="122" y="234" width="456" height="182" rx="30"/>
+  <rect class="ring ring-5" data-ring="reg" x="150" y="290" width="400" height="110" rx="22"/>
 
   <!-- Ring names; hover a ring for its Chomsky type, what accepts it, and an example language -->
   <text x="40" y="44" class="ring-name">Recursively enumerable</text>
   <text x="68" y="100" class="ring-name">Context-sensitive</text>
   <text x="96" y="156" class="ring-name">Context-free</text>
-  <text x="124" y="252" class="ring-name">Deterministic context-free</text>
-  <text x="152" y="308" class="ring-name">LL(1)</text>
-  <text x="180" y="362" class="ring-name">Regular</text>
+  <text x="124" y="212" class="ring-name">Deterministic context-free</text>
+  <text x="152" y="268" class="ring-name">LL(1)</text>
+  <text x="180" y="322" class="ring-name">Regular</text>
 
   <!-- Tools: placed by the languages they work with; their text comes from TOOLS below -->
   <a class="pill" id="t-tm" href="tools/tm/" tabindex="0"><rect x="527" y="19" width="129" height="34" rx="17"/><text x="591.5" y="36">Turing Machine</text></a>
-  <a class="pill" id="t-pda" href="tools/pda/" tabindex="0"><rect x="205" y="146" width="123" height="34" rx="17"/><text x="266.5" y="163">PDA Simulator</text></a>
-  <a class="pill" id="t-pumping" href="tools/pumping/" tabindex="0"><rect x="342" y="146" width="96" height="34" rx="17"/><text x="390" y="163">Pumping</text></a>
-  <a class="pill" id="t-rdp" href="tools/rdp/" tabindex="0"><rect x="452" y="146" width="144" height="34" rx="17"/><text x="524" y="163">Recursive Descent</text></a>
-  <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="480" y="228" width="92" height="34" rx="17"/><text x="526" y="245">LR Parser</text></a>
-  <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="394" y="284" width="150" height="34" rx="17"/><text x="469" y="301">Predictive Parsing</text></a>
-  <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="165" y="384" width="124" height="34" rx="17"/><text x="227" y="401">NFA Simulator</text></a>
-  <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="305" y="384" width="158" height="34" rx="17"/><text x="384" y="401">Regular Expressions</text></a>
+  <a class="pill" id="t-pda" href="tools/pda/" tabindex="0"><rect x="205" y="132" width="123" height="34" rx="17"/><text x="266.5" y="149">PDA Simulator</text></a>
+  <a class="pill" id="t-pumping" href="tools/pumping/" tabindex="0"><rect x="342" y="132" width="96" height="34" rx="17"/><text x="390" y="149">Pumping</text></a>
+  <a class="pill" id="t-rdp" href="tools/rdp/" tabindex="0"><rect x="452" y="132" width="144" height="34" rx="17"/><text x="524" y="149">Recursive Descent</text></a>
+  <a class="pill" id="t-lr" href="tools/lr/" tabindex="0"><rect x="480" y="188" width="92" height="34" rx="17"/><text x="526" y="205">LR Parser</text></a>
+  <a class="pill" id="t-ll1" href="tools/ll1/" tabindex="0"><rect x="394" y="244" width="150" height="34" rx="17"/><text x="469" y="261">Predictive Parsing</text></a>
+  <a class="pill" id="t-nfa" href="tools/nfa/" tabindex="0"><rect x="165" y="344" width="124" height="34" rx="17"/><text x="227" y="361">NFA Simulator</text></a>
+  <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="305" y="344" width="158" height="34" rx="17"/><text x="384" y="361">Regular Expressions</text></a>
   <!-- The grammar tools are not tied to one class: each pill reaches from inside Regular out across every inner boundary -->
-  <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="515" y="346" width="169" height="34" rx="17"/><text x="599.5" y="363">Grammar Derivations</text></a>
-  <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="482" y="390" width="202" height="34" rx="17"/><text x="583" y="407">Grammar Transformations</text></a>
+  <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="515" y="306" width="169" height="34" rx="17"/><text x="599.5" y="323">Grammar Derivations</text></a>
+  <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="482" y="350" width="202" height="34" rx="17"/><text x="583" y="367">Grammar Transformations</text></a>
 
 </svg>
 <div id="tip" role="tooltip" hidden></div>
