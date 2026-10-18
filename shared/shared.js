@@ -801,20 +801,29 @@ function treeEdgePath(p, c, dir) {
   return `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`;
 }
 
-// The dashed rule that marks the terminals (a line under them, or a vertical line after them).
+// The dashed rule that marks the terminals (a line under them, or a vertical line after them), with an arrowhead
+// in the reading order.
 function treeBaseline(g, nodes, dir) {
   const lvs = nodes.filter((n) => !n.children.length);
   if (!lvs.length) return;
-  const line = g.append("line").attr("stroke", "var(--border)").attr("stroke-width", 1).attr("stroke-dasharray", "4,4");
+  // an arrowhead at the end shows the reading order of the terminals (left to right, or top to bottom)
+  const svg = d3.select("#tree-svg");
+  if (svg.select("#tree-read-arrow").empty()) {
+    (svg.select("defs").empty() ? svg.insert("defs", ":first-child") : svg.select("defs")).append("marker")
+      .attr("id", "tree-read-arrow").attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 10).attr("markerHeight", 8)
+      .attr("refX", 8).attr("refY", 4).attr("orient", "auto")
+      .append("path").attr("d", "M0,0 L9,4 L0,8 z").attr("fill", "var(--text-lo)");
+  }
+  const line = g.append("line").attr("stroke", "var(--border-hi)").attr("stroke-width", 1).attr("stroke-dasharray", "4,4").attr("marker-end", "url(#tree-read-arrow)");
   if (dir === "side") {
     const x = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 8;
     const ys = lvs.map((n) => n._y);
-    line.attr("x1", x).attr("x2", x).attr("y1", Math.min.apply(null, ys) - TR).attr("y2", Math.max.apply(null, ys) + TR);
+    line.attr("x1", x).attr("x2", x).attr("y1", Math.min.apply(null, ys) - TR).attr("y2", Math.max.apply(null, ys) + TR + 14);
   } else {
     const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
     const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
     const y = lvs[0]._y + TR + 6;
-    line.attr("x1", lx1).attr("y1", y).attr("x2", lx2).attr("y2", y);
+    line.attr("x1", lx1).attr("y1", y).attr("x2", lx2 + 14).attr("y2", y);
   }
 }
 
