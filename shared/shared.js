@@ -749,7 +749,7 @@ function treePlace(vr, nodes, dir) {
     return { w: Math.max.apply(null, xs) - Math.min.apply(null, xs) + 80, h: BL + 2 * TR };
   }
   // sideways: the leaves in order, one row each; a parent in the middle of its children; a column per depth
-  // (a leaf sits right of its parent, not on a common line, so that edges do not cross the drawing)
+  // (the leaves are right-aligned in a column of their own)
   const RH = 2 * TR + 8;
   let row = 0;
   (function ay(n) {
@@ -758,7 +758,8 @@ function treePlace(vr, nodes, dir) {
     n._y = (n.children[0]._y + n.children[n.children.length - 1]._y) / 2;
   })(vr);
   const colW = [];
-  nodes.forEach((n) => { colW[n._depth] = Math.max(colW[n._depth] || 0, treeNodeW(n.symbol)); });
+  nodes.forEach((n) => { if (n.children.length) colW[n._depth] = Math.max(colW[n._depth] || 0, treeNodeW(n.symbol)); });
+  const leafW = Math.max.apply(null, nodes.filter((n) => !n.children.length).map((n) => treeNodeW(n.symbol)).concat([2 * TR]));
   const GAP = 36;
   const x0 = [];
   let x = 0;
@@ -767,8 +768,10 @@ function treePlace(vr, nodes, dir) {
     x0[d] = x + w / 2;
     x += w + (w ? GAP : 0);
   }
-  nodes.forEach((n) => { n._x = x0[n._depth]; });
-  return { w: x, h: row * RH };
+  // the leaves are right-aligned in a column after the last internal column, like the baseline of a top-down tree
+  const right = x + leafW;
+  nodes.forEach((n) => { n._x = n.children.length ? x0[n._depth] : right - treeNodeW(n.symbol) / 2; });
+  return { w: right, h: row * RH };
 }
 
 // Which direction for this tree in the pane? Both are laid out and compared by the scale at which they fit; the
@@ -798,12 +801,16 @@ function treeEdgePath(p, c, dir) {
   return `M ${c._x},${c._y - TR} L ${c._x},${ey} L ${p._x},${p._y + TR}`;
 }
 
-// The dashed rule under the terminals (top-down trees only).
+// The dashed rule that marks the terminals (a line under them, or a vertical line after them).
 function treeBaseline(g, nodes, dir) {
   const lvs = nodes.filter((n) => !n.children.length);
-  if (!lvs.length || dir === "side") return;
+  if (!lvs.length) return;
   const line = g.append("line").attr("stroke", "var(--border)").attr("stroke-width", 1).attr("stroke-dasharray", "4,4");
-  {
+  if (dir === "side") {
+    const x = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 8;
+    const ys = lvs.map((n) => n._y);
+    line.attr("x1", x).attr("x2", x).attr("y1", Math.min.apply(null, ys) - TR).attr("y2", Math.max.apply(null, ys) + TR);
+  } else {
     const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
     const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
     const y = lvs[0]._y + TR + 6;
