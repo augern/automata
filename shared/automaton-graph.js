@@ -11,14 +11,61 @@
 // Zoom/pan on the svg, and fitting the graph to the view (see fit-view.js, which must be loaded
 // first): fit() after every redrawing, on double-click and when the pane resizes while hasNodes()
 // is true. Returns { fit, zoom }.
-function createGraphView(prefix, { hasNodes = () => true } = {}) {
+//
+// The layout direction adapts to the pane: left-to-right or top-to-bottom, whichever lets the graph be drawn
+// larger (see drawAutomatonGraph). When the pane is resized so that the other direction fits clearly better, the
+// graph is laid out again: relayout() redraws it (a tool that marks states after drawing passes onRelayout, which
+// redraws and marks them again).
+function createGraphView(prefix, { hasNodes = () => true, onRelayout = null } = {}) {
   ensureArrowMarkers(d3.select("#" + prefix + "-svg"), prefix);
-  const view = createFitView({
+  const fv = createFitView({
     svg: prefix + "-svg", root: prefix + "-graph-root", scaleExtent: [0.1, 8],
     maxScale: 0.92, padX: 40, padY: 30, hasContent: hasNodes,
     sticky: false, // a redrawn definition is always fitted again
   });
-  return { fit: view.fit, zoom: view.zoom };
+  const view = { fit: fv.fit, zoom: fv.zoom, dir: null, spec: null };
+  let timer = null;
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!view.spec || !hasNodes()) return;
+        if (graphChooseDir(prefix, view, view.spec).dir === view.dir) return;
+        if (onRelayout) onRelayout(); else drawAutomatonGraph(prefix, view, view.spec);
+      }, 150);
+    }).observe(document.getElementById(prefix + "-svg").parentElement);
+  }
+  return view;
+}
+
+// The dagre layout of a spec in one direction ("LR" or "TB").
+function graphLayout(spec, dir) {
+  const { nodes, edges, radius: R = 16, ranksep = 64 } = spec;
+  const dg = new dagre.graphlib.Graph();
+  dg.setGraph({ rankdir: dir, nodesep: 36, ranksep, marginx: 50, marginy: 40 });
+  dg.setDefaultEdgeLabel(() => ({}));
+  for (let i = 0; i < nodes.length; i++) dg.setNode(i, { width: R * 2 + 4, height: R * 2 + 4 });
+  for (const e of edges) dg.setEdge(e.from, e.to, {});
+  dagre.layout(dg);
+  return dg;
+}
+
+// Which direction draws the graph larger in the pane? Both layouts are computed and compared by the scale at
+// which they fit (capped like the fit itself, so small graphs stay left-to-right). The current direction is
+// kept unless the other is clearly better (15 %), so the graph does not flip back and forth while resizing.
+// Returns { dir, dg } for the chosen direction (dg is null when no layout was needed).
+function graphChooseDir(prefix, view, spec) {
+  if (spec.rankdir) return { dir: spec.rankdir, dg: null };
+  const svg = document.getElementById(prefix + "-svg");
+  const vw = svg ? svg.clientWidth : 0, vh = svg ? svg.clientHeight : 0;
+  const cur = view.dir || "LR";
+  if (!vw || !vh || !spec.nodes.length) return { dir: cur, dg: null };
+  const dgs = { LR: graphLayout(spec, "LR"), TB: graphLayout(spec, "TB") };
+  const fitScale = (g) => Math.min(0.92, Math.max(vw - 80, 20) / (g.graph().width || 1), Math.max(vh - 60, 20) / (g.graph().height || 1));
+  const s = { LR: fitScale(dgs.LR), TB: fitScale(dgs.TB) };
+  const other = cur === "LR" ? "TB" : "LR";
+  const dir = view.dir && s[other] <= s[cur] * 1.15 ? cur : s[other] > s[cur] ? other : cur;
+  return { dir, dg: dgs[dir] };
 }
 
 // <marker id="P-arrow"> and <marker id="P-arrow-eps"> in the svg's <defs> (idempotent).
@@ -57,7 +104,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 //   radius (16), ranksep (64)
 //   joinLabels: true → one line "a, b, c"; false → one stacked line per label
 function drawAutomatonGraph(prefix, view, spec) {
-  const { nodes, start, edges, loops = [], radius: R = 16, ranksep = 64, joinLabels = false, onHover, onNodeHover } = spec;
+  const { nodes, start, edges, loops = [], radius: R = 16, joinLabels = false, onHover, onNodeHover } = spec;
   const root = d3.select("#" + prefix + "-graph-root");
   root.selectAll("*").remove();
 
@@ -66,12 +113,11 @@ function drawAutomatonGraph(prefix, view, spec) {
   if (emptyEl) emptyEl.style.display = n === 0 ? "" : "none";
   if (n === 0) return;
 
-  const dg = new dagre.graphlib.Graph();
-  dg.setGraph({ rankdir: "LR", nodesep: 36, ranksep, marginx: 50, marginy: 40 });
-  dg.setDefaultEdgeLabel(() => ({}));
-  for (let i = 0; i < n; i++) dg.setNode(i, { width: R * 2 + 4, height: R * 2 + 4 });
-  for (const e of edges) dg.setEdge(e.from, e.to, {});
-  dagre.layout(dg);
+  view.spec = spec;
+  const chosen = graphChooseDir(prefix, view, spec);
+  const dir = chosen.dir, TB = dir === "TB";
+  view.dir = dir;
+  const dg = chosen.dg || graphLayout(spec, dir);
 
   const arrowFor = (eps) => "url(#" + prefix + (eps ? "-arrow-eps" : "-arrow") + ")";
   const edgeClass = (eps) => "ag-edge" + (eps ? " ag-edge--eps" : "");
@@ -80,9 +126,11 @@ function drawAutomatonGraph(prefix, view, spec) {
   // With ids, each stacked label remembers its id and the edge group reports hovers.
   // A label equal to the private-use wildcard (NFA_WILD, "any other symbol") is drawn as a red "?".
   const WILD = "\uE000";
-  function addLabel(g, labels, x, y, ids) {
+  // `side`: the label sits to the right of its anchor point (top-to-bottom layouts, where edges run vertically).
+  function addLabel(g, labels, x, y, ids, side = false) {
+    const anchor = side ? "start" : "middle";
     if (joinLabels) {
-      const t = g.append("text").attr("x", x).attr("y", y).attr("text-anchor", "middle");
+      const t = g.append("text").attr("x", x).attr("y", y).attr("text-anchor", anchor);
       labels.forEach((lbl, li) => {
         if (li > 0) t.append("tspan").text(", ");
         if (lbl === WILD) t.append("tspan").attr("class", "ag-wild").text("?");
@@ -91,7 +139,7 @@ function drawAutomatonGraph(prefix, view, spec) {
       return;
     }
     labels.forEach((lbl, li) => {
-      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", "middle").classed("ag-wild", lbl === WILD).text(lbl === WILD ? "?" : lbl);
+      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", anchor).classed("ag-wild", lbl === WILD).text(lbl === WILD ? "?" : lbl);
       if (ids) t.attr("data-k", li);
     });
   }
@@ -124,7 +172,8 @@ function drawAutomatonGraph(prefix, view, spec) {
         .attr("x1", p0.x).attr("y1", p0.y).attr("x2", p1.x).attr("y2", p1.y)
         .attr("stroke", "none").attr("marker-end", arrowFor(e.eps));
     }
-    addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4), e.ids);
+    if (TB) addLabel(eg, e.labels, mid.x + 7, mid.y + 3, e.ids, true);
+    else addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4), e.ids);
     makeHoverable(eg, pathLine(pts), e.ids);
   }
 
@@ -151,7 +200,8 @@ function drawAutomatonGraph(prefix, view, spec) {
     if (i === start) {
       root.append("line")
         .attr("class", "ag-start")
-        .attr("x1", dn.x - R - 18).attr("y1", dn.y).attr("x2", dn.x - R - 1).attr("y2", dn.y)
+        .attr("x1", TB ? dn.x : dn.x - R - 18).attr("y1", TB ? dn.y - R - 18 : dn.y)
+        .attr("x2", TB ? dn.x : dn.x - R - 1).attr("y2", TB ? dn.y - R - 1 : dn.y)
         .attr("marker-end", "url(#" + prefix + "-arrow)");
     }
   }
@@ -163,12 +213,20 @@ function drawAutomatonGraph(prefix, view, spec) {
     if (!dn) continue;
     // Both ends sit exactly on the node's circle, symmetric about its top, so the
     // loop is attached to the node and the arrowhead touches it.
-    const a = Math.PI / 5; // 36° either side of straight up
-    const dx = R * Math.sin(a), y0 = dn.y - R * Math.cos(a), cx = dn.x;
+    // Left-to-right layouts put it above the node; top-to-bottom ones to the right, clear of the edges above and below.
+    const a = Math.PI / 5; // 36° either side of straight up (or of straight right)
     const eg = root.append("g").attr("class", edgeClass(lp.eps)).attr("data-self", lp.node);
-    const d = `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`;
+    let d;
+    if (TB) {
+      const xr = dn.x + R * Math.cos(a), dy = R * Math.sin(a);
+      d = `M${xr},${dn.y - dy} C${xr + 36},${dn.y - dy - 10} ${xr + 36},${dn.y + dy + 10} ${xr},${dn.y + dy}`;
+    } else {
+      const dx = R * Math.sin(a), y0 = dn.y - R * Math.cos(a), cx = dn.x;
+      d = `M${cx - dx},${y0} C${cx - dx - 10},${y0 - 36} ${cx + dx + 10},${y0 - 36} ${cx + dx},${y0}`;
+    }
     eg.append("path").attr("d", d).attr("marker-end", arrowFor(lp.eps));
-    addLabel(eg, lp.labels, cx, y0 - (joinLabels ? 38 : 40), lp.ids);
+    if (TB) addLabel(eg, lp.labels, dn.x + R + 30, dn.y + 4, lp.ids, true);
+    else addLabel(eg, lp.labels, dn.x, dn.y - R * Math.cos(a) - (joinLabels ? 38 : 40), lp.ids);
     makeHoverable(eg, d, lp.ids);
   }
 

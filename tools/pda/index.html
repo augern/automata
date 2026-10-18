@@ -197,7 +197,7 @@
     <script src="guide.js?v=cb5888d4"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/automaton-graph.js?v=69c0e607"></script>
+    <script src="../../shared/automaton-graph.js?v=f729e38a"></script>
     <script>
       initResize("rh-1", "p-def", +1);
       initResize("rh-2", "p-tree", -1);
@@ -403,7 +403,7 @@ else: ${kw("reject")}`
 
       const PDA_R = 16;
 
-      const pdaGraph = createGraphView("pda", { hasNodes: () => pdaStates.length > 0 });
+      const pdaGraph = createGraphView("pda", { hasNodes: () => pdaStates.length > 0, onRelayout: () => { renderPDAGraph(); if (_simHistory.length) simRender(); } });
       function fitPDA() { pdaGraph.fit(); }
 
       function ruleLabel(r) {
