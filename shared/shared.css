@@ -1080,7 +1080,7 @@ body {
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 /* Internal nodes: white fill, thin black border (Graphviz rectangle) */
-.tree-node circle {
+.tree-node .tn-shape {
   fill: var(--bg);
   stroke: var(--text);
   stroke-width: 1.2;
@@ -1090,12 +1090,12 @@ body {
     stroke-width 0.2s;
 }
 /* Terminals: light grey fill to distinguish from nonterminals */
-.tree-node.terminal circle {
+.tree-node.terminal .tn-shape {
   fill: var(--bg-cell);
   stroke: var(--border-hi);
 }
 /* New node (just created this step): accent border */
-.tree-node.new-node circle {
+.tree-node.new-node .tn-shape {
   fill: var(--accent-bg);
   stroke: var(--accent);
   stroke-width: 2;

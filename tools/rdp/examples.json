@@ -147,6 +147,24 @@
             "a|b",
             "(ab"
           ]
+        },
+        {
+          "label": "Sentences (running example)",
+          "purpose": "Every alternative starts with a different word, so no alternative is ever undone. old snores is rejected: the noun is missing.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjective> <noun>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
+          ],
+          "strings": [
+            "old Harry snores",
+            "big brother sleeps",
+            "strong Harry jogs",
+            "old snores"
+          ]
         }
       ]
     },
@@ -204,6 +222,22 @@
             "( ( ( id ) ) )",
             "( ( id ) )",
             "id + id + id"
+          ]
+        },
+        {
+          "label": "Sentences with an adjective list (left-recursive)",
+          "purpose": "The adjective list calls itself before reading a word, so the run stops at the first repeat.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjectives> <noun>",
+            "<adjectives> → <adjectives> <adjective> | <adjective>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
+          ],
+          "strings": [
+            "old big Harry snores"
           ]
         }
       ]

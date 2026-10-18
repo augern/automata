@@ -31,6 +31,18 @@
             "D -> T id [ num ] ;",
             "T -> int | float | bool"
           ]
+        },
+        {
+          "label": "Sentences (running example)",
+          "purpose": "A tiny natural-language grammar with long nonterminal names: no conflicts in any method.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjective> <noun>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
+          ]
         }
       ]
     },
@@ -194,6 +206,19 @@
             "// Compare with the left-recursive comma-separated list: here the stack holds the whole list",
             "S -> L",
             "L -> x , L | x"
+          ]
+        },
+        {
+          "label": "Sentences with an adjective list (left-recursive)",
+          "purpose": "Left recursion in the adjective list, which LR parsers handle without rewriting.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjectives> <noun>",
+            "<adjectives> → <adjectives> <adjective> | <adjective>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
           ]
         }
       ]

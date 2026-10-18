@@ -686,6 +686,19 @@ const TR = 18,
   TLH = 60,
   TNW = 46;
 
+// Width of a parse-tree node for its label: at least a circle, wider for long names such as <adjective>.
+function treeNodeW(sym) {
+  return Math.max(2 * TR, Math.ceil([...String(sym)].length * 6.6) + 16);
+}
+// Horizontal positions (_x) of a forest under the virtual root vr: d3's tidy tree, siblings and cousins kept
+// apart by the widths of their nodes.
+function treeLayoutX(vr) {
+  const h = d3.hierarchy(vr, (n) => n.children);
+  const w = (d) => (d.data.id === -1 ? 0 : treeNodeW(d.data.symbol));
+  d3.tree().nodeSize([1, 1]).separation((a, b) => (w(a) + w(b)) / 2 + 10)(h);
+  h.each((d) => { d.data._x = d.x; });
+}
+
 // renderTree handles the LL(1) parse tree (treeRoot / treeLastNew).
 // lr-tool.html intentionally shadows this with its own version for the LR
 // bottom-up forest (tForest / tRoots / tLast), which has a different structure.
@@ -704,17 +717,8 @@ function renderTree() {
   const emp = document.getElementById("tree-empty");
   if (emp) emp.style.display = "none";
 
-  let lc = 0;
-  function aX(n) {
-    if (!n.children.length) {
-      n._x = lc++ * TNW;
-      return;
-    }
-    n.children.forEach((c) => aX(c));
-    n._x = (n.children[0]._x + n.children[n.children.length - 1]._x) / 2;
-  }
   const vr = dr.length === 1 ? dr[0] : { id: -1, symbol: "", children: dr };
-  aX(vr);
+  treeLayoutX(vr);
 
   const nodes = [],
     edges2 = [];
@@ -752,20 +756,8 @@ function renderTree() {
   // Baseline dashed rule under terminal nodes
   const lvs = nodes.filter((n) => !n.children.length);
   if (lvs.length) {
-    const lx1 =
-      Math.min.apply(
-        null,
-        lvs.map((n) => n._x),
-      ) -
-      TR -
-      4;
-    const lx2 =
-      Math.max.apply(
-        null,
-        lvs.map((n) => n._x),
-      ) +
-      TR +
-      4;
+    const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
+    const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
     g.append("line")
       .attr("x1", lx1)
       .attr("y1", BL + TR + 6)
@@ -791,7 +783,8 @@ function renderTree() {
       .append("g")
       .attr("class", "tree-node" + (isTerm ? " terminal" : "") + (isNew ? " new-node" : ""))
       .attr("transform", "translate(" + node._x + "," + node._y + ")");
-    ng.append("circle").attr("r", TR);
+    const nw = treeNodeW(node.symbol);
+    ng.append("rect").attr("class", "tn-shape").attr("x", -nw / 2).attr("y", -TR).attr("width", nw).attr("height", 2 * TR).attr("rx", TR);
     ng.append("text")
       .attr("dy", node.ruleIdx !== null ? "-3" : "0")
       .text(node.symbol);

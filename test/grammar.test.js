@@ -81,3 +81,10 @@ test("bnfAlternatives: offsets of alternatives and symbols", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(alts[0].toks.map((t) => [t.sym, t.from, t.to]))), [["a", 1, 2], ["|", 3, 6], ["b", 7, 8]]);
   assert.deepEqual([alts[0].from, alts[0].to, alts[1].from, alts[1].to], [1, 8, 11, 12]);
 });
+
+test("parseBNF: a <name> in angle brackets must have a rule; quoted or bare < > are terminals", () => {
+  assert.throws(() => parseBNF("<s> -> <a> x\n<b> -> y", false), /No rule for <a>/);
+  assert.doesNotThrow(() => parseBNF("<s> -> <a> x\n<a> -> y", false));
+  const g = parseBNF("E -> E < E | '<a>' | >", false);
+  assert.deepEqual(sorted(g.terminals), ["$", "<", "<a>", ">"]);
+});

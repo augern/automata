@@ -208,6 +208,19 @@
             "P -> P '*' | P '+' | P '?' | A",
             "A -> '(' R ')' | a | b | c | d"
           ]
+        },
+        {
+          "label": "Sentences with an adjective list",
+          "purpose": "Left recursion in the adjective list: the rewrite moves it into a tail nonterminal, keeping the long names.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjectives> <noun>",
+            "<adjectives> → <adjectives> <adjective> | <adjective>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
+          ]
         }
       ]
     }

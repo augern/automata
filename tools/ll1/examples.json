@@ -50,6 +50,18 @@
             "D' -> ; | [ num ] ;",
             "T -> int | float | bool"
           ]
+        },
+        {
+          "label": "Sentences (running example)",
+          "purpose": "A tiny natural-language grammar with long nonterminal names: LL(1), every choice decided by the next word.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjective> <noun>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
+          ]
         }
       ]
     },
@@ -82,6 +94,19 @@
             "// The classic ambiguity: both alternatives of S begin with 'if E then S'",
             "S -> if E then S | if E then S else S | other",
             "E -> b"
+          ]
+        },
+        {
+          "label": "Sentences with an adjective list (left-recursive)",
+          "purpose": "A list of adjectives written with left recursion: two productions compete for the first adjective, so the grammar is not LL(1).",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjectives> <noun>",
+            "<adjectives> → <adjectives> <adjective> | <adjective>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
           ]
         }
       ]

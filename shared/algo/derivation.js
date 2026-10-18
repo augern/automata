@@ -32,6 +32,8 @@ function parseDerivationGrammar(text) {
     rules.flatMap(r => r.lhs.length > 1 ? r.lhs.filter(s => /^[A-Z]/.test(s)) : [])
   );
   const nonterminals = new Set([...singleLHSnts, ...multiLHSnts]);
+  // <names> in angle brackets are nonterminals wherever they appear
+  for (const r of rules) for (const s of [...r.lhs, ...r.rhs]) if (BNF_ANGLE.test(s)) nonterminals.add(s);
 
   // Start symbol: LHS of the first single-token rule
   const startRule = rules.find(r => r.lhs.length === 1);

@@ -7,7 +7,7 @@
     <title>LR Parser | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=f3a71061" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=36f52b82" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -521,12 +521,12 @@
       </div>
     </div>
 
-    <script src="../../shared/algo/grammar.js?v=7b2e7551"></script>
+    <script src="../../shared/algo/grammar.js?v=27c17d36"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=2d677df2"></script>
+    <script src="../../shared/shared.js?v=886cba52"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -909,17 +909,8 @@
         document.getElementById("tree-empty").style.display = "none";
 
         // X layout — natural pixel coordinates, no internal scaling
-        let lc = 0;
-        function aX(n) {
-          if (!n.children.length) {
-            n._x = lc++ * TNW;
-            return;
-          }
-          n.children.forEach((c) => aX(c));
-          n._x = (n.children[0]._x + n.children[n.children.length - 1]._x) / 2;
-        }
         const vr = dr.length === 1 ? dr[0] : { id: -1, symbol: "", children: dr };
-        aX(vr);
+        treeLayoutX(vr);
 
         const nodes = [],
           edges2 = [];
@@ -957,20 +948,8 @@
         // Baseline rule under terminals
         const lvs = nodes.filter((n) => !n.children.length);
         if (lvs.length) {
-          const lx1 =
-            Math.min.apply(
-              null,
-              lvs.map((n) => n._x),
-            ) -
-            TR -
-            4;
-          const lx2 =
-            Math.max.apply(
-              null,
-              lvs.map((n) => n._x),
-            ) +
-            TR +
-            4;
+          const lx1 = Math.min.apply(null, lvs.map((n) => n._x - treeNodeW(n.symbol) / 2)) - 4;
+          const lx2 = Math.max.apply(null, lvs.map((n) => n._x + treeNodeW(n.symbol) / 2)) + 4;
           g.append("line")
             .attr("x1", lx1)
             .attr("y1", BL + TR + 6)
@@ -995,7 +974,8 @@
             .append("g")
             .attr("class", "tree-node" + (isTerm ? " terminal" : "") + (isNew ? " new-node" : ""))
             .attr("transform", "translate(" + node._x + "," + node._y + ")");
-          ng.append("circle").attr("r", TR);
+          const nw = treeNodeW(node.symbol);
+          ng.append("rect").attr("class", "tn-shape").attr("x", -nw / 2).attr("y", -TR).attr("width", nw).attr("height", 2 * TR).attr("rx", TR);
           ng.append("text")
             .attr("dy", node.ruleIdx !== null ? "-3" : "0")
             .text(node.symbol);

@@ -123,6 +123,18 @@
             "P -> P '*' | P '+' | P '?' | A",
             "A -> '(' R ')' | a | b | c | d"
           ]
+        },
+        {
+          "label": "Sentences (running example)",
+          "purpose": "Subject and predicate built from adjective, noun and verb names in angle brackets, such as old Harry snores.",
+          "text": [
+            "<sentence> → <subject> <predicate>",
+            "<subject> → <adjective> <noun>",
+            "<predicate> → <verb>",
+            "<adjective> → old | big | strong",
+            "<noun> → Harry | brother",
+            "<verb> → jogs | snores | sleeps"
+          ]
         }
       ]
     },

@@ -52,6 +52,8 @@ function bnfSymbols(alt, epsTokens = ["eps", "epsilon", EPSILON]) {
   return t.filter((x) => !(x.quoted && x.sym === "")).map((x) => x.sym);
 }
 
+const BNF_ANGLE = /^<[^<>\s]+>$/;
+
 function parseBNF(text, augment = true) {
   const lines = text
     .split("\n")
@@ -59,6 +61,7 @@ function parseBNF(text, augment = true) {
     .filter((l) => l && !l.startsWith("//"));
   if (!lines.length) throw new Error("Empty grammar");
   const rules = [];
+  const angle = new Set(); // unquoted <names> on right-hand sides
   for (const line of lines) {
     const arrow = line.includes("->") ? "->" : line.includes("\u2192") ? "\u2192" : null;
     if (!arrow) throw new Error("Missing '->' in: " + line);
@@ -67,9 +70,15 @@ function parseBNF(text, augment = true) {
     const lhs = line.slice(0, at).trim();
     const rhs = line.slice(at + arrow.length).trim();
     if (!lhs) throw new Error("Missing LHS in: " + line);
-    for (const alt of bnfAlternatives(rhs)) rules.push({ lhs, rhs: bnfSymbols(alt) });
+    for (const alt of bnfAlternatives(rhs)) {
+      rules.push({ lhs, rhs: bnfSymbols(alt) });
+      for (const t of alt.toks) if (!t.quoted && BNF_ANGLE.test(t.sym)) angle.add(t.sym);
+    }
   }
   if (!rules.length) throw new Error("No rules found");
+  // A name in angle brackets, <noun>, is a nonterminal by convention: it must have a rule.
+  const defined = new Set(rules.map((r) => r.lhs));
+  for (const a of angle) if (!defined.has(a)) throw new Error("No rule for " + a + " (a name in angle brackets is a nonterminal)");
   const origStart = rules[0].lhs;
   if (augment) {
     const existingLHS = new Set(rules.map((r) => r.lhs));

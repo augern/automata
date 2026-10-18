@@ -65,7 +65,7 @@ test("recursive-descent examples parse, and their sample strings run in the exam
   }
   // Only the examples about left recursion are left-recursive.
   const rec = examples("rdp").filter((ex) => A.rdpLeftRecursive(A.rdpParseGrammar(textOf(ex))).length > 0).map((ex) => ex.label);
-  assert.deepEqual([...rec].sort(), ["Hidden left recursion", "Left recursion"]);
+  assert.deepEqual([...rec].sort(), ["Hidden left recursion", "Left recursion", "Sentences with an adjective list (left-recursive)"]);
 });
 
 test("pumping examples: the machine or grammar parses and every sample string has something to pump", () => {

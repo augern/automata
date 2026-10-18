@@ -7,7 +7,7 @@
     <title>Pumping Explorer | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=f3a71061" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=36f52b82" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -59,15 +59,15 @@
       .ag-node.pump-loop circle:first-of-type { stroke: var(--pp-y); stroke-width: 3; }
 
       .pt-n { cursor: default; }
-      .pt-n circle { fill: var(--bg); stroke: var(--border-hi); stroke-width: 1.4; }
+      .pt-n .pt-shape { fill: var(--bg); stroke: var(--border-hi); stroke-width: 1.4; }
       .pt-n text { font-family: var(--font-serif); font-size: var(--fs-sm); fill: var(--text); text-anchor: middle; pointer-events: none; }
-      .pt-n.pt-leaf circle { stroke: none; fill: none; }
+      .pt-n.pt-leaf .pt-shape { stroke: none; fill: none; }
       .pt-n.pt-leaf text { font-family: var(--font-mono); font-weight: 600; }
       .pt-n.pt-eps text { font-style: italic; fill: var(--text-lo); font-weight: normal; }
       .pt-n.pt-u text { fill: var(--pp-u); } .pt-n.pt-v text, .pt-n.pt-y text { fill: var(--pp-y); } .pt-n.pt-x text { fill: var(--pp-x); } .pt-n.pt-z text { fill: var(--pp-z); }
-      .pt-n.pt-up circle { stroke: var(--pp-y); stroke-width: 3; fill: var(--hot-bg); }
-      .pt-n.pt-low circle { stroke: var(--pp-x); stroke-width: 3; fill: var(--st-active-bg); }
-      .pt-n.pt-both circle { stroke: var(--pp-y); stroke-width: 3; fill: var(--st-active-bg); }
+      .pt-n.pt-up .pt-shape { stroke: var(--pp-y); stroke-width: 3; fill: var(--hot-bg); }
+      .pt-n.pt-low .pt-shape { stroke: var(--pp-x); stroke-width: 3; fill: var(--st-active-bg); }
+      .pt-n.pt-both .pt-shape { stroke: var(--pp-y); stroke-width: 3; fill: var(--st-active-bg); }
       .pt-e { fill: none; stroke: var(--border-hi); stroke-width: 1.2; }
 
       #explain { padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
@@ -156,14 +156,14 @@
     </div>
     <!-- #panels -->
 
-    <script src="../../shared/algo/grammar.js?v=7b2e7551"></script>
+    <script src="../../shared/algo/grammar.js?v=27c17d36"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
     <script src="../../shared/algo/rdp.js?v=5a7e9a43"></script>
     <script src="../../shared/algo/pumping.js?v=9850ae52"></script>
-    <script src="../../shared/shared.js?v=2d677df2"></script>
+    <script src="../../shared/shared.js?v=886cba52"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -448,12 +448,14 @@
         $("tree-empty").style.display = tree ? "none" : "";
         if (!tree) return;
         const h = d3.hierarchy(tree, (d) => d.children);
-        d3.tree().nodeSize([30, 56]).separation((a, b) => (a.data.leaf && b.data.leaf ? 1 : 1.2))(h);
+        const nw = (d) => Math.max(26, [...String(d.data.sym)].length * 7 + 14); // wide names such as <adjective> need wider nodes
+        d3.tree().nodeSize([30, 56]).separation((a, b) => ((nw(a) + nw(b)) / 2 + 8) / 30)(h);
         g.append("g").selectAll("path").data(h.links()).join("path").attr("class", "pt-e")
           .attr("d", (l) => "M" + l.source.x + "," + (l.source.y + 12) + "C" + l.source.x + "," + (l.source.y + 30) + " " + l.target.x + "," + (l.target.y - 30) + " " + l.target.x + "," + (l.target.y - 12));
         const cls = (d) => "pt-n" + (d.data.leaf ? " pt-leaf" : "") + (d.data.eps ? " pt-eps" : "") + (d.data.part ? " pt-" + d.data.part : "") + (d.data.mark ? " pt-" + d.data.mark : "");
         const ns = g.append("g").selectAll("g").data(h.descendants()).join("g").attr("class", cls).attr("transform", (d) => "translate(" + d.x + "," + d.y + ")");
-        ns.append("circle").attr("r", (d) => (d.data.leaf ? 0 : 13));
+        ns.append("rect").attr("class", "pt-shape").attr("x", (d) => (d.data.leaf ? 0 : -nw(d) / 2)).attr("y", -13).attr("rx", 13)
+          .attr("width", (d) => (d.data.leaf ? 0 : nw(d))).attr("height", (d) => (d.data.leaf ? 0 : 26));
         ns.append("text").attr("dy", "0.35em").text((d) => d.data.sym);
         treeView.refit();
       }
