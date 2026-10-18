@@ -3,6 +3,8 @@
 // theme.js (themeToggle / themeIsDark); the layout items need the panel code in
 // shared.js and only appear on pages that have panels.
 (function () {
+  const here = document.currentScript && document.currentScript.src;
+
   function items() {
     const list = [
       {
@@ -40,9 +42,22 @@
     return list;
   }
 
+  // The way back to the index page, first in the bar.
+  function installHome(bar) {
+    if (!here || document.getElementById("btn-home")) return;
+    const a = document.createElement("a");
+    a.id = "btn-home";
+    a.className = "home-btn";
+    a.href = new URL("../index.html", here).href;
+    a.title = "Back to the index of tools";
+    a.innerHTML = '<span aria-hidden="true">‹</span> Index';
+    bar.insertBefore(a, bar.firstChild);
+  }
+
   function install() {
     const bar = document.getElementById("topbar");
     if (!bar || document.getElementById("btn-view") || typeof UI === "undefined") return;
+    installHome(bar);
     const btn = document.createElement("button");
     btn.id = "btn-view";
     btn.type = "button";

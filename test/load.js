@@ -10,7 +10,7 @@ const root = path.join(__dirname, "..");
 // Top-level `const`s are not properties of the context, so exports are
 // collected by evaluating an object literal inside the context.
 function load(...files) {
-  const ctx = vm.createContext({});
+  const ctx = vm.createContext({ TextEncoder });
   for (const f of files) {
     const file = path.join(root, "shared", "algo", f);
     vm.runInContext(fs.readFileSync(file, "utf8"), ctx, { filename: file });

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Interactive grammar transformation tool — ε-elimination, unit production elimination, Chomsky Normal Form, and left-recursion elimination with step-by-step visualisation.">
 <title>Grammar Transformations | Parser Tools</title>
-<link rel="stylesheet" href="../../shared/shared.css?v=c6c2522b">
-<link rel="stylesheet" href="../../shared/ui.css?v=1108e9c0">
+<link rel="stylesheet" href="../../shared/shared.css?v=f3a71061">
+<link rel="stylesheet" href="../../shared/ui.css?v=ac0f5f88">
 <script src="../../shared/theme.js?v=9222f18e"></script>
 <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -80,7 +80,7 @@
 <body>
 
 <div id="topbar">
-  <h1><a href="../../index.html">Grammar Rewriting</a></h1>
+  <h1>Grammar Rewriting</h1>
   <div style="width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0"></div>
   <button class="mode-btn active" id="btn-mode-clean" onclick="setMode('clean')">Cleanup</button>
   <button class="mode-btn"        id="btn-mode-eps"   onclick="setMode('eps')">ε-Elimination</button>
@@ -165,13 +165,16 @@
 </div>
 
 <script src="../../shared/algo/grammar.js?v=39525f46"></script>
-<script src="../../shared/algo/panels.js?v=23a37100"></script>
-<script src="../../shared/algo/share.js?v=e00a0058"></script>
+<script src="../../shared/algo/panels.js?v=92261e45"></script>
+<script src="../../shared/algo/share.js?v=931f737d"></script>
 <script src="../../shared/algo/rewrite.js?v=96125aa5"></script>
-<script src="../../shared/shared.js?v=a3412ea2"></script>
+<script src="../../shared/shared.js?v=22f37a65"></script>
 <script src="../../shared/share-link.js?v=0d17f714"></script>
 <script src="../../shared/ui.js?v=b7fb54c9"></script>
-<script src="../../shared/view-menu.js?v=d1c37b50"></script>
+<script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
+<script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
+<script src="../../shared/quick-link.js?v=fca552e1"></script>
+<script src="../../shared/view-menu.js?v=131965d4"></script>
 <script src="guide.js?v=58dbc569"></script>
 <script src="../../shared/guide.js?v=98cfe80c"></script>
 <script>

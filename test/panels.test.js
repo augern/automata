@@ -125,3 +125,17 @@ test("soleOpenPanel returns the one open panel's id, else null", () => {
   assert.equal(soleOpenPanel([{ id: "a", collapsed: true }]), null);
   assert.equal(soleOpenPanel([]), null);
 });
+
+// ── Which panels a handle resizes ──
+const { panelHandleNeighbours } = load("panels.js");
+test("a handle resizes the nearest open panel on each side; collapsed panels are skipped", () => {
+  assert.deepEqual([...panelHandleNeighbours([false, false, false], 0)], [0, 1]);
+  assert.deepEqual([...panelHandleNeighbours([false, false, false], 1)], [1, 2]);
+  // the middle panel is collapsed: both handles resize the outer two
+  assert.deepEqual([...panelHandleNeighbours([false, true, false], 0)], [0, 2]);
+  assert.deepEqual([...panelHandleNeighbours([false, true, false], 1)], [0, 2]);
+  assert.deepEqual([...panelHandleNeighbours([false, true, true, false], 1)], [0, 3]);
+  // nothing open on one side: the handle has nothing to resize
+  assert.equal(panelHandleNeighbours([true, false, false], 0), null);
+  assert.equal(panelHandleNeighbours([false, false, true], 1), null);
+});

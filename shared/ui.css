@@ -775,3 +775,18 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
   pointer-events: none;
 }
 .ui-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── Full-screen QR code (shared/qr-modal.js) ── */
+.qr-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-6);
+  padding: 24px; background: rgb(0 0 0 / 0.92); cursor: pointer; text-align: center;
+}
+.qr-modal[hidden] { display: none; }
+.qr-modal:focus { outline: none; }
+.qr-modal-title { font-family: var(--font-serif); font-style: italic; font-size: 1.6rem; color: rgb(232 232 232); }
+.qr-modal-code { width: min(78vmin, 880px); height: auto; border-radius: var(--radius); background: white; }
+.qr-modal-url { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--accent); text-decoration: none; word-break: break-all; max-width: 90vw; }
+.qr-modal-url:hover { text-decoration: underline; }
+.qr-modal-note { max-width: 520px; font-size: var(--fs-sm); line-height: 1.5; color: var(--hot); }
+.qr-modal-hint { font-size: var(--fs-xs); color: rgb(136 136 136); }

@@ -154,3 +154,13 @@ test("TM: drops invalid cells, rejects bad structure", () => {
   assert.equal(S.shareValidateTM({ tm: { ...TM, alphabet: ["□"] } }), null);
   assert.equal(S.shareValidateTM({ tm: { ...TM, alphabet: ["_"] } }), null);
 });
+
+test("quick links: example and collapsed panels round-trip, other hashes are not quick links", () => {
+  assert.equal(S.quickEncode(3, [false, true, false]), "q=3-010");
+  assert.equal(S.quickEncode(null, [true, false]), "q=-10");
+  const q = S.quickDecode("#q=12-010");
+  assert.equal(q.example, 12);
+  assert.deepEqual([...q.collapsed], [false, true, false]);
+  assert.equal(S.quickDecode("#q=-10").example, null);
+  for (const h of ["", "#s=abc", "#q=x-1", "#q=3-012", "#q=3", "#q=123456-1"]) assert.equal(S.quickDecode(h), null, h);
+});

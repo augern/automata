@@ -21,6 +21,16 @@ function panelDrag({ widthL, widthR, minL, minR, dx, collapseAfter = 48, canColl
   return { left, right: total - left, collapse: null };
 }
 
+// The panels a handle resizes: the nearest open panel on each side of it, so a collapsed panel next to
+// a handle stays collapsed and the handle resizes the two open panels around it. Handle i sits between
+// panels i and i + 1. Returns [left, right] indices, or null when one side has no open panel.
+function panelHandleNeighbours(collapsed, i) {
+  let l = i, r = i + 1;
+  while (l >= 0 && collapsed[l]) l--;
+  while (r < collapsed.length && collapsed[r]) r++;
+  return l >= 0 && r < collapsed.length ? [l, r] : null;
+}
+
 // Weights that reproduce the current widths (collapsed panels keep weight 0).
 // Using the real widths as weights makes later changes to one pair leave every
 // other panel exactly where it is.

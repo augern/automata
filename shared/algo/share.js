@@ -214,3 +214,17 @@ function shareValidateTM(obj) {
   }
   return { tm: { states, alphabet, start, accept, reject, trans }, s };
 }
+
+// ── Quick links (the QR code) ────────────────────────────────────────
+// A short state that fits a small QR code: the loaded example and which panels are collapsed.
+//   #q=<example index>-<one 0/1 per panel, 1 = collapsed>      e.g. #q=3-010
+// The example part is empty when no example is loaded.
+function quickEncode(example, collapsed) {
+  return "q=" + (Number.isInteger(example) && example >= 0 ? example : "") + "-" + collapsed.map((c) => (c ? "1" : "0")).join("");
+}
+// { example: number | null, collapsed: boolean[] }, or null when the hash is not a quick link.
+function quickDecode(hash) {
+  const m = /^#q=(\d{0,4})-([01]{0,12})$/.exec(hash);
+  if (!m) return null;
+  return { example: m[1] === "" ? null : +m[1], collapsed: [...m[2]].map((c) => c === "1") };
+}

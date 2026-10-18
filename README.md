@@ -56,6 +56,7 @@ parser-tools/
 │   │   ├── strings.js                  ← pure: random input strings (automaton walks, sampling, grammar sentences)
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping
+│   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
 │   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
@@ -70,7 +71,8 @@ parser-tools/
 │   ├── fit-view.js                     ← pan/zoom and automatic fit-to-view, shared by every graph and tree view
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
-│   ├── view-menu.js                    ← the top bar's View menu (share, theme, layout presets)
+│   ├── view-menu.js                    ← the top bar's Index button and View menu (share, theme, layout presets)
+│   ├── quick-link.js, qr-modal.js      ← the QR button: tool, example and panel set as a full-screen QR code (#q=…)
 │   ├── guide.js                        ← the top bar's Guide button and pop-up (the mechanism; each tool supplies its text in tools/<tool>/guide.js)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools

@@ -445,12 +445,17 @@ function startPanelLayout() {
   const row = document.getElementById("panels");
   if (!row || _panelObserver) return;
   // A click, or Enter/Space, on a collapsed strip opens it.
+  // A click on an open panel's header (outside its buttons) collapses it.
   const openStrip = (e) => {
-    const head = e.target.closest(".panel.collapsed > .panel-header");
-    if (head && head.parentElement.parentElement === row) {
-      e.preventDefault();
-      toggleCollapse(head.parentElement.id);
+    const head = e.target.closest(".panel > .panel-header");
+    if (!head || head.parentElement.parentElement !== row) return;
+    const panel = head.parentElement;
+    if (!panel.classList.contains("collapsed")) {
+      const inner = e.target.closest("button, a, input, select, textarea, label, .ui-menu");
+      if (inner || !panel.querySelector(".collapse-btn") || (window.getSelection && String(window.getSelection()))) return;
     }
+    e.preventDefault();
+    toggleCollapse(panel.id);
   };
   row.addEventListener("click", openStrip);
   row.addEventListener("keydown", (e) => {
@@ -478,27 +483,30 @@ function startPanelLayout() {
 function initResize(hid) {
   const handle = document.getElementById(hid);
   if (!handle) return;
-  const left = handle.previousElementSibling;
-  const right = handle.nextElementSibling;
+  // The panels this handle resizes: the nearest open panel on each side (a collapsed panel stays collapsed).
+  let left = handle.previousElementSibling;
+  let right = handle.nextElementSibling;
+  function pick() {
+    const ps = _panels();
+    const before = ps.filter((p) => handle.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_PRECEDING).length;
+    const n = panelHandleNeighbours(ps.map((p) => p.classList.contains("collapsed")), before - 1);
+    if (!n) return false;
+    left = ps[n[0]];
+    right = ps[n[1]];
+    return true;
+  }
   handle.setAttribute("role", "separator");
   handle.setAttribute("aria-orientation", "vertical");
   handle.setAttribute("aria-label", "Resize panels");
   handle.setAttribute("title", "Drag to resize · double-click to reset");
   handle.tabIndex = 0;
   // Remember the designed weights for double-click reset.
-  [left, right].forEach((el) => { if (!el.dataset.pw0) el.dataset.pw0 = String(_panelWeight(el)); });
+  _panels().forEach((el) => { if (!el.dataset.pw0) el.dataset.pw0 = String(_panelWeight(el)); });
 
   // Set up a drag/keyboard session: returns start widths and minimums. A
   // collapsed neighbour is opened at its minimum width first.
   function begin() {
-    [left, right].forEach((el) => {
-      if (!el.classList.contains("collapsed")) return;
-      el.classList.remove("collapsed");
-      delete el.dataset.auto;
-      delete el.dataset.locked;
-      el.dataset.protect = "1";
-      updateCollapseBtn(el.id, false);
-    });
+    if (!pick()) return null;
     _normaliseWeights();
     const wL = left.getBoundingClientRect().width;
     const wR = right.getBoundingClientRect().width;
@@ -532,6 +540,7 @@ function initResize(hid) {
 
   function startDrag(startX) {
     const sess = begin();
+    if (!sess) return null;
     const row = handle.parentElement;
     handle.classList.add("dragging");
     row.classList.add("resizing");
@@ -558,6 +567,7 @@ function initResize(hid) {
 
   handle.addEventListener("mousedown", function (e) {
     const d = startDrag(e.clientX);
+    if (!d) return;
     function mm(ev) { d.onMove(ev.clientX); }
     function mu() {
       d.onEnd();
@@ -571,6 +581,7 @@ function initResize(hid) {
   });
   handle.addEventListener("touchstart", function (e) {
     const d = startDrag(e.touches[0].clientX);
+    if (!d) return;
     function tm(ev) { d.onMove(ev.touches[0].clientX); ev.preventDefault(); }
     function tu() {
       d.onEnd();
@@ -586,13 +597,16 @@ function initResize(hid) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();
     const step = (e.shiftKey ? 96 : 24) * (e.key === "ArrowLeft" ? -1 : 1);
-    apply(begin(), step);
+    const sess = begin();
+    if (!sess) return;
+    apply(sess, step);
     finish();
   });
 
   // Double-click: give the two panels back their designed proportions.
   handle.addEventListener("dblclick", function () {
     const sess = begin();
+    if (!sess) return;
     const d0L = parseFloat(left.dataset.pw0), d0R = parseFloat(right.dataset.pw0);
     const total = sess.widthL + sess.widthR;
     apply(sess, (total * d0L) / (d0L + d0R) - sess.widthL);
@@ -963,6 +977,43 @@ function upgradeExamplesSelect(sel, groups) {
   sync();
 }
 
+// ── Quick links (QR code): the loaded example and the panel set, see quickEncode in algo/share.js ──
+// The example loader of a tool is wrapped so the key of the last example loaded is known.
+var _currentExampleKey = null;
+function _trackExample(fnName) {
+  var f = window[fnName];
+  if (typeof f !== "function" || f._tracked) return;
+  var w = function (k) { if (k && typeof k === "string") _currentExampleKey = k; return f.apply(this, arguments); };
+  w._tracked = true;
+  window[fnName] = w;
+}
+function quickLinkUrl() {
+  var key = _currentExampleKey, n = key && /^ex(\d+)$/.test(key) ? +key.slice(2) : null;
+  return location.origin + location.pathname + "#" + quickEncode(n, _panels().map(function (el) { return el.classList.contains("collapsed"); }));
+}
+// Run once the examples are loaded: load the example and set the panels a quick link names.
+function quickLinkApply(fnName) {
+  var q = quickDecode(location.hash);
+  if (!q) return;
+  var f = window[fnName];
+  if (q.example !== null && typeof f === "function") { try { f("ex" + q.example); } catch (e) {} }
+  var ps = _panels();
+  if (q.collapsed.length === ps.length) {
+    ps.forEach(function (el, i) {
+      var want = q.collapsed[i];
+      if (want && !el.classList.contains("collapsed")) _collapseNow(el);
+      else if (!want && el.classList.contains("collapsed")) {
+        el.classList.remove("collapsed");
+        delete el.dataset.locked;
+        delete el.dataset.auto;
+        updateCollapseBtn(el.id, false);
+      }
+    });
+    fitPanelLayout();
+    _panelsChanged();
+  }
+}
+
 function loadExamplesInto(url, selectId, examplesObj, onReady) {
   fetch(url)
     .then(function (r) { return r.json(); })
@@ -989,7 +1040,10 @@ function loadExamplesInto(url, selectId, examplesObj, onReady) {
         sel.appendChild(og);
       });
       upgradeExamplesSelect(sel, groups);
+      var fnName = ((sel.getAttribute("onchange") || "").match(/^\s*(\w+)\(/) || [])[1];
+      if (fnName) _trackExample(fnName);
       if (typeof onReady === "function") onReady();
+      if (fnName) quickLinkApply(fnName);
     })
     .catch(function (err) {
       console.error("Failed to load examples from " + url, err);
@@ -1196,7 +1250,10 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
         sel.appendChild(og);
       });
       upgradeExamplesSelect(sel, groups);
-      if (firstKey && (!shouldLoadFirst || shouldLoadFirst())) loadFn(firstKey);
+      var fnName = loadFn.name;
+      _trackExample(fnName);
+      if (firstKey && (!shouldLoadFirst || shouldLoadFirst())) window[fnName](firstKey);
+      quickLinkApply(fnName);
     })
     .catch(function(err) {
       console.error("Failed to load examples from " + url, err);
