@@ -1,0 +1,49 @@
+/* The compiler-construction tools (shared/compiler-ui.js): definition fields, the input strip with the scanner's
+   bites, the token stream, the parser stack and the results tables. */
+
+.cm-label { padding: var(--sp-3) var(--sp-5) 0; }
+.cm-text {
+  display: block; box-sizing: border-box; width: 100%; background: transparent; color: var(--text); border: none; outline: none;
+  font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.6; padding: var(--sp-3) var(--sp-5); resize: vertical;
+  border-bottom: 1px solid var(--border-lo);
+}
+.cm-text::placeholder { color: var(--text-placeholder); }
+#token-input { min-height: 120px; }
+#grammar-input.cm-text { flex: none; min-height: 200px; }
+.cm-fields { flex: 1; overflow: auto; }
+
+.cm-log { padding: var(--sp-3) var(--sp-5); min-height: 2.6em; font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.5; border-bottom: 1px solid var(--border-lo); }
+.cm-log.is-error { color: var(--st-reject); }
+.cm-log.is-accept { color: var(--st-accept); }
+
+.cm-section { border-bottom: 1px solid var(--border-lo); padding: var(--sp-3) var(--sp-5); }
+.cm-section > .ui-label { display: block; margin-bottom: var(--sp-2); }
+.cm-chars { display: flex; flex-wrap: wrap; font-family: var(--font-mono); font-size: var(--fs-lg); line-height: 1.4; }
+.cm-ch { min-width: 0.7em; text-align: center; padding: 1px 1px; border-bottom: 3px solid transparent; }
+.cm-ch.is-done { color: var(--text-lo); }
+.cm-ch.is-sp { color: var(--text-lo); }
+.cm-ch.is-lex { background: var(--st-active-bg); color: var(--st-active); border-bottom-color: var(--st-active); }
+.cm-ch.is-peek { background: var(--hot-bg); border-bottom-color: var(--hot); }
+.cm-key { font-size: var(--fs-2xs); color: var(--text-lo); margin-top: var(--sp-2); }
+.cm-key .is-lex, .cm-key .is-peek { padding: 0 4px; margin-right: 6px; }
+.cm-key .is-lex { background: var(--st-active-bg); color: var(--st-active); }
+.cm-key .is-peek { background: var(--hot-bg); }
+.cm-empty { color: var(--text-lo); font-style: italic; font-size: var(--fs-xs); }
+
+.cm-tokens { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.cm-tok { display: inline-flex; flex-direction: column; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 1px 6px; background: var(--bg); }
+.cm-tok.is-la { border-color: var(--hot); background: var(--hot-bg); }
+.cm-tok-name { font-size: var(--fs-2xs); color: var(--text-dim); }
+.cm-tok-lex { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.cm-la-note { font-size: var(--fs-xs); color: var(--text-dim); font-style: italic; margin-left: var(--sp-3); }
+
+.cm-stack { flex: 1; overflow: auto; min-height: 90px; padding: 0 var(--sp-5) var(--sp-4); }
+.cm-table { border-collapse: collapse; font-size: var(--fs-xs); font-family: var(--font-mono); margin-bottom: var(--sp-3); }
+.cm-table th { text-align: left; font-weight: normal; color: var(--text-dim); padding: 1px 12px 1px 0; border-bottom: 1px solid var(--border-lo); }
+.cm-table td { padding: 1px 12px 1px 0; }
+.cm-table tr.is-top td { color: var(--accent); font-weight: bold; }
+
+#cm-out { flex: 1; overflow: auto; padding: var(--sp-3) var(--sp-5); }
+#cm-out h3 { margin: var(--sp-4) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: normal; font-style: italic; font-family: var(--font-serif); color: var(--text-dim); }
+.cm-value { font-family: var(--font-mono); font-size: var(--fs-lg); margin: 0; }
+.cm-msgs { margin: 0; padding-left: 18px; font-size: var(--fs-sm); color: var(--st-reject); }

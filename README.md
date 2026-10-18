@@ -16,6 +16,15 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
 | **Turing Machine Simulator** | Deterministic TM — editable transition table, tape simulation, step-by-step execution |
 
+Compiler construction (a section of its own on the index page, not on the map; they share `shared/algo/compiler.js`
+and `shared/compiler-ui.js`):
+
+| Tool | Coverage |
+|---|---|
+| **Scanner and Parser** | A longest-match scanner and an SLR(1) parser run together as one list of events: the parser pulls tokens, the scanner bites off lexemes (look-ahead and back-up shown), default reductions fetch no token |
+| **Syntax-Directed Translation** | `{{ … }}` actions on grammar rules (a small, safely interpreted action language), run at reductions: evaluation, quadruples, postfix; value attributes on the parse tree |
+| **Types and Symbol Table** | Type attributes computed bottom-up (int/float), a symbol table, `int2float` conversions in the quadruples, scope and type errors |
+
 All tools share a common visual language (academic, high-contrast) and support
 step-by-step algorithm visualisation with Back/Forward controls.
 
@@ -55,6 +64,7 @@ parser-tools/
 │   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check, seeded random moves
 │   │   ├── strings.js                  ← pure: random input strings (automaton walks, sampling, grammar sentences)
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
+│   │   ├── compiler.js                 ← pure: token rules and longest-match scanner, action language, the scanner+parser run as frames
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping
 │   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
 │   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Actions on grammar rules, run when the parser reduces: expression evaluation, three-address code (quadruples) and translation to postfix." />
+    <title>Syntax-Directed Translation | Parser Tools</title>
+    <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <link rel="stylesheet" href="../../shared/shared.css?v=f20da596" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
+    <link rel="stylesheet" href="../../shared/compiler.css?v=5b5e3775" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-def { --pw: 300; --pmin: 220px; }
+      #p-run { --pw: 460; --pmin: 300px; }
+      #p-tree { --pw: 420; --pmin: 260px; }
+      #p-out { --pw: 300; --pmin: 200px; }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1>Syntax-Directed Translation</h1>
+    </div>
+
+    <div id="panels">
+      <!-- 1. The definition: token rules and grammar -->
+      <div class="panel" id="p-def" data-priority="2">
+        <div class="panel-header">
+          <span class="panel-title">Definition</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="examples-bar">
+            <select id="examples-select" onchange="loadExample(this.value)">
+              <option value="">Example</option>
+            </select>
+          </div>
+          <div class="cm-fields">
+            <div class="ui-label cm-label">Token rules (name, pattern)</div>
+            <textarea id="token-input" class="cm-text" spellcheck="false"></textarea>
+            <div class="ui-label cm-label">Grammar with actions {{ … }}</div>
+            <textarea id="grammar-input" class="cm-text" spellcheck="false"></textarea>
+          </div>
+          <div id="grammar-footer"><div id="error-msg"></div></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. The run: the input and the scanner's bites, the tokens, the parser -->
+      <div class="panel" id="p-run" data-priority="4">
+        <div class="panel-header">
+          <span class="panel-title">Scanner and parser</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-sim">
+            <div class="ui-sim__row">
+              <div class="input-group">
+                <input id="sim-input" class="ui-input ui-input--lg" type="text" spellcheck="false" />
+              </div>
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-sim-reset" title="Restart" disabled></button>
+                <button class="btn" id="btn-sim-back" disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-sim-step" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-sim-all" title="Run all" disabled></button>
+              </div>
+            </div>
+          </div>
+          <div id="cm-log" class="cm-log"></div>
+          <div class="cm-section">
+            <span class="ui-label">Input</span>
+            <div id="cm-input" class="cm-chars"></div>
+            <div class="cm-key"><span class="is-lex">bitten off</span><span class="is-peek">looked at, then given back</span></div>
+          </div>
+          <div class="cm-section">
+            <span class="ui-label">Tokens returned to the parser</span>
+            <div id="cm-tokens" class="cm-tokens"></div>
+          </div>
+          <div class="cm-section" style="border-bottom: 0; padding-bottom: 0"><span class="ui-label">Parser stack (bottom to top)</span></div>
+          <div id="cm-stack" class="cm-stack"></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. The parse tree -->
+      <div class="panel" id="p-tree" data-priority="3">
+        <div class="panel-header">
+          <span class="panel-title">Parse tree</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-tree');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-canvas">
+            <svg id="tree-svg"><g id="tree-root"></g></svg>
+            <div id="tree-empty" class="ui-canvas__empty">The parse tree grows with the run.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-3"></div>
+
+      <!-- 4. Results -->
+      <div class="panel" id="p-out" data-priority="1">
+        <div class="panel-header">
+          <span class="panel-title">Translation</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-out');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="cm-out"></div>
+        </div>
+      </div>
+    </div>
+    <!-- #panels -->
+
+    <script src="../../shared/algo/grammar.js?v=14930600"></script>
+    <script src="../../shared/algo/panels.js?v=92261e45"></script>
+    <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
+    <script src="../../shared/algo/strings.js?v=23796ffe"></script>
+    <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
+    <script src="../../shared/algo/lr.js?v=a528fab7"></script>
+    <script src="../../shared/algo/compiler.js?v=574b401e"></script>
+    <script src="../../shared/shared.js?v=c0c9b70f"></script>
+    <script src="../../shared/fit-view.js?v=9af2be16"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
+    <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
+    <script src="../../shared/quick-link.js?v=fca552e1"></script>
+    <script src="../../shared/view-menu.js?v=eada4185"></script>
+    <script src="guide.js?v=c7c9827a"></script>
+    <script src="../../shared/guide.js?v=98cfe80c"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/compiler-ui.js?v=9c8bcee7"></script>
+    <script>
+      const EXAMPLES = {};
+      function loadExample(k) { CompilerTool.loadExample(k); }
+      CompilerTool.init({ examples: "examples.json", storage: "sdt-tool-v1", annotate: true, out: ["value", "quads"] });
+    </script>
+  </body>
+</html>

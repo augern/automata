@@ -1,0 +1,59 @@
+{
+  "groups": [
+    {
+      "label": "Attributes, types and the symbol table",
+      "examples": [
+        {
+          "label": "Types from literals and operators",
+          "purpose": "Types are computed bottom-up: int and float literals; an operator widens to float when an operand is float, with a conversion quadruple.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "float [0-9]+\\.[0-9]+",
+            "int [0-9]+",
+            "id [a-z][a-z0-9]*",
+            "'=' =",
+            "';' ;",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "'/' /",
+            "'(' \\(",
+            "')' \\)"
+          ],
+          "text": "<prog> → <stmts>\n<stmts> → <stmts> <stmt> | <stmt>\n<stmt> → id '=' <expr> ';' {{ install($1.lexeme, $3.type); emit('=', $3.place, '', $1.lexeme) }}\n<expr> → <expr> '+' <term> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('+', a, b, $$.place) }}\n  | <expr> '-' <term> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('-', a, b, $$.place) }}\n  | <term>\n<term> → <term> '*' <factor> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('*', a, b, $$.place) }}\n  | <term> '/' <factor> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('/', a, b, $$.place) }}\n  | <factor>\n<factor> → '(' <expr> ')' {{ $$.type = $2.type; $$.place = $2.place }}\n  | int {{ $$.type = int; $$.place = $1.lexeme }}\n  | float {{ $$.type = float; $$.place = $1.lexeme }}\n  | id {{ require(lookup($1.lexeme) != '', 'undeclared variable ' + $1.lexeme); $$.type = lookup($1.lexeme); $$.place = $1.lexeme }}",
+          "strings": [
+            "x = 1 + 2; y = x * 2.5;",
+            "a = 7; b = a / 2; c = b + 0.5;",
+            "x = 1; y = z + x;"
+          ]
+        },
+        {
+          "label": "Declarations and assignments",
+          "purpose": "Declarations install types. An assignment looks the variable up, converts int to float, and reports undeclared names and float-to-int assignments.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "integer integer",
+            "real real",
+            "float [0-9]+\\.[0-9]+",
+            "int [0-9]+",
+            "id [a-z][a-z0-9]*",
+            "'=' =",
+            "';' ;",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "'/' /",
+            "'(' \\(",
+            "')' \\)"
+          ],
+          "text": "<prog> → <items>\n<items> → <items> <item> | <item>\n<item> → <decl> | <stmt>\n<decl> → integer id ';' {{ install($2.lexeme, int) }}\n  | real id ';' {{ install($2.lexeme, float) }}\n<stmt> → id '=' <expr> ';' {{ t = lookup($1.lexeme); require(t != '', 'undeclared variable ' + $1.lexeme); require(not (t == int and $3.type == float), 'cannot assign a real to the integer ' + $1.lexeme); emit('=', coerce($3.place, $3.type, t), '', $1.lexeme) }}\n<expr> → <expr> '+' <term> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('+', a, b, $$.place) }}\n  | <expr> '-' <term> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('-', a, b, $$.place) }}\n  | <term>\n<term> → <term> '*' <factor> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('*', a, b, $$.place) }}\n  | <term> '/' <factor> {{ $$.type = widen($1.type, $3.type); a = coerce($1.place, $1.type, $$.type); b = coerce($3.place, $3.type, $$.type); $$.place = newtemp(); emit('/', a, b, $$.place) }}\n  | <factor>\n<factor> → '(' <expr> ')' {{ $$.type = $2.type; $$.place = $2.place }}\n  | int {{ $$.type = int; $$.place = $1.lexeme }}\n  | float {{ $$.type = float; $$.place = $1.lexeme }}\n  | id {{ require(lookup($1.lexeme) != '', 'undeclared variable ' + $1.lexeme); $$.type = lookup($1.lexeme); $$.place = $1.lexeme }}",
+          "strings": [
+            "integer x; real y; x = 1; y = x * 2.5;",
+            "integer n; n = 2.5;",
+            "x = 1;"
+          ]
+        }
+      ]
+    }
+  ]
+}

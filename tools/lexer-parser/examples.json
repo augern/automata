@@ -1,0 +1,86 @@
+{
+  "groups": [
+    {
+      "label": "How the two cooperate",
+      "examples": [
+        {
+          "label": "Expressions",
+          "purpose": "The parser asks for one token at a time; the scanner bites off the next lexeme and skips white space. The look-ahead shows when it is called.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "num [0-9]+(\\.[0-9]+)?",
+            "id [a-z][a-z0-9]*",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "'/' /",
+            "'(' \\(",
+            "')' \\)"
+          ],
+          "text": "<expr> → <expr> '+' <term> | <expr> '-' <term> | <term>\n<term> → <term> '*' <factor> | <term> '/' <factor> | <factor>\n<factor> → '(' <expr> ')' | num | id",
+          "strings": [
+            "a + 12 * (b - 3.5)",
+            "x1+y*2",
+            "2 * (3 + 4)",
+            "3 +",
+            "2 ? 3"
+          ]
+        },
+        {
+          "label": "Keywords and identifiers",
+          "purpose": "print is a keyword, printer an identifier: the longest match wins, and on a tie the earlier rule (the keyword) does.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "print print",
+            "id [a-z]+",
+            "num [0-9]+",
+            "'=' =",
+            "';' ;",
+            "'+' \\+"
+          ],
+          "text": "<prog> → <stmts>\n<stmts> → <stmts> <stmt> | <stmt>\n<stmt> → print <expr> ';' | id '=' <expr> ';'\n<expr> → <expr> '+' <term> | <term>\n<term> → num | id",
+          "strings": [
+            "print x + 1;",
+            "printer = 2;",
+            "print printer;",
+            "x = print;"
+          ]
+        },
+        {
+          "label": "< against <=",
+          "purpose": "One character of look-ahead decides: after < the scanner reads the next character, and gives it back when it is not =.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "id [a-z]+",
+            "num [0-9]+",
+            "'<' <",
+            "'<=' <="
+          ],
+          "text": "<cond> → <operand> '<' <operand> | <operand> '<=' <operand>\n<operand> → id | num",
+          "strings": [
+            "a < b",
+            "a<=b",
+            "a<b",
+            "a <= 10"
+          ]
+        },
+        {
+          "label": "Integer and real literals",
+          "purpose": "1.5 is one token, but in 1.+2 the scanner reads the point, finds no digit after it, gives it back and returns the integer 1.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "float [0-9]+\\.[0-9]+",
+            "int [0-9]+",
+            "'+' \\+"
+          ],
+          "text": "<sum> → <sum> '+' <number> | <number>\n<number> → int | float",
+          "strings": [
+            "1 + 2.5",
+            "12.50+3",
+            "1.+2"
+          ]
+        }
+      ]
+    }
+  ]
+}

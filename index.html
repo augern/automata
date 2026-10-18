@@ -101,6 +101,9 @@ body[data-view="list"] #view-map { display: none; }
 .tool-link .tl-desc { font-size: var(--fs-sm); line-height: 1.4; color: var(--text-dim); }
 .tool-link .tl-needs { margin-top: var(--sp-2); font-size: var(--fs-xs); font-style: italic; color: var(--text-lo); }
 
+#view-compiler { display: flex; justify-content: center; width: 100%; padding: 0 var(--sp-6); box-sizing: border-box; }
+#view-compiler .index-card { max-width: 720px; }
+.cc-intro { margin: 0 0 var(--sp-5); font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.4; }
 .footer { font-size: var(--fs-xs); color: var(--text-lo); text-align: center; max-width: 720px; }
 .footer p { margin: var(--sp-2) 0; }
 </style>
@@ -154,6 +157,15 @@ body[data-view="list"] #view-map { display: none; }
 
 <!-- List view: the same tools, grouped by language class and ordered by prerequisite -->
 <section id="view-list" aria-label="List of the tools"><div class="index-card" id="list-card"></div></section>
+
+<!-- Compiler construction: tools that are not about a class of languages, so they are not on the map -->
+<section id="view-compiler" aria-label="Compiler construction">
+  <div class="index-card" id="compiler-card">
+    <div class="group-label">Compiler construction</div>
+    <p class="cc-intro">Scanner, parser and the processing of the syntax tree, working together on an input.</p>
+    <div class="tool-links" id="compiler-links"></div>
+  </div>
+</section>
 
 <div class="footer">
   <p>Developed by <em>August Ernstsson</em>, largely with the assistance of <em>Claude Code</em>.</p>
@@ -213,6 +225,20 @@ body[data-view="list"] #view-map { display: none; }
     a.href = t.href;
     a.append(el("span", "tl-title", t.title), el("span", "tl-desc", t.desc), el("span", "tl-needs", "Builds on: " + t.builds));
     links.appendChild(a);
+  }
+
+  // ── Compiler construction section, below the map and the list ──
+  const COMPILER_TOOLS = [
+    { href: "tools/lexer-parser/", title: "Scanner and Parser", desc: "A scanner and an LR parser run together: the parser asks for a token when it needs one, and the scanner bites off the next lexeme, with its look-ahead and back-up shown.", builds: "Regular Expressions, LR Parser" },
+    { href: "tools/sdt/", title: "Syntax-Directed Translation", desc: "Actions on grammar rules, run when the parser reduces: expression evaluation, three-address code (quadruples) and translation to postfix.", builds: "Scanner and Parser" },
+    { href: "tools/types/", title: "Types and Symbol Table", desc: "Types as attributes computed bottom-up, a symbol table of declared variables, and conversions between int and float in the quadruples.", builds: "Syntax-Directed Translation" },
+  ];
+  const ccLinks = document.getElementById("compiler-links");
+  for (const t of COMPILER_TOOLS) {
+    const a = el("a", "tool-link");
+    a.href = t.href;
+    a.append(el("span", "tl-title", t.title), el("span", "tl-desc", t.desc), el("span", "tl-needs", "Builds on: " + t.builds));
+    ccLinks.appendChild(a);
   }
 
   // ── Map tooltips: tools show their description; rings their Chomsky type, what accepts them, an example ──
