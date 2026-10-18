@@ -133,3 +133,34 @@ test("tree growth is capped and reported", () => {
     assert.match(nfaExplainConfig(nfa, ["b"], rej).why, /not an accepting state/);
   });
 })();
+
+// ── The error state ──
+test("error state: a stuck branch moves to it and stays for the rest of the input", () => {
+  const { nfaErrorName, nfaErrorSymbols, NFA_WILD } = load("nfa.js");
+  const n = nfa(["q0", "q1"], "q0", ["q1"], [["q0", "a", "q1"]]);
+  n.alphabet = ["a", "b"];
+  assert.equal(nfaErrorName(n), "err");
+  assert.equal(nfaErrorName({ states: ["err", "err′"] }), "err′′");
+  assert.deepEqual([...nfaErrorSymbols(n, n.alphabet, "q0")], ["b"]);
+  assert.deepEqual([...nfaErrorSymbols(n, n.alphabet, "q1")], ["a", "b"]);
+  const t = nfaBuildSimTree(n, "abc", 512, { errorName: "err" });
+  assert.equal(t.accepted, false);
+  const walk = (x, out = []) => { out.push(x); x.children.forEach((c) => walk(c, out)); return out; };
+  const errs = walk(t.vRoot).filter((x) => x.error);
+  assert.deepEqual(errs.map((x) => x.depth), [2, 3]);
+  assert.equal(errs[1].parent, errs[0]);
+  assert.equal(errs[1].rejected, true);
+  // the explanation and the table cell of an error move
+  const { nfaExplainConfig, nfaEdgeCells } = load("nfa.js");
+  assert.equal(nfaExplainConfig(n, [..."abc"], errs[0]).role, "error");
+  assert.deepEqual([...nfaEdgeCells(n, [..."abc"], errs[0])], ["q1|b"]);
+  assert.deepEqual([...nfaEdgeCells(n, [..."abc"], errs[1])], ["err|" + NFA_WILD]);
+  // without the option nothing changes
+  assert.equal(walk(nfaBuildSimTree(n, "abc").vRoot).some((x) => x.error), false);
+});
+
+test("error state: an ε-move into a state that can move keeps the branch alive", () => {
+  const { nfaErrorSymbols } = load("nfa.js");
+  const n = nfa(["p", "q"], "p", ["q"], [["p", "ε", "q"], ["q", "a", "q"]]);
+  assert.deepEqual([...nfaErrorSymbols(n, ["a"], "p")], []);
+});

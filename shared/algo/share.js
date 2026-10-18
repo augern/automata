@@ -162,7 +162,7 @@ function shareValidateNFA(obj) {
       trans[st][sym] = Array.isArray(raw) ? [...new Set(raw.filter((t) => shareIsStr(t) && states.includes(t)))] : [];
     }
   }
-  return { nfa: { states, alphabet, start, accepts, trans }, s };
+  return { nfa: { states, alphabet, start, accepts, trans }, s, ...(obj.err === true ? { err: true } : {}) };
 }
 
 // { pda: { states, start, accepts, initStack, acceptMode, rules }, s? }

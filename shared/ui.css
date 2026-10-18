@@ -790,3 +790,9 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .qr-modal-url:hover { text-decoration: underline; }
 .qr-modal-note { max-width: 520px; font-size: var(--fs-sm); line-height: 1.5; color: var(--hot); }
 .qr-modal-hint { font-size: var(--fs-xs); color: rgb(136 136 136); }
+
+/* The wildcard of the error state ("any other symbol"): white on red so it cannot be mistaken for a "?" symbol */
+.ui-wild { display: inline-block; padding: 0 0.35em; border-radius: var(--radius); background: var(--st-reject); color: white; font-weight: bold; }
+.ag-edge text .ag-wild, .ag-edge text.ag-wild { fill: white; stroke: var(--st-reject); stroke-width: 4px; stroke-linejoin: round; paint-order: stroke; font-weight: bold; }
+.ui-table td.is-error { color: var(--st-reject); font-style: italic; text-align: center; opacity: 0.75; }
+.ct-node.is-error circle { stroke: var(--st-reject); }

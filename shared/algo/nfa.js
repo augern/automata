@@ -104,7 +104,10 @@ function nfaEpsAnnotation(nfa, parentState, sym, childState) {
   };
 }
 
-function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES) {
+// opts.errorName: a branch that cannot move gets a child with that name (error: true) which then stays there
+// (one node per remaining symbol), so every level is still one symbol read.
+function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES, opts = {}) {
+  const errorName = opts.errorName || null;
   let nodeId = 0;
   // Virtual root — not rendered, just a container for depth-0 nodes
   const vRoot = { id: nodeId++, state: null, depth: -1, children: [], parent: null };
@@ -123,8 +126,16 @@ function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES) {
     const sym = chars[d];
     const nextFrontier = [];
 
+    const errChild = (node) => {
+      const child = { id: nodeId++, state: errorName, depth: d + 1, parent: node, children: [], dead: false, accepted: false,
+                      viaEps: false, epsCountBefore: 0, epsCountAfter: 0, error: true };
+      node.children.push(child);
+      nextFrontier.push(child);
+    };
+
     for (const node of frontier) {
       if (nodeId > maxNodes) { node.dead = true; continue; }
+      if (node.error) { errChild(node); continue; }
 
       // All states reachable via ε* sym ε* from node.state
       const nextStates = new Set();
@@ -134,6 +145,7 @@ function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES) {
 
       if (nextStates.size === 0) {
         node.dead = true;
+        if (errorName) errChild(node);
       } else {
         for (const ns of nextStates) {
           if (nodeId > maxNodes) break;
@@ -166,6 +178,25 @@ function nfaBuildSimTree(nfa, inputStr, maxNodes = NFA_MAX_TREE_NODES) {
   return { vRoot, maxDepth: chars.length, accepted: nfaAcceptsString(nfa, inputStr), truncated: nodeId > maxNodes };
 }
 
+// ── The error state ──────────────────────────────────────────────────
+// Optionally a branch that cannot move enters an explicit error state instead of just ending. A state s
+// has an error move on a symbol when no state of its ε-closure has a move on it. "Any symbol outside the
+// alphabet" is written NFA_WILD (a private-use character that the views draw as a red-backed "?").
+const NFA_WILD = "\uE000";
+
+// A name for the error state that no state of the automaton uses.
+function nfaErrorName(nfa) {
+  let name = "err";
+  while (nfa.states.includes(name)) name += "′";
+  return name;
+}
+
+// The alphabet symbols on which `state` enters the error state.
+function nfaErrorSymbols(nfa, alphabet, state) {
+  const closure = [...nfaEpsClosure(nfa, [state])];
+  return alphabet.filter((a) => !closure.some((s) => ((nfa.trans[s] && nfa.trans[s][a]) || []).length > 0));
+}
+
 // ── Explaining a configuration ────────────────────────────────────────
 // Plain data describing one node of the simulation tree (a state together with how much
 // input has been read), for the explanation shown when a node is selected. ctx =
@@ -183,7 +214,13 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
   const set = (xs) => "{" + xs.join(", ") + "}";
 
   let role, why;
-  if (node.accepted) {
+  if (node.error) {
+    role = "error";
+    const sym = chars[node.depth - 1];
+    why = node.parent && node.parent.error
+      ? `the error state absorbs the rest of the input (here ${sym}); it is not accepting, so the string is rejected.`
+      : `no state of the ε-closure of ${node.parent.state} has a transition on ${sym}, so the NFA enters the error state. It stays there for the rest of the input and is not accepting.`;
+  } else if (node.accepted) {
     role = "accepted";
     why = node.depth === 0
       ? `the input is empty and the ε-closure ${set(closure)} of the start state contains an accepting state, so the string is accepted.`
@@ -193,6 +230,9 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
     why = node.depth === 0
       ? `the input is empty, but no state of the ε-closure ${set(closure)} is accepting.`
       : `all input is read, but ${node.state} is not an accepting state.`;
+  } else if (node.dead && node.children.some((c) => c.error)) {
+    role = "dead";
+    why = `no state of the ε-closure ${set(closure)} has a transition on ${next}, so the NFA enters the error state.`;
   } else if (node.dead) {
     role = "dead";
     const canMove = closure.some((s) => (nfa.trans[s]?.[next] || []).length > 0);
@@ -212,7 +252,9 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
   if (isRoot && role !== "accepted" && role !== "rejected" && role !== "dead") role = "initial";
 
   let arrival = null;
-  if (!isRoot) {
+  if (node.error) {
+    arrival = { error: true, fromState: node.parent.state, sym: chars[node.depth - 1] };
+  } else if (!isRoot) {
     const sym = chars[node.depth - 1];
     const from = node.parent.state;
     let best = null;
@@ -239,6 +281,7 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
 function nfaEdgeCells(nfa, chars, node) {
   const a = nfaExplainConfig(nfa, chars, node).arrival;
   if (!a) return [];
+  if (a.error) return [a.fromState + "|" + ((nfa.alphabet || []).includes(a.sym) ? a.sym : NFA_WILD)];
   const hops = (path) => (path ? path.slice(0, -1).map((s) => s + "|ε") : []);
   return [...hops(nfaEpsPath(nfa, a.fromState, a.via)), a.via + "|" + a.sym, ...hops(nfaEpsPath(nfa, a.to, node.state))];
 }

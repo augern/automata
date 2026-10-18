@@ -78,13 +78,20 @@ function drawAutomatonGraph(prefix, view, spec) {
 
   // Label text: joined on one line, or one <text> per label stacked and centred on (x, y).
   // With ids, each stacked label remembers its id and the edge group reports hovers.
+  // A label equal to the private-use wildcard (NFA_WILD, "any other symbol") is drawn as a red-backed "?".
+  const WILD = "\uE000";
   function addLabel(g, labels, x, y, ids) {
     if (joinLabels) {
-      g.append("text").attr("x", x).attr("y", y).attr("text-anchor", "middle").text(labels.join(", "));
+      const t = g.append("text").attr("x", x).attr("y", y).attr("text-anchor", "middle");
+      labels.forEach((lbl, li) => {
+        if (li > 0) t.append("tspan").text(", ");
+        if (lbl === WILD) t.append("tspan").attr("class", "ag-wild").text("?");
+        else t.append("tspan").text(lbl);
+      });
       return;
     }
     labels.forEach((lbl, li) => {
-      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", "middle").text(lbl);
+      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", "middle").classed("ag-wild", lbl === WILD).text(lbl === WILD ? "?" : lbl);
       if (ids) t.attr("data-k", li);
     });
   }
