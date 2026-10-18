@@ -1214,3 +1214,6 @@ body {
   border-color: var(--accent);
   background: var(--accent-bg);
 }
+
+/* A note from the grammar parser in the error line: informative, not an error */
+#error-msg.is-note { color: var(--text-dim); }

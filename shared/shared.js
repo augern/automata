@@ -1077,6 +1077,16 @@ function initAlgoModal() {
 // Depend on globals: simTokens, simPos (read-only here).
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+// Show what the grammar parser noted (such as a <name> without a rule, read as a terminal) in the error line, in
+// the note style. Call after a successful parse; a later setError text replaces it.
+function showGrammarNotes(g) {
+  const el = document.getElementById("error-msg");
+  if (!el) return;
+  const notes = (g && g.notes) || [];
+  el.classList.toggle("is-note", notes.length > 0);
+  if (notes.length) el.textContent = notes.join(" ");
+}
+
 function tokenise(str) {
   const t = strTokenise(currentGrammar ? currentGrammar.terminals : [], str);
   t.push("$");

@@ -6,7 +6,7 @@
     <meta name="description" content="Backtracking recursive-descent parser: the procedures generated from a grammar, and the search for a parse with its guesses and backtracking, step by step." />
     <title>Backtracking Recursive Descent | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=36f52b82" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=f20da596" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -241,12 +241,12 @@
       </div>
     </div>
 
-    <script src="../../shared/algo/grammar.js?v=9c5bd0d1"></script>
+    <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/rdp.js?v=5a7e9a43"></script>
-    <script src="../../shared/shared.js?v=886cba52"></script>
+    <script src="../../shared/shared.js?v=4307741e"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -292,6 +292,7 @@
       // ── Build ─────────────────────────────────────────────────
       function setError(msg) {
         $("error-msg").textContent = msg || "";
+        $("error-msg").classList.remove("is-note");
       }
 
       function build() {
@@ -300,6 +301,7 @@
           rdG = rdpParseGrammar(rdSrc);
           rdSpans = rdpRuleSpans(rdSrc);
           setError("");
+          showGrammarNotes(rdG.base);
         } catch (e) {
           rdG = null;
           setError(e.message);

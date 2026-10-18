@@ -14,7 +14,7 @@
 // Parse without augmentation; returns { rules, start, nts }.
 function parseGrammarRaw(text) {
   const g = parseBNF(text, false);
-  return { rules: g.rules, start: g.start, nts: g.nonterminals };
+  return { rules: g.rules, start: g.start, nts: g.nonterminals, notes: g.notes };
 }
 
 // HTML-safe: every use of ruleStr is inside step-log HTML.

@@ -80,9 +80,11 @@ function parseBNF(text, augment = true) {
     }
   }
   if (!rules.length) throw new Error("No rules found");
-  // A name in angle brackets, <noun>, is a nonterminal by convention: it must have a rule.
+  // A name in angle brackets, <noun>, is a nonterminal by convention. One without a rule is read as a terminal
+  // (a token class such as <id>), and a note says so.
   const defined = new Set(rules.map((r) => r.lhs));
-  for (const a of angle) if (!defined.has(a)) throw new Error("No rule for " + a + " (a name in angle brackets is a nonterminal)");
+  const open = [...angle].filter((a) => !defined.has(a));
+  const notes = open.length ? [open.join(", ") + (open.length === 1 ? " has" : " have") + " no rule and " + (open.length === 1 ? "is" : "are") + " read as " + (open.length === 1 ? "a terminal" : "terminals") + "."] : [];
   const origStart = rules[0].lhs;
   if (augment) {
     const existingLHS = new Set(rules.map((r) => r.lhs));
@@ -95,7 +97,7 @@ function parseBNF(text, augment = true) {
     terms = new Set();
   for (const r of rules) for (const s of r.rhs) if (!nts.has(s)) terms.add(s);
   terms.add("$");
-  return { rules, start, augmented: augment, nonterminals: nts, terminals: terms };
+  return { rules, start, augmented: augment, nonterminals: nts, terminals: terms, notes };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

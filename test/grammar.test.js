@@ -82,11 +82,16 @@ test("bnfAlternatives: offsets of alternatives and symbols", () => {
   assert.deepEqual([alts[0].from, alts[0].to, alts[1].from, alts[1].to], [1, 8, 11, 12]);
 });
 
-test("parseBNF: a <name> in angle brackets must have a rule; quoted or bare < > are terminals", () => {
-  assert.throws(() => parseBNF("<s> -> <a> x\n<b> -> y", false), /No rule for <a>/);
-  assert.doesNotThrow(() => parseBNF("<s> -> <a> x\n<a> -> y", false));
-  const g = parseBNF("E -> E < E | '<a>' | >", false);
-  assert.deepEqual(sorted(g.terminals), ["$", "<", "<a>", ">"]);
+test("parseBNF: a <name> without a rule is a terminal with a note; quoted or bare < > are plain terminals", () => {
+  const g = parseBNF("<s> -> <a> x\n<b> -> y", false);
+  assert.deepEqual(sorted(g.terminals), ["$", "<a>", "x", "y"]);
+  assert.match(g.notes[0], /^<a> has no rule and is read as a terminal/);
+  assert.equal(parseBNF("<s> -> <a> x\n<a> -> y", false).notes.length, 0);
+  const g2 = parseBNF("<s> -> <a> <b> x", false);
+  assert.match(g2.notes[0], /^<a>, <b> have no rule and are read as terminals/);
+  const g3 = parseBNF("E -> E < E | '<a>' | >", false);
+  assert.deepEqual(sorted(g3.terminals), ["$", "<", "<a>", ">"]);
+  assert.equal(g3.notes.length, 0);
 });
 
 test("parseBNF: a doubled quote inside quotes is the quote itself; '' stays ε", () => {
