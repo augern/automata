@@ -179,7 +179,7 @@ const CompilerTool = (() => {
     if (cfg.out.includes("value")) {
       const done = f.type === "accept";
       const val = done && f.stack.length >= 2 ? f.stack[f.stack.length - 1].attrs.val : undefined;
-      h += "<h3>Value</h3><p class='cm-value'>" + (done ? (val === undefined ? "<i>none</i>" : esc(String(Math.round(val * 1e6) / 1e6))) : "<span class='cm-empty'>when the parse is accepted</span>") + "</p>";
+      h += "<h3>Value</h3><p class='cm-value'>" + (done ? (val === undefined ? "<i>none</i>" : esc(typeof val === "number" ? String(Math.round(val * 1e6) / 1e6) : String(val))) : "<span class='cm-empty'>when the parse is accepted</span>") + "</p>";
     }
     if (cfg.out.includes("quads")) {
       h += "<h3>Quadruples</h3>";
