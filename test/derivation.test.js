@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const { parseDerivationGrammar, derivMatchesRange, derivApply, derivIsDone } = load("derivation.js");
+const { parseDerivationGrammar, derivMatchesRange, derivApply, derivIsDone } = load("grammar.js", "derivation.js");
 const arr = (x) => [...x];
 
 // The classic context-sensitive grammar for aⁿbⁿcⁿ (n ≥ 1).
@@ -84,7 +84,7 @@ test("done detection sees a rule LHS anywhere in the form, including the empty f
 });
 
 // ── Random derivation ─────────────────────────────────────────────────
-const { derivTerminalRatio, derivMoves, derivHash, derivUnit, derivRandomMove, derivOutcome } = load("derivation.js");
+const { derivTerminalRatio, derivMoves, derivHash, derivUnit, derivRandomMove, derivOutcome } = load("grammar.js", "derivation.js");
 
 // Run a whole random derivation; returns { forms, outcome } (forms[0] = start).
 function randomRun(g, seed, cap = 300) {

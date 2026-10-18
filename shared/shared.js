@@ -1085,7 +1085,7 @@ function initAlgoModal() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 function tokenise(str) {
-  const t = str.trim().split(/\s+/).filter(Boolean);
+  const t = strTokenise(currentGrammar ? currentGrammar.terminals : [], str);
   t.push("$");
   return t;
 }

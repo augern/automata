@@ -8,7 +8,6 @@
 // Nonterminals = (a) tokens that are a complete single-symbol LHS, plus
 //                (b) uppercase-initial tokens in multi-symbol LHSs.
 function parseDerivationGrammar(text) {
-  const EPS_TOKENS = new Set(["eps", "epsilon", "ε", "''", '""']);
   const lines = text.split("\n").map(l => l.trim())
                     .filter(l => l && !l.startsWith("//"));
   if (!lines.length) throw new Error("Empty grammar");
@@ -22,13 +21,7 @@ function parseDerivationGrammar(text) {
     const rhsStr   = line.slice(arrowIdx + arrow.length).trim();
     const lhsToks  = lhsStr.split(/\s+/).filter(Boolean);
     if (!lhsToks.length) throw new Error("Empty LHS in: " + line);
-    for (const alt of rhsStr.split("|")) {
-      const rhsToks = alt.trim().split(/\s+/).filter(Boolean);
-      rules.push({
-        lhs: lhsToks,
-        rhs: rhsToks.length === 1 && EPS_TOKENS.has(rhsToks[0]) ? [] : rhsToks,
-      });
-    }
+    for (const alt of bnfAlternatives(rhsStr)) rules.push({ lhs: lhsToks, rhs: bnfSymbols(alt) });
   }
   if (!rules.length) throw new Error("No rules found");
 

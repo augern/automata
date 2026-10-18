@@ -121,3 +121,22 @@ function grammarRandomSentence(grammar, rng, { minTerms = 4, maxTerms = 12, atte
   }
   return best;
 }
+
+// Input string to tokens: separated by whitespace when it has any; without whitespace the string is cut
+// greedily at the grammar's terminals (longest first, any other character on its own), so "aab", "id+id" and
+// "(a|b)*" all work with no spaces. The grammar tools' one tokeniser.
+function strTokenise(terminals, str) {
+  const s = String(str).trim();
+  if (!s) return [];
+  if (/\s/.test(s)) return s.split(/\s+/);
+  const terms = [...terminals].filter((t) => t !== "$").sort((a, b) => b.length - a.length);
+  const out = [];
+  let at = 0;
+  while (at < s.length) {
+    const t = terms.find((x) => x && s.startsWith(x, at));
+    const piece = t || s[at];
+    out.push(piece);
+    at += piece.length;
+  }
+  return out;
+}

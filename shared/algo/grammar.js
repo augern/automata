@@ -14,6 +14,44 @@ function esc(s) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:BNF-PARSER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// The alternatives of a right-hand side, with the offsets of everything (relative to the text):
+//   [{ from, to, toks: [{ sym, from, to }] }]   an alternative with no tokens is ε.
+// Symbols are separated by whitespace and alternatives by "|". A symbol in single or double quotes is a terminal
+// written literally: '|' is the terminal |, 'a b' one terminal with a space in it, and '' (or "") is ε. Unquoted,
+// eps, epsilon and ε are ε.
+function bnfAlternatives(rhs) {
+  const alts = [];
+  let cur = { from: 0, to: 0, toks: [] };
+  let i = 0;
+  const close = (end) => { cur.to = end; alts.push(cur); };
+  while (i < rhs.length) {
+    const c = rhs[i];
+    if (c === "|") { close(i); cur = { from: i + 1, to: i + 1, toks: [] }; i++; continue; }
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "'" || c === '"') {
+      const end = rhs.indexOf(c, i + 1);
+      if (end < 0) throw new Error("Unterminated quote in: " + rhs.trim());
+      cur.toks.push({ sym: rhs.slice(i + 1, end), quoted: true, from: i, to: end + 1 });
+      i = end + 1;
+      continue;
+    }
+    let j = i;
+    while (j < rhs.length && rhs[j] !== "|" && !/\s/.test(rhs[j])) j++;
+    cur.toks.push({ sym: rhs.slice(i, j), quoted: false, from: i, to: j });
+    i = j;
+  }
+  close(rhs.length);
+  // trim each alternative to its tokens
+  for (const a of alts) if (a.toks.length) { a.from = a.toks[0].from; a.to = a.toks[a.toks.length - 1].to; }
+  return alts;
+}
+// The symbols of one alternative; [] for ε.
+function bnfSymbols(alt, epsTokens = ["eps", "epsilon", EPSILON]) {
+  const t = alt.toks;
+  if (t.length === 1 && ((!t[0].quoted && epsTokens.includes(t[0].sym)) || (t[0].quoted && t[0].sym === ""))) return [];
+  return t.filter((x) => !(x.quoted && x.sym === "")).map((x) => x.sym);
+}
+
 function parseBNF(text, augment = true) {
   const lines = text
     .split("\n")
@@ -29,13 +67,7 @@ function parseBNF(text, augment = true) {
     const lhs = line.slice(0, at).trim();
     const rhs = line.slice(at + arrow.length).trim();
     if (!lhs) throw new Error("Missing LHS in: " + line);
-    for (const alt of rhs.split("|")) {
-      const toks = alt.trim().split(/\s+/).filter(Boolean);
-      rules.push({
-        lhs,
-        rhs: toks.length === 1 && ["eps", "epsilon", EPSILON, "''", `""`].includes(toks[0]) ? [] : toks,
-      });
-    }
+    for (const alt of bnfAlternatives(rhs)) rules.push({ lhs, rhs: bnfSymbols(alt) });
   }
   if (!rules.length) throw new Error("No rules found");
   const origStart = rules[0].lhs;

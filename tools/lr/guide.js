@@ -4,7 +4,7 @@ window.TOOL_GUIDE = {
   title: "LR parser",
   intro: "Builds a bottom-up (shift–reduce) parser for a grammar: the automaton, the ACTION and GOTO tables, and a parse of a string. The buttons at the top select the lookahead used for reductions: none (LR(0)), FOLLOW sets (SLR(1)), merged LR(1) lookaheads (LALR(1)) or full LR(1) lookahead.",
   use: [
-    "Write one rule per line, `A -> α | β`, with symbols separated by spaces. `eps` is the empty string.",
+    "Write one rule per line, `A -> α | β`, with symbols separated by spaces. `eps` is the empty string. A symbol in quotes is a terminal written literally, such as `'|'` or `'('`. Input strings may be written without spaces when the terminals are single characters.",
     "Step through the construction of the automaton, then of the tables. Coarse / Fine sets the size of each step.",
     "A cell with two actions is a conflict (red): the grammar is outside the chosen class. A stronger method may remove it.",
     "Simulation panel: enter a string (the dice gives a random sentence).",

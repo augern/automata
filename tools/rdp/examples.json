@@ -128,6 +128,25 @@
             "id ( ) ;",
             "id = ;"
           ]
+        },
+        {
+          "label": "Regular expressions",
+          "purpose": "The regex language, LL-ready, parsed by recursive descent. Input such as (a|b)*abb needs no spaces.",
+          "text": [
+            "R -> C R'",
+            "R' -> '|' C R' | eps",
+            "C -> P C'",
+            "C' -> P C' | eps",
+            "P -> A P'",
+            "P' -> '*' P' | '+' P' | '?' P' | eps",
+            "A -> '(' R ')' | a | b | c | d"
+          ],
+          "strings": [
+            "(a|b)*abb",
+            "ab*",
+            "a|b",
+            "(ab"
+          ]
         }
       ]
     },

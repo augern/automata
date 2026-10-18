@@ -70,3 +70,14 @@ test("grammarRandomSentence derives sentences of the grammar and varies", () => 
   }
   assert.ok(seen.size > 20);
 });
+
+test("strTokenise: whitespace when there is any, else cut at the terminals (longest first)", () => {
+  const { load } = require("./load.js");
+  const { strTokenise } = load("strings.js");
+  const T = new Set(["(", ")", "|", "*", "a", "b", "id", "$"]);
+  assert.deepEqual([...strTokenise(T, "(a|b)*ab")], ["(", "a", "|", "b", ")", "*", "a", "b"]);
+  assert.deepEqual([...strTokenise(T, "id a")], ["id", "a"]);
+  assert.deepEqual([...strTokenise(T, "idid")], ["id", "id"]);
+  assert.deepEqual([...strTokenise(T, "ax")], ["a", "x"]);
+  assert.deepEqual([...strTokenise(T, "  ")], []);
+});

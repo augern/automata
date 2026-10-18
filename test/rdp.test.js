@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const L = load("grammar.js", "rdp.js");
+const L = load("grammar.js", "strings.js", "rdp.js");
 const { rdpParseGrammar, rdpTokenise, rdpLeftRecursive, rdpRun, rdpStateAt, rdpProcedures, rdpPendingLines, rdpExplainNode } = L;
 const arr = (x) => [...x];
 

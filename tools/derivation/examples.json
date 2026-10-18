@@ -113,6 +113,16 @@
           "text": [
             "S -> ( S ) S | eps"
           ]
+        },
+        {
+          "label": "Regular expressions (the regex tool's language)",
+          "purpose": "Union, concatenation and the postfix operators as three layers of precedence, over a, b, c, d. Quotes write | * + ? ( ) as terminals.",
+          "text": [
+            "R -> R '|' C | C",
+            "C -> C P | P",
+            "P -> P '*' | P '+' | P '?' | A",
+            "A -> '(' R ')' | a | b | c | d"
+          ]
         }
       ]
     },

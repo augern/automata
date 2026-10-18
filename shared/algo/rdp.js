@@ -46,23 +46,8 @@ function rdpParseGrammar(text) {
   return { base, rules: base.rules, start: base.start, nonterminals: base.nonterminals, terminals, alts, order };
 }
 
-// Input string to tokens: whitespace-separated, or (without whitespace) cut greedily at the
-// grammar's terminals, so "aab" and "id+id" both work.
-function rdpTokenise(g, str) {
-  const s = String(str).trim();
-  if (!s) return [];
-  if (/\s/.test(s)) return s.split(/\s+/);
-  const terms = [...g.terminals].sort((a, b) => b.length - a.length);
-  const out = [];
-  let at = 0;
-  while (at < s.length) {
-    const t = terms.find((x) => s.startsWith(x, at));
-    const piece = t || s[at];
-    out.push(piece);
-    at += piece.length;
-  }
-  return out;
-}
+// Input string to tokens (see strTokenise in strings.js).
+function rdpTokenise(g, str) { return strTokenise(g.terminals, str); }
 
 // Nonterminals that can derive themselves as the first symbol (left recursion), directly or
 // through nullable prefixes. A top-down parser never returns from these.
@@ -191,13 +176,9 @@ function rdpRuleSpans(text) {
     const cut = line.indexOf(arrow);
     const lhsText = line.slice(0, cut).trimEnd();
     let pos = cut + arrow.length;
-    for (const alt of line.slice(pos).split("|")) {
-      const lead = alt.length - alt.trimStart().length;
-      const body = alt.trim();
-      const start = from + pos + lead;
-      const toks = [...body.matchAll(/\S+/g)].map((m) => [start + m.index, start + m.index + m[0].length]);
-      spans.push({ lhs: [from, from + lhsText.length], rhs: [start, start + body.length], toks });
-      pos += alt.length + 1;
+    const base = from + pos;
+    for (const alt of bnfAlternatives(line.slice(pos))) {
+      spans.push({ lhs: [from, from + lhsText.length], rhs: [base + alt.from, base + alt.to], toks: alt.toks.map((t) => [base + t.from, base + t.to]) });
     }
   }
   return spans;

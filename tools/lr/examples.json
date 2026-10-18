@@ -64,6 +64,16 @@
             "// Balanced parentheses",
             "S -> ( S ) S | eps"
           ]
+        },
+        {
+          "label": "Regular expressions",
+          "purpose": "Union, concatenation and postfix operators with left-recursive lists: no conflicts in SLR(1). Quoted terminals: '|' '*' '+' '?' '(' ')'.",
+          "text": [
+            "R -> R '|' C | C",
+            "C -> C P | P",
+            "P -> P '*' | P '+' | P '?' | A",
+            "A -> '(' R ')' | a | b | c | d"
+          ]
         }
       ]
     },

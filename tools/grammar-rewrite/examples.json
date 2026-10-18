@@ -198,6 +198,16 @@
             "T -> T * F | F",
             "F -> id | ( E )"
           ]
+        },
+        {
+          "label": "Regular expressions",
+          "purpose": "Three left-recursive layers (union, concatenation, postfix): the rewrite gives the LL-ready form.",
+          "text": [
+            "R -> R '|' C | C",
+            "C -> C P | P",
+            "P -> P '*' | P '+' | P '?' | A",
+            "A -> '(' R ')' | a | b | c | d"
+          ]
         }
       ]
     }

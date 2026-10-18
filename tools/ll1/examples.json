@@ -143,6 +143,19 @@
             "elems -> value elems' | eps",
             "elems' -> , value elems' | eps"
           ]
+        },
+        {
+          "label": "Regular expressions (LL-ready)",
+          "purpose": "The regex language without left recursion: LL(1). Operators and parentheses are quoted terminals.",
+          "text": [
+            "R -> C R'",
+            "R' -> '|' C R' | eps",
+            "C -> P C'",
+            "C' -> P C' | eps",
+            "P -> A P'",
+            "P' -> '*' P' | '+' P' | '?' P' | eps",
+            "A -> '(' R ')' | a | b | c | d"
+          ]
         }
       ]
     }

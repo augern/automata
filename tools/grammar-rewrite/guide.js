@@ -4,7 +4,7 @@ window.TOOL_GUIDE = {
   title: "Grammar transformations",
   intro: "Applies a standard transformation to a context-free grammar, one step at a time. Cleanup, ε-elimination, unit elimination and Chomsky normal form each build on the previous ones. Left-recursion elimination prepares a grammar for top-down parsing; Greibach normal form builds on both.",
   use: [
-    "Enter a grammar, one rule per line, `A -> α | β`; `eps` is the empty string.",
+    "Enter a grammar, one rule per line, `A -> α | β`; `eps` is the empty string. A symbol in quotes is a terminal written literally, such as `'|'` or `'('`.",
     "Select the transformation in the top bar and press Step. The middle panel explains each step; Current Grammar shows the result so far.",
     "The language is preserved (except for ε where noted); only the form changes.",
   ],

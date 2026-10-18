@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const P = load("grammar.js", "rdp.js", "regex.js", "pumping.js");
+const P = load("grammar.js", "strings.js", "rdp.js", "regex.js", "pumping.js");
 const arr = (x) => [...x];
 
 // ── DFA ───────────────────────────────────────────────────────────────

@@ -66,3 +66,18 @@ B -> b | eps`);
   assert.deepEqual(sorted(follow.A), ["$", "b"]);
   assert.deepEqual(sorted(follow.B), ["$"]);
 });
+
+test("parseBNF: quoted terminals may contain | and spaces; quoted eps is a terminal, empty quotes are ε", () => {
+  const g = parseBNF("R -> R '|' C | C\nC -> 'a b' | 'eps' | \"|\" | ''", false);
+  assert.deepEqual(JSON.parse(JSON.stringify(g.rules.map((r) => r.rhs))), [["R", "|", "C"], ["C"], ["a b"], ["eps"], ["|"], []]);
+  assert.deepEqual(sorted(g.terminals), ["$", "a b", "eps", "|"]);
+  assert.throws(() => parseBNF("S -> 'a", false), /Unterminated quote/);
+});
+
+test("bnfAlternatives: offsets of alternatives and symbols", () => {
+  const { bnfAlternatives } = load("grammar.js");
+  const alts = bnfAlternatives(" a '|' b | c ");
+  assert.equal(alts.length, 2);
+  assert.deepEqual(JSON.parse(JSON.stringify(alts[0].toks.map((t) => [t.sym, t.from, t.to]))), [["a", 1, 2], ["|", 3, 6], ["b", 7, 8]]);
+  assert.deepEqual([alts[0].from, alts[0].to, alts[1].from, alts[1].to], [1, 8, 11, 12]);
+});

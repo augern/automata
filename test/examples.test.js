@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { load } = require("./load.js");
 
-const A = load("grammar.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js", "rdp.js", "pumping.js");
+const A = load("grammar.js", "strings.js", "lr.js", "ll1.js", "nfa.js", "pda.js", "tm.js", "regex.js", "rewrite.js", "derivation.js", "rdp.js", "pumping.js");
 
 function examples(name) {
   const file = path.join(__dirname, "..", "tools", name, "examples.json");

@@ -4,6 +4,7 @@ window.TOOL_GUIDE = {
   title: "Grammar derivations",
   intro: "Builds a derivation: starting from the start symbol, part of the current form is rewritten repeatedly. Handles context-free, context-sensitive and unrestricted grammars (productions with several symbols on the left).",
   use: [
+    "One rule per line, `A -> α | β`; `eps` is the empty string; a symbol in quotes is a terminal written literally, such as `'|'`.",
     "Select part of the last line (click a symbol or drag across several), then click a production in the Productions panel whose left side matches.",
     "Esc clears the selection; `z` undoes the last step.",
     "Random choice applies a random production at a random place; ▶| continues until the derivation ends. Reseed restarts with a new random sequence; the same seed gives the same derivation.",
