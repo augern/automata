@@ -690,13 +690,22 @@ const TR = 18,
 function treeNodeW(sym) {
   return Math.max(2 * TR, Math.ceil([...String(sym)].length * 6.6) + 16);
 }
-// Horizontal positions (_x) of a forest under the virtual root vr: d3's tidy tree, siblings and cousins kept
-// apart by the widths of their nodes.
+// Horizontal positions (_x) of a forest under the virtual root vr: d3's tidy tree, siblings and cousins kept apart
+// by the widths of their nodes. The leaves are all drawn on one baseline, whatever their depth, so each leaf is
+// given zero-width placeholders down to the deepest row: the tidy tree then keeps all leaves apart from each other.
 function treeLayoutX(vr) {
-  const h = d3.hierarchy(vr, (n) => n.children);
-  const w = (d) => (d.data.id === -1 ? 0 : treeNodeW(d.data.symbol));
-  d3.tree().nodeSize([1, 1]).separation((a, b) => (w(a) + w(b)) / 2 + 10)(h);
-  h.each((d) => { d.data._x = d.x; });
+  let maxD = 0;
+  (function depth(n, d) { maxD = Math.max(maxD, d); n.children.forEach((c) => depth(c, d + 1)); })(vr, 0);
+  const wrap = (n, d) => {
+    const w = n.id === -1 ? 0 : treeNodeW(n.symbol);
+    if (n.children.length) return { n, w, kids: n.children.map((c) => wrap(c, d + 1)) };
+    let node = { n, w, kids: [] };
+    for (let k = d; k < maxD; k++) node = { n: null, w: 0, kids: [node] };
+    return node;
+  };
+  const h = d3.hierarchy(wrap(vr, 0), (x) => x.kids);
+  d3.tree().nodeSize([1, 1]).separation((a, b) => (a.data.w + b.data.w) / 2 + 10)(h);
+  h.each((d) => { if (d.data.n) d.data.n._x = d.x; });
 }
 
 // renderTree handles the LL(1) parse tree (treeRoot / treeLastNew).
