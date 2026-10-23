@@ -17,7 +17,17 @@
 .ge-lhs { min-width: 0; max-width: 100%; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
 .ge-lhs:hover { border-color: var(--border); }
 .ge-lhs:focus { outline: none; border-color: var(--accent); }
-.ge-row.is-ghost .ge-lhs:not(:focus), .ge-row.is-ghost .ge-arrow { opacity: 0.28; }
+/* A repeated left side (and its arrow) shows only when the row is pointed at or has the focus; the ⋯ menu likewise.
+   Without a hover (touch) they stay visible, faded. */
+.ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-arrow { opacity: 0; }
+.ge-row.is-ghost:hover .ge-lhs, .ge-row.is-ghost:hover .ge-arrow, .ge-row.is-ghost:focus-within .ge-lhs, .ge-row.is-ghost:focus-within .ge-arrow { opacity: 0.4; }
+.ge-row.is-ghost .ge-lhs:focus { opacity: 1; }
+.ge-row .ge-menu { opacity: 0; }
+.ge-row:hover .ge-menu, .ge-row:focus-within .ge-menu, .ge-menu[aria-expanded="true"] { opacity: 1; }
+@media (hover: none) {
+  .ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-arrow { opacity: 0.28; }
+  .ge-row .ge-menu { opacity: 1; }
+}
 .ge-arrow { color: var(--text-dim); }
 .ge-rhs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 4px; min-width: 0; }
 .ge-chip { padding: 0 5px; border: 1px solid transparent; border-radius: var(--radius); cursor: text; font-size: var(--fs-md); }
