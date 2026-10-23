@@ -32,13 +32,8 @@ const GrammarEditor = (() => {
     textarea.style.display = "none";
 
     const bar = el("div", "ge-bar");
-    const tabRules = el("button", "ge-tab", "Rules"), tabText = el("button", "ge-tab", "Text");
-    for (const [b, v] of [[tabRules, "rules"], [tabText, "text"]]) {
-      b.type = "button";
-      b.addEventListener("click", () => setView(v));
-    }
     const status = el("span", "ge-status");
-    bar.append(tabRules, tabText, status);
+    bar.append(status);
     const rowsEl = el("div", "ge-rows");
     const foot = el("div", "ge-foot");
     const addRule = el("button", "btn", "+ Rule"), addNt = el("button", "btn", "+ Nonterminal");
@@ -92,6 +87,14 @@ const GrammarEditor = (() => {
       render();
     }
 
+    // the panel's menu switches between the table and the text
+    const panel = textarea.closest(".panel");
+    if (panel) panelMenuExtras[panel.id] = () => [
+      { heading: "Grammar view" },
+      { label: "Rules", checked: view === "rules", title: "The grammar as a table of productions", onSelect: () => setView("rules") },
+      { label: "Text", checked: view === "text", title: "The grammar as plain text", onSelect: () => setView("text") },
+    ];
+
     // Text view
     textEl.addEventListener("input", () => {
       nativeValue.set.call(textarea, textEl.value);
@@ -102,11 +105,10 @@ const GrammarEditor = (() => {
 
     // ── Rendering ──
     function render(focus) {
-      tabRules.classList.toggle("is-on", view === "rules");
-      tabText.classList.toggle("is-on", view === "text");
       rowsEl.style.display = foot.style.display = view === "rules" ? "" : "none";
       textEl.style.display = view === "text" ? "" : "none";
       status.textContent = parseError;
+      bar.style.display = parseError ? "" : "none";
       if (view === "text") { if (document.activeElement !== textEl) textEl.value = nativeValue.get.call(textarea); return; }
       rowsEl.innerHTML = "";
       const nts = gmNonterminals(model), nums = gmNumbers(model), ghosts = gmGhosts(model);
