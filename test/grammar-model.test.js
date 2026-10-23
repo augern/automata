@@ -52,7 +52,7 @@ test("symbols are quoted when the text needs it", () => {
   assert.equal(G.gmSymText({ sym: "'", quoted: false }), '"\'"');
 });
 
-test("edits return new models: insert, remove, move, update, make a left side the start symbol", () => {
+test("edits return new models: insert, remove, move, update", () => {
   const m = G.gmParse("A -> a\nB -> b\nB -> c");
   const m2 = G.gmInsert(m, 1, G.gmNewRule("A", ["x"]));
   assert.equal(G.gmToText(m2), "A -> a | x\nB -> b | c");
@@ -60,7 +60,6 @@ test("edits return new models: insert, remove, move, update, make a left side th
   assert.equal(G.gmToText(G.gmRemove(m, 0)), "B -> b | c");
   assert.equal(G.gmToText(G.gmMove(m, 0, 1)), "B -> b\nA -> a\nB -> c");
   assert.equal(G.gmToText(G.gmUpdate(m, 1, { enabled: false })), "A -> a\n// B -> b\nB -> c");
-  assert.equal(G.gmToText(G.gmMakeStart(m, "B")), "B -> b | c\nA -> a");
 });
 
 test("the parser reads what the model writes: every example grammar round-trips to the same productions", () => {
@@ -74,13 +73,12 @@ test("the parser reads what the model writes: every example grammar round-trips 
   }
 });
 
-test("a draft (an empty rule without ε) is not written to the text and has no number", () => {
-  let m = G.gmParse("A -> a");
+test("an empty right side is ε: it is numbered, written to the text, and spelled as it was", () => {
+  let m = G.gmParse("A -> a | eps\nB -> ε");
+  assert.deepEqual(plain(m.rows.map((r) => r.rhs.length)), [1, 0, 0]);
+  assert.deepEqual(plain(G.gmNumbers(m)), [1, 2, 3]);
+  assert.equal(G.gmToText(m), "A -> a | eps\nB -> ε");
   m = G.gmInsert(m, 1, G.gmNewRule("A"));
-  assert.equal(G.gmToText(m), "A -> a");
-  assert.deepEqual(plain(G.gmNumbers(m)), [1, null]);
-  m = G.gmUpdate(m, 1, { rhs: [{ sym: "b", quoted: false }] });
-  assert.equal(G.gmToText(m), "A -> a | b");
-  const e = G.gmUpdate(G.gmInsert(m, 2, G.gmNewRule("A")), 2, { eps: "ε" });
-  assert.equal(G.gmToText(e), "A -> a | b | ε");
+  assert.equal(G.gmToText(m), "A -> a | ε | eps\nB -> ε", "a new empty rule is the ε production");
+  assert.equal(G.parseBNF(G.gmToText(m), false).rules[1].rhs.length, 0);
 });

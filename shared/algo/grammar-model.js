@@ -5,8 +5,8 @@
 // model = { arrow: "->" | "→", rows: [row] }
 //   row  = { kind: "rule", lhs: [symbol], rhs: [{ sym, quoted }], eps: spelling of ε or null, enabled }
 //        | { kind: "comment", text }
-// A rule with an empty rhs and a spelling of ε derives ε. An empty rule without one is a draft, a production being typed:
-// it is not written to the text and has no number. A disabled rule is written as a comment in the text.
+// A rule with an empty rhs derives ε; eps is only how the text spells it (eps, epsilon, ε, ''). A disabled rule is
+// written as a comment in the text. The start symbol is the left side of the first rule, as in the text.
 
 const GM_EPS = ["eps", "epsilon", EPSILON];
 
@@ -74,9 +74,8 @@ function gmSymText(s) {
 }
 
 const gmLhsKey = (r) => r.lhs.join(" ");
-const gmIsDraft = (r) => r.kind === "rule" && !r.rhs.length && !r.eps;
-// A rule that is part of the grammar: enabled and not a draft.
-const gmLive = (r) => r.kind === "rule" && r.enabled && !gmIsDraft(r);
+// A rule that is part of the grammar: an enabled one.
+const gmLive = (r) => r.kind === "rule" && r.enabled;
 const gmRhsText = (r) => (r.rhs.length ? r.rhs.map(gmSymText).join(" ") : r.eps || EPSILON);
 
 // The model → text: adjacent enabled rules with the same left side share a line, joined by |.
@@ -85,7 +84,6 @@ function gmToText(model) {
   let prev = null;
   for (const row of model.rows) {
     if (row.kind === "comment") { lines.push("// " + row.text); prev = null; continue; }
-    if (gmIsDraft(row)) continue;
     if (!row.enabled) { lines.push("// " + gmLhsKey(row) + " " + model.arrow + " " + gmRhsText(row)); prev = null; continue; }
     if (prev && gmLhsKey(prev) === gmLhsKey(row)) lines[lines.length - 1] += " | " + gmRhsText(row);
     else lines.push(gmLhsKey(row) + " " + model.arrow + " " + gmRhsText(row));
@@ -140,13 +138,5 @@ function gmMove(model, index, delta) {
 function gmUpdate(model, index, changes) {
   const m = gmClone(model);
   Object.assign(m.rows[index], changes);
-  return m;
-}
-// The start symbol is the left side of the first rule: move all rules of a left side to the top (in their order).
-function gmMakeStart(model, lhsKey) {
-  const m = gmClone(model);
-  const mine = m.rows.filter((r) => r.kind === "rule" && gmLhsKey(r) === lhsKey);
-  const rest = m.rows.filter((r) => !(r.kind === "rule" && gmLhsKey(r) === lhsKey));
-  m.rows = mine.concat(rest);
   return m;
 }

@@ -14,7 +14,6 @@
 .ge-on { margin: 0; accent-color: var(--accent); align-self: center; }
 .ge-num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
 .ge-left { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
-.ge-start { color: var(--amber); font-size: var(--fs-xs); margin-right: 2px; }
 .ge-lhs { min-width: 0; max-width: 100%; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
 .ge-lhs:hover { border-color: var(--border); }
 .ge-lhs:focus { outline: none; border-color: var(--accent); }
@@ -25,15 +24,13 @@
 .ge-chip:hover { border-color: var(--border-hi); }
 .ge-nt { color: var(--accent); font-family: var(--font-serif); font-style: italic; }
 .ge-t { color: var(--text); font-family: var(--font-mono); font-size: var(--fs-sm); }
-.ge-eps { color: var(--text-lo); font-family: var(--font-serif); font-style: italic; }
 .ge-open { text-decoration: underline dashed var(--text-lo); text-underline-offset: 3px; }
 .ge-in { flex: 1 1 3ch; width: auto; }
 .ge-in, .ge-chip-edit { background: transparent; color: var(--text); border: none; border-bottom: 1px solid var(--border); outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0 2px; min-width: 3ch; }
 .ge-in:focus, .ge-chip-edit { border-bottom-color: var(--accent); }
-.ge-in::placeholder { color: var(--text-placeholder); }
+.ge-in::placeholder { color: var(--text-lo); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); }
 .ge-menu { background: transparent; border: none; color: var(--text-lo); cursor: pointer; padding: 0; line-height: 1; }
 .ge-menu:hover { color: var(--accent); }
 .ge-comment { padding: 2px var(--sp-4) 2px calc(var(--sp-4) + 40px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
 .ge-empty { padding: var(--sp-5); font-size: var(--fs-xs); color: var(--text-lo); font-style: italic; }
 
-.ge-row.is-draft .ge-on { visibility: hidden; }

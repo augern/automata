@@ -110,10 +110,9 @@ const GrammarEditor = (() => {
       if (view === "text") { if (document.activeElement !== textEl) textEl.value = nativeValue.get.call(textarea); return; }
       rowsEl.innerHTML = "";
       const nts = gmNonterminals(model), nums = gmNumbers(model), ghosts = gmGhosts(model);
-      const firstLhs = (model.rows.find(gmLive) || {}).lhs;
       model.rows.forEach((row, i) => {
         if (row.kind === "comment") { rowsEl.appendChild(el("div", "ge-comment", "// " + row.text)); return; }
-        rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts, firstLhs));
+        rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts));
       });
       if (!model.rows.some((r) => r.kind === "rule")) rowsEl.appendChild(el("div", "ge-empty", parseError ? "The grammar text has an error (see Text)." : "No productions. + Nonterminal starts one."));
       if (focus) {
@@ -124,8 +123,8 @@ const GrammarEditor = (() => {
 
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
 
-    function buildRow(row, i, num, ghost, nts, firstLhs) {
-      const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (gmIsDraft(row) ? " is-draft" : ""));
+    function buildRow(row, i, num, ghost, nts) {
+      const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : ""));
       d.dataset.i = i;
       const on = el("input", "ge-on");
       on.type = "checkbox";
@@ -145,21 +144,14 @@ const GrammarEditor = (() => {
         if (v !== gmLhsKey(row)) changed(gmUpdate(model, i, { lhs: v.split(/\s+/) }), { row: i, part: "lhs" });
       });
       lhs.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lhs.dispatchEvent(new Event("change")); focusEnd(i); } });
-      const isStart = model.rows.findIndex(gmLive) === i;
       const left = el("span", "ge-left");
-      if (isStart) { const star = el("span", "ge-start", "★"); star.title = "Start symbol: the left side of the first production"; left.appendChild(star); }
       left.append(lhs, el("span", "ge-arrow", model.arrow === "->" ? "→" : model.arrow));
       const rhs = el("span", "ge-rhs");
       row.rhs.forEach((s, k) => rhs.appendChild(buildChip(row, i, k, s, nts)));
-      if (!row.rhs.length && row.eps) {
-        const c = el("span", "ge-chip ge-eps", "ε");
-        c.title = "The empty string. Click to replace it by symbols.";
-        c.addEventListener("click", () => changed(gmUpdate(model, i, { eps: null }), { row: i, part: "end" }));
-        rhs.appendChild(c);
-      }
       const inp = el("input", "ge-in");
       inp.spellcheck = false;
-      inp.placeholder = row.rhs.length || row.eps ? "" : "symbols";
+      inp.placeholder = row.rhs.length ? "" : "ε"; // an empty right side is ε
+      inp.title = row.rhs.length ? "" : "Empty: the production derives the empty string";
       inp.size = 4;
       inp.addEventListener("input", () => { inp.size = Math.max(4, inp.value.length + 1); });
       inp.addEventListener("keydown", (e) => endKey(e, inp, i));
@@ -173,7 +165,6 @@ const GrammarEditor = (() => {
         { label: "Duplicate", onSelect: () => changed(gmInsert(model, i + 1, JSON.parse(JSON.stringify(row))), { row: i + 1, part: "end" }) },
         { label: "Move up", disabled: i === 0, onSelect: () => changed(gmMove(model, i, -1)) },
         { label: "Move down", disabled: i === model.rows.length - 1, onSelect: () => changed(gmMove(model, i, 1)) },
-        { label: "Make start symbol", disabled: !row.enabled || (firstLhs && gmLhsKey(row) === firstLhs.join(" ")), title: "Move the productions of this left side to the top", onSelect: () => changed(gmMakeStart(model, gmLhsKey(row))) },
         { separator: true },
         { label: "Delete", onSelect: () => changed(gmRemove(model, i)) },
       ], { align: "right" });
@@ -252,7 +243,7 @@ const GrammarEditor = (() => {
       if (e.key === " " || e.key === "Enter") {
         const v = inp.value.trim();
         if (v) { e.preventDefault(); inp.value = ""; commitTyped(i, v, true); return; }
-        if (e.key === "Enter" && (row.rhs.length || row.eps)) {
+        if (e.key === "Enter") {
           e.preventDefault();
           changed(gmInsert(model, i + 1, gmNewRule(row.lhs)), { row: i + 1, part: "end" });
         } else if (e.key === " ") e.preventDefault();
@@ -260,7 +251,6 @@ const GrammarEditor = (() => {
       }
       if (e.key === "Backspace" && inp.value === "") {
         if (row.rhs.length) { e.preventDefault(); const m = gmClone(model); m.rows[i].rhs.pop(); changed(m, { row: i, part: "end" }); }
-        else if (row.eps) { e.preventDefault(); changed(gmUpdate(model, i, { eps: null }), { row: i, part: "end" }); }
         else if (ruleRows().length > 1) {
           e.preventDefault();
           const prev = ruleRows().filter((j) => j < i).pop();
