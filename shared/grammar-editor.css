@@ -1,0 +1,39 @@
+/* The grammar editor (shared/grammar-editor.js): a table of productions with chips for the symbols. */
+.ge { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ge-bar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border-lo); flex-shrink: 0; }
+.ge-tab { background: transparent; color: var(--text-dim); border: 1px solid var(--border); border-radius: var(--radius); padding: 1px var(--sp-4); font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+.ge-tab.is-on { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+.ge-status { font-size: var(--fs-2xs); color: var(--red); margin-left: var(--sp-3); line-height: 1.3; }
+.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; }
+.ge-foot { flex-shrink: 0; display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border-lo); }
+.ge-text { flex: 1; width: 100%; box-sizing: border-box; background: transparent; color: var(--text); border: none; outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); resize: none; }
+
+.ge-row { display: grid; grid-template-columns: 14px 16px fit-content(38%) minmax(0, 1fr) 14px; column-gap: var(--sp-2); align-items: baseline; padding: 2px var(--sp-3); }
+.ge-row:hover { background: var(--bg-hover); }
+.ge-row.is-off .ge-rhs, .ge-row.is-off .ge-left { opacity: 0.45; text-decoration: line-through; }
+.ge-on { margin: 0; accent-color: var(--accent); align-self: center; }
+.ge-num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
+.ge-left { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.ge-start { color: var(--amber); font-size: var(--fs-xs); margin-right: 2px; }
+.ge-lhs { min-width: 0; max-width: 100%; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
+.ge-lhs:hover { border-color: var(--border); }
+.ge-lhs:focus { outline: none; border-color: var(--accent); }
+.ge-row.is-ghost .ge-lhs:not(:focus), .ge-row.is-ghost .ge-arrow { opacity: 0.28; }
+.ge-arrow { color: var(--text-dim); }
+.ge-rhs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 4px; min-width: 0; }
+.ge-chip { padding: 0 5px; border: 1px solid transparent; border-radius: var(--radius); cursor: text; font-size: var(--fs-md); }
+.ge-chip:hover { border-color: var(--border-hi); }
+.ge-nt { color: var(--accent); font-family: var(--font-serif); font-style: italic; }
+.ge-t { color: var(--text); font-family: var(--font-mono); font-size: var(--fs-sm); }
+.ge-eps { color: var(--text-lo); font-family: var(--font-serif); font-style: italic; }
+.ge-open { text-decoration: underline dashed var(--text-lo); text-underline-offset: 3px; }
+.ge-in { flex: 1 1 3ch; width: auto; }
+.ge-in, .ge-chip-edit { background: transparent; color: var(--text); border: none; border-bottom: 1px solid var(--border); outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0 2px; min-width: 3ch; }
+.ge-in:focus, .ge-chip-edit { border-bottom-color: var(--accent); }
+.ge-in::placeholder { color: var(--text-placeholder); }
+.ge-menu { background: transparent; border: none; color: var(--text-lo); cursor: pointer; padding: 0; line-height: 1; }
+.ge-menu:hover { color: var(--accent); }
+.ge-comment { padding: 2px var(--sp-4) 2px calc(var(--sp-4) + 40px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
+.ge-empty { padding: var(--sp-5); font-size: var(--fs-xs); color: var(--text-lo); font-style: italic; }
+
+.ge-row.is-draft .ge-on { visibility: hidden; }
