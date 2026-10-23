@@ -124,7 +124,7 @@ const GrammarEditor = (() => {
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
 
     function buildRow(row, i, num, ghost, nts) {
-      const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : ""));
+      const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
       const on = el("input", "ge-on");
       on.type = "checkbox";

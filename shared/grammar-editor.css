@@ -22,11 +22,16 @@
 .ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-arrow { opacity: 0; }
 .ge-row.is-ghost:hover .ge-lhs, .ge-row.is-ghost:hover .ge-arrow, .ge-row.is-ghost:focus-within .ge-lhs, .ge-row.is-ghost:focus-within .ge-arrow { opacity: 0.4; }
 .ge-row.is-ghost .ge-lhs:focus { opacity: 1; }
-.ge-row .ge-menu { opacity: 0; }
-.ge-row:hover .ge-menu, .ge-row:focus-within .ge-menu, .ge-menu[aria-expanded="true"] { opacity: 1; }
+.ge-row .ge-menu, .ge-row:not(.is-off) .ge-on { opacity: 0; }
+/* the entry field of a row with symbols shows its underline only when the row is pointed at or has the focus; an
+   empty row (ε) always shows its placeholder */
+.ge-row:not(.is-empty) .ge-in { border-bottom-color: transparent; }
+.ge-row:not(.is-empty):hover .ge-in, .ge-row:not(.is-empty):focus-within .ge-in { border-bottom-color: var(--border); }
+.ge-row:hover .ge-menu, .ge-row:focus-within .ge-menu, .ge-menu[aria-expanded="true"], .ge-row:hover .ge-on, .ge-row:focus-within .ge-on { opacity: 1; }
 @media (hover: none) {
   .ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-arrow { opacity: 0.28; }
-  .ge-row .ge-menu { opacity: 1; }
+  .ge-row .ge-menu, .ge-row .ge-on { opacity: 1; }
+  .ge-row:not(.is-empty) .ge-in { border-bottom-color: var(--border); }
 }
 .ge-arrow { color: var(--text-dim); }
 .ge-rhs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 4px; min-width: 0; }
@@ -38,6 +43,7 @@
 .ge-in { flex: 1 1 3ch; width: auto; }
 .ge-in, .ge-chip-edit { background: transparent; color: var(--text); border: none; border-bottom: 1px solid var(--border); outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0 2px; min-width: 3ch; }
 .ge-in:focus, .ge-chip-edit { border-bottom-color: var(--accent); }
+.ge-row:not(.is-empty) .ge-in:focus { border-bottom-color: var(--accent); }
 .ge-in::placeholder { color: var(--text-lo); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); }
 .ge-menu { background: transparent; border: none; color: var(--text-lo); cursor: pointer; padding: 0; line-height: 1; }
 .ge-menu:hover { color: var(--accent); }
