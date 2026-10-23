@@ -4,49 +4,60 @@
 .ge-tab { background: transparent; color: var(--text-dim); border: 1px solid var(--border); border-radius: var(--radius); padding: 1px var(--sp-4); font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
 .ge-tab.is-on { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
 .ge-status { font-size: var(--fs-2xs); color: var(--red); margin-left: var(--sp-3); line-height: 1.3; }
-.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; }
 .ge-foot { flex-shrink: 0; display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border-lo); }
 .ge-text { flex: 1; width: 100%; box-sizing: border-box; background: transparent; color: var(--text); border: none; outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); resize: none; }
 
-.ge-row { display: grid; grid-template-columns: 14px 16px fit-content(38%) minmax(0, 1fr) 14px; column-gap: var(--sp-2); align-items: baseline; padding: 2px var(--sp-3); }
-.ge-row:hover { background: var(--bg-hover); }
-.ge-row.is-off .ge-rhs, .ge-row.is-off .ge-left { opacity: 0.45; text-decoration: line-through; }
-.ge-on { margin: 0; accent-color: var(--accent); align-self: center; }
+/* One grid for all rows (a row is display: contents): number, left side, arrow, symbols, menu. The columns, and with
+   them the arrows, line up between rows. */
+.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: 22px fit-content(38%) 16px minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
+.ge-row { display: contents; }
+.ge-row > * { padding: 2px 2px; }
+.ge-row > :first-child { padding-left: var(--sp-3); }
+.ge-row > :last-child { padding-right: var(--sp-3); }
+.ge-row:hover > * { background: var(--bg-hover); }
+.ge-row.is-off .ge-rhs, .ge-row.is-off .ge-lhs { opacity: 0.45; text-decoration: line-through; }
 .ge-num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
-.ge-left { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
-.ge-lhs { min-width: 0; max-width: 100%; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
+.ge-lhs { min-width: 0; max-width: 100%; box-sizing: border-box; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
 .ge-lhs:hover { border-color: var(--border); }
 .ge-lhs:focus { outline: none; border-color: var(--accent); }
-/* A repeated left side (and its arrow) shows only when the row is pointed at or has the focus; the ⋯ menu likewise.
-   Without a hover (touch) they stay visible, faded. */
-.ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-arrow { opacity: 0; }
-.ge-row.is-ghost:hover .ge-lhs, .ge-row.is-ghost:hover .ge-arrow, .ge-row.is-ghost:focus-within .ge-lhs, .ge-row.is-ghost:focus-within .ge-arrow { opacity: 0.4; }
+
+/* The arrow cell holds the arrow and, in a row that repeats its left side, the | it was written with. Not pointed at,
+   such a row shows only the |, under the arrows of the rows above. Pointed at (or with the focus) it shows its left
+   side and arrow, faded. */
+.ge-arrow { position: relative; text-align: center; color: var(--text-dim); }
+.ge-pipe { display: none; color: var(--text-lo); }
+.ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-ar { opacity: 0; }
+.ge-row.is-ghost .ge-ar { display: none; }
+.ge-row.is-ghost .ge-pipe { display: inline; }
+.ge-row.is-ghost:hover .ge-lhs, .ge-row.is-ghost:focus-within .ge-lhs { opacity: 0.4; }
+.ge-row.is-ghost:hover .ge-ar, .ge-row.is-ghost:focus-within .ge-ar { display: inline; opacity: 0.4; }
+.ge-row.is-ghost:hover .ge-pipe, .ge-row.is-ghost:focus-within .ge-pipe { display: none; }
 .ge-row.is-ghost .ge-lhs:focus { opacity: 1; }
-.ge-row .ge-menu, .ge-row:not(.is-off) .ge-on { opacity: 0; }
-/* the entry field of a row with symbols shows its underline only when the row is pointed at or has the focus; an
-   empty row (ε) always shows its placeholder */
-.ge-row:not(.is-empty) .ge-in { border-bottom-color: transparent; }
-.ge-row:not(.is-empty):hover .ge-in, .ge-row:not(.is-empty):focus-within .ge-in { border-bottom-color: var(--border); }
-.ge-row:hover .ge-menu, .ge-row:focus-within .ge-menu, .ge-menu[aria-expanded="true"], .ge-row:hover .ge-on, .ge-row:focus-within .ge-on { opacity: 1; }
+.ge-menu { opacity: 0; background: transparent; border: none; color: var(--text-lo); cursor: pointer; padding: 0; line-height: 1; }
+.ge-row:hover .ge-menu, .ge-row:focus-within .ge-menu, .ge-menu[aria-expanded="true"] { opacity: 1; }
+.ge-menu:hover { color: var(--accent); }
+/* the entry field shows its underline only when the row is pointed at or has the focus; an empty row (ε) shows its
+   placeholder without it */
+.ge-in { border-bottom-color: transparent; }
+.ge-row:hover .ge-in, .ge-row:focus-within .ge-in { border-bottom-color: var(--border); }
+.ge-row .ge-in:focus { border-bottom-color: var(--accent); }
 @media (hover: none) {
-  .ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-arrow { opacity: 0.28; }
-  .ge-row .ge-menu, .ge-row .ge-on { opacity: 1; }
-  .ge-row:not(.is-empty) .ge-in { border-bottom-color: var(--border); }
+  .ge-row.is-ghost .ge-lhs { opacity: 0.28; }
+  .ge-row.is-ghost .ge-ar { display: inline; opacity: 0.28; }
+  .ge-row.is-ghost .ge-pipe { display: none; }
+  .ge-menu { opacity: 1; }
+  .ge-in { border-bottom-color: var(--border); }
 }
-.ge-arrow { color: var(--text-dim); }
+
 .ge-rhs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 4px; min-width: 0; }
 .ge-chip { padding: 0 5px; border: 1px solid transparent; border-radius: var(--radius); cursor: text; font-size: var(--fs-md); }
 .ge-chip:hover { border-color: var(--border-hi); }
 .ge-nt { color: var(--accent); font-family: var(--font-serif); font-style: italic; }
 .ge-t { color: var(--text); font-family: var(--font-mono); font-size: var(--fs-sm); }
 .ge-open { text-decoration: underline dashed var(--text-lo); text-underline-offset: 3px; }
-.ge-in { flex: 1 1 3ch; width: auto; }
 .ge-in, .ge-chip-edit { background: transparent; color: var(--text); border: none; border-bottom: 1px solid var(--border); outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0 2px; min-width: 3ch; }
-.ge-in:focus, .ge-chip-edit { border-bottom-color: var(--accent); }
-.ge-row:not(.is-empty) .ge-in:focus { border-bottom-color: var(--accent); }
+.ge-in { flex: 1 1 3ch; width: auto; border-bottom-color: transparent; }
+.ge-chip-edit { border-bottom-color: var(--accent); }
 .ge-in::placeholder { color: var(--text-lo); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); }
-.ge-menu { background: transparent; border: none; color: var(--text-lo); cursor: pointer; padding: 0; line-height: 1; }
-.ge-menu:hover { color: var(--accent); }
-.ge-comment { padding: 2px var(--sp-4) 2px calc(var(--sp-4) + 40px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
-.ge-empty { padding: var(--sp-5); font-size: var(--fs-xs); color: var(--text-lo); font-style: italic; }
-
+.ge-comment { grid-column: 1 / -1; padding: 2px var(--sp-3) 2px calc(var(--sp-3) + 22px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
+.ge-empty { grid-column: 1 / -1; padding: var(--sp-5); font-size: var(--fs-xs); color: var(--text-lo); font-style: italic; }

@@ -126,11 +126,6 @@ const GrammarEditor = (() => {
     function buildRow(row, i, num, ghost, nts) {
       const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
-      const on = el("input", "ge-on");
-      on.type = "checkbox";
-      on.checked = row.enabled;
-      on.title = "Production on or off";
-      on.addEventListener("change", () => changed(gmUpdate(model, i, { enabled: on.checked }), { row: i, part: "end" }));
       const n = el("span", "ge-num", num === null ? "" : String(num));
       n.title = num === null ? "" : "Production " + num;
       const lhs = el("input", "ge-lhs");
@@ -144,8 +139,11 @@ const GrammarEditor = (() => {
         if (v !== gmLhsKey(row)) changed(gmUpdate(model, i, { lhs: v.split(/\s+/) }), { row: i, part: "lhs" });
       });
       lhs.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lhs.dispatchEvent(new Event("change")); focusEnd(i); } });
-      const left = el("span", "ge-left");
-      left.append(lhs, el("span", "ge-arrow", model.arrow === "->" ? "→" : model.arrow));
+      // The arrow cell: the arrow, and in a row that repeats its left side the | it was written with. They share one
+      // column, so the arrows of all rows are aligned and the | sits under them.
+      const arrow = el("span", "ge-arrow");
+      arrow.append(el("span", "ge-ar", model.arrow === "->" ? "→" : model.arrow));
+      if (ghost) arrow.append(el("span", "ge-pipe", "|"));
       const rhs = el("span", "ge-rhs");
       row.rhs.forEach((s, k) => rhs.appendChild(buildChip(row, i, k, s, nts)));
       const inp = el("input", "ge-in");
@@ -161,14 +159,14 @@ const GrammarEditor = (() => {
       menu.type = "button";
       menu.title = "Production menu";
       UI.menu(menu, () => [
-        { label: row.enabled ? "Switch off" : "Switch on", onSelect: () => changed(gmUpdate(model, i, { enabled: !row.enabled })) },
+        { label: row.enabled ? "Disable" : "Enable", onSelect: () => changed(gmUpdate(model, i, { enabled: !row.enabled })) },
         { label: "Duplicate", onSelect: () => changed(gmInsert(model, i + 1, JSON.parse(JSON.stringify(row))), { row: i + 1, part: "end" }) },
         { label: "Move up", disabled: i === 0, onSelect: () => changed(gmMove(model, i, -1)) },
         { label: "Move down", disabled: i === model.rows.length - 1, onSelect: () => changed(gmMove(model, i, 1)) },
         { separator: true },
         { label: "Delete", onSelect: () => changed(gmRemove(model, i)) },
       ], { align: "right" });
-      d.append(on, n, left, rhs, menu);
+      d.append(n, lhs, arrow, rhs, menu);
       return d;
     }
 
