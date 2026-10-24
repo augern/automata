@@ -145,13 +145,8 @@ const GrammarEditor = (() => {
     function buildRow(row, i, num, ghost, nts, last) {
       const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (last ? " is-last" : "") + (i % 2 ? " is-odd" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
-      if (num !== null) {
-        d.dataset.prod = num;
-        // linked with the tool's other views: the production under the pointer is announced, and one announced by a
-        // view (document event "production-hover", detail: number or null) is marked
-        d.addEventListener("mouseenter", () => document.dispatchEvent(new CustomEvent("grammar-hover", { detail: num })));
-        d.addEventListener("mouseleave", () => document.dispatchEvent(new CustomEvent("grammar-hover", { detail: null })));
-      }
+      // the number the tool uses for this production (opts.base: that of the first one); views mark it with data-prod
+      if (num !== null) d.dataset.prod = num - 1 + (opts.base === undefined ? 1 : opts.base);
       const n = el("span", "ge-num", num === null ? "" : String(num));
       n.title = num === null ? "" : "Production " + num;
       const lhs = el("input", "ge-lhs");
@@ -333,13 +328,6 @@ const GrammarEditor = (() => {
     host.addEventListener("keydown", (e) => {
       if (e.target === textEl) return;
       if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
-    });
-
-    document.addEventListener("production-hover", (e) => {
-      rowsEl.querySelectorAll(".is-linked").forEach((r) => r.classList.remove("is-linked"));
-      if (e.detail === null || e.detail === undefined) return;
-      const r = rowsEl.querySelector('.ge-row[data-prod="' + e.detail + '"]');
-      if (r) r.classList.add("is-linked");
     });
 
     readText(nativeValue.get.call(textarea));

@@ -1470,3 +1470,24 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
       console.error("Failed to load examples from " + url, err);
     });
 }
+
+// ── Production links ──
+// An element with data-prod="n" (a space-separated list for a cell with several) shows production n: the grammar editor's
+// rows, the items of an LR state, a reduction in a table. Pointing at one marks the others with is-hot (the target
+// colour), in all views at once; the one under the pointer keeps its own hover look.
+(function () {
+  var marked = [];
+  function clear() { marked.forEach(function (e) { e.classList.remove("is-hot"); }); marked = []; }
+  document.addEventListener("mouseover", function (ev) {
+    var src = ev.target.closest && ev.target.closest("[data-prod]");
+    clear();
+    if (!src) return;
+    var ns = src.getAttribute("data-prod").split(" ");
+    document.querySelectorAll("[data-prod]").forEach(function (e) {
+      if (e === src) return;
+      var mine = e.getAttribute("data-prod").split(" ");
+      if (ns.some(function (n) { return mine.indexOf(n) >= 0; })) { e.classList.add("is-hot"); marked.push(e); }
+    });
+  });
+  document.addEventListener("mouseout", function (ev) { if (ev.target.closest && ev.target.closest("[data-prod]")) clear(); });
+})();
