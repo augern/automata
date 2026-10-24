@@ -65,6 +65,7 @@ const ScannerTool = (() => {
   const nfaOne = () => !!sc && (nfaMode === "rule" || (nfaMode === "auto" && sc.nfa.n > NFA_BIG));
   const dfaFocus = () => !!sc && (dfaMode === "focus" || (dfaMode === "auto" && sc.dfa.states.length > DFA_BIG));
   let nfaIx = new Map(), dfaIx = new Map(); // state → its index in what is drawn
+  let classIds = new Map(); // character class → the ids of its labels on the DFA edges
   panelMenuExtras["p-nfa"] = () => [
     { heading: "NFA view" },
     { label: "Automatic", checked: nfaMode === "auto", title: "All rules up to " + NFA_BIG + " states, else one rule", onSelect: () => { nfaMode = "auto"; drawNfa(); } },
@@ -154,12 +155,17 @@ const ScannerTool = (() => {
     dfaIx = indexOf(dfa.states.length, keep);
     note.textContent = keep ? dfa.states.length + " states in all: the part around the current state. The table has them all." : "";
     const dp = new Map(), loops = new Map();
+    classIds = new Map();
     dfa.trans.forEach((row, from) => row.forEach((to, c) => {
       if (to < 0 || !dfaIx.has(from) || !dfaIx.has(to)) return;
       const m = from === to ? loops : dp, key = from + ">" + to;
       if (!m.has(key)) m.set(key, { from: dfaIx.get(from), to: dfaIx.get(to), node: dfaIx.get(from), labels: [], ids: [] });
+      // one id for each class on each edge: "from:to:class"
+      const id = dfaIx.get(from) + ":" + dfaIx.get(to) + ":" + c;
       m.get(key).labels.push(dfa.classes[c].label);
-      m.get(key).ids.push(c);
+      m.get(key).ids.push(id);
+      if (!classIds.has(c)) classIds.set(c, []);
+      classIds.get(c).push(id);
     }));
     const ids = [...dfaIx.keys()];
     drawAutomatonGraph("dfa", dfaView, {
@@ -168,8 +174,11 @@ const ScannerTool = (() => {
       edges: [...dp.values()],
       loops: [...loops.values()],
       joinLabels: true,
-      reserveLabels: ids.length <= DFA_BIG,
-      onHover: (hot) => markClasses(hot),
+      onHover: (hot) => {
+        // the labels of the DFA are shown where the pointer is (see scanner.css): the edge, or the class
+        markClasses(hot ? hot.map((id) => +id.split(":")[2]) : null);
+        if (hot) setGraphHot("dfa", hot); else showTaken(currentFrame());
+      },
     });
     ids.forEach((i) => { const st = dfa.states[i]; if (st.rules.length) d3.select("#dfa-state-" + dfaIx.get(i)).attr("data-prod", st.rules.map((r) => r + 1).join(" ")); });
   }
@@ -192,8 +201,8 @@ const ScannerTool = (() => {
     el.innerHTML = h;
     el.querySelectorAll(".sc-class").forEach((row) => {
       const c = +row.dataset.c;
-      row.addEventListener("mouseenter", () => { markClasses([c]); setGraphHot("dfa", [c]); });
-      row.addEventListener("mouseleave", () => { markClasses(null); setGraphHot("dfa", []); markPath(currentFrame()); });
+      row.addEventListener("mouseenter", () => { markClasses([c]); setGraphHot("dfa", classIds.get(c) || []); });
+      row.addEventListener("mouseleave", () => { markClasses(null); showTaken(currentFrame()); });
     });
   }
 
@@ -301,11 +310,22 @@ const ScannerTool = (() => {
       d3.selectAll('#dfa-graph-root [data-edge="' + x + "-" + y + '"], #dfa-graph-root [data-self="' + x + '"]').filter(function () { return x === y ? this.dataset.self !== undefined : this.dataset.edge !== undefined; }).classed("is-active", true);
     }
     if (f.last) d3.select("#dfa-state-" + ix(f.last.state)).classed("is-last", true);
+    showTaken(f);
     if (f.state !== null && f.state !== undefined) {
       highlightAutomatonStates("dfa", [ix(f.state)]);
       const row = document.querySelector('#sc-table tr[data-state="' + f.state + '"]');
       if (row) row.classList.add("is-now");
     }
+  }
+
+  // The transition just taken shows its label: the class of the character that was read.
+  function showTaken(f) {
+    setGraphHot("dfa", []);
+    if (!f || !sc || f.type !== "read" || !f.edges || !f.edges.length) return;
+    const [a, b] = f.edges[f.edges.length - 1];
+    const ch = [...$("sim-input").value][f.forward - 1];
+    if (ch === undefined || !dfaIx.has(a) || !dfaIx.has(b)) return;
+    setGraphHot("dfa", [dfaIx.get(a) + ":" + dfaIx.get(b) + ":" + sc.dfa.classOf(ch)]);
   }
 
   // ── Examples and sharing ──────────────────────────────────

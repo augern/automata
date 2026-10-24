@@ -22,3 +22,6 @@
 #nfa-graph-root .ag-edge text, #dfa-graph-root .ag-edge text { paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; stroke-linejoin: round; }
 .sc-viewnote { position: absolute; left: var(--sp-4); top: var(--sp-3); right: var(--sp-4); font-size: var(--fs-2xs); color: var(--text-dim); pointer-events: none; }
 .sc-viewnote:empty { display: none; }
+/* the labels of the DFA are long: only the one under the pointer, and the one just taken, are shown */
+#dfa-graph-root .ag-edge text { display: none; }
+#dfa-graph-root .ag-hot text { display: inline; paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; stroke-linejoin: round; }
