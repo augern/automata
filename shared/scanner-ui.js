@@ -308,6 +308,7 @@ const ScannerTool = (() => {
       // a token named as its lexeme (an operator, a keyword) says it once
       c.innerHTML = t.name === t.lexeme ? '<span class="cm-tok-lex">' + esc(t.lexeme) + "</span>" : '<span class="cm-tok-name">' + esc(t.name) + '</span><span class="cm-tok-lex">' + esc(t.lexeme) + "</span>";
       c.title = "Characters " + t.start + " to " + t.end;
+      c.dataset.prod = t.rule + 1; // linked with its rule in the token rules (see "Production links" in shared.js)
       el.appendChild(c);
     });
   }

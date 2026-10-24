@@ -150,3 +150,11 @@ test("the NFA is simplified: trivial ε-edges are contracted, and the DFA is the
   assert.equal(sc.nfa.accept.size, sc.rules.length);
   assert.equal(sc.nfa.edges.some((e) => e.to === 0), false);
 });
+
+test("a returned token names its rule", () => {
+  const sc = S.scnCompile(KW);
+  const run = S.scnRun(sc, "print x");
+  const last = run.frames[run.frames.length - 1];
+  assert.deepEqual(arr(last.tokens.map((t) => [t.name, t.rule])), [["print", 1], ["id", 2]]); // skip is rule 0
+  assert.equal(sc.rules[last.tokens[0].rule].name, "print");
+});

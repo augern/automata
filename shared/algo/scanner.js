@@ -399,7 +399,7 @@ const SCN_MAX_FRAMES = 3000;
 //   state  the DFA state the scanner is in (null: not in a call)
 //   path   the states the call has been through; edges: [[from, to]] the transitions it has taken
 //   last   { state, end, rule } the last accepting state seen in this call, or null
-//   tokens [{ name, lexeme, start, end }] returned so far
+//   tokens [{ name, lexeme, start, end, rule }] returned so far (rule: the token rule)
 function scnRun(sc, input) {
   const { dfa, rules } = sc;
   const chars = [...input];
@@ -432,7 +432,7 @@ function scnRun(sc, input) {
     } else if (rules[r.rule].skip) {
       push({ type: "skip", fine: false, msg: "The scanner consumes " + JSON.stringify(lexeme) + " by the rule " + rules[r.rule].name + " and discards it.", begin: pos, forward: r.end, readTo: r.readTo, state: r.last.state, path, edges, last: r.last });
     } else {
-      tokens.push({ name: rules[r.rule].name, lexeme, start: r.start, end: r.end });
+      tokens.push({ name: rules[r.rule].name, lexeme, start: r.start, end: r.end, rule: r.rule });
       push({ type: "token", fine: false, msg: "The scanner returns the token " + rules[r.rule].name + " for " + JSON.stringify(lexeme) + (r.readTo > r.end ? ", after reading " + JSON.stringify(chars.slice(r.end, r.readTo).join("")) + " beyond it and backing up." : "."), begin: pos, forward: r.end, readTo: r.readTo, state: r.last.state, path, edges, last: r.last });
     }
     pos = r.end;
