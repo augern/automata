@@ -75,6 +75,8 @@ const ScannerTool = (() => {
       start: 0,
       edges: [...pairs.values()],
       joinLabels: true,
+      reserveLabels: true,
+      hideEps: true,
       radius: 13,
     });
     nfa.accept.forEach((k, s) => d3.select("#nfa-state-" + s).attr("data-prod", k + 1));
@@ -93,6 +95,7 @@ const ScannerTool = (() => {
       edges: [...dp.values()],
       loops: [...loops.values()],
       joinLabels: true,
+      reserveLabels: true,
       onHover: (ids) => markClasses(ids),
     });
     dfa.states.forEach((st) => { if (st.rules.length) d3.select("#dfa-state-" + st.id).attr("data-prod", st.rules.map((r) => r + 1).join(" ")); });

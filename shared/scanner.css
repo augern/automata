@@ -18,3 +18,5 @@
 .sc-class-name { min-width: 7em; color: var(--accent); }
 .sc-class-members { color: var(--text-dim); overflow-wrap: anywhere; }
 .ag-node.is-last circle { stroke: var(--st-accept); stroke-width: 3; }
+/* an edge label stays readable where it crosses a line */
+#nfa-graph-root .ag-edge text, #dfa-graph-root .ag-edge text { paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; stroke-linejoin: round; }

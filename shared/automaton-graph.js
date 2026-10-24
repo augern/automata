@@ -60,7 +60,14 @@ function graphLayout(spec, dir) {
     }
     dg.setNode(i, { width: w, height: h });
   }
-  for (const e of edges) dg.setEdge(e.from, e.to, {});
+  // reserveLabels: each edge label takes up room in the layout (dagre puts it on a rank of its own, midway), so that
+  // labels do not run into other edges or labels. An all-ε edge has no label (see hideEps).
+  for (const e of edges) {
+    if (!spec.reserveLabels) { dg.setEdge(e.from, e.to, {}); continue; }
+    const shown = spec.hideEps && e.eps ? [] : e.labels;
+    const text = spec.joinLabels ? [shown.join(", ")] : shown;
+    dg.setEdge(e.from, e.to, { width: Math.max(0, ...text.map((t) => t.length * 6 + 8)), height: shown.length ? (spec.joinLabels ? 1 : shown.length) * 13 : 0, labelpos: "c" });
+  }
   dagre.layout(dg);
   return dg;
 }
@@ -132,6 +139,8 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 //     result with setGraphHot(prefix, ids), which redraws the matching edges and labels
 //     on top, highlighted.
 //   radius (16), ranksep (64)
+//   reserveLabels: true → the layout makes room for the labels (more spread out, no label on another edge)
+//   hideEps: true → an edge with eps: true has no label (it is dashed)
 //   joinLabels: true → one line "a, b, c"; false → one stacked line per label
 function drawAutomatonGraph(prefix, view, spec) {
   const { nodes, start, edges, loops = [], radius: R = 16, joinLabels = false, onHover, onNodeHover } = spec;
@@ -202,7 +211,10 @@ function drawAutomatonGraph(prefix, view, spec) {
         .attr("x1", p0.x).attr("y1", p0.y).attr("x2", p1.x).attr("y2", p1.y)
         .attr("stroke", "none").attr("marker-end", arrowFor(e.eps));
     }
-    if (TB) addLabel(eg, e.labels, mid.x + 7, mid.y + 3, e.ids, true);
+    const hidden = spec.hideEps && e.eps;
+    if (hidden) { /* a dashed edge is an ε-edge: no label */ }
+    else if (spec.reserveLabels && ed.x !== undefined) addLabel(eg, e.labels, ed.x, ed.y + (joinLabels ? 4 : 0), e.ids, false);
+    else if (TB) addLabel(eg, e.labels, mid.x + 7, mid.y + 3, e.ids, true);
     else addLabel(eg, e.labels, mid.x, mid.y - (joinLabels ? 6 : 4), e.ids);
     makeHoverable(eg, pathLine(pts), e.ids);
   }

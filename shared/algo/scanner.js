@@ -118,6 +118,9 @@ function scnShowChar(c) {
   return c;
 }
 
+// A single character as a pattern would write it: one that means something in a pattern gets a backslash.
+const scnShowLiteral = (c) => (/[|*+?().\[\]\\]/.test(c) ? "\\" + c : scnShowChar(c));
+
 // A set of characters as short text: runs of three or more as ranges (a-z).
 function scnShowChars(chars) {
   const cs = [...chars].filter((c) => c !== SCN_OTHER).sort();
@@ -135,7 +138,7 @@ function scnShowChars(chars) {
 // The label of a character set of the NFA: a single character as it is, a class in brackets.
 function scnSetLabel(set) {
   if (set.neg) return set.chars.length === 1 && set.chars[0] === "\n" ? "." : "[^" + scnShowChars(set.chars) + "]";
-  return set.chars.length === 1 ? scnShowChar(set.chars[0]) : "[" + scnShowChars(set.chars) + "]";
+  return set.chars.length === 1 ? scnShowLiteral(set.chars[0]) : "[" + scnShowChars(set.chars) + "]";
 }
 
 // ── The NFA of all rules ─────────────────────────────────────────────
@@ -154,6 +157,15 @@ function scnBuildNFA(rules) {
   const fresh = () => n++;
   const link = (from, to, set) => edges.push({ from, to, set: set || null });
   function build(t) {
+    // x+ and x* of one set of characters: a state with a loop, not a construction of ε-edges around x
+    if ((t.t === "plus" || t.t === "star") && t.x.t === "set") {
+      const q = fresh();
+      link(q, q, t.x);
+      if (t.t === "star") return { s: q, e: q };
+      const s0 = fresh();
+      link(s0, q, t.x);
+      return { s: s0, e: q };
+    }
     const s = fresh(), e = fresh();
     if (t.t === "set") link(s, e, t);
     else if (t.t === "empty") link(s, e);
@@ -194,7 +206,7 @@ function scnSimplifyNFA(nfa) {
     // no ε-loops on one state, no duplicates
     const seen = new Set();
     edges = edges.filter((e) => {
-      if (!e.set && e.from === e.to) return false;
+      if (!e.set && e.from === e.to) return false; // an ε-loop adds nothing
       const k = e.from + ">" + e.to + ">" + (e.set ? (e.set.neg ? "^" : "") + e.set.chars.join("") : "ε");
       if (seen.has(k)) return false;
       seen.add(k);
@@ -329,7 +341,7 @@ function scnBuildDFA(nfa) {
     c.chars.sort();
     const named = c.chars.filter((x) => x !== SCN_OTHER);
     const other = c.chars.includes(SCN_OTHER);
-    c.label = (named.length ? (named.length === 1 ? scnShowChar(named[0]) : "[" + scnShowChars(named) + "]") : "") + (other ? (named.length ? " + other" : "other") : "");
+    c.label = (named.length ? (named.length === 1 ? scnShowLiteral(named[0]) : "[" + scnShowChars(named) + "]") : "") + (other ? (named.length ? " + other" : "other") : "");
   });
   const byChar = new Map();
   classes.forEach((c, k) => c.chars.forEach((x) => byChar.set(x, k)));
