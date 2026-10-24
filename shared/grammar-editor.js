@@ -209,7 +209,14 @@ const GrammarEditor = (() => {
         { label: "Delete", onSelect: () => changed(gmRemove(model, i)) },
       ], { align: "right" });
       d.append(n, lhs, arrow, rhs, menu);
-      if (hasAction) d.appendChild(buildAction(row, i));
+      if (hasAction) {
+        d.appendChild(buildAction(row, i));
+        // pointing at a symbol marks where the action refers to it
+        const refs = (n, on) => d.querySelectorAll('.ge-tok[data-ref="' + n + '"]').forEach((t) => t.classList.toggle("is-on", on));
+        const watch = (e, n) => { e.addEventListener("mouseenter", () => refs(n, true)); e.addEventListener("mouseleave", () => refs(n, false)); };
+        watch(lhs, "0");
+        rhs.querySelectorAll(".ge-chip").forEach((c, k) => watch(c, String(k + 1)));
+      }
       return d;
     }
 
@@ -339,7 +346,33 @@ const GrammarEditor = (() => {
         if (e.key === "Enter") { e.preventDefault(); focusEnd(i); }
         else if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey) && !dirty) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
       });
-      box.appendChild(ta);
+      // The $$ and $k in the text are linked with the symbols of the production: a mirror of the text behind the field
+      // has a span for each, which is what the pointer is tested against. Pointing at one marks the symbol it names
+      // (ge-ref); pointing at a symbol, left side or right side, marks its places in the text.
+      const field = el("div", "ge-action-field");
+      const mirror = el("div", "ge-mirror");
+      mirror.setAttribute("aria-hidden", "true");
+      const drawMirror = () => {
+        mirror.innerHTML = ta.value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\$\$|\$\d+/g, (m) => '<span class="ge-tok" data-ref="' + (m === "$$" ? "0" : m.slice(1)) + '">' + m + "</span>") + "\n";
+      };
+      const rowEl = () => box.closest(".ge-row");
+      const clearRefs = () => {
+        const r = rowEl();
+        if (r) r.querySelectorAll(".ge-ref").forEach((e) => e.classList.remove("ge-ref"));
+      };
+      const refTarget = (r, n) => (n === "0" ? r.querySelector(".ge-lhs, .ge-lhsq") : r.querySelectorAll(".ge-rhs .ge-chip")[+n - 1]);
+      ta.addEventListener("input", drawMirror);
+      field.addEventListener("mousemove", (e) => {
+        clearRefs();
+        const r = rowEl();
+        const hit = [...mirror.querySelectorAll(".ge-tok")].find((t) => [...t.getClientRects()].some((q) => e.clientX >= q.left && e.clientX <= q.right && e.clientY >= q.top && e.clientY <= q.bottom));
+        const target = hit && r ? refTarget(r, hit.dataset.ref) : null;
+        if (target) target.classList.add("ge-ref");
+      });
+      field.addEventListener("mouseleave", clearRefs);
+      field.append(mirror, ta);
+      box.appendChild(field);
+      drawMirror();
       requestAnimationFrame(fit);
       return box;
     }

@@ -80,6 +80,12 @@
 /* the action of a production: a panel below its row, under the symbols */
 .ge-row > .ge-action { grid-column: 2 / -1; grid-row: 2; align-self: start; display: flex; align-items: flex-start; gap: var(--sp-3); padding: 0 var(--sp-4) 4px 4px; }
 .ge-action-label { flex-shrink: 0; padding-top: 1px; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-lo); }
-.ge-action-in { flex: 1; min-width: 0; box-sizing: border-box; resize: none; overflow: hidden; background: var(--bg-input); color: var(--text); border: 1px solid var(--border-lo); border-radius: var(--radius); outline: none; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; padding: 1px 4px; white-space: pre-wrap; }
+.ge-action-field { position: relative; flex: 1; min-width: 0; background: var(--bg-input); border-radius: var(--radius); }
+.ge-mirror, .ge-action-in { box-sizing: border-box; width: 100%; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; padding: 1px 4px; border: 1px solid transparent; white-space: pre-wrap; overflow-wrap: break-word; }
+.ge-mirror { position: absolute; inset: 0; color: transparent; pointer-events: none; overflow: hidden; }
+.ge-tok.is-on { background: var(--hot-bg); border-radius: 2px; box-shadow: 0 0 0 1px var(--hot); }
+.ge-chip.ge-ref, .ge-lhs.ge-ref, .ge-lhsq.ge-ref { background: var(--hot-bg); color: var(--hot); border-color: var(--hot); }
+.ge-row.is-ghost .ge-lhs.ge-ref, .ge-row.is-ghost .ge-lhsq.ge-ref { opacity: 1; }
+.ge-action-in { display: block; resize: none; overflow: hidden; background: transparent; color: var(--text); border-color: var(--border-lo); border-radius: var(--radius); outline: none; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; padding: 1px 4px; white-space: pre-wrap; }
 .ge-action-in:focus { border-color: var(--accent); }
 .ge-row.is-off .ge-action { opacity: 0.45; }
