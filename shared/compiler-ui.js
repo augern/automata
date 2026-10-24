@@ -1,7 +1,8 @@
 // The view shared by the compiler-construction tools (Scanner and Parser, Syntax-Directed Translation, Types and
 // Symbol Table). A page has the panels p-def (token rules, grammar), p-run (input, stepper, what the scanner has consumed, the
 // token stream, the parser stack), p-tree (the parse tree) and p-out (results); CompilerTool.init(cfg) wires them to
-// the engine in algo/compiler.js. Needs d3, shared.js, ui.js, stepper.js and fit-view.js.
+// the engine in algo/compiler.js. Needs d3, dagre, shared.js, ui.js, stepper.js, fit-view.js, automaton-graph.js,
+// scanner-graph.js and the grammar and scanner editors.
 //
 // What the views show follows from the definition (see features below): attributes on the tree and the stack when
 // the grammar has actions, and the results sections the actions use.
@@ -9,6 +10,7 @@
 //   cfg.storage    the key of the panel layout in localStorage
 const CompilerTool = (() => {
   let comp = null, run = null, strings = [], view = null, cfg = null;
+  let fine = false, frames = [], scannerGraph = null, tokenEditor = null; // frames: the ones the stepper walks (coarse: without the one-character ones of the scanner)
   let feat = { annotate: false, out: [] };
   const $ = (id) => document.getElementById(id);
   let sim = null;
@@ -41,12 +43,17 @@ const CompilerTool = (() => {
     } catch (e) {
       setError(e.message);
       run = null;
+      frames = [];
       drawAutomaton();
+      scannerGraph.draw();
+      tokenEditor.flag([]);
       render();
       return;
     }
     feat = features(comp);
     drawAutomaton();
+    scannerGraph.draw();
+    tokenEditor.flag(ScannerGraph.notes(comp.scanner));
     const notes = [];
     if (comp.missing.length) notes.push("No token rule for: " + comp.missing.join(", ") + ".");
     if (comp.tables.conflicts.length) notes.push(comp.tables.conflicts.length + " SLR(1) conflict(s): the parser prefers shift.");
@@ -56,12 +63,15 @@ const CompilerTool = (() => {
   }
 
   // ── Running ───────────────────────────────────────────────
+  const visible = () => (run ? run.frames.filter((f) => fine || !f.fine) : []);
+  const currentFrame = () => (frames.length ? frames[Math.min(sim.pos, frames.length - 1)] : null);
   function runString() {
     run = null;
     if (comp) {
-      const r = cmpRun(comp, $("sim-input").value);
+      const r = cmpRun(comp, $("sim-input").value, { fine: true });
       run = r;
     }
+    frames = visible();
     sim.pos = 0;
     sim.refresh();
     saveShare();
@@ -92,7 +102,7 @@ const CompilerTool = (() => {
   const attrText = (attrs) => attrParts(attrs).join("  ");
 
   function render() {
-    const f = run ? run.frames[Math.min(sim.pos, run.frames.length - 1)] : null;
+    const f = currentFrame();
     renderLog(f);
     renderInput(f);
     renderTokens(f);
@@ -101,6 +111,35 @@ const CompilerTool = (() => {
     renderOut(f);
     renderGrammar(f);
     renderAutomaton(f);
+    scannerGraph.mark();
+    // the machine that has just moved has its heading accented
+    $("sd-head").classList.toggle("is-active", !!f && f.machine === "scanner");
+    $("au-head").classList.toggle("is-active", !!f && f.machine === "parser");
+  }
+
+  // Fine steps: a step for every character the scanner reads
+  function setGrain(f) {
+    const cur = currentFrame();
+    fine = f;
+    const all = run ? run.frames : [];
+    frames = visible();
+    const at = cur ? all.indexOf(cur) : 0;
+    let pos = 0;
+    frames.forEach((fr, k) => { if (all.indexOf(fr) <= at) pos = k; });
+    sim.pos = pos;
+    sim.refresh();
+    render();
+  }
+
+  // Where the scanner is at this frame, for the DFA graph (shared/scanner-graph.js)
+  function scannerPosition() {
+    const f = currentFrame();
+    if (!f || !comp) return null;
+    const chars = [...$("sim-input").value], dfa = comp.scanner.dfa, s = f.scn;
+    if (!s) return { path: [], edges: [], last: null, from: 0, ch: chars[f.cursor] };
+    const read = f.type === "read";
+    const taken = read && s.edges.length ? { a: s.edges[s.edges.length - 1][0], b: s.edges[s.edges.length - 1][1], cls: dfa.classOf(chars[f.lex.end - 1]) } : null;
+    return { state: s.state, path: s.path, edges: s.edges, last: s.last, from: read ? s.state : 0, ch: read ? chars[f.lex.end] : f.type === "stop" ? undefined : chars[f.cursor], taken };
   }
 
   // ── The parser automaton: the states as numbers only (the compact form of the LR tool) ──
@@ -193,8 +232,10 @@ const CompilerTool = (() => {
     toks.forEach((t, i) => {
       const c = document.createElement("span");
       c.className = "cm-tok" + (f.la !== null && i === toks.length - 1 && f.type !== "shift" ? " is-la" : "");
-      c.innerHTML = '<span class="cm-tok-name">' + esc(t.name) + '</span><span class="cm-tok-lex">' + esc(t.lexeme) + "</span>";
+      // a token named as its lexeme (an operator, a keyword) says it once
+      c.innerHTML = t.name === t.lexeme ? '<span class="cm-tok-lex">' + esc(t.lexeme) + "</span>" : '<span class="cm-tok-name">' + esc(t.name) + '</span><span class="cm-tok-lex">' + esc(t.lexeme) + "</span>";
       c.title = "Characters " + t.start + " to " + t.end;
+      if (t.rule !== undefined) c.dataset.tok = t.rule + 1; // linked with its rule in the token rules (see shared.js)
       el.appendChild(c);
     });
     if (f.la !== null) {
@@ -321,17 +362,22 @@ const CompilerTool = (() => {
   let editor = null;
   function init(config) {
     cfg = config;
+    tokenEditor = ScannerEditor.attach($("token-input"));
     editor = GrammarEditor.attach($("grammar-input"), { actions: true, actionHint: "$$ = $1 + $3" });
     initResize("rh-1", "p-def", +1);
     initResize("rh-2", "p-run", +1);
     initResize("rh-3", "p-tree", +1);
     view = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 4], maxScale: 1.2, pad: 24, hasContent: () => !!lastForest && lastForest.length > 0 });
     treeRegisterPanel("p-tree", "tree-svg", () => drawTree());
-    autoView = createGraphView("au", { hasNodes: () => !!comp, onRelayout: () => { drawAutomaton(); renderAutomaton(run ? run.frames[Math.min(sim.pos, run.frames.length - 1)] : null); } });
+    autoView = createGraphView("au", { hasNodes: () => !!comp, onRelayout: () => { drawAutomaton(); renderAutomaton(currentFrame()); } });
+    scannerGraph = ScannerGraph.create({ prefix: "sd", noteId: "sd-note", getSc: () => (comp ? comp.scanner : null), getView: scannerPosition });
+    panelMenuExtras["p-run"] = () => scannerGraph.menu();
+    $("grain-coarse").addEventListener("change", () => setGrain(false));
+    $("grain-fine").addEventListener("change", () => setGrain(true));
     sim = createStepper({
       buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
       min: 0,
-      last: () => (run ? run.frames.length - 1 : null),
+      last: () => (frames.length ? frames.length - 1 : null),
       onChange: render,
     });
     $("btn-sim-reset").addEventListener("click", () => sim.reset());

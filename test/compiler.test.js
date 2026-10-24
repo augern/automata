@@ -149,3 +149,21 @@ id [a-z]+
   assert.deepEqual(arr(last.messages), []);
   assert.deepEqual(arr(C.cmpRun(comp, "x = z + 1;").frames.pop().messages), ["undeclared z"]);
 });
+
+test("a run with fine steps has a frame for every character the scanner reads, and says where the scanner is in its DFA", () => {
+  const comp = C.cmpCompile(EVAL_TOKENS, EVAL_GRAMMAR);
+  const plain = C.cmpRun(comp, "2 + 34");
+  const fine = C.cmpRun(comp, "2 + 34", { fine: true });
+  assert.equal(plain.frames.some((f) => f.fine), false);
+  // the frames that are not fine are the same events, in the same order
+  assert.deepEqual(arr(fine.frames.filter((f) => !f.fine).map((f) => f.type)), arr(plain.frames.map((f) => f.type)));
+  const reads = fine.frames.filter((f) => f.type === "read");
+  assert.equal(reads.length >= 5, true);
+  assert.equal(reads.every((f) => f.machine === "scanner" && f.fine && f.scn.path[0] === 0), true);
+  // the scan frame after "34" ends in the accepting state of num, with the path through the DFA
+  const scan = fine.frames.filter((f) => f.type === "scan" && f.tokens.length === 3)[0];
+  assert.equal(scan.scn.path.length, 3);
+  assert.equal(scan.scn.last.state, scan.scn.state);
+  assert.equal(scan.tokens[2].rule, 1);
+  assert.equal(fine.frames.filter((f) => f.type === "shift").every((f) => f.machine === "parser"), true);
+});

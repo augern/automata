@@ -53,4 +53,6 @@
 
 /* the parser automaton under the stack: states as numbers only */
 .cm-auto-head { border-bottom: 0; padding-bottom: 0; }
-.cm-auto { flex: 0 0 46%; min-height: 170px; border-top: 1px solid var(--border-lo); }
+.cm-auto { flex: 1 1 30%; min-height: 150px; border-top: 1px solid var(--border-lo); }
+.cm-auto-head.is-active .ui-label { color: var(--accent); }
+.cm-auto-head.is-active .ui-label::before { content: "● "; }

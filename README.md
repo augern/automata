@@ -22,7 +22,7 @@ Compiler construction (a section of its own on the index page, not on the map; t
 | Tool | Coverage |
 |---|---|
 | **Scanner** | Token rules to a scanner (maximal munch): one NFA for all rules, the alphabet cut into character classes (`[a-z]`, `[^"]`, `.`, “other”), the minimal DFA with token tags, its transition table, and longest-match scanning with back-up, a frame per character (coarse or fine steps); rules in the scanner editor (priority order, `→ skip`, notes on rules that never match) |
-| **Compiler Front End** | A longest-match scanner and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner consumes lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, types and a symbol table |
+| **Compiler Front End** | A maximal-munch scanner (the Scanner tool's DFA, drawn above the parser's automaton, with coarse or fine steps) and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner consumes lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, types and a symbol table |
 
 All tools share a common visual language (academic, high-contrast) and support
 step-by-step algorithm visualisation with Back/Forward controls.
@@ -79,7 +79,8 @@ parser-tools/
 │   ├── theme.js                        ← light/dark theme (system default, remembered toggle)
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
 │   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
-│   ├── scanner-editor.js, .css         ← the scanner editor: the token rules as a table (Scanner tool); model in algo/scanner-model.js
+│   ├── scanner-editor.js, .css         ← the scanner editor: the token rules as a table (Scanner and Compiler tools); model in algo/scanner-model.js
+│   ├── scanner-graph.js                ← the scanner DFA as a graph with the scanner marked on it: part view, tooltips (Scanner and Compiler tools)
 │   ├── grammar-editor.js, .css         ← the grammar editor: a table of productions with chips (LL(1), LR, derivation, recursive-descent grammar-transformation and compiler tools); model in algo/grammar-model.js
 │   ├── fit-view.js                     ← pan/zoom and automatic fit-to-view, shared by every graph and tree view
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)

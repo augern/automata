@@ -9,8 +9,10 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=02a78cef" />
     <link rel="stylesheet" href="../../shared/ui.css?v=b0845852" />
-    <link rel="stylesheet" href="../../shared/compiler.css?v=3bf5bc9c" />
+    <link rel="stylesheet" href="../../shared/compiler.css?v=09a5fdb5" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
+    <link rel="stylesheet" href="../../shared/scanner-editor.css?v=d7a839ae" />
+    <link rel="stylesheet" href="../../shared/scanner.css?v=1e3582f4" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -39,7 +41,7 @@
             </select>
           </div>
           <div class="cm-fields">
-            <div class="ui-label cm-label">Token rules (name, pattern)</div>
+            <div class="ui-label cm-label">Token rules</div>
             <textarea id="token-input" class="cm-text" spellcheck="false"></textarea>
             <div class="ui-label cm-label">Grammar and actions</div>
             <textarea id="grammar-input" class="cm-text" spellcheck="false"></textarea>
@@ -69,6 +71,10 @@
                 <button class="btn icon-run-all" id="btn-sim-all" title="Run all" disabled></button>
               </div>
             </div>
+            <div class="sc-grain">
+              <label><input type="radio" name="sc-grain" id="grain-coarse" checked /> Coarse steps</label>
+              <label><input type="radio" name="sc-grain" id="grain-fine" /> Fine steps</label>
+            </div>
           </div>
           <div id="cm-log" class="cm-log"></div>
           <div class="cm-section">
@@ -78,11 +84,13 @@
           </div>
           <div class="cm-section">
             <span class="ui-label">Tokens returned to the parser</span>
-            <div id="cm-tokens" class="cm-tokens"></div>
+            <div id="cm-tokens" class="cm-tokens" data-prod-view="tokens"></div>
           </div>
           <div class="cm-section" style="border-bottom: 0; padding-bottom: 0"><span class="ui-label">Parser stack (bottom to top)</span></div>
           <div id="cm-stack" class="cm-stack"></div>
-          <div class="cm-section cm-auto-head"><span class="ui-label">Parser automaton (the stack is marked: orange, its top blue)</span></div>
+          <div class="cm-section cm-auto-head" id="sd-head"><span class="ui-label">Scanner DFA (the current state is blue, the path of this call orange)</span></div>
+          <div class="ui-canvas cm-auto" data-prod-view="scanner-graph"><svg id="sd-svg"><g id="sd-graph-root"></g></svg><div id="sd-graph-empty" class="ui-canvas__empty">No scanner.</div><div id="sd-note" class="sc-viewnote"></div></div>
+          <div class="cm-section cm-auto-head" id="au-head"><span class="ui-label">Parser automaton (the stack is marked: orange, its top blue)</span></div>
           <div class="ui-canvas cm-auto"><svg id="au-svg"><g id="au-graph-root"></g></svg><div id="au-graph-empty" class="ui-canvas__empty">No automaton.</div></div>
         </div>
       </div>
@@ -124,6 +132,7 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
+    <script src="../../shared/algo/scanner.js?v=83a39a9b"></script>
     <script src="../../shared/algo/compiler.js?v=b510f387"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
@@ -132,14 +141,17 @@
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=dde5420c"></script>
+    <script src="../../shared/algo/scanner-model.js?v=7b65f835"></script>
+    <script src="../../shared/scanner-editor.js?v=2923e330"></script>
+    <script src="../../shared/scanner-graph.js?v=c72e3a7c"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=870e0091"></script>
+    <script src="guide.js?v=9241b44e"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/compiler-ui.js?v=310226df"></script>
+    <script src="../../shared/compiler-ui.js?v=85cbf0d0"></script>
     <script>
       const EXAMPLES = {};
       function loadExample(k) { CompilerTool.loadExample(k); }
