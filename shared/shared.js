@@ -1096,7 +1096,7 @@ function upgradeExamplesSelect(sel, groups) {
   function sync() {
     var cur = null;
     sel._exGroups.forEach(function (g) { g.items.forEach(function (it) { if (it.key === sel.value) cur = it; }); });
-    btn.firstChild.textContent = cur ? cur.label : placeholder;
+    btn.firstChild.textContent = cur ? cur.label + (sel._exModified ? " *" : "") : placeholder;
     btn.title = cur && cur.purpose ? cur.purpose : "";
   }
   // Tools set the current example with `select.value = key`: follow that.
@@ -1106,6 +1106,7 @@ function upgradeExamplesSelect(sel, groups) {
     set: function (v) { desc.set.call(this, v); sync(); },
   });
   sel.addEventListener("change", sync);
+  sel._exSync = sync;
   UI.menu(btn, function () {
     var items = [];
     sel._exGroups.forEach(function (g) {
@@ -1292,12 +1293,21 @@ function setSimLog(msg, cls) {
 }
 
 // Loads an example grammar. Depends on tool globals: EXAMPLES, setError, build.
+// The selector keeps the example's title; an asterisk after it marks a grammar edited since.
 function loadExample(k) {
   if (!k) return;
   const ex = EXAMPLES[k];
   if (!ex) return;
-  document.getElementById("grammar-input").value = ex.text;
-  document.getElementById("examples-select").value = "";
+  const input = document.getElementById("grammar-input"), sel = document.getElementById("examples-select");
+  input.value = ex.text;
+  sel.value = k;
+  const norm = (t) => t.split("\n").map((l) => l.trim().replace(/\s+/g, " ")).filter(Boolean).join("\n");
+  const mark = () => {
+    sel._exModified = !!EXAMPLES[sel.value] && norm(input.value) !== norm(EXAMPLES[sel.value].text);
+    if (sel._exSync) sel._exSync();
+  };
+  mark();
+  if (!input._exWatched) { input._exWatched = true; input.addEventListener("input", mark); }
   setError("");
   build();
 }
