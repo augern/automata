@@ -36,15 +36,9 @@ const GrammarEditor = (() => {
     const status = el("span", "ge-status");
     bar.append(status);
     const rowsEl = el("div", "ge-rows");
-    const foot = el("div", "ge-foot");
-    const addRule = el("button", "btn", "+ Rule"), addNt = el("button", "btn", "+ Nonterminal");
-    addRule.type = addNt.type = "button";
-    addRule.title = "A production for the left side of the last one";
-    addNt.title = "A production for a new left side";
-    foot.append(addRule, addNt);
     const textEl = el("textarea", "ge-text");
     textEl.spellcheck = false;
-    host.append(bar, rowsEl, foot, textEl);
+    host.append(bar, rowsEl, textEl);
 
     // ── State and text ──
     const text = () => gmToText(model);
@@ -113,7 +107,7 @@ const GrammarEditor = (() => {
     // ── Rendering ──
     function render(focus) {
       host.classList.toggle("no-nums", !showNums);
-      rowsEl.style.display = foot.style.display = view === "rules" ? "" : "none";
+      rowsEl.style.display = view === "rules" ? "" : "none";
       textEl.style.display = view === "text" ? "" : "none";
       status.textContent = parseError;
       bar.style.display = parseError ? "" : "none";
@@ -124,7 +118,7 @@ const GrammarEditor = (() => {
         if (row.kind === "comment") { rowsEl.appendChild(el("div", "ge-comment", "// " + row.text)); return; }
         rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts, row.kind === "rule" && !ghosts[i + 1]));
       });
-      if (!model.rows.some((r) => r.kind === "rule")) rowsEl.appendChild(el("div", "ge-empty", parseError ? "The grammar text has an error (see Text)." : "No productions. + Nonterminal starts one."));
+      rowsEl.appendChild(buildNewRow());
       if (focus) {
         const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs" : ".ge-in"));
         if (target) target.focus();
@@ -221,10 +215,10 @@ const GrammarEditor = (() => {
     function ruleRows() { return model.rows.map((r, i) => (r.kind === "rule" ? i : -1)).filter((i) => i >= 0); }
 
     // The typed text of the end field: symbols become chips, a | starts another production with the same left side.
-    function commitTyped(i, str, keepFocus) {
+    function commitTyped(i, str, keepFocus, base) {
       let alts;
       try { alts = bnfAlternatives(str); } catch (e) { return false; }
-      const m = gmClone(model);
+      const m = gmClone(base || model);
       let at = i;
       alts.forEach((a, idx) => {
         if (idx > 0) { m.rows.splice(at + 1, 0, gmNewRule(m.rows[at].lhs)); at++; }
@@ -244,6 +238,7 @@ const GrammarEditor = (() => {
         if (e.altKey) { e.preventDefault(); const j = i + (e.key === "ArrowUp" ? -1 : 1); if (j >= 0 && j < model.rows.length) changed(gmMove(model, i, j < i ? -1 : 1), { row: j, part: "end" }); return; }
         const rr = ruleRows(), at = rr.indexOf(i), j = rr[at + (e.key === "ArrowUp" ? -1 : 1)];
         if (j !== undefined) { e.preventDefault(); focusEnd(j); }
+        else if (e.key === "ArrowDown" && at >= 0) { e.preventDefault(); focusEnd(model.rows.length); }
         return;
       }
       if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
@@ -267,19 +262,51 @@ const GrammarEditor = (() => {
       }
     }
 
-    // ── The footer ──
-    addRule.addEventListener("click", () => {
+    // ── The entry row ──
+    // Always the last row: not part of the model until something is typed in it. The left side defaults to that of the
+    // last production (a new production for it); a new name starts a new group.
+    function buildNewRow() {
+      const at = model.rows.length;
       const rr = ruleRows();
-      const last = rr.length ? model.rows[rr[rr.length - 1]] : null;
-      changed(gmInsert(model, model.rows.length, gmNewRule(last ? last.lhs : "S")), { row: model.rows.length, part: "end" });
-    });
-    addNt.addEventListener("click", () => {
-      const used = new Set(model.rows.filter((r) => r.kind === "rule").flatMap((r) => r.lhs));
-      let name = "A";
-      for (let c = 65; c <= 90 && used.has(name); c++) name = String.fromCharCode(c);
-      for (let k = 1; used.has(name); k++) name = "N" + k;
-      changed(gmInsert(model, model.rows.length, gmNewRule(name)), { row: model.rows.length, part: "lhs" });
-    });
+      const dflt = rr.length ? gmLhsKey(model.rows[rr[rr.length - 1]]) : "S";
+      const d = el("div", "ge-row ge-new" + (at % 2 ? " is-odd" : ""));
+      d.dataset.i = at;
+      const lhs = el("input", "ge-lhs");
+      lhs.placeholder = dflt;
+      lhs.size = Math.max(4, Math.min(16, dflt.length + 1));
+      lhs.spellcheck = false;
+      lhs.title = "Left side of a new production (empty: " + dflt + ")";
+      lhs.addEventListener("input", () => { lhs.size = Math.max(4, Math.min(16, lhs.value.length + 1)); });
+      const arrow = el("span", "ge-arrow");
+      arrow.append(el("span", "ge-ar", model.arrow === "->" ? "→" : model.arrow));
+      const rhs = el("span", "ge-rhs");
+      const inp = el("input", "ge-in");
+      inp.spellcheck = false;
+      inp.placeholder = "ε";
+      inp.title = "Right side of a new production: type its symbols";
+      inp.size = 4;
+      inp.addEventListener("input", () => { inp.size = Math.max(4, inp.value.length + 1); });
+      // makes the entry row a production, with the symbols typed so far
+      const start = (v) => {
+        const base = gmInsert(model, at, gmNewRule((lhs.value.trim() || dflt).split(/\s+/)));
+        if (v) commitTyped(at, v, true, base);
+        else changed(base, { row: at, part: "end" });
+      };
+      lhs.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.focus(); } });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowUp") { const rr2 = ruleRows(); if (rr2.length) { e.preventDefault(); focusEnd(rr2[rr2.length - 1]); } return; }
+        if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          const v = inp.value.trim();
+          if (v) { inp.value = ""; start(v); } else if (e.key === "Enter") start("");
+        }
+      });
+      inp.addEventListener("blur", () => { const v = inp.value.trim(); if (v) { inp.value = ""; start(v); } });
+      rhs.appendChild(inp);
+      d.append(el("span", "ge-num"), lhs, arrow, rhs, el("span", "ge-menu-gap"));
+      return d;
+    }
     host.addEventListener("keydown", (e) => {
       if (e.target === textEl) return;
       if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
