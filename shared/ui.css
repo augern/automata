@@ -291,6 +291,7 @@
   font-family: var(--font-mono);
   pointer-events: none;
 }
+.ag-node .ag-tag { font-size: 9px; fill: var(--text-dim); font-family: var(--font-mono); pointer-events: none; }
 .ag-node.is-accepting circle { stroke: var(--st-accept); }
 .ag-node.is-accepting .ag-label { fill: var(--st-accept); }
 .ag-node.is-rejecting circle { stroke: var(--st-reject); }

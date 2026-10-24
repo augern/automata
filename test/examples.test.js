@@ -218,3 +218,17 @@ test("compiler-construction examples: the strings give the results their descrip
   assert.deepEqual(JSON.parse(JSON.stringify(last(ty, "x = 1;").f.messages)), ["undeclared variable x"]);
   assert.equal(last(ty, "integer x; real y; x = 1; y = x * 2.5;").f.messages.length, 0);
 });
+
+test("scanner examples: the token rules compile, every string scans to the end, and the mistake example is flagged", () => {
+  const S = load("scanner.js");
+  for (const ex of examples("scanner")) {
+    const sc = S.scnCompile(Array.isArray(ex.tokens) ? ex.tokens.join("\n") : ex.tokens);
+    assert.ok(ex.strings && ex.strings.length > 0, `${ex.label}: no sample strings`);
+    for (const s of ex.strings) {
+      const run = S.scnRun(sc, s);
+      assert.equal(run.frames[run.frames.length - 1].type, "end", `${ex.label}: "${s}"`);
+    }
+    const expectShadowed = ex.label === "A rule that never matches";
+    assert.equal(sc.shadowed.length > 0, expectShadowed, `${ex.label}: shadowed rules`);
+  }
+});

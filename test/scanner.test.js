@@ -118,3 +118,18 @@ test("bad patterns name their token", () => {
   assert.throws(() => S.scnCompile(""), /No token rules/);
   assert.throws(() => S.scnParseRules("justaname"), /expected/);
 });
+
+test("scanner model: the text round trip, quoting, disabled rules and comments", () => {
+  const M = load("grammar.js", "grammar-model.js", "scanner-model.js");
+  const text = "// the tokens\nskip [ \\t\\n]+ -> skip\nnum [0-9]+(\\.[0-9]+)?\n'+' \\+\n'it''s' x\n// disabled: id [a-z]+";
+  const m = M.smParse(text);
+  assert.deepEqual(arr(m.rows.map((r) => r.kind === "rule" ? [r.name, r.skip, r.enabled] : r.text)), ["the tokens", ["skip", true, true], ["num", false, true], ["+", false, true], ["it's", false, true], ["id", false, false]]);
+  assert.equal(M.smToText(m), text);
+  assert.deepEqual(arr(M.smIndexes(m)), [null, 0, 1, 2, 3, null]);
+  // a plain comment that looks like a rule stays a comment
+  assert.equal(M.smParse("// the numbers").rows[0].kind, "comment");
+  assert.throws(() => M.smParse("lonely"), /expected/);
+  // the compiler tool's example token rules round-trip
+  const ex = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "tools", "compiler", "examples.json"), "utf8"));
+  for (const g of ex.groups) for (const e of g.examples) assert.equal(M.smToText(M.smParse(e.tokens.join("\n"))), e.tokens.join("\n"), e.label);
+});

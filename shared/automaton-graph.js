@@ -121,7 +121,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 }
 
 // Lay out and draw the graph described by spec:
-//   nodes: [{ label, accepting?, rejecting?, error? }]   (error: the error state, drawn with a cross)   (node i has id "P-state-i")
+//   nodes: [{ label, accepting?, rejecting?, error?, tag? }]  (tag: a note below the state)   (error: the error state, drawn with a cross)   (node i has id "P-state-i")
 //   start: index of the start state
 //   edges: [{ from, to, labels: string[], eps?: boolean, ids?: any[] }]   non-self edges, one per (from, to)
 //   loops: [{ node, labels: string[], eps?: boolean, ids?: any[] }]       self-loops
@@ -227,6 +227,8 @@ function drawAutomatonGraph(prefix, view, spec) {
       ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", k).attr("x2", k).attr("y2", -k);
     }
     ng.append("text").attr("class", "ag-label").attr("text-anchor", "middle").attr("dominant-baseline", "middle").text(nd.label);
+    // a short note below the state (the token it recognises, say)
+    if (nd.tag) ng.append("text").attr("class", "ag-tag").attr("text-anchor", "middle").attr("y", R + 11).text(nd.tag);
     if (i === start) {
       root.append("line")
         .attr("class", "ag-start")

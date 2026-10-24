@@ -1,0 +1,36 @@
+/* The scanner editor (shared/scanner-editor.js): the token rules as a table. */
+.se { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.se-bar { padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); color: var(--red); line-height: 1.3; }
+.se-text { flex: 1; width: 100%; box-sizing: border-box; background: transparent; color: var(--text); border: none; outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); resize: none; }
+
+/* One grid for all rows (each row a subgrid, so its background spans it): priority, name, pattern, menu. */
+.se-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: 22px fit-content(36%) minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
+.se-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; }
+.se-row > * { padding: 2px 2px; }
+.se-row > :first-child { padding-left: var(--sp-3); }
+.se-row > .se-menu, .se-row > .se-menu-gap { padding-right: var(--sp-4); }
+.se-row.is-odd { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.se-row:hover { background: var(--bg-hover); }
+.se-row.is-hot { background: var(--hot-bg); }
+.se-row.is-off .se-name, .se-row.is-off .se-pat { opacity: 0.45; text-decoration: line-through; }
+.se-row > .se-num { text-align: right; align-self: stretch; font-family: var(--font-mono); font-size: var(--fs-2xs); color: color-mix(in srgb, var(--text-lo) 50%, transparent); background: var(--bg-cell); }
+.se-name, .se-pat { background: transparent; border: 1px solid transparent; border-radius: var(--radius); outline: none; padding: 0 3px; min-width: 0; box-sizing: border-box; }
+.se-name { color: var(--accent); font-family: var(--font-mono); font-size: var(--fs-sm); margin-left: 4px; }
+.se-pat { width: 100%; color: var(--text); font-family: var(--font-mono); font-size: var(--fs-sm); }
+.se-name:hover, .se-pat:hover { border-color: var(--border); }
+.se-name:focus, .se-pat:focus { border-color: var(--accent); }
+.se-row.is-bad .se-pat { border-color: var(--red); }
+.se-patcell { display: flex; align-items: baseline; gap: var(--sp-3); min-width: 0; }
+.se-skip { flex-shrink: 0; font-size: var(--fs-2xs); color: var(--text-lo); font-style: italic; }
+.se-menu { opacity: 0; background: transparent; border: none; color: var(--text-lo); cursor: pointer; padding: 0; line-height: 1; }
+.se-row:hover .se-menu, .se-row:focus-within .se-menu, .se-menu[aria-expanded="true"] { opacity: 1; }
+.se-menu:hover { color: var(--accent); }
+.se-new { opacity: 0.75; }
+.se-new:focus-within { opacity: 1; }
+.se-new .se-name::placeholder, .se-new .se-pat::placeholder { opacity: 0.5; }
+.se-comment { grid-column: 1 / -1; padding: 2px var(--sp-3) 2px calc(var(--sp-3) + 22px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
+/* a note under a row: a pattern error, or what the tool has found about the rule */
+.se-row > .se-note { grid-column: 2 / -1; padding: 0 var(--sp-4) 3px 4px; font-size: var(--fs-2xs); line-height: 1.35; color: var(--text-dim); }
+.se-note.is-error { color: var(--red); }
+.se-note.is-warn { color: var(--amber); }
+@media (hover: none) { .se-menu { opacity: 1; } }

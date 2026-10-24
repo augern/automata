@@ -1,0 +1,20 @@
+/* The scanner tool (shared/scanner-ui.js): the automata with their tables below, the granularity switch. */
+#p-nfa .panel-body, #p-dfa .panel-body { display: flex; flex-direction: column; }
+#p-nfa .ui-canvas, #p-dfa .ui-canvas { flex: 1 1 55%; min-height: 160px; }
+.sc-section { flex: 0 1 38%; min-height: 90px; overflow: auto; border-top: 1px solid var(--border-lo); padding: var(--sp-3) var(--sp-5); }
+.sc-section > .ui-label { display: block; margin-bottom: var(--sp-2); }
+.sc-grain { display: flex; gap: var(--sp-5); padding: var(--sp-2) var(--sp-5) 0; font-size: var(--fs-xs); color: var(--text-dim); }
+.sc-grain label { display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+.sc-note { font-size: var(--fs-xs); color: var(--text-dim); margin-bottom: var(--sp-3); line-height: 1.4; }
+.sc-table { border-collapse: collapse; font-size: var(--fs-xs); font-family: var(--font-mono); }
+.sc-table th { font-weight: normal; color: var(--text-dim); padding: 1px 8px 1px 0; text-align: left; border-bottom: 1px solid var(--border-lo); }
+.sc-table td { padding: 1px 8px 1px 0; }
+.sc-table tr.is-hot td, .sc-table tr.is-hot th { background: var(--hot-bg); }
+.sc-table tr.is-accept td:first-child { color: var(--st-accept); }
+.sc-table tr.is-now td { color: var(--st-active); font-weight: bold; }
+.sc-table td.is-taken { background: var(--st-active-bg); color: var(--st-active); }
+.sc-class { display: flex; gap: var(--sp-4); font-family: var(--font-mono); font-size: var(--fs-xs); padding: 1px 0; }
+.sc-class.is-hot { background: var(--hot-bg); }
+.sc-class-name { min-width: 7em; color: var(--accent); }
+.sc-class-members { color: var(--text-dim); overflow-wrap: anywhere; }
+.ag-node.is-last circle { stroke: var(--st-accept); stroke-width: 3; }

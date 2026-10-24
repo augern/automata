@@ -16,11 +16,12 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **LR Parser Tool** | LR(0), SLR(1), LALR(1), LR(1) — characteristic automaton, ACTION/GOTO tables, string simulation, parse tree |
 | **Turing Machine Simulator** | Deterministic TM — editable transition table, tape simulation, step-by-step execution |
 
-Compiler construction (a section of its own on the index page, not on the map; the engine is
-`shared/algo/compiler.js`, the view `shared/compiler-ui.js`):
+Compiler construction (a section of its own on the index page, not on the map; the engines are
+`shared/algo/scanner.js` and `shared/algo/compiler.js`, the views `shared/scanner-ui.js` and `shared/compiler-ui.js`):
 
 | Tool | Coverage |
 |---|---|
+| **Scanner** | Token rules to a scanner: one NFA for all rules, the alphabet cut into character classes (`[a-z]`, `[^"]`, `.`, “other”), the minimal DFA with token tags, its transition table, and longest-match scanning with back-up, a frame per character (coarse or fine steps); rules in the scanner editor (priority order, `→ skip`, notes on rules that never match) |
 | **Compiler Front End** | A longest-match scanner and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner consumes lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, types and a symbol table |
 
 All tools share a common visual language (academic, high-contrast) and support
@@ -62,6 +63,8 @@ parser-tools/
 │   │   ├── derivation.js               ← pure: derivation-grammar parser, range matching, done check, seeded random moves
 │   │   ├── strings.js                  ← pure: random input strings (automaton walks, sampling, grammar sentences)
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
+│   │   ├── scanner.js                  ← pure: token-rule patterns with sets, the NFA of all rules, character classes, the minimal DFA, longest-match scanning and its frames
+│   │   ├── scanner-model.js            ← pure: the token rules as editor rows, the text round trip
 │   │   ├── compiler.js                 ← pure: token rules and longest-match scanner, action language, the scanner+parser run as frames
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping
 │   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
@@ -76,6 +79,7 @@ parser-tools/
 │   ├── theme.js                        ← light/dark theme (system default, remembered toggle)
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
 │   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
+│   ├── scanner-editor.js, .css         ← the scanner editor: the token rules as a table (Scanner tool); model in algo/scanner-model.js
 │   ├── grammar-editor.js, .css         ← the grammar editor: a table of productions with chips (LL(1), LR, derivation, recursive-descent grammar-transformation and compiler tools); model in algo/grammar-model.js
 │   ├── fit-view.js                     ← pan/zoom and automatic fit-to-view, shared by every graph and tree view
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)

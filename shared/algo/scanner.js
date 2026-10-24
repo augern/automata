@@ -259,9 +259,13 @@ function scnBuildDFA(nfa) {
   }
   const nS = order.size;
   const states = [], atomTrans = [];
+  // the rules that accept in any state merged into one (a rule that never wins shows up here, not in `accept`)
+  const together = new Map();
+  acc.forEach((r, q) => { if (order.has(block[q])) { if (!together.has(block[q])) together.set(block[q], new Set()); r.forEach((x) => together.get(block[q]).add(x)); } });
   for (const [b, id] of order) {
     const q = rep.get(b);
-    states[id] = { id, accept: acc[q].length ? acc[q][0] : -1, rules: acc[q] };
+    const all = [...together.get(b) || []].sort((x, y) => x - y);
+    states[id] = { id, accept: all.length ? all[0] : -1, rules: all };
     atomTrans[id] = raw[q].map((t) => (t < 0 ? -1 : order.get(block[t])));
   }
   // merge the classes that behave alike in every state
@@ -334,6 +338,7 @@ const SCN_MAX_FRAMES = 3000;
 //   type   start | read | stop | token | skip | error | end
 //   msg    what happened, in words
 //   begin  where the lexeme begins; forward  how far the scanner has read (the characters before it are consumed)
+//   dead   a stop frame: the character at forward - 1 has no transition; eof: the input ended
 //   state  the DFA state the scanner is in (null: not in a call)
 //   path   the states the call has been through; edges: [[from, to]] the transitions it has taken
 //   last   { state, end, rule } the last accepting state seen in this call, or null
@@ -362,16 +367,16 @@ function scnRun(sc, input) {
     }
     if (!r.steps.length || r.steps[r.steps.length - 1].to >= 0) {
       // ran into the end of the input
-      if (r.steps.length) push({ type: "stop", fine: true, msg: "The end of the input: the scanner stops" + (last ? " and returns the last accepting state's token." : "."), begin: pos, forward: chars.length, state: path[path.length - 1], path: [...path], edges: edges.map((e) => [...e]), last, dead: true });
+      if (r.steps.length) push({ type: "stop", fine: true, msg: "The end of the input: the scanner stops" + (last ? " and returns the last accepting state's token." : "."), begin: pos, forward: chars.length, state: path[path.length - 1], path: [...path], edges: edges.map((e) => [...e]), last, eof: true });
     }
     const lexeme = chars.slice(r.start, r.end).join("");
     if (r.rule === -1) {
       push({ type: "error", fine: false, msg: "Lexical error: no token rule matches at position " + r.start + " (the character " + JSON.stringify(chars[r.start]) + "). The scanner skips it.", begin: pos, forward: r.end, state: r.steps.length ? r.steps[0].from : 0, path, edges, last: null });
     } else if (rules[r.rule].skip) {
-      push({ type: "skip", fine: false, msg: "The scanner consumes " + JSON.stringify(lexeme) + " by the rule " + rules[r.rule].name + " and discards it.", begin: pos, forward: r.end, state: r.last.state, path, edges, last: r.last });
+      push({ type: "skip", fine: false, msg: "The scanner consumes " + JSON.stringify(lexeme) + " by the rule " + rules[r.rule].name + " and discards it.", begin: pos, forward: r.end, readTo: r.readTo, state: r.last.state, path, edges, last: r.last });
     } else {
       tokens.push({ name: rules[r.rule].name, lexeme, start: r.start, end: r.end });
-      push({ type: "token", fine: false, msg: "The scanner returns the token " + rules[r.rule].name + " for " + JSON.stringify(lexeme) + (r.readTo > r.end ? ", after reading " + JSON.stringify(chars.slice(r.end, r.readTo).join("")) + " beyond it and backing up." : "."), begin: pos, forward: r.end, state: r.last.state, path, edges, last: r.last });
+      push({ type: "token", fine: false, msg: "The scanner returns the token " + rules[r.rule].name + " for " + JSON.stringify(lexeme) + (r.readTo > r.end ? ", after reading " + JSON.stringify(chars.slice(r.end, r.readTo).join("")) + " beyond it and backing up." : "."), begin: pos, forward: r.end, readTo: r.readTo, state: r.last.state, path, edges, last: r.last });
     }
     pos = r.end;
   }
