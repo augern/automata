@@ -60,7 +60,7 @@ const ScannerTool = (() => {
   // ── The graphs ────────────────────────────────────────────
   // A real scanner's automata are too big to read as one picture, so above a size they show a part: the NFA of one rule
   // (the one pointed at in the rules), the DFA around the state the scanner is in. The panel menus choose.
-  const NFA_BIG = 40, DFA_BIG = 30;
+  const NFA_BIG = 40, DFA_BIG = 30, SHORT_LABEL = 8;
   let nfaMode = "auto", dfaMode = "auto", nfaRule = 0;
   const nfaOne = () => !!sc && (nfaMode === "rule" || (nfaMode === "auto" && sc.nfa.n > NFA_BIG));
   const dfaFocus = () => !!sc && (dfaMode === "focus" || (dfaMode === "auto" && sc.dfa.states.length > DFA_BIG));
@@ -72,14 +72,26 @@ const ScannerTool = (() => {
     { label: "Automatic", checked: nfaMode === "auto", title: "All rules up to " + NFA_BIG + " states, else one rule", onSelect: () => { nfaMode = "auto"; drawNfa(); } },
     { label: "All rules", checked: nfaMode === "whole", onSelect: () => { nfaMode = "whole"; drawNfa(); } },
     { label: "One rule", checked: nfaMode === "rule", title: "The NFA of the rule pointed at in the token rules", onSelect: () => { nfaMode = "rule"; drawNfa(); } },
+    { separator: true },
+    { label: "Character classes", checked: shown.classes, onSelect: () => { shown.classes = !shown.classes; applySections(); } },
   ];
   panelMenuExtras["p-dfa"] = () => [
     { heading: "DFA view" },
     { label: "Automatic", checked: dfaMode === "auto", title: "The whole DFA up to " + DFA_BIG + " states, else the part around the current state", onSelect: () => { dfaMode = "auto"; drawDfa(); } },
     { label: "Whole DFA", checked: dfaMode === "whole", onSelect: () => { dfaMode = "whole"; drawDfa(); } },
     { label: "Around the current state", checked: dfaMode === "focus", title: "The states on the path so far, the current state and its successors", onSelect: () => { dfaMode = "focus"; drawDfa(); } },
+    { separator: true },
+    { label: "Transition table", checked: shown.table, onSelect: () => { shown.table = !shown.table; applySections(); } },
   ];
 
+  // The character classes and the transition table are kept, but off unless the panel menu shows them.
+  const shown = { classes: false, table: false };
+  function applySections() {
+    $("p-nfa").querySelector(".sc-section").hidden = !shown.classes;
+    $("p-dfa").querySelector(".sc-section").hidden = !shown.table;
+    if (nfaView) nfaView.fit();
+    if (dfaView) dfaView.fit();
+  }
   function drawGraphs() {
     drawNfa();
     drawDfa();
@@ -168,6 +180,8 @@ const ScannerTool = (() => {
       if (!classIds.has(c)) classIds.set(c, []);
       classIds.get(c).push(id);
     }));
+    // a label that is short is drawn on its edge; a long one is left out (⋯) and is in the tooltip
+    for (const e of [...dp.values(), ...loops.values()]) if (e.labels.join(", ").length > SHORT_LABEL) e.labels = e.labels.map((_, k) => (k === 0 ? AG_MORE : null)).filter((x) => x !== null);
     const ids = [...dfaIx.keys()];
     drawAutomatonGraph("dfa", dfaView, {
       nodes: ids.map((i) => { const st = dfa.states[i]; return { label: String(st.id), accepting: st.accept >= 0, tag: st.accept >= 0 ? rules[st.accept].name : undefined }; }),
@@ -175,9 +189,7 @@ const ScannerTool = (() => {
       edges: [...dp.values()],
       loops: [...loops.values()],
       joinLabels: true,
-      hideLabels: true,
-      nodesep: 26,
-      ranksep: 46,
+      reserveLabels: true,
       onHover: (hot) => {
         // an edge: its classes in a tooltip, and the edge marked; the class rows are marked too
         markClasses(hot ? hot.map((id) => +id.split(":")[2]) : null);
@@ -412,6 +424,7 @@ const ScannerTool = (() => {
     initResize("rh-2", "p-nfa", +1);
     initResize("rh-3", "p-dfa", +1);
     editor = ScannerEditor.attach($("token-input"));
+    applySections();
     nfaView = createGraphView("nfa", { hasNodes: () => !!sc, onRelayout: () => { drawGraphs(); markPath(currentFrame()); } });
     dfaView = createGraphView("dfa", { hasNodes: () => !!sc, onRelayout: () => { drawGraphs(); markPath(currentFrame()); } });
     sim = createStepper({

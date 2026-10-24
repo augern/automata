@@ -17,6 +17,8 @@
 // graph is laid out again: relayout() redraws it (a tool that marks states after drawing passes onRelayout, which
 // redraws and marks them again).
 // A graph is fitted to its pane and may be enlarged up to this factor (so small graphs fill the pane too).
+// the label that stands for labels left out as too long
+const AG_MORE = "\uE001";
 const AG_MAX_SCALE = 1.8, AG_PAD_X = 28, AG_PAD_Y = 24;
 
 function createGraphView(prefix, { hasNodes = () => true, onRelayout = null } = {}) {
@@ -49,7 +51,7 @@ function graphLayout(spec, dir) {
   dg.setDefaultEdgeLabel(() => ({}));
   // A state with a self-loop reserves room for the loop and its label (above it in left-to-right layouts, to its
   // right in top-to-bottom ones), so that other edges are routed around it. The box is symmetric: dagre centres it.
-  const loopLabelW = new Map(loops.map((lp) => [lp.node, spec.hideLabels ? 0 : lp.labels.join(", ").length * 5.6]));
+  const loopLabelW = new Map(loops.map((lp) => [lp.node, lp.labels.join(", ").length * 5.6]));
   for (let i = 0; i < nodes.length; i++) {
     let w = R * 2 + 4, h = R * 2 + 4;
     if (loopLabelW.has(i)) {
@@ -139,7 +141,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 //     result with setGraphHot(prefix, ids), which redraws the matching edges and labels
 //     on top, highlighted.
 //   radius (16), ranksep (64)
-//   hideLabels: true → the edge labels are not drawn by the page (it shows them on hover): the layout leaves no room for them
+//   a label equal to AG_MORE is drawn as ⋯: the page has left the label out because it is too long (and shows it on hover)
 //   reserveLabels: true → the layout makes room for the labels (more spread out, no label on another edge)
 //   hideEps: true → an edge with eps: true has no label (it is dashed)
 //   joinLabels: true → one line "a, b, c"; false → one stacked line per label
@@ -165,7 +167,7 @@ function drawAutomatonGraph(prefix, view, spec) {
   // Label text: joined on one line, or one <text> per label stacked and centred on (x, y).
   // With ids, each stacked label remembers its id and the edge group reports hovers.
   // A label equal to the private-use wildcard (NFA_WILD, "any other symbol") is drawn as a red "?".
-  const WILD = "\uE000";
+  const WILD = "\uE000", MORE = AG_MORE;
   // `side`: the label sits to the right of its anchor point (top-to-bottom layouts, where edges run vertically).
   function addLabel(g, labels, x, y, ids, side = false) {
     const anchor = side ? "start" : "middle";
@@ -174,12 +176,13 @@ function drawAutomatonGraph(prefix, view, spec) {
       labels.forEach((lbl, li) => {
         if (li > 0) t.append("tspan").text(", ");
         if (lbl === WILD) t.append("tspan").attr("class", "ag-wild").text("?");
+        else if (lbl === MORE) t.append("tspan").attr("class", "ag-more").text("⋯");
         else t.append("tspan").text(lbl);
       });
       return;
     }
     labels.forEach((lbl, li) => {
-      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", anchor).classed("ag-wild", lbl === WILD).text(lbl === WILD ? "?" : lbl);
+      const t = g.append("text").attr("x", x).attr("y", y - (labels.length - 1) * 5).attr("dy", li * 1.1 + "em").attr("text-anchor", anchor).classed("ag-wild", lbl === WILD).classed("ag-more", lbl === MORE).text(lbl === WILD ? "?" : lbl === MORE ? "⋯" : lbl);
       if (ids) t.attr("data-k", li);
     });
   }
