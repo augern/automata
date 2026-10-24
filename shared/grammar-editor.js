@@ -183,6 +183,15 @@ const GrammarEditor = (() => {
     function run(info) { runInfo = info || null; if (view === "rules") applyRun(); }
     function mark(list) { marks = list || []; if (view === "rules") applyMarks(); }
 
+    // A terminal whose name is that of a token rule is linked with it (opts.tokenOf(name): the rule's number, from 1, or
+    // null): data-tok, as the scanner editor's rows have (see "Production and token links" in shared.js).
+    function linkToken(c) {
+      const k = opts.tokenOf && !c.classList.contains("ge-nt") ? opts.tokenOf(c.textContent) : null;
+      if (k) c.dataset.tok = k; else delete c.dataset.tok;
+    }
+    // for when the token rules change: the links of the chips are set again, without redrawing the table
+    function refreshLinks() { rowsEl.querySelectorAll(".ge-chip").forEach(linkToken); }
+
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
 
     function buildRow(row, i, num, ghost, nts, last) {
@@ -425,6 +434,7 @@ const GrammarEditor = (() => {
     function buildChip(row, i, k, s, nts) {
       const open = !nts.has(s.sym) && ANGLE.test(s.sym) && !s.quoted;
       const c = el("span", "ge-chip " + chipKind(s.sym, nts) + (open ? " ge-open" : ""), s.sym);
+      linkToken(c);
       c.title = open ? s.sym + " has no production: read as a terminal" : s.quoted ? "Terminal, written in quotes" : nts.has(s.sym) ? "Nonterminal" : "Terminal";
       c.addEventListener("click", () => editChip(c, row, i, k, s));
       return c;
@@ -591,7 +601,7 @@ const GrammarEditor = (() => {
 
     readText(nativeValue.get.call(textarea));
     render();
-    return { setView, render, mark, run, undo: doUndo, redo: doRedo, model: () => model };
+    return { setView, render, mark, run, refreshLinks, undo: doUndo, redo: doRedo, model: () => model };
   }
 
   return { attach };

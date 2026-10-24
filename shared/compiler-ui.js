@@ -54,6 +54,7 @@ const CompilerTool = (() => {
     drawAutomaton();
     scannerGraph.draw();
     tokenEditor.flag(ScannerGraph.notes(comp.scanner));
+    editor.refreshLinks();
     const notes = [];
     if (comp.missing.length) notes.push("No token rule for: " + comp.missing.join(", ") + ".");
     if (comp.tables.conflicts.length) notes.push(comp.tables.conflicts.length + " SLR(1) conflict(s): the parser prefers shift.");
@@ -363,7 +364,12 @@ const CompilerTool = (() => {
   function init(config) {
     cfg = config;
     tokenEditor = ScannerEditor.attach($("token-input"));
-    editor = GrammarEditor.attach($("grammar-input"), { actions: true, actionHint: "$$ = $1 + $3" });
+    // a terminal is linked with the token rule of its name
+    const tokenOf = (name) => { const k = comp ? comp.tokenRules.findIndex((r) => !r.skip && r.name === name) : -1; return k >= 0 ? k + 1 : null; };
+    editor = GrammarEditor.attach($("grammar-input"), { actions: true, actionHint: "$$ = $1 + $3", tokenOf });
+    // the two editors are different views for the links between them, though they are in one panel
+    document.querySelector(".ge").dataset.prodView = "grammar";
+    document.querySelector(".se").dataset.prodView = "token-rules";
     initResize("rh-1", "p-def", +1);
     initResize("rh-2", "p-run", +1);
     initResize("rh-3", "p-tree", +1);
