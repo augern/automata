@@ -283,6 +283,25 @@ const GrammarEditor = (() => {
       return box;
     }
 
+    // An action is written on one line; shown a statement per line: a break after each ; outside quotes.
+    function breakStatements(str) {
+      let out = "", q = null;
+      for (let k = 0; k < str.length; k++) {
+        const c = str[k];
+        if (q) { if (c === q) q = null; out += c; continue; }
+        if (c === "'" || c === '"') { q = c; out += c; continue; }
+        if (c === ";") {
+          out += ";";
+          let j = k + 1;
+          while (j < str.length && /[ \t\n]/.test(str[j])) j++;
+          if (j < str.length) { out += "\n"; k = j - 1; }
+          continue;
+        }
+        out += c;
+      }
+      return out;
+    }
+
     // The action of a production: a panel below its row, one line of text (it is written on one line: {{ … }})
     function buildAction(row, i) {
       const box = el("div", "ge-action");
@@ -291,12 +310,22 @@ const GrammarEditor = (() => {
       box.appendChild(label);
       const ta = el("textarea", "ge-action-in");
       ta.rows = 1;
+      ta.title = "One statement per line; written on one line in the text view";
       ta.spellcheck = false;
-      ta.value = row.action;
+      ta.value = breakStatements(row.action);
       ta.placeholder = opts.actionHint || "$$ = $1";
       const fit = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
       let dirty = false;
       ta.addEventListener("input", () => {
+        // re-break after typing a ;, keeping the caret before the same text
+        const broken = breakStatements(ta.value);
+        if (broken !== ta.value) {
+          const before = ta.value.slice(0, ta.selectionStart).replace(/\s/g, "").length;
+          ta.value = broken;
+          let n = 0, pos = 0;
+          while (pos < broken.length && n < before) { if (!/\s/.test(broken[pos])) n++; pos++; }
+          ta.setSelectionRange(pos, pos);
+        }
         fit();
         // typed text is written through without a redraw (which would drop the focus); one undo step per visit
         if (!dirty) { undo.push(JSON.stringify(model)); if (undo.length > 100) undo.shift(); redo = []; dirty = true; }
