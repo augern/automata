@@ -353,12 +353,40 @@ const GrammarEditor = (() => {
       const dflt = rr.length ? gmLhsKey(model.rows[rr[rr.length - 1]]) : "S";
       const d = el("div", "ge-row ge-new" + (at % 2 ? " is-odd" : ""));
       d.dataset.i = at;
-      const lhs = el("input", "ge-lhs");
-      lhs.placeholder = dflt;
-      lhs.size = Math.max(4, Math.min(16, dflt.length + 1));
-      lhs.spellcheck = false;
-      lhs.title = "Left side of a new production (empty: " + dflt + ")";
-      lhs.addEventListener("input", () => fitLhs(lhs));
+      // the left side typed so far: one text field, or in unrestricted grammars chips and a field after them
+      const lhsIn = el("input", opts.sequences ? "ge-lhs-in" : "ge-lhs");
+      lhsIn.placeholder = dflt;
+      lhsIn.spellcheck = false;
+      lhsIn.title = "Left side of a new production (empty: " + dflt + ")";
+      const pending = [];
+      let lhs = lhsIn;
+      if (opts.sequences) {
+        lhs = el("span", "ge-lhsq");
+        lhs.appendChild(lhsIn);
+        const drawPending = () => {
+          lhs.querySelectorAll(".ge-chip").forEach((c) => c.remove());
+          pending.forEach((sym, k) => {
+            const c = el("span", "ge-chip " + chipKind(sym, gmNonterminals(model)), sym);
+            c.addEventListener("click", () => { lhsIn.value = pending.splice(k).join(" "); drawPending(); lhsIn.focus(); });
+            lhs.insertBefore(c, lhsIn);
+          });
+          lhsIn.placeholder = pending.length ? "" : dflt;
+          lhsIn.size = Math.max(pending.length ? 2 : dflt.length + 1, lhsIn.value.length + 1);
+        };
+        lhsIn.size = dflt.length + 1;
+        lhsIn.addEventListener("input", () => { lhsIn.size = Math.max(pending.length ? 2 : dflt.length + 1, lhsIn.value.length + 1); });
+        lhsIn.addEventListener("keydown", (e) => {
+          if (e.key === " ") {
+            e.preventDefault();
+            const v = lhsIn.value.trim();
+            if (v) { pending.push(...v.split(/\s+/)); lhsIn.value = ""; drawPending(); }
+          } else if (e.key === "Backspace" && lhsIn.value === "" && pending.length) {
+            e.preventDefault();
+            pending.pop();
+            drawPending();
+          }
+        });
+      } else lhsIn.addEventListener("input", () => fitLhs(lhsIn));
       const arrow = el("span", "ge-arrow");
       arrow.append(el("span", "ge-ar", model.arrow === "->" ? "→" : model.arrow));
       const rhs = el("span", "ge-rhs");
@@ -370,11 +398,12 @@ const GrammarEditor = (() => {
       inp.addEventListener("input", () => { inp.size = Math.max(4, inp.value.length + 1); });
       // makes the entry row a production, with the symbols typed so far
       const start = (v) => {
-        const base = gmInsert(model, at, gmNewRule((lhs.value.trim() || dflt).split(/\s+/)));
+        const typed = pending.concat(lhsIn.value.trim().split(/\s+/).filter(Boolean));
+        const base = gmInsert(model, at, gmNewRule(typed.length ? typed : dflt.split(/\s+/)));
         if (v) commitTyped(at, v, true, base);
         else changed(base, { row: at, part: "end" });
       };
-      lhs.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.focus(); } });
+      lhsIn.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.focus(); } });
       inp.addEventListener("keydown", (e) => {
         if (e.key === "ArrowUp") { const rr2 = ruleRows(); if (rr2.length) { e.preventDefault(); focusEnd(rr2[rr2.length - 1]); } return; }
         if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
