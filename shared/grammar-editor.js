@@ -126,6 +126,7 @@ const GrammarEditor = (() => {
       rowsEl.appendChild(buildNewRow());
       rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs);
       applyMarks();
+      applyRun();
       if (focus) {
         const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs, .ge-lhs-in" : focus.part === "action" ? ".ge-action-in" : ".ge-in"));
         if (target) target.focus();
@@ -161,6 +162,25 @@ const GrammarEditor = (() => {
         else add(row.querySelectorAll(".ge-rhs .ge-chip")[m.k], m.cls);
       }
     }
+    // What the tool is running: { rule, args: [text of the value of each symbol], result } for the production being
+    // reduced (rule as in mark), or null. The row is marked, and its action shows the values it read and produced.
+    let runInfo = null;
+    function applyRun() {
+      rowsEl.querySelectorAll(".is-running").forEach((e) => e.classList.remove("is-running"));
+      rowsEl.querySelectorAll(".ge-vals").forEach((e) => e.remove());
+      if (!runInfo) return;
+      const row = rowsEl.querySelector('.ge-row[data-live="' + runInfo.rule + '"]');
+      if (!row) return;
+      row.classList.add("is-running");
+      const box = row.querySelector(".ge-action");
+      if (box) {
+        const v = el("div", "ge-vals");
+        runInfo.args.forEach((a, k) => { v.appendChild(el("span", "ge-val-name", "$" + (k + 1))); v.appendChild(document.createTextNode(" = " + a + "   ")); });
+        v.appendChild(el("span", "ge-val-name", "$$")); v.appendChild(document.createTextNode(" = " + runInfo.result));
+        box.appendChild(v);
+      }
+    }
+    function run(info) { runInfo = info || null; if (view === "rules") applyRun(); }
     function mark(list) { marks = list || []; if (view === "rules") applyMarks(); }
 
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
@@ -352,8 +372,13 @@ const GrammarEditor = (() => {
       const field = el("div", "ge-action-field");
       const mirror = el("div", "ge-mirror");
       mirror.setAttribute("aria-hidden", "true");
+      // a $k past the end of the right side (or $0) refers to nothing
+      const badRef = (n) => n !== "0" && (+n < 1 || +n > row.rhs.length);
       const drawMirror = () => {
-        mirror.innerHTML = ta.value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\$\$|\$\d+/g, (m) => '<span class="ge-tok" data-ref="' + (m === "$$" ? "0" : m.slice(1)) + '">' + m + "</span>") + "\n";
+        mirror.innerHTML = ta.value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\$\$|\$\d+/g, (m) => {
+          const n = m === "$$" ? "0" : String(+m.slice(1));
+          return '<span class="ge-tok' + (badRef(n) ? " is-bad" : "") + '" data-ref="' + n + '">' + m + "</span>";
+        }) + "\n";
       };
       const rowEl = () => box.closest(".ge-row");
       const clearRefs = () => {
@@ -387,6 +412,7 @@ const GrammarEditor = (() => {
         const hit = [...mirror.querySelectorAll(".ge-tok")].find((t) => [...t.getClientRects()].some((q) => e.clientX >= q.left && e.clientX <= q.right && e.clientY >= q.top && e.clientY <= q.bottom));
         const n = hit ? hit.dataset.ref : null;
         if (n !== hoverRef) { hoverRef = n; applyRefs(); }
+        field.title = hit && hit.classList.contains("is-bad") ? hit.textContent + ": the production has " + (row.rhs.length ? row.rhs.length + " symbol" + (row.rhs.length > 1 ? "s" : "") : "no symbols") : "";
       });
       field.addEventListener("mouseleave", () => { hoverRef = null; applyRefs(); });
       field.append(mirror, ta);
@@ -565,7 +591,7 @@ const GrammarEditor = (() => {
 
     readText(nativeValue.get.call(textarea));
     render();
-    return { setView, render, mark, undo: doUndo, redo: doRedo, model: () => model };
+    return { setView, render, mark, run, undo: doUndo, redo: doRedo, model: () => model };
   }
 
   return { attach };

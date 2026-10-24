@@ -351,6 +351,7 @@ const CMP_MAX_FRAMES = 600;
 //   lex    { start, end, readTo, name? } of the last scanner call (null for the other events)
 //   la     the look-ahead token's name, or null
 //   tokens [{ name, lexeme, start, end, val, type?, entry? }] produced so far
+//   reduced { rule, args: [{ sym, attrs }], result } for a reduce frame: the production, the values its action read, what it made
 //   stack  [{ state, sym, attrs }]    the forest [tree nodes], quads, symtab, messages: copies at this moment
 function cmpRun(comp, input) {
   const { scanner, grammar, tables } = comp;
@@ -360,9 +361,9 @@ function cmpRun(comp, input) {
   let stack = [{ state: 0, sym: null, attrs: {}, node: null }];
   let cursor = 0, la = null, lex = null, nid = 0, temps = 0;
 
-  const snapshot = (type, msg) => {
+  const snapshot = (type, msg, extra) => {
     frames.push(JSON.parse(JSON.stringify({
-      type, msg, cursor, lex, la, tokens,
+      ...extra, type, msg, cursor, lex, la, tokens,
       stack: stack.map((s) => ({ state: s.state, sym: s.sym, attrs: s.attrs })),
       forest: stack.filter((s) => s.node).map((s) => s.node),
       quads, symtab, messages,
@@ -448,7 +449,7 @@ function cmpRun(comp, input) {
     const node = { id: nid++, sym: rule.lhs, rule: act.ruleIdx, attrs: { ...self }, children: popped.map((s) => s.node) };
     stack.push({ state: gt, sym: rule.lhs, attrs: self, node });
     lex = null;
-    snapshot("reduce", "Reduce by " + rule.lhs + " → " + (rule.rhs.join(" ") || EPSILON) + ": pop " + rule.rhs.length + ", go to state " + gt + "." + (rule.action ? " Action: " + rule.action : ""));
+    snapshot("reduce", "Reduce by " + rule.lhs + " → " + (rule.rhs.join(" ") || EPSILON) + ": pop " + rule.rhs.length + ", go to state " + gt + "." + (rule.action ? " Action: " + rule.action : ""), { reduced: { rule: act.ruleIdx, args: popped.map((s) => ({ sym: s.sym, attrs: s.attrs })), result: self } });
   }
   return { frames, accepted };
 }

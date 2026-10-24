@@ -97,6 +97,17 @@ const CompilerTool = (() => {
     renderStack(f);
     renderTree(f);
     renderOut(f);
+    renderGrammar(f);
+  }
+
+  // The production being reduced is marked in the grammar editor, with the values its action read and made (production
+  // 0, the added start production, is not in the editor).
+  function renderGrammar(f) {
+    const r = f && f.reduced;
+    if (!editor) return;
+    if (!r || r.rule < 1) { editor.run(null); return; }
+    const show = (a, sym) => attrText(a) || (a && a.lexeme !== undefined ? JSON.stringify(a.lexeme) : "∅");
+    editor.run({ rule: r.rule - 1, args: r.args.map((x) => show(x.attrs)), result: show(r.result) });
   }
 
   function renderLog(f) {
@@ -263,9 +274,10 @@ const CompilerTool = (() => {
     $("sim-input").value = s;
   }
 
+  let editor = null;
   function init(config) {
     cfg = config;
-    GrammarEditor.attach($("grammar-input"), { actions: true, actionHint: "$$ = $1 + $3" });
+    editor = GrammarEditor.attach($("grammar-input"), { actions: true, actionHint: "$$ = $1 + $3" });
     initResize("rh-1", "p-def", +1);
     initResize("rh-2", "p-run", +1);
     initResize("rh-3", "p-tree", +1);

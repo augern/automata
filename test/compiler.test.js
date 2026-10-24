@@ -108,6 +108,11 @@ test("a run: the scanner is called when the parser needs a token, and the action
   const types = run.frames.map((f) => f.type);
   const i = types.indexOf("shift");
   assert.deepEqual(arr(types.slice(i, i + 3)), ["shift", "reduce", "reduce"]);
+  // a reduce frame names the production and the values its action read and made
+  const red = run.frames.filter((f) => f.type === "reduce" && f.reduced.args.length === 3 && f.reduced.args[1].sym === "*")[0];
+  assert.equal(red.reduced.result.val, 12);
+  assert.deepEqual(arr(red.reduced.args.map((x) => x.attrs.val)), [3, "*", 4]);
+  assert.equal(comp.grammar.rules[red.reduced.rule].rhs.length, 3);
 });
 
 test("a run: lexical and syntax errors stop the run with a message", () => {
