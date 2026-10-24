@@ -6,15 +6,15 @@
 
 /* One grid for all rows (each row is a subgrid, so its background and border span the whole row): number, left side, arrow, symbols, menu. The columns, and with
    them the arrows, line up between rows. */
-.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: 22px fit-content(38%) 12px minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
-.ge.no-nums .ge-rows { grid-template-columns: 0 fit-content(38%) 12px minmax(0, 1fr) 18px; }
+.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: 22px fit-content(38%) 18px minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
+.ge.no-nums .ge-rows { grid-template-columns: 0 fit-content(38%) 18px minmax(0, 1fr) 18px; }
 .ge.no-nums .ge-num { visibility: hidden; padding: 0; overflow: hidden; }
 .ge.no-nums .ge-row > :first-child { padding-left: var(--sp-2); }
 .ge-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; }
 .ge-row > * { padding: 2px 2px; }
 .ge-row > :first-child { padding-left: var(--sp-3); }
 .ge-row > :last-child { padding-right: var(--sp-4); }
-.ge-row > .ge-lhs { margin-left: 4px; margin-right: -2px; }
+.ge-row > .ge-lhs { margin-left: 4px; }
 .ge-row.is-odd { background: color-mix(in srgb, var(--text) 3%, transparent); }
 .ge-row.is-last { border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent); }
 .ge-row:hover { background: var(--bg-hover); }
@@ -69,3 +69,4 @@
 .ge-new .ge-lhs::placeholder { color: var(--accent); opacity: 0.45; }
 .ge-new .ge-arrow { visibility: hidden; }
 .ge-new .ge-in::placeholder { opacity: 0.5; }
+.ge-ruler { position: absolute; visibility: hidden; white-space: pre; pointer-events: none; }

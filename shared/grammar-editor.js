@@ -119,10 +119,22 @@ const GrammarEditor = (() => {
         rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts, row.kind === "rule" && !ghosts[i + 1]));
       });
       rowsEl.appendChild(buildNewRow());
+      rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs);
       if (focus) {
         const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs" : ".ge-in"));
         if (target) target.focus();
       }
+    }
+
+    // A left-side field is as wide as its text (an input's size attribute counts average characters, which leaves room
+    // at the end): measured in a span with the field's font.
+    const ruler = el("span", "ge-ruler");
+    host.appendChild(ruler);
+    function fitLhs(inp) {
+      const cs = getComputedStyle(inp);
+      ruler.style.font = cs.font;
+      ruler.textContent = inp.value || inp.placeholder;
+      inp.style.width = Math.ceil(ruler.getBoundingClientRect().width) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2 + "px";
     }
 
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
@@ -137,6 +149,7 @@ const GrammarEditor = (() => {
       lhs.size = Math.max(4, Math.min(16, lhs.value.length + 1));
       lhs.spellcheck = false;
       lhs.title = ghost ? "Written with |: the parser sees " + gmLhsKey(row) + " → … as a production of its own. Edit to give this production another left side." : "Left side";
+      lhs.addEventListener("input", () => fitLhs(lhs));
       lhs.addEventListener("change", () => {
         const v = lhs.value.trim();
         if (!v) { lhs.value = gmLhsKey(row); return; }
@@ -276,7 +289,7 @@ const GrammarEditor = (() => {
       lhs.size = Math.max(4, Math.min(16, dflt.length + 1));
       lhs.spellcheck = false;
       lhs.title = "Left side of a new production (empty: " + dflt + ")";
-      lhs.addEventListener("input", () => { lhs.size = Math.max(4, Math.min(16, lhs.value.length + 1)); });
+      lhs.addEventListener("input", () => fitLhs(lhs));
       const arrow = el("span", "ge-arrow");
       arrow.append(el("span", "ge-ar", model.arrow === "->" ? "→" : model.arrow));
       const rhs = el("span", "ge-rhs");
