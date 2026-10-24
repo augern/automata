@@ -20,10 +20,13 @@ const GrammarEditor = (() => {
   };
   const ANGLE = /^<[^<>\s]+>$/;
 
-  function attach(textarea) {
+  function attach(textarea, opts) {
+    opts = opts || {};
     let model = { arrow: "->", rows: [] };
-    let view = "rules", showNums = false;
-    try { showNums = localStorage.getItem("parser-tools-grammar-nums") === "1"; } catch (e) { /* storage blocked */ }
+    // production numbers: shown by default where the tool says so (opts.numbers); the panel menu changes it, per tool
+    const numsKey = "parser-tools-grammar-nums:" + location.pathname;
+    let view = "rules", showNums = !!opts.numbers;
+    try { const v = localStorage.getItem(numsKey); if (v !== null) showNums = v === "1"; } catch (e) { /* storage blocked */ }
     try { if (localStorage.getItem("parser-tools-grammar-view") === "text") view = "text"; } catch (e) { /* storage blocked */ }
     let undo = [], redo = [];
     let parseError = "";
@@ -91,7 +94,7 @@ const GrammarEditor = (() => {
       { separator: true },
       { label: "Production numbers", checked: showNums, title: "The numbers used in the tables", onSelect: () => {
         showNums = !showNums;
-        try { localStorage.setItem("parser-tools-grammar-nums", showNums ? "1" : "0"); } catch (e) { /* storage blocked */ }
+        try { localStorage.setItem(numsKey, showNums ? "1" : "0"); } catch (e) { /* storage blocked */ }
         render();
       } },
     ];
@@ -142,6 +145,13 @@ const GrammarEditor = (() => {
     function buildRow(row, i, num, ghost, nts, last) {
       const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (last ? " is-last" : "") + (i % 2 ? " is-odd" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
+      if (num !== null) {
+        d.dataset.prod = num;
+        // linked with the tool's other views: the production under the pointer is announced, and one announced by a
+        // view (document event "production-hover", detail: number or null) is marked
+        d.addEventListener("mouseenter", () => document.dispatchEvent(new CustomEvent("grammar-hover", { detail: num })));
+        d.addEventListener("mouseleave", () => document.dispatchEvent(new CustomEvent("grammar-hover", { detail: null })));
+      }
       const n = el("span", "ge-num", num === null ? "" : String(num));
       n.title = num === null ? "" : "Production " + num;
       const lhs = el("input", "ge-lhs");
@@ -323,6 +333,13 @@ const GrammarEditor = (() => {
     host.addEventListener("keydown", (e) => {
       if (e.target === textEl) return;
       if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
+    });
+
+    document.addEventListener("production-hover", (e) => {
+      rowsEl.querySelectorAll(".is-linked").forEach((r) => r.classList.remove("is-linked"));
+      if (e.detail === null || e.detail === undefined) return;
+      const r = rowsEl.querySelector('.ge-row[data-prod="' + e.detail + '"]');
+      if (r) r.classList.add("is-linked");
     });
 
     readText(nativeValue.get.call(textarea));

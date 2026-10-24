@@ -9,7 +9,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=f20da596" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
-    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=d281c01b" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=62693c98" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -301,6 +301,13 @@
         fill: var(--red) !important;
       }
 
+      /* an item whose production is under the pointer in the grammar editor */
+      text.item-link,
+      text.item-link tspan {
+        fill: var(--accent) !important;
+        font-weight: bold;
+      }
+
       /* ── Conflict item highlights (click a conflict cell to reveal) ── */
       text.item-hi-a,
       text.item-hi-a tspan {
@@ -533,12 +540,12 @@
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
-    <script src="../../shared/grammar-editor.js?v=587a871b"></script>
+    <script src="../../shared/grammar-editor.js?v=15dc95c5"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=4d911df4"></script>
+    <script src="guide.js?v=b21a2038"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       // Global error catcher — shows errors visibly on mobile
@@ -599,16 +606,6 @@
         fft.appendChild(ffb);
         ffd.appendChild(fft);
         wrap.appendChild(ffd);
-        // Productions
-        const rd = document.createElement("div");
-        rd.innerHTML = '<div class="tbl-section-label">Productions</div><div id="rules-list"></div>';
-        wrap.appendChild(rd);
-        const rl = rd.querySelector("#rules-list");
-        rules.forEach((r, i) => {
-          const l = document.createElement("div");
-          l.innerHTML = '<span class="ri">' + i + ':</span><span class="rule">' + esc(r.lhs) + " \u2192 " + esc(r.rhs.join(" ") || EPSILON) + "</span>";
-          rl.appendChild(l);
-        });
         // Action
         const ad = document.createElement("div");
         ad.innerHTML = '<div class="tbl-section-label">ACTION</div>';
@@ -1291,6 +1288,16 @@
         w.document.write('<html><head><title>Parse Trace</title><meta charset="UTF-8">' + "<style>body{font-family:monospace;font-size:13px;padding:2em;white-space:pre;line-height:1.8;color:#1a2030;background:#f8f9fb}</style></head>" + "<body>" + esc(traceInfo() + formatTrace(simTrace)) + "</body></html>");
         w.document.close();
       }
+
+      // ── Items and the grammar editor: the production of an item under the pointer is marked in the editor, and the
+      // items of a production under the pointer in the editor are marked in the automaton ──
+      document.addEventListener("grammar-hover", (e) => {
+        d3.selectAll("text.item-link").classed("item-link", false);
+        if (e.detail) d3.selectAll("#cy text[data-item-key]").filter(function () { return this.getAttribute("data-item-key").split(":")[0] === String(e.detail); }).classed("item-link", true);
+      });
+      const itemProd = (ev) => { const t = ev.target.closest && ev.target.closest("text[data-item-key]"); return t ? +t.getAttribute("data-item-key").split(":")[0] : null; };
+      document.getElementById("cy").addEventListener("mouseover", (ev) => { const n = itemProd(ev); document.dispatchEvent(new CustomEvent("production-hover", { detail: n || null })); });
+      document.getElementById("cy").addEventListener("mouseout", (ev) => { if (itemProd(ev) !== null) document.dispatchEvent(new CustomEvent("production-hover", { detail: null })); });
 
       // ── Conflict item highlighting ────────────────────────────────────────
       function clearConflictHi() {
@@ -2322,7 +2329,7 @@ ${kw("loop")}
       registerStepper("p-tree", { step: simStep, back: simBack, reset: simReset, end: simRunAll });
 
       window.addEventListener("load", () => {
-        GrammarEditor.attach(document.getElementById("grammar-input"));
+        GrammarEditor.attach(document.getElementById("grammar-input"), { numbers: true });
         loadPanelState();
         initAlgoModal();
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);
