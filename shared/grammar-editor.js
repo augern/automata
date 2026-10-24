@@ -117,6 +117,8 @@ const GrammarEditor = (() => {
       if (view === "text") { if (document.activeElement !== textEl) textEl.value = nativeValue.get.call(textarea); return; }
       rowsEl.innerHTML = "";
       const nts = gmNonterminals(model), nums = gmNumbers(model), ghosts = gmGhosts(model);
+      // unrestricted grammars: the capitalised symbols of a longer left side are nonterminals too
+      if (opts.sequences) for (const r of model.rows) if (gmLive(r) && r.lhs.length > 1) r.lhs.filter((x) => /^[A-Z]/.test(x)).forEach((x) => nts.add(x));
       model.rows.forEach((row, i) => {
         if (row.kind === "comment") { rowsEl.appendChild(el("div", "ge-comment", "// " + row.text)); return; }
         rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts, row.kind === "rule" && !ghosts[i + 1]));
@@ -124,7 +126,7 @@ const GrammarEditor = (() => {
       rowsEl.appendChild(buildNewRow());
       rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs);
       if (focus) {
-        const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs" : ".ge-in"));
+        const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs, .ge-lhs-in" : ".ge-in"));
         if (target) target.focus();
       }
     }
@@ -152,18 +154,7 @@ const GrammarEditor = (() => {
       if (shown !== null) d.dataset.prod = shown;
       const n = el("span", "ge-num", shown === null ? "" : String(shown));
       n.title = shown === null ? "" : "Production " + shown;
-      const lhs = el("input", "ge-lhs");
-      lhs.value = gmLhsKey(row);
-      lhs.size = Math.max(4, Math.min(16, lhs.value.length + 1));
-      lhs.spellcheck = false;
-      lhs.title = ghost ? "Written with |: the parser sees " + gmLhsKey(row) + " → … as a production of its own. Edit to give this production another left side." : "Left side";
-      lhs.addEventListener("input", () => fitLhs(lhs));
-      lhs.addEventListener("change", () => {
-        const v = lhs.value.trim();
-        if (!v) { lhs.value = gmLhsKey(row); return; }
-        if (v !== gmLhsKey(row)) changed(gmUpdate(model, i, { lhs: v.split(/\s+/) }), { row: i, part: "lhs" });
-      });
-      lhs.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lhs.dispatchEvent(new Event("change")); focusEnd(i); } });
+      const lhs = opts.sequences ? buildLhsSeq(row, i, ghost, nts) : buildLhsInput(row, i, ghost);
       // The arrow cell: the arrow, and in a row that repeats its left side the | it was written with. They share one
       // column, so the arrows of all rows are aligned and the | sits under them.
       const arrow = el("span", "ge-arrow");
@@ -193,6 +184,76 @@ const GrammarEditor = (() => {
       ], { align: "right" });
       d.append(n, lhs, arrow, rhs, menu);
       return d;
+    }
+
+    // the left side as one text field
+    function buildLhsInput(row, i, ghost) {
+      const lhs = el("input", "ge-lhs");
+      lhs.value = gmLhsKey(row);
+      lhs.size = Math.max(4, Math.min(16, lhs.value.length + 1));
+      lhs.spellcheck = false;
+      lhs.title = ghost ? "Written with |: the parser sees " + gmLhsKey(row) + " → … as a production of its own. Edit to give this production another left side." : "Left side";
+      lhs.addEventListener("input", () => fitLhs(lhs));
+      lhs.addEventListener("change", () => {
+        const v = lhs.value.trim();
+        if (!v) { lhs.value = gmLhsKey(row); return; }
+        if (v !== gmLhsKey(row)) changed(gmUpdate(model, i, { lhs: v.split(/\s+/) }), { row: i, part: "lhs" });
+      });
+      lhs.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lhs.dispatchEvent(new Event("change")); focusEnd(i); } });
+      return lhs;
+    }
+
+    // The left side as a sequence of symbols, in the format of the right side (unrestricted grammars): chips, and a field
+    // after them for more.
+    function buildLhsSeq(row, i, ghost, nts) {
+      const box = el("span", "ge-lhsq");
+      box.title = ghost ? "Written with |: a production of its own to the parser. Edit to give it another left side." : "Left side";
+      const setLhs = (syms, part) => changed(gmUpdate(model, i, { lhs: syms }), { row: i, part });
+      row.lhs.forEach((sym, k) => {
+        const c = el("span", "ge-chip " + chipKind(sym, nts), sym);
+        c.addEventListener("click", () => {
+          const inp = el("input", "ge-chip-edit");
+          inp.value = sym;
+          inp.size = Math.max(2, sym.length + 1);
+          inp.spellcheck = false;
+          c.replaceWith(inp);
+          inp.focus();
+          inp.select();
+          let done = false;
+          const finish = (cancel) => {
+            if (done) return;
+            done = true;
+            const parts = inp.value.trim().split(/\s+/).filter(Boolean);
+            const next = row.lhs.slice(0, k).concat(parts, row.lhs.slice(k + 1));
+            if (cancel || !next.length || next.join(" ") === row.lhs.join(" ")) { render({ row: i, part: "end" }); return; }
+            setLhs(next, "end");
+          };
+          inp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); finish(false); }
+            else if (e.key === "Escape") { e.preventDefault(); finish(true); }
+          });
+          inp.addEventListener("blur", () => finish(false));
+        });
+        box.appendChild(c);
+      });
+      const inp = el("input", "ge-lhs-in");
+      inp.spellcheck = false;
+      inp.size = 2;
+      inp.title = "More symbols on the left side";
+      inp.addEventListener("input", () => { inp.size = Math.max(2, inp.value.length + 1); });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          const v = inp.value.trim();
+          if (v) { inp.value = ""; setLhs(row.lhs.concat(v.split(/\s+/)), "lhs"); } else if (e.key === "Enter") focusEnd(i);
+        } else if (e.key === "Backspace" && inp.value === "" && row.lhs.length > 1) {
+          e.preventDefault();
+          setLhs(row.lhs.slice(0, -1), "lhs");
+        }
+      });
+      inp.addEventListener("blur", () => { const v = inp.value.trim(); inp.value = ""; if (v) setLhs(row.lhs.concat(v.split(/\s+/)), "end"); });
+      box.appendChild(inp);
+      return box;
     }
 
     function buildChip(row, i, k, s, nts) {

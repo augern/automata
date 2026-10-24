@@ -15,11 +15,12 @@
 .ge-row > :first-child { padding-left: var(--sp-3); }
 .ge-row > :last-child { padding-right: var(--sp-4); }
 .ge-row > .ge-lhs { margin-left: 4px; }
+.ge-row > .ge-lhsq { margin-left: 4px; }
 .ge-row.is-odd { background: color-mix(in srgb, var(--text) 3%, transparent); }
 .ge-row.is-last { border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent); }
 .ge-row:hover { background: var(--bg-hover); }
 .ge-row.is-hot, .ge-row.is-hot > .ge-num { background: var(--hot-bg); }
-.ge-row.is-off .ge-rhs, .ge-row.is-off .ge-lhs { opacity: 0.45; text-decoration: line-through; }
+.ge-row.is-off .ge-rhs, .ge-row.is-off .ge-lhs, .ge-row.is-off .ge-lhsq { opacity: 0.45; text-decoration: line-through; }
 .ge-row > .ge-num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-2xs); color: color-mix(in srgb, var(--text-lo) 50%, transparent); background: var(--bg-cell); align-self: stretch; }
 .ge-lhs { min-width: 0; max-width: 100%; box-sizing: border-box; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
 .ge-lhs:hover { border-color: var(--border); }
@@ -30,10 +31,10 @@
    side and arrow, faded. */
 .ge-arrow { position: relative; text-align: center; color: var(--text-dim); }
 .ge-pipe { display: none; color: var(--text-lo); }
-.ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-ar { opacity: 0; }
+.ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-lhsq, .ge-row.is-ghost .ge-ar { opacity: 0; }
 .ge-row.is-ghost .ge-ar { display: none; }
 .ge-row.is-ghost .ge-pipe { display: inline; }
-.ge-row.is-ghost:hover .ge-lhs, .ge-row.is-ghost:focus-within .ge-lhs { opacity: 0.4; }
+.ge-row.is-ghost:hover .ge-lhs, .ge-row.is-ghost:focus-within .ge-lhs, .ge-row.is-ghost:hover .ge-lhsq, .ge-row.is-ghost:focus-within .ge-lhsq { opacity: 0.4; }
 .ge-row.is-ghost:hover .ge-ar, .ge-row.is-ghost:focus-within .ge-ar { display: inline; opacity: 0.4; }
 .ge-row.is-ghost:hover .ge-pipe, .ge-row.is-ghost:focus-within .ge-pipe { display: none; }
 .ge-row.is-ghost .ge-lhs:focus { opacity: 1; }
@@ -46,7 +47,7 @@
 .ge-row:hover .ge-in, .ge-row:focus-within .ge-in { border-bottom-color: var(--border); }
 .ge-row .ge-in:focus { border-bottom-color: var(--accent); }
 @media (hover: none) {
-  .ge-row.is-ghost .ge-lhs { opacity: 0.28; }
+  .ge-row.is-ghost .ge-lhs, .ge-row.is-ghost .ge-lhsq { opacity: 0.28; }
   .ge-row.is-ghost .ge-ar { display: inline; opacity: 0.28; }
   .ge-row.is-ghost .ge-pipe { display: none; }
   .ge-menu { opacity: 1; }
@@ -71,3 +72,7 @@
 .ge-new .ge-arrow { visibility: hidden; }
 .ge-new .ge-in::placeholder { opacity: 0.5; }
 .ge-ruler { position: absolute; visibility: hidden; white-space: pre; pointer-events: none; }
+/* a left side of symbols: chips like the right side's */
+.ge-lhsq { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 4px; min-width: 0; }
+.ge-lhs-in { background: transparent; color: var(--text); border: none; border-bottom: 1px solid transparent; outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0 2px; min-width: 2ch; }
+.ge-row:hover .ge-lhs-in, .ge-row:focus-within .ge-lhs-in { border-bottom-color: var(--border); }
