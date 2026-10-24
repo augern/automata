@@ -4,7 +4,7 @@ window.TOOL_GUIDE = {
   title: "Scanner",
   intro: "Shows how a scanner is built from token rules: one NFA for all the rules, the characters cut into classes, the minimal DFA over those classes, and the scanner running on an input, one character at a time. A scanner follows the maximal munch (longest match) rule: it returns the longest lexeme any rule matches; of two rules that match the same lexeme, the earlier wins.",
   use: [
-    "Each row of the token rules is `name  pattern`; the order is the priority. A rule that discards what it matches (white space, a comment) is marked `→ skip`, from its menu (⋯). The entry row at the end makes a new rule. The panel menu switches to the text view of the same rules.",
+    "Each row of the token rules is `name  pattern`; the order is the priority. A rule that discards what it matches (white space, a comment) is marked `→ skip`, from its menu (⋯); only that flag matters, the rule's name is free (the examples call the white-space rule `ws`). The entry row at the end makes a new rule. The panel menu switches to the text view of the same rules.",
     "A pattern uses `|`, `*`, `+`, `?`, `( )`, classes such as `[a-z0-9_]` and `[^\"]`, `.` for any character but a newline, `\\n`, `\\t`, and `\\c` for a special character c.",
     "The NFA joins the rules under one start state; each accepting state is tagged with its rule. A rule that can never win, and states where two rules match the same lexeme, are noted under the rules.",
     "Characters that behave alike in every state are one class: the NFA and the DFA have one edge for [a-z], not 26. Characters that no rule mentions are the class “other”. Pointing at a class marks its edges; pointing at a rule marks the states that accept it.",

@@ -7,7 +7,7 @@
           "label": "Expressions",
           "purpose": "The parser asks for one token at a time; the scanner consumes the next lexeme and skips white space. The look-ahead shows when it is called.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "num [0-9]+(\\.[0-9]+)?",
             "id [a-z][a-z0-9]*",
             "'+' \\+",
@@ -30,7 +30,7 @@
           "label": "Keywords and identifiers",
           "purpose": "print is a keyword, printer an identifier: the longest match wins (maximal munch), and on a tie the earlier rule (the keyword) does.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "print print",
             "id [a-z]+",
             "num [0-9]+",
@@ -50,7 +50,7 @@
           "label": "< against <=",
           "purpose": "One character of look-ahead decides: after < the scanner reads the next character, and gives it back when it is not =.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "id [a-z]+",
             "num [0-9]+",
             "'<' <",
@@ -68,7 +68,7 @@
           "label": "Integer and real literals",
           "purpose": "1.5 is one token, but in 1.+2 the scanner reads the point, finds no digit after it, gives it back and returns the integer 1.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "float [0-9]+\\.[0-9]+",
             "int [0-9]+",
             "'+' \\+"
@@ -89,7 +89,7 @@
           "label": "Evaluate expressions",
           "purpose": "Each rule computes the value $$ of its left side from $1, $2, … of its right side when the parser reduces: a node's value is known as it is built.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "num [0-9]+(\\.[0-9]+)?",
             "'+' \\+",
             "'-' -",
@@ -110,7 +110,7 @@
           "label": "Three-address code (quadruples)",
           "purpose": "Every operator gets a fresh temporary; emit appends a quadruple (operator, two arguments, result). The order of the quadruples is the order of the reductions.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "num [0-9]+(\\.[0-9]+)?",
             "id [a-z][a-z0-9]*",
             "'+' \\+",
@@ -131,7 +131,7 @@
           "label": "Translation to postfix",
           "purpose": "A translation into a string: the value of a node is the postfix text of its subtree.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "num [0-9]+(\\.[0-9]+)?",
             "id [a-z][a-z0-9]*",
             "'+' \\+",
@@ -157,7 +157,7 @@
           "label": "Types from literals and operators",
           "purpose": "Types are computed bottom-up: int and float literals; an operator widens to float when an operand is float, with a conversion quadruple.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "float [0-9]+\\.[0-9]+",
             "int [0-9]+",
             "id [a-z][a-z0-9]*",
@@ -181,7 +181,7 @@
           "label": "Declarations and assignments",
           "purpose": "Declarations install types. An assignment looks the variable up, converts int to float, and reports undeclared names and float-to-int assignments.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "integer integer",
             "real real",
             "float [0-9]+\\.[0-9]+",

@@ -7,7 +7,7 @@
           "label": "Names, numbers and white space",
           "purpose": "Three rules and two operators in one NFA: the scanner decides which rule a lexeme belongs to by where the DFA ends up.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "num [0-9]+",
             "id [a-z][a-z0-9]*",
             "'+' \\+",
@@ -23,7 +23,7 @@
           "label": "Keywords before names",
           "purpose": "print is both a keyword and a name. It is listed first, so it wins where the two match the same lexeme; longer names still win.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "print print",
             "id [a-z]+"
           ],
@@ -37,7 +37,7 @@
           "label": "A rule that never matches",
           "purpose": "With id first, print can never win: id matches every lexeme print does. The editor warns about the rule.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "id [a-z]+",
             "print print"
           ],
@@ -55,7 +55,7 @@
           "label": "< against <=",
           "purpose": "After < the scanner reads one more character: = makes it <=, anything else is given back and < is returned.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "id [a-z]+",
             "'<' <",
             "'<=' <="
@@ -70,7 +70,7 @@
           "label": "Integer and real literals",
           "purpose": "After 1. the scanner needs a digit; without one it backs up to the integer 1 and starts again at the point.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "float [0-9]+\\.[0-9]+",
             "int [0-9]+"
           ],
@@ -84,7 +84,7 @@
           "label": "Optional fraction",
           "purpose": "One rule with an optional part: the state after 12 accepts, so 12. is the number 12 followed by a stray point.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "num [0-9]+(\\.[0-9]+)?"
           ],
           "strings": [
@@ -102,7 +102,7 @@
           "label": "Strings and comments",
           "purpose": "[^\"] and . match every character but a few, so characters no rule mentions fall in the class other and a string can hold anything.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "str \"[^\"]*\"",
             "comment //.* -> skip",
             "div /",
@@ -118,7 +118,7 @@
           "label": "Names with underscores",
           "purpose": "Letters, digits and the underscore overlap in two classes; the 63 characters become a few classes, however large the alphabet is.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "id [A-Za-z_][A-Za-z0-9_]*",
             "num [0-9]+"
           ],
@@ -136,7 +136,7 @@
           "label": "A small C-like language",
           "purpose": "Keywords, names, numbers, strings with escapes, operators and two kinds of comment: 35 rules, and the DFA that scans them all in one pass.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "comment //.* -> skip",
             "blockcomment /\\*([^*]|\\*+[^*/])*\\*+/ -> skip",
             "if if",
@@ -182,7 +182,7 @@
           "label": "JSON",
           "purpose": "The tokens of JSON: punctuation, three keywords, strings with escapes and numbers with an optional sign, fraction and exponent.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "str \"([^\"\\\\]|\\\\.)*\"",
             "num -?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?",
             "true true",
@@ -205,7 +205,7 @@
           "label": "Pascal, case-insensitive",
           "purpose": "Keywords ignore case, so each is a row of two-letter classes; comments come in two forms and strings double their quote.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "comment \\{[^}]*\\} -> skip",
             "comment2 \\(\\*([^*]|\\*+[^*)])*\\*+\\) -> skip",
             "program [Pp][Rr][Oo][Gg][Rr][Aa][Mm]",
@@ -255,7 +255,7 @@
           "label": "Log lines",
           "purpose": "Dates, times, levels, addresses and paths: the longest match tells 10.0.0.7 and 2024-03-05 from the number 10 or 2024.",
           "tokens": [
-            "skip [ \\t]+ -> skip",
+            "ws [ \\t]+ -> skip",
             "date [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]",
             "time [0-9][0-9]:[0-9][0-9]:[0-9][0-9]",
             "level INFO|WARN|ERROR|DEBUG",
@@ -275,7 +275,7 @@
           "label": "Number literals of C",
           "purpose": "Decimal, octal, hex, binary and floating-point literals share prefixes: 0, 0x and 0b all begin with the digit 0.",
           "tokens": [
-            "skip [ \\t\\n]+ -> skip",
+            "ws [ \\t\\n]+ -> skip",
             "dec 0|[1-9][0-9]*",
             "oct 0[0-7]+",
             "hex 0[xX][0-9a-fA-F]+",
