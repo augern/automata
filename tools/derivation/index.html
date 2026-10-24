@@ -6,6 +6,7 @@
     <title>Grammar Derivations</title>
     <link rel="stylesheet" href="../../shared/shared.css?v=9bbd6824" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=d35ccee8" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -294,11 +295,13 @@
     <script src="../../shared/shared.js?v=345876dc"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
+    <script src="../../shared/grammar-editor.js?v=4ab29a77"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=fcd7ea28"></script>
+    <script src="guide.js?v=25e5c828"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
@@ -347,13 +350,14 @@
       }
 
       // ── Shareable link ──────────────────────────────────────────
-      const saveShare = createShareSaver(() => ({ g: document.getElementById("grammar-input").value, sd: _seed }));
+      const saveShare = createShareSaver(() => ({ g: document.getElementById("grammar-input").value, x: exampleShareKey(), sd: _seed }));
       let sharedStateApplied = false;
       function applyShareState() {
         const st = shareValidateTextState(readShareState(), "g");
         if (!st) return;
         sharedStateApplied = true;
         document.getElementById("grammar-input").value = st.g;
+        exampleRestoreLater(st.x);
         if (st.sd !== undefined) _seed = st.sd;
       }
 
@@ -362,6 +366,8 @@
         const ex = EXAMPLES[k];
         if (!ex) return;
         document.getElementById("grammar-input").value = ex.text;
+        document.getElementById("examples-select").value = k;
+        exampleWatch();
         setError("");
         build();
       }
@@ -380,9 +386,9 @@
         let h = '';
         for (let i = 0; i < rules.length; i++) {
           const applicable = isApplicableRule(i);
-          h += `<div class="prod-rule${applicable ? " applicable" : ""}"` +
+          h += `<div class="prod-rule${applicable ? " applicable" : ""}" data-prod="${i + 1}"` +
                (applicable ? ` onclick="applyRule(${i})"` : "") + `>`;
-          h += `<span class="prod-rule-idx">${i}</span>`;
+          h += `<span class="prod-rule-idx">${i + 1}</span>`;
           h += `<span class="prod-arrow">:&nbsp;</span>`;
           h += fmtRuleHTML(rules[i], nts, "prod-sym-nt", "prod-sym-t", "prod-sym-eps");
           h += `</div>`;
@@ -642,8 +648,8 @@
           const rule   = _grammar.rules[step.ruleIdx];
           const lhsStr = rule.lhs.join(" ");
           const rhsStr = rule.rhs.length > 0 ? rule.rhs.join(" ") : "ε";
-          const tip    = `rule ${step.ruleIdx}: ${lhsStr} → ${rhsStr}`;
-          gutterHTML   = `<span class="deriv-arrow" data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx}</span>⇒</span>`;
+          const tip    = `production ${step.ruleIdx + 1}: ${lhsStr} → ${rhsStr}`;
+          gutterHTML   = `<span class="deriv-arrow" data-prod="${step.ruleIdx + 1}" data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx + 1}</span>⇒</span>`;
         }
 
         const formHTML = isCurrent
@@ -739,6 +745,7 @@
       // ←/→ (or ,/.) step, Home restarts, End runs; the Derivation panel has key focus.
       registerStepper("p-deriv", { step: derivRandomStep, back: derivUndo, reset: derivNew, end: derivRunRandom }, { primary: true });
 
+      GrammarEditor.attach(document.getElementById("grammar-input"));
       document.getElementById("grammar-input").addEventListener("input", () => build());
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
