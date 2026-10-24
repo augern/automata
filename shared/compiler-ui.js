@@ -243,12 +243,13 @@ const CompilerTool = (() => {
     $("examples-select").value = k;
     $("token-input").value = (Array.isArray(ex.tokens) ? ex.tokens.join("\n") : ex.tokens || "");
     $("grammar-input").value = ex.text;
+    exampleWatch();
     strings = ex.strings || [];
     $("sim-input").value = strings[0] || "";
     build();
   }
 
-  const saveShare = createShareSaver(() => ({ t: $("token-input").value, g: $("grammar-input").value, s: $("sim-input").value }));
+  const saveShare = createShareSaver(() => ({ t: $("token-input").value, g: $("grammar-input").value, x: exampleShareKey(), s: $("sim-input").value }));
   let sharedApplied = false;
   function applyShareState() {
     const st = readShareState();
@@ -258,11 +259,13 @@ const CompilerTool = (() => {
     sharedApplied = true;
     $("token-input").value = t;
     $("grammar-input").value = g;
+    exampleRestoreLater(typeof st.x === "string" && /^ex\d{1,3}$/.test(st.x) ? st.x : undefined);
     $("sim-input").value = s;
   }
 
   function init(config) {
     cfg = config;
+    GrammarEditor.attach($("grammar-input"), { actions: true, actionHint: "$$ = $1 + $3" });
     initResize("rh-1", "p-def", +1);
     initResize("rh-2", "p-run", +1);
     initResize("rh-3", "p-tree", +1);

@@ -44,9 +44,9 @@ const GrammarEditor = (() => {
     host.append(bar, rowsEl, textEl);
 
     // ── State and text ──
-    const text = () => gmToText(model);
+    const text = () => gmToText(model, opts);
     function readText(t) {
-      try { model = gmParse(t); parseError = ""; } catch (e) { parseError = e.message; }
+      try { model = gmParse(t, opts); parseError = ""; } catch (e) { parseError = e.message; }
     }
     function changed(newModel, focus) {
       undo.push(JSON.stringify(model));
@@ -127,7 +127,7 @@ const GrammarEditor = (() => {
       rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs);
       applyMarks();
       if (focus) {
-        const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs, .ge-lhs-in" : ".ge-in"));
+        const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs, .ge-lhs-in" : focus.part === "action" ? ".ge-action-in" : ".ge-in"));
         if (target) target.focus();
       }
     }
@@ -196,8 +196,12 @@ const GrammarEditor = (() => {
       const menu = el("button", "ge-menu", "⋯");
       menu.type = "button";
       menu.title = "Production menu";
+      const hasAction = opts.actions && row.action !== undefined && row.action !== null;
       UI.menu(menu, () => [
         { label: row.enabled ? "Disable" : "Enable", onSelect: () => changed(gmUpdate(model, i, { enabled: !row.enabled })) },
+        ...(opts.actions ? [hasAction
+          ? { label: "Remove action", onSelect: () => changed(gmUpdate(model, i, { action: null })) }
+          : { label: "Add action", title: "Code run when the parser reduces by this production", onSelect: () => changed(gmUpdate(model, i, { action: "" }), { row: i, part: "action" }) }] : []),
         { label: "Duplicate", onSelect: () => changed(gmInsert(model, i + 1, JSON.parse(JSON.stringify(row))), { row: i + 1, part: "end" }) },
         { label: "Move up", disabled: i === 0, onSelect: () => changed(gmMove(model, i, -1)) },
         { label: "Move down", disabled: i === model.rows.length - 1, onSelect: () => changed(gmMove(model, i, 1)) },
@@ -205,6 +209,7 @@ const GrammarEditor = (() => {
         { label: "Delete", onSelect: () => changed(gmRemove(model, i)) },
       ], { align: "right" });
       d.append(n, lhs, arrow, rhs, menu);
+      if (hasAction) d.appendChild(buildAction(row, i));
       return d;
     }
 
@@ -275,6 +280,38 @@ const GrammarEditor = (() => {
       });
       inp.addEventListener("blur", () => { const v = inp.value.trim(); inp.value = ""; if (v) setLhs(row.lhs.concat(v.split(/\s+/)), "end"); });
       box.appendChild(inp);
+      return box;
+    }
+
+    // The action of a production: a panel below its row, one line of text (it is written on one line: {{ … }})
+    function buildAction(row, i) {
+      const box = el("div", "ge-action");
+      const label = el("span", "ge-action-label", "{ }");
+      label.title = "Action: code run when the parser reduces by this production";
+      box.appendChild(label);
+      const ta = el("textarea", "ge-action-in");
+      ta.rows = 1;
+      ta.spellcheck = false;
+      ta.value = row.action;
+      ta.placeholder = opts.actionHint || "$$ = $1";
+      const fit = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+      let dirty = false;
+      ta.addEventListener("input", () => {
+        fit();
+        // typed text is written through without a redraw (which would drop the focus); one undo step per visit
+        if (!dirty) { undo.push(JSON.stringify(model)); if (undo.length > 100) undo.shift(); redo = []; dirty = true; }
+        model.rows[i].action = ta.value.replace(/\s*\n\s*/g, " ");
+        parseError = "";
+        nativeValue.set.call(textarea, text());
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      ta.addEventListener("blur", () => { dirty = false; });
+      ta.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); focusEnd(i); }
+        else if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey) && !dirty) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
+      });
+      box.appendChild(ta);
+      requestAnimationFrame(fit);
       return box;
     }
 

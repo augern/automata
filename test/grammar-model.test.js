@@ -82,3 +82,27 @@ test("an empty right side is ε: it is numbered, written to the text, and spelle
   assert.equal(G.gmToText(m), "A -> a | ε | eps\nB -> ε", "a new empty rule is the ε production");
   assert.equal(G.parseBNF(G.gmToText(m), false).rules[1].rhs.length, 0);
 });
+
+test("actions: {{ … }} belong to their alternative, and round-trip with each alternative on its own line", () => {
+  const text = "<expr> → <expr> '+' <term> {{ $$ = $1 + $3 }}\n  | <expr> '|' <term> {{ $$ = $1 | $3 }}\n  | <term>\n<term> → id {{ $$ = 1 }}";
+  const m = G.gmParse(text, { actions: true });
+  assert.deepEqual(plain(m.rows.map((r) => r.action || null)), ["$$ = $1 + $3", "$$ = $1 | $3", null, "$$ = 1"]);
+  assert.deepEqual(plain(m.rows[1].rhs.map((s) => s.sym)), ["<expr>", "|", "<term>"]);
+  assert.equal(G.gmToText(m, { actions: true }), text);
+  // a disabled production keeps its action in the comment
+  m.rows[0].enabled = false;
+  const t2 = G.gmToText(m, { actions: true });
+  assert.equal(t2.split("\n")[0], "// <expr> → <expr> '+' <term> {{ $$ = $1 + $3 }}");
+  assert.equal(plain(G.gmParse(t2, { actions: true }).rows[0].action), "$$ = $1 + $3");
+  // without the option, nothing is an action
+  assert.equal(G.gmParse("S -> a", {}).rows[0].action, undefined);
+});
+
+test("the example definitions of the compiler tool round-trip through the model", () => {
+  const ex = JSON.parse(require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "tools", "compiler", "examples.json"), "utf8"));
+  const norm = (t) => t.split("\n").map((l) => l.trim().replace(/\s+/g, " ")).filter(Boolean).join("\n");
+  for (const g of ex.groups) for (const e of g.examples) {
+    const m = G.gmParse(e.text, { actions: true });
+    assert.equal(norm(G.gmToText(m, { actions: true })), norm(e.text), e.label);
+  }
+});

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../../shared/shared.css?v=9bbd6824" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
     <link rel="stylesheet" href="../../shared/compiler.css?v=26209ff0" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=ae051262" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -39,7 +40,7 @@
           <div class="cm-fields">
             <div class="ui-label cm-label">Token rules (name, pattern)</div>
             <textarea id="token-input" class="cm-text" spellcheck="false"></textarea>
-            <div class="ui-label cm-label">Grammar, with actions {{ … }}</div>
+            <div class="ui-label cm-label">Grammar and actions</div>
             <textarea id="grammar-input" class="cm-text" spellcheck="false"></textarea>
           </div>
           <div id="grammar-footer"><div id="error-msg"></div></div>
@@ -125,14 +126,16 @@
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
+    <script src="../../shared/grammar-editor.js?v=4e749549"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=fec7c3a2"></script>
+    <script src="guide.js?v=951035b6"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/compiler-ui.js?v=7747a594"></script>
+    <script src="../../shared/compiler-ui.js?v=a5759402"></script>
     <script>
       const EXAMPLES = {};
       function loadExample(k) { CompilerTool.loadExample(k); }

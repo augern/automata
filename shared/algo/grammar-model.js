@@ -5,6 +5,7 @@
 // model = { arrow: "->" | "→", rows: [row] }
 //   row  = { kind: "rule", lhs: [symbol], rhs: [{ sym, quoted }], eps: spelling of ε or null, enabled }
 //        | { kind: "comment", text }
+//   A rule may have an action (a string), written {{ … }} after its symbols, when the tool asks for actions (opts.actions).
 // A rule with an empty rhs derives ε; eps is only how the text spells it (eps, epsilon, ε, ''). A disabled rule is
 // written as a comment in the text. The start symbol is the left side of the first rule, as in the text.
 
@@ -17,14 +18,24 @@ function gmNewRule(lhs, rhs = []) {
 // The text of a grammar → the model. Lines are  lhs -> alternatives  (alternatives separated by |); a line starting
 // with | continues the previous left side; // starts a comment, and a comment that is exactly one rule is a disabled
 // rule. Throws on a line that is neither.
-function gmParse(text) {
+function gmParse(text, opts) {
+  const withActions = !!(opts && opts.actions);
   const model = { arrow: null, rows: [] };
   let lastLhs = null;
   const addRule = (lhsToks, rhsText, enabled) => {
-    for (const alt of bnfAlternatives(rhsText)) {
-      const toks = alt.toks;
+    // an action {{ … }} becomes a placeholder symbol of its alternative, so that a | inside it is not a separator
+    const acts = [];
+    const holed = withActions ? rhsText.replace(/\{\{([\s\S]*?)\}\}/g, (m, a) => { acts.push(a.trim()); return " @@" + (acts.length - 1) + "@@ "; }) : rhsText;
+    for (const alt of bnfAlternatives(holed)) {
+      let action = null;
+      const toks = alt.toks.filter((t) => {
+        const h = withActions && !t.quoted && /^@@(\d+)@@$/.exec(t.sym);
+        if (h) action = acts[+h[1]] || null;
+        return !h;
+      });
       const r = gmNewRule(lhsToks);
       r.enabled = enabled;
+      if (action) r.action = action;
       const solo = toks.length === 1 ? toks[0] : null;
       if (!toks.length) r.eps = EPSILON;
       else if (solo && ((!solo.quoted && GM_EPS.includes(solo.sym)) || (solo.quoted && solo.sym === ""))) r.eps = solo.quoted ? "''" : solo.sym;
@@ -77,18 +88,29 @@ const gmLhsKey = (r) => r.lhs.join(" ");
 // A rule that is part of the grammar: an enabled one.
 const gmLive = (r) => r.kind === "rule" && r.enabled;
 const gmRhsText = (r) => (r.rhs.length ? r.rhs.map(gmSymText).join(" ") : r.eps || EPSILON);
+// the right side with its action, on one line
+const gmRuleText = (r) => gmRhsText(r) + (r.action ? " {{ " + r.action.replace(/\s*\n\s*/g, " ").trim() + " }}" : "");
 
-// The model → text: adjacent enabled rules with the same left side share a line, joined by |.
-function gmToText(model) {
+// The model → text: adjacent enabled rules with the same left side share a line, joined by |. With opts.actions each
+// alternative has a line of its own (the first after the left side, the others after "  | "), as actions are long.
+function gmToText(model, opts) {
   const lines = [];
-  let prev = null;
-  for (const row of model.rows) {
-    if (row.kind === "comment") { lines.push("// " + row.text); prev = null; continue; }
-    if (!row.enabled) { lines.push("// " + gmLhsKey(row) + " " + model.arrow + " " + gmRhsText(row)); prev = null; continue; }
-    if (prev && gmLhsKey(prev) === gmLhsKey(row)) lines[lines.length - 1] += " | " + gmRhsText(row);
-    else lines.push(gmLhsKey(row) + " " + model.arrow + " " + gmRhsText(row));
+  const withActions = !!(opts && opts.actions);
+  let prev = null, split = false;
+  model.rows.forEach((row, i) => {
+    if (row.kind === "comment") { lines.push("// " + row.text); prev = null; return; }
+    if (!row.enabled) { lines.push("// " + gmLhsKey(row) + " " + model.arrow + " " + gmRuleText(row)); prev = null; return; }
+    if (prev && gmLhsKey(prev) === gmLhsKey(row)) {
+      if (split) lines.push("  | " + gmRuleText(row));
+      else lines[lines.length - 1] += " | " + gmRuleText(row);
+    } else {
+      // with actions, a group where any alternative has one is written a line each
+      split = false;
+      if (withActions) for (let j = i; j < model.rows.length && gmLive(model.rows[j]) && gmLhsKey(model.rows[j]) === gmLhsKey(row); j++) if (model.rows[j].action) split = true;
+      lines.push(gmLhsKey(row) + " " + model.arrow + " " + gmRuleText(row));
+    }
     prev = row;
-  }
+  });
   return lines.join("\n");
 }
 
