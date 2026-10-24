@@ -321,7 +321,7 @@ const CompilerTool = (() => {
     }
     if (feat.out.includes("quads")) {
       h += "<h3>Quadruples</h3>";
-      h += f.quads.length ? "<table class='cm-table'><thead><tr><th>#</th><th>op</th><th>arg 1</th><th>arg 2</th><th>result</th></tr></thead><tbody>" + f.quads.map((q, i) => "<tr><td>" + i + "</td>" + q.map((x) => "<td>" + esc(x) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "<p class='cm-empty'>none yet</p>";
+      h += f.quads.length ? "<table class='cm-table'><thead><tr><th>#</th><th>op</th><th>arg 1</th><th>arg 2</th><th>result</th></tr></thead><tbody>" + f.quads.map((q, i) => "<tr><td>" + (i + 1) + "</td>" + q.map((x) => "<td>" + esc(x) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "<p class='cm-empty'>none yet</p>";
     }
     if (feat.out.includes("symtab") || feat.out.includes("types")) {
       h += "<h3>Symbol table</h3>";

@@ -217,6 +217,17 @@ test("compiler-construction examples: the strings give the results their descrip
   assert.deepEqual(JSON.parse(JSON.stringify(last(ty, "integer n; n = 2.5;").f.messages)), ["cannot assign a real to the integer n"]);
   assert.deepEqual(JSON.parse(JSON.stringify(last(ty, "x = 1;").f.messages)), ["undeclared variable x"]);
   assert.equal(last(ty, "integer x; real y; x = 1; y = x * 2.5;").f.messages.length, 0);
+  // control structures: postfix code with labels and jumps, and quadruples whose jumps are patched
+  const pf = comp("compiler", "Postfix code for if and while");
+  const code = (s) => last(pf, s).f.stack[1].attrs.val;
+  assert.equal(code("x := 10 + k * 30"), "x 10 k 30 * + :=");
+  assert.equal(code("if a + b then x := 4 else x := 33"), "a b + L1 JEQZ x 4 := L2 JUMP L1: x 33 := L2:");
+  assert.equal(code("while i < 10 do i := i + 1"), "L1: i 10 < L2 JEQZ i i 1 + := L1 JUMP L2:");
+  assert.equal(code("if a + b then if c - d then x := 10 else y := 20 else z := 30"), "a b + L1 JEQZ c d - L2 JEQZ x 10 := L3 JUMP L2: y 20 := L3: L4 JUMP L1: z 30 := L4:");
+  const bp = comp("compiler", "Quadruples with backpatching");
+  const quads = (s) => JSON.parse(JSON.stringify(last(bp, s).f.quads));
+  assert.deepEqual(quads("if a = b then x := x + 1 else y := 20"), [["=", "a", "b", "t1"], ["JEQZ", "t1", "", "(6)"], ["+", "x", "1", "t2"], [":=", "t2", "", "x"], ["JUMP", "", "", "(7)"], [":=", "20", "", "y"]]);
+  assert.deepEqual(quads("while i < 10 do i := i + 1"), [["<", "i", "10", "t1"], ["JEQZ", "t1", "", "(6)"], ["+", "i", "1", "t2"], [":=", "t2", "", "i"], ["JUMP", "", "", "(1)"]]);
 });
 
 test("scanner examples: the token rules compile, every string scans to the end, and the mistake example is flagged", () => {

@@ -117,7 +117,7 @@ function cmpScan(sc, chars, pos) {
 // Statements separated by ;  —  $$.name = expr   $$ = expr (the attribute val)   local = expr   call(...)
 // Expressions: numbers, 'strings', $k (the attribute val of the k-th right-hand side symbol), $k.name, $$.name,
 // locals, a bare word (its own name as a string, so  $$.type = int  works), calls, ( ), unary - and not,
-// * /  + -  == != < > <= >=  and  or  and  c ? a : b. A rule with no action copies the attributes of $1.
+// * /  + -  == != < > <= >=  and  or  and  c ? a : b. Functions: newtemp, newlabel, emit (returns the quadruple number), nextquad, patch (a jump's target, backpatching), install, lookup, widen, coerce, require, error, trunc. A rule with no action copies the attributes of $1.
 
 function cmpTokenizeAction(src) {
   const out = [];
@@ -362,6 +362,7 @@ function cmpRun(comp, input, opts) {
   const chars = [...input];
   const frames = [];
   const tokens = [], quads = [], symtab = [], messages = [];
+  let labels = 0;
   let stack = [{ state: 0, sym: null, attrs: {}, node: null }];
   let cursor = 0, la = null, lex = null, nid = 0, temps = 0;
 
@@ -382,7 +383,12 @@ function cmpRun(comp, input, opts) {
   };
   const fn = {
     newtemp: () => "t" + ++temps,
-    emit: (op, a, b, r) => { quads.push([op, a === undefined ? "" : a, b === undefined ? "" : b, r === undefined ? "" : r]); },
+    // a quadruple is appended; its number (from 1) is returned, so that a jump can be patched later
+    emit: (op, a, b, r) => { quads.push([op, a === undefined ? "" : a, b === undefined ? "" : b, r === undefined ? "" : r]); return quads.length; },
+    nextquad: () => quads.length + 1,
+    // backpatching: the result field of quadruple i becomes the jump target (n)
+    patch: (i, target) => { if (quads[i - 1]) quads[i - 1][3] = "(" + target + ")"; },
+    newlabel: () => "L" + ++labels,
     install: (name, type) => { symtab[entryOf(name)].type = type; },
     lookup: (name) => { const e = symtab.find((x) => x.name === name); return e ? e.type : ""; },
     widen: (a, b) => (a === "float" || b === "float" ? "float" : a || b),

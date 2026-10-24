@@ -204,6 +204,75 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Control structures",
+      "examples": [
+        {
+          "label": "Postfix code for if and while",
+          "purpose": "if-then-else and while become postfix code with labels, JEQZ and JUMP: the grammar is factorised so that each label is made where it is needed.",
+          "tokens": [
+            "ws [ \\t\\n]+ -> skip",
+            "if if",
+            "then then",
+            "else else",
+            "while while",
+            "do do",
+            "begin begin",
+            "end end",
+            "id [a-z][a-z0-9]*",
+            "num [0-9]+",
+            "':=' :=",
+            "'=' =",
+            "'<' <",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "';' ;",
+            "'(' \\(",
+            "')' \\)"
+          ],
+          "text": "<prog> → <stmts>\n<stmts> → <stmts> ';' <stmt> {{ $$ = $1 + ' ' + $3 }}\n  | <stmt>\n<stmt> → id ':=' <expr> {{ $$ = $1.lexeme + ' ' + $3 + ' :=' }}\n  | <truepart> <stmt> {{ $$ = $1 + ' ' + $2 + ' ' + $1.l2 + ':' }}\n  | <whileclause> <stmt> {{ $$ = $1 + ' ' + $2 + ' ' + $1.l1 + ' JUMP ' + $1.l2 + ':' }}\n  | begin <stmts> end {{ $$ = $2 }}\n<truepart> → <ifclause> <stmt> else {{ l = newlabel(); $$.l1 = $1.l1; $$.l2 = l; $$ = $1 + ' ' + $2 + ' ' + l + ' JUMP ' + $1.l1 + ':' }}\n<ifclause> → if <expr> then {{ l = newlabel(); $$.l1 = l; $$ = $2 + ' ' + l + ' JEQZ' }}\n<whileclause> → <whilehead> <expr> do {{ l = newlabel(); $$.l1 = $1; $$.l2 = l; $$ = $1 + ': ' + $2 + ' ' + l + ' JEQZ' }}\n<whilehead> → while {{ $$ = newlabel() }}\n<expr> → <arith> '=' <arith> {{ $$ = $1 + ' ' + $3 + ' =' }}\n  | <arith> '<' <arith> {{ $$ = $1 + ' ' + $3 + ' <' }}\n  | <arith>\n<arith> → <arith> '+' <term> {{ $$ = $1 + ' ' + $3 + ' +' }}\n  | <arith> '-' <term> {{ $$ = $1 + ' ' + $3 + ' -' }}\n  | <term>\n<term> → <term> '*' <factor> {{ $$ = $1 + ' ' + $3 + ' *' }}\n  | <factor>\n<factor> → '(' <expr> ')' {{ $$ = $2 }}\n  | id {{ $$ = $1.lexeme }}\n  | num {{ $$ = $1.lexeme }}",
+          "strings": [
+            "if a + b then if c - d then x := 10 else y := 20 else z := 30",
+            "while i < 10 do i := i + 1",
+            "x := 10 + k * 30",
+            "begin i := 0; while i < 3 do begin s := s + i; i := i + 1 end end"
+          ]
+        },
+        {
+          "label": "Quadruples with backpatching",
+          "purpose": "A jump is emitted before its target is known; the action that reaches the target patches it, as in the textbook scheme for if, else and while.",
+          "tokens": [
+            "ws [ \\t\\n]+ -> skip",
+            "if if",
+            "then then",
+            "else else",
+            "while while",
+            "do do",
+            "begin begin",
+            "end end",
+            "id [a-z][a-z0-9]*",
+            "num [0-9]+",
+            "':=' :=",
+            "'=' =",
+            "'<' <",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "';' ;",
+            "'(' \\(",
+            "')' \\)"
+          ],
+          "text": "<prog> → <stmts>\n<stmts> → <stmts> ';' <stmt> | <stmt>\n<stmt> → id ':=' <expr> {{ emit(':=', $3.place, '', $1.lexeme) }}\n  | <truepart> <stmt> {{ patch($1.q, nextquad()) }}\n  | <whileclause> <stmt> {{ emit('JUMP', '', '', '(' + $1.start + ')'); patch($1.p, nextquad()) }}\n  | begin <stmts> end\n<truepart> → <ifclause> <stmt> else {{ $$.q = emit('JUMP', '', '', '?'); patch($1.p, nextquad()) }}\n<ifclause> → if <expr> then {{ $$.p = emit('JEQZ', $2.place, '', '?') }}\n<whileclause> → <whilehead> <expr> do {{ $$.start = $1.start; $$.p = emit('JEQZ', $2.place, '', '?') }}\n<whilehead> → while {{ $$.start = nextquad() }}\n<expr> → <arith> '=' <arith> {{ $$.place = newtemp(); emit('=', $1.place, $3.place, $$.place) }}\n  | <arith> '<' <arith> {{ $$.place = newtemp(); emit('<', $1.place, $3.place, $$.place) }}\n  | <arith>\n<arith> → <arith> '+' <term> {{ $$.place = newtemp(); emit('+', $1.place, $3.place, $$.place) }}\n  | <arith> '-' <term> {{ $$.place = newtemp(); emit('-', $1.place, $3.place, $$.place) }}\n  | <term>\n<term> → <term> '*' <factor> {{ $$.place = newtemp(); emit('*', $1.place, $3.place, $$.place) }}\n  | <factor>\n<factor> → '(' <expr> ')' {{ $$.place = $2.place }}\n  | id {{ $$.place = $1.lexeme }}\n  | num {{ $$.place = $1.lexeme }}",
+          "strings": [
+            "if a = b then x := x + 1 else y := 20",
+            "while i < 10 do i := i + 1",
+            "if 1 + 3 then x := 4 * 5 + 6 else y := 2",
+            "if a < b then if c = d then x := 1 else x := 2 else y := 3"
+          ]
+        }
+      ]
     }
   ]
 }
