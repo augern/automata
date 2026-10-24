@@ -65,6 +65,7 @@ const ScannerTool = (() => {
   const nfaOne = () => !!sc && (nfaMode === "rule" || (nfaMode === "auto" && sc.nfa.n > NFA_BIG));
   const dfaFocus = () => !!sc && (dfaMode === "focus" || (dfaMode === "auto" && sc.dfa.states.length > DFA_BIG));
   let nfaIx = new Map(), dfaIx = new Map(); // state → its index in what is drawn
+  let dfaIds = []; // the states drawn, by their index in the drawing
   let classIds = new Map(); // character class → the ids of its labels on the DFA edges
   panelMenuExtras["p-nfa"] = () => [
     { heading: "NFA view" },
@@ -174,12 +175,17 @@ const ScannerTool = (() => {
       edges: [...dp.values()],
       loops: [...loops.values()],
       joinLabels: true,
+      hideLabels: true,
+      nodesep: 26,
+      ranksep: 46,
       onHover: (hot) => {
-        // the labels of the DFA are shown where the pointer is (see scanner.css): the edge, or the class
+        // an edge: its classes in a tooltip, and the edge marked; the class rows are marked too
         markClasses(hot ? hot.map((id) => +id.split(":")[2]) : null);
-        if (hot) setGraphHot("dfa", hot); else showTaken(currentFrame());
+        if (hot) { setGraphHot("dfa", hot); showTip(edgeTip(hot)); } else { showTaken(currentFrame()); hideTip(); }
       },
+      onNodeHover: (i) => { setGraphNodeHot("dfa", i); if (i !== null) showTip(stateTip(dfaIds[i])); else hideTip(); },
     });
+    dfaIds = ids;
     ids.forEach((i) => { const st = dfa.states[i]; if (st.rules.length) d3.select("#dfa-state-" + dfaIx.get(i)).attr("data-prod", st.rules.map((r) => r + 1).join(" ")); });
   }
 
@@ -318,7 +324,55 @@ const ScannerTool = (() => {
     }
   }
 
-  // The transition just taken shows its label: the class of the character that was read.
+  // ── The tooltip of the DFA: what an edge or a state stands for, in several lines ──
+  let tipEl = null, tipX = 0, tipY = 0;
+  function showTip(html) {
+    if (!tipEl) {
+      tipEl = document.createElement("div");
+      tipEl.className = "sc-tip";
+      document.body.appendChild(tipEl);
+    }
+    tipEl.innerHTML = html;
+    tipEl.style.display = "block";
+    placeTip();
+  }
+  function placeTip() {
+    if (!tipEl || tipEl.style.display === "none") return;
+    const r = tipEl.getBoundingClientRect();
+    tipEl.style.left = Math.max(4, Math.min(tipX + 14, window.innerWidth - r.width - 8)) + "px";
+    tipEl.style.top = Math.max(4, Math.min(tipY + 16, window.innerHeight - r.height - 8)) + "px";
+  }
+  function hideTip() { if (tipEl) tipEl.style.display = "none"; }
+  document.addEventListener("mousemove", (e) => { tipX = e.clientX; tipY = e.clientY; placeTip(); });
+
+  // a class: its label and what it contains
+  function classLine(c) {
+    const k = sc.dfa.classes[c];
+    const named = k.chars.filter((x) => x !== SCN_OTHER);
+    const list = named.length > 1 ? scnShowChars(named) : "";
+    const what = (named.length ? named.length + " character" + (named.length === 1 ? "" : "s") + (list && list !== k.label.replace(/^\[|\]$/g, "") ? ": " + esc(list.length > 60 ? list.slice(0, 60) + "…" : list) : "") : "") + (k.chars.includes(SCN_OTHER) ? (named.length ? "; " : "") + "any character no rule mentions" : "");
+    return "<div><b>" + esc(k.label) + "</b> <span>" + what + "</span></div>";
+  }
+  // the state an index of the drawing stands for, and the edge between two of them
+  function edgeTip(ids) {
+    const [a, b] = ids[0].split(":").map(Number);
+    const from = dfaIds[a], to = dfaIds[b];
+    const st = sc.dfa.states[to];
+    return '<div class="sc-tip-head">State ' + from + " → " + to + "</div>" + ids.map((id) => classLine(+id.split(":")[2])).join("") +
+      (st.accept >= 0 ? "<div class='sc-tip-foot'>State " + to + " accepts " + esc(sc.rules[st.accept].name) + "</div>" : "");
+  }
+  function stateTip(id) {
+    const { dfa, rules } = sc, st = dfa.states[id];
+    let h = '<div class="sc-tip-head">State ' + id + (id === 0 ? " (start)" : "") + "</div>";
+    if (st.accept >= 0) h += "<div>Accepts <b>" + esc(rules[st.accept].name) + "</b>" + (st.rules.length > 1 ? "; also matches " + st.rules.slice(1).map((r) => esc(rules[r].name)).join(", ") + ", which come later" : "") + "</div>";
+    const out = new Map();
+    dfa.trans[id].forEach((t, c) => { if (t >= 0) { if (!out.has(t)) out.set(t, []); out.get(t).push(dfa.classes[c].label); } });
+    const rows = [...out].map(([t, cs]) => "<div>→ <b>" + t + "</b> <span>on " + esc(cs.join(", ")) + "</span></div>");
+    h += rows.length ? rows.slice(0, 8).join("") + (rows.length > 8 ? "<div><span>… and " + (rows.length - 8) + " more states</span></div>" : "") : "<div><span>No transitions out</span></div>";
+    return h;
+  }
+
+  // The transition just taken is marked on the graph (its class is in the log).
   function showTaken(f) {
     setGraphHot("dfa", []);
     if (!f || !sc || f.type !== "read" || !f.edges || !f.edges.length) return;

@@ -22,6 +22,10 @@
 #nfa-graph-root .ag-edge text, #dfa-graph-root .ag-edge text { paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; stroke-linejoin: round; }
 .sc-viewnote { position: absolute; left: var(--sp-4); top: var(--sp-3); right: var(--sp-4); font-size: var(--fs-2xs); color: var(--text-dim); pointer-events: none; }
 .sc-viewnote:empty { display: none; }
-/* the labels of the DFA are long: only the one under the pointer, and the one just taken, are shown */
-#dfa-graph-root .ag-edge text { display: none; }
-#dfa-graph-root .ag-hot text { display: inline; paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; stroke-linejoin: round; }
+/* the labels of the DFA are long: they are in the tooltip of the edge, not on it */
+#dfa-graph-root .ag-edge text, #dfa-graph-root .ag-hot text { display: none; }
+.sc-tip { position: fixed; z-index: 1000; display: none; max-width: 300px; pointer-events: none; background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); padding: var(--sp-3) var(--sp-4); font-family: var(--font-mono); font-size: var(--fs-2xs); line-height: 1.5; }
+.sc-tip b { color: var(--accent); }
+.sc-tip span { color: var(--text-dim); }
+.sc-tip-head { font-weight: bold; margin-bottom: 2px; }
+.sc-tip-foot { margin-top: 2px; color: var(--st-accept); }

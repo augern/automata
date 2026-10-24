@@ -45,11 +45,11 @@ function createGraphView(prefix, { hasNodes = () => true, onRelayout = null } = 
 function graphLayout(spec, dir) {
   const { nodes, edges, loops = [], radius: R = 16, ranksep = 64 } = spec;
   const dg = new dagre.graphlib.Graph();
-  dg.setGraph({ rankdir: dir, nodesep: 36, ranksep, marginx: 50, marginy: 40 });
+  dg.setGraph({ rankdir: dir, nodesep: spec.nodesep || 36, ranksep, marginx: 50, marginy: 40 });
   dg.setDefaultEdgeLabel(() => ({}));
   // A state with a self-loop reserves room for the loop and its label (above it in left-to-right layouts, to its
   // right in top-to-bottom ones), so that other edges are routed around it. The box is symmetric: dagre centres it.
-  const loopLabelW = new Map(loops.map((lp) => [lp.node, lp.labels.join(", ").length * 5.6]));
+  const loopLabelW = new Map(loops.map((lp) => [lp.node, spec.hideLabels ? 0 : lp.labels.join(", ").length * 5.6]));
   for (let i = 0; i < nodes.length; i++) {
     let w = R * 2 + 4, h = R * 2 + 4;
     if (loopLabelW.has(i)) {
@@ -139,6 +139,7 @@ function highlightAutomatonStates(prefix, active = [], dead = []) {
 //     result with setGraphHot(prefix, ids), which redraws the matching edges and labels
 //     on top, highlighted.
 //   radius (16), ranksep (64)
+//   hideLabels: true → the edge labels are not drawn by the page (it shows them on hover): the layout leaves no room for them
 //   reserveLabels: true → the layout makes room for the labels (more spread out, no label on another edge)
 //   hideEps: true → an edge with eps: true has no label (it is dashed)
 //   joinLabels: true → one line "a, b, c"; false → one stacked line per label

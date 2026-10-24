@@ -420,7 +420,7 @@ function scnRun(sc, input) {
       path.push(s.to);
       edges.push([s.from, s.to]);
       if (s.rule !== null) last = { state: s.to, end: s.i + 1, rule: s.rule };
-      push({ type: "read", fine: true, msg: "Read " + JSON.stringify(s.ch) + ": state " + s.from + " → " + s.to + (s.rule !== null ? ", which accepts " + rules[s.rule].name + "." : "."), begin: pos, forward: s.i + 1, state: s.to, path: [...path], edges: edges.map((e) => [...e]), last });
+      push({ type: "read", fine: true, msg: "Read " + JSON.stringify(s.ch) + " (class " + dfa.classes[dfa.classOf(s.ch)].label + "): state " + s.from + " → " + s.to + (s.rule !== null ? ", which accepts " + rules[s.rule].name + "." : "."), begin: pos, forward: s.i + 1, state: s.to, path: [...path], edges: edges.map((e) => [...e]), last });
     }
     if (!r.steps.length || r.steps[r.steps.length - 1].to >= 0) {
       // ran into the end of the input
