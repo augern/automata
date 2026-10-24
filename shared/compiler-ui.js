@@ -41,10 +41,12 @@ const CompilerTool = (() => {
     } catch (e) {
       setError(e.message);
       run = null;
+      drawAutomaton();
       render();
       return;
     }
     feat = features(comp);
+    drawAutomaton();
     const notes = [];
     if (comp.missing.length) notes.push("No token rule for: " + comp.missing.join(", ") + ".");
     if (comp.tables.conflicts.length) notes.push(comp.tables.conflicts.length + " SLR(1) conflict(s): the parser prefers shift.");
@@ -98,6 +100,48 @@ const CompilerTool = (() => {
     renderTree(f);
     renderOut(f);
     renderGrammar(f);
+    renderAutomaton(f);
+  }
+
+  // ── The parser automaton: the states as numbers only (the compact form of the LR tool) ──
+  let autoView = null;
+  function drawAutomaton() {
+    if (!autoView) return;
+    if (!comp) { drawAutomatonGraph("au", autoView, { nodes: [], start: 0, edges: [] }); return; }
+    const { states, edges } = comp.auto;
+    const pairs = new Map(), loops = new Map();
+    edges.forEach((e, i) => {
+      const m = e.s === e.t ? loops : pairs, key = e.s + ">" + e.t;
+      if (!m.has(key)) m.set(key, { from: e.s, to: e.t, node: e.s, labels: [], ids: [] });
+      m.get(key).labels.push(e.label);
+      m.get(key).ids.push(i);
+    });
+    drawAutomatonGraph("au", autoView, {
+      nodes: states.map((st) => ({ label: String(st.id), accepting: st.accepting })),
+      start: 0,
+      edges: [...pairs.values()],
+      loops: [...loops.values()],
+      joinLabels: true,
+      onHover: () => {}, // registers the edges' ids, which the stack's path is marked by
+    });
+  }
+  // The states on the parser stack are marked, the top one as the current state, and the transitions between them.
+  function renderAutomaton(f) {
+    if (!autoView || !comp) return;
+    d3.selectAll("#au-graph-root .ag-node").classed("is-hot", false);
+    highlightAutomatonStates("au", []);
+    setGraphHot("au", []);
+    if (!f) return;
+    const st = f.stack, ids = [];
+    st.forEach((e, k) => {
+      d3.select("#au-state-" + e.state).classed("is-hot", true);
+      if (k > 0) {
+        const i = comp.auto.edges.findIndex((x) => x.s === st[k - 1].state && x.t === e.state && x.label === e.sym);
+        if (i >= 0) ids.push(i);
+      }
+    });
+    highlightAutomatonStates("au", [st[st.length - 1].state]);
+    setGraphHot("au", ids);
   }
 
   // The production being reduced is marked in the grammar editor, with the values its action read and made (production
@@ -283,6 +327,7 @@ const CompilerTool = (() => {
     initResize("rh-3", "p-tree", +1);
     view = createFitView({ svg: "tree-svg", root: "tree-root", scaleExtent: [0.08, 4], maxScale: 1.2, pad: 24, hasContent: () => !!lastForest && lastForest.length > 0 });
     treeRegisterPanel("p-tree", "tree-svg", () => drawTree());
+    autoView = createGraphView("au", { hasNodes: () => !!comp, onRelayout: () => { drawAutomaton(); renderAutomaton(run ? run.frames[Math.min(sim.pos, run.frames.length - 1)] : null); } });
     sim = createStepper({
       buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
       min: 0,

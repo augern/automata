@@ -6,9 +6,10 @@
     <meta name="description" content="Scanner, parser and semantic actions working together: the parser asks the scanner for a token when it needs one; actions on grammar rules compute values, types and three-address code." />
     <title>Compiler Front End | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=9bbd6824" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
-    <link rel="stylesheet" href="../../shared/compiler.css?v=26209ff0" />
+    <link rel="stylesheet" href="../../shared/compiler.css?v=3bf5bc9c" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -81,6 +82,8 @@
           </div>
           <div class="cm-section" style="border-bottom: 0; padding-bottom: 0"><span class="ui-label">Parser stack (bottom to top)</span></div>
           <div id="cm-stack" class="cm-stack"></div>
+          <div class="cm-section cm-auto-head"><span class="ui-label">Parser automaton (the stack is marked: orange, its top blue)</span></div>
+          <div class="ui-canvas cm-auto"><svg id="au-svg"><g id="au-graph-root"></g></svg><div id="au-graph-empty" class="ui-canvas__empty">No automaton.</div></div>
         </div>
       </div>
 
@@ -124,6 +127,7 @@
     <script src="../../shared/algo/compiler.js?v=c3ac1042"></script>
     <script src="../../shared/shared.js?v=345876dc"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
+    <script src="../../shared/automaton-graph.js?v=fc256d65"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
@@ -135,7 +139,7 @@
     <script src="guide.js?v=951035b6"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/compiler-ui.js?v=f2db2eeb"></script>
+    <script src="../../shared/compiler-ui.js?v=310226df"></script>
     <script>
       const EXAMPLES = {};
       function loadExample(k) { CompilerTool.loadExample(k); }
