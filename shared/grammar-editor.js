@@ -22,7 +22,8 @@ const GrammarEditor = (() => {
 
   function attach(textarea) {
     let model = { arrow: "->", rows: [] };
-    let view = "rules";
+    let view = "rules", showNums = false;
+    try { showNums = localStorage.getItem("parser-tools-grammar-nums") === "1"; } catch (e) { /* storage blocked */ }
     try { if (localStorage.getItem("parser-tools-grammar-view") === "text") view = "text"; } catch (e) { /* storage blocked */ }
     let undo = [], redo = [];
     let parseError = "";
@@ -93,6 +94,12 @@ const GrammarEditor = (() => {
       { heading: "Grammar view" },
       { label: "Rules", checked: view === "rules", title: "The grammar as a table of productions", onSelect: () => setView("rules") },
       { label: "Text", checked: view === "text", title: "The grammar as plain text", onSelect: () => setView("text") },
+      { separator: true },
+      { label: "Production numbers", checked: showNums, title: "The numbers used in the tables", onSelect: () => {
+        showNums = !showNums;
+        try { localStorage.setItem("parser-tools-grammar-nums", showNums ? "1" : "0"); } catch (e) { /* storage blocked */ }
+        render();
+      } },
     ];
 
     // Text view
@@ -105,6 +112,7 @@ const GrammarEditor = (() => {
 
     // ── Rendering ──
     function render(focus) {
+      host.classList.toggle("no-nums", !showNums);
       rowsEl.style.display = foot.style.display = view === "rules" ? "" : "none";
       textEl.style.display = view === "text" ? "" : "none";
       status.textContent = parseError;

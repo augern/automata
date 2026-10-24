@@ -8,6 +8,9 @@
 /* One grid for all rows (a row is display: contents): number, left side, arrow, symbols, menu. The columns, and with
    them the arrows, line up between rows. */
 .ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: 22px fit-content(38%) 16px minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
+.ge.no-nums .ge-rows { grid-template-columns: 0 fit-content(38%) 16px minmax(0, 1fr) 18px; }
+.ge.no-nums .ge-num { visibility: hidden; padding: 0; overflow: hidden; }
+.ge.no-nums .ge-row > :first-child { padding-left: var(--sp-2); }
 .ge-row { display: contents; }
 .ge-row > * { padding: 2px 2px; }
 .ge-row > :first-child { padding-left: var(--sp-3); }
