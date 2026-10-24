@@ -76,7 +76,7 @@ parser-tools/
 │   ├── theme.js                        ← light/dark theme (system default, remembered toggle)
 │   ├── ui.css                          ← shared components (ui-*, ag-*, ct-*); built on the tokens in shared.css
 │   ├── ui.js                           ← UI.banner, UI.logBar, UI.table builders
-│   ├── grammar-editor.js, .css         ← the grammar editor: a table of productions with chips (LL(1), LR and derivation tools); model in algo/grammar-model.js
+│   ├── grammar-editor.js, .css         ← the grammar editor: a table of productions with chips (LL(1), LR, derivation and recursive-descent tools); model in algo/grammar-model.js
 │   ├── fit-view.js                     ← pan/zoom and automatic fit-to-view, shared by every graph and tree view
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action

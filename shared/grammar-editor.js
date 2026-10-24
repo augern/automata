@@ -125,6 +125,7 @@ const GrammarEditor = (() => {
       });
       rowsEl.appendChild(buildNewRow());
       rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs);
+      applyMarks();
       if (focus) {
         const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs, .ge-lhs-in" : ".ge-in"));
         if (target) target.focus();
@@ -142,11 +143,32 @@ const GrammarEditor = (() => {
       inp.style.width = Math.ceil(ruler.getBoundingClientRect().width) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2 + "px";
     }
 
+    // Marks from the tool: [{ rule, part: "lhs" | "rhs" | "sym", k, cls }], rule counting the enabled productions from 0.
+    // The class is added to the left side, the right side or the k-th symbol of that production (a repeated left side
+    // is marked in the first row of its group, where it is shown). [] clears them. Kept over redraws.
+    let marks = [];
+    function applyMarks() {
+      rowsEl.querySelectorAll("[data-mark]").forEach((e) => { e.className = e.className.replace(/\bgh-\S+/g, "").trim(); e.removeAttribute("data-mark"); });
+      const add = (e, cls) => { if (e) { cls.split(" ").forEach((c) => e.classList.add(c)); e.dataset.mark = "1"; } };
+      for (const m of marks) {
+        const row = rowsEl.querySelector('.ge-row[data-live="' + m.rule + '"]');
+        if (!row) continue;
+        if (m.part === "lhs") {
+          let r = row;
+          while (r.classList.contains("is-ghost") && r.previousElementSibling) r = r.previousElementSibling;
+          add(r.querySelector(".ge-lhs, .ge-lhsq"), m.cls);
+        } else if (m.part === "rhs") add(row.querySelector(".ge-rhs"), m.cls);
+        else add(row.querySelectorAll(".ge-rhs .ge-chip")[m.k], m.cls);
+      }
+    }
+    function mark(list) { marks = list || []; if (view === "rules") applyMarks(); }
+
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
 
     function buildRow(row, i, num, ghost, nts, last) {
       const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (last ? " is-last" : "") + (i % 2 ? " is-odd" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
+      if (num !== null) d.dataset.live = num - 1;
       // the number the tool uses for this production (opts.base: that of the first one, a number or a function; 0 is the
       // added start production where the tool has one); views mark it with data-prod
       const first = typeof opts.base === "function" ? opts.base() : opts.base === undefined ? 1 : opts.base;
@@ -425,7 +447,7 @@ const GrammarEditor = (() => {
 
     readText(nativeValue.get.call(textarea));
     render();
-    return { setView, render, undo: doUndo, redo: doRedo, model: () => model };
+    return { setView, render, mark, undo: doUndo, redo: doRedo, model: () => model };
   }
 
   return { attach };

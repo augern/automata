@@ -197,7 +197,7 @@ function rdpKeyParts(key) {
 }
 
 // The parts of the grammar text that a line of the procedures stands for: [{ from, to, role }],
-// role lhs | rhs | sym. A procedure's own lines (head, end) stand for all rules of that nonterminal's
+// role lhs | rhs | sym, and the production (rule, an index into g.rules) and for a symbol its place k. A procedure's own lines (head, end) stand for all rules of that nonterminal's
 // left side; an alternative's lines for its production; a symbol's line also for that symbol.
 function rdpGrammarRanges(g, spans, key) {
   const kp = rdpKeyParts(key);
@@ -206,18 +206,18 @@ function rdpGrammarRanges(g, spans, key) {
   const addRule = (ruleIdx) => {
     const sp = spans[ruleIdx];
     if (!sp) return;
-    out.push({ from: sp.lhs[0], to: sp.lhs[1], role: "lhs" });
-    if (sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "rhs" });
+    out.push({ from: sp.lhs[0], to: sp.lhs[1], role: "lhs", rule: ruleIdx });
+    if (sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "rhs", rule: ruleIdx });
   };
   if (kp.part === "head" || kp.part === "memo" || kp.part === "end") {
-    for (const alt of g.alts[kp.nt]) if (spans[alt.rule]) out.push({ from: spans[alt.rule].lhs[0], to: spans[alt.rule].lhs[1], role: "lhs" });
+    for (const alt of g.alts[kp.nt]) if (spans[alt.rule]) out.push({ from: spans[alt.rule].lhs[0], to: spans[alt.rule].lhs[1], role: "lhs", rule: alt.rule });
   } else if (kp.part === "alt") {
     addRule(g.alts[kp.nt][kp.alt].rule);
   } else {
     const alt = g.alts[kp.nt][kp.alt];
     addRule(alt.rule);
     const tok = spans[alt.rule] && spans[alt.rule].toks[kp.k];
-    if (tok && kp.k < alt.rhs.length) out.push({ from: tok[0], to: tok[1], role: "sym" });
+    if (tok && kp.k < alt.rhs.length) out.push({ from: tok[0], to: tok[1], role: "sym", rule: alt.rule, k: kp.k });
   }
   return out;
 }
@@ -246,11 +246,11 @@ function rdpFrameRanges(g, spans, key) {
   if (!kp || !g.alts[kp.nt]) return out;
   for (const [a, k] of pr.doneSyms) {
     const tok = spans[g.alts[kp.nt][a].rule] && spans[g.alts[kp.nt][a].rule].toks[k];
-    if (tok) out.push({ from: tok[0], to: tok[1], role: "done" });
+    if (tok) out.push({ from: tok[0], to: tok[1], role: "done", rule: g.alts[kp.nt][a].rule, k });
   }
   for (const a of pr.goneAlts) {
     const sp = spans[g.alts[kp.nt][a].rule];
-    if (sp && sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "gone" });
+    if (sp && sp.rhs[1] > sp.rhs[0]) out.push({ from: sp.rhs[0], to: sp.rhs[1], role: "gone", rule: g.alts[kp.nt][a].rule });
   }
   return out;
 }

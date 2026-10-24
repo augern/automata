@@ -8,6 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=9bbd6824" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=128d6d30" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -17,18 +18,16 @@
 
       /* What the current step is about is marked by a copy of the text behind the (transparent) textarea */
       #grammar-field { position: relative; flex: 1; min-height: 0; display: flex; }
-      #grammar-input, #grammar-hl { box-sizing: border-box; width: 100%; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); overflow-wrap: break-word; white-space: pre-wrap; }
-      #grammar-input { position: relative; }
-      #grammar-hl { position: absolute; inset: 0; color: transparent; overflow: hidden; pointer-events: none; }
-      #grammar-hl .gh-gone { background: var(--bg-hover); }
-      #grammar-hl .gh-lhs, #grammar-hl .gh-rhs { background: var(--st-active-bg); }
-      #grammar-hl .gh-hot { background: var(--hot-bg); }
-      #grammar-hl .gh-done { background: var(--st-accept-bg); }
-      #grammar-hl .gh-sym { background: color-mix(in srgb, var(--st-active) 38%, transparent); }
-      #grammar-hl .gh-sym.gh-good { background: color-mix(in srgb, var(--st-accept) 38%, transparent); }
-      #grammar-hl .gh-sym.gh-bad { background: color-mix(in srgb, var(--st-reject) 38%, transparent); }
-      #grammar-hl .gh-sym.gh-warn { background: color-mix(in srgb, var(--st-warn) 38%, transparent); }
-
+      #grammar-input { display: none; }
+      /* what the current step is about, marked in the grammar editor's rows (see paintGrammar) */
+      .ge .gh-gone { background: var(--bg-hover); }
+      .ge .gh-lhs, .ge .gh-rhs { background: var(--st-active-bg); }
+      .ge .gh-hot { background: var(--hot-bg); }
+      .ge .gh-done { background: var(--st-accept-bg); }
+      .ge .gh-sym { background: color-mix(in srgb, var(--st-active) 38%, transparent); }
+      .ge .gh-sym.gh-good { background: color-mix(in srgb, var(--st-accept) 38%, transparent); }
+      .ge .gh-sym.gh-bad { background: color-mix(in srgb, var(--st-reject) 38%, transparent); }
+      .ge .gh-sym.gh-warn { background: color-mix(in srgb, var(--st-warn) 38%, transparent); }
       #grammar-note {
         flex-shrink: 0;
         padding: 0 var(--sp-5) var(--sp-4);
@@ -132,7 +131,6 @@
             </select>
           </div>
           <div id="grammar-field">
-            <div id="grammar-hl" aria-hidden="true"></div>
             <textarea id="grammar-input" spellcheck="false" placeholder="S -> a S b | eps"></textarea>
           </div>
           <div id="grammar-note"></div>
@@ -245,16 +243,18 @@
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
-    <script src="../../shared/algo/rdp.js?v=5a7e9a43"></script>
+    <script src="../../shared/algo/rdp.js?v=1d801659"></script>
     <script src="../../shared/shared.js?v=345876dc"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
+    <script src="../../shared/grammar-editor.js?v=45ee4014"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=ffa73026"></script>
+    <script src="guide.js?v=318b242b"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -363,10 +363,15 @@
       // right side) of the line being executed or generated, and the symbol itself; hovered lines
       // in the hover colour. Only while the text is still the one the procedures were made from.
       function paintGrammar() {
-        const hl = $("grammar-hl"), text = $("grammar-input").value;
-        if (!rdG || text !== rdSrc) { hl.innerHTML = ""; return; }
-        const cls = new Array(text.length).fill("");
-        const mark = (ranges, role, extra) => { for (const r of ranges) for (let i = r.from; i < r.to; i++) cls[i] += " gh-" + (role || r.role) + (extra && r.role === "sym" ? " " + extra : ""); };
+        const text = $("grammar-input").value;
+        if (!rdG || text !== rdSrc) { grammarEditor.mark([]); return; }
+        const marks = [];
+        const mark = (ranges, role, extra) => {
+          for (const r of ranges) {
+            const part = r.role === "done" ? "sym" : r.role === "gone" ? "rhs" : r.role;
+            marks.push({ rule: r.rule, part, k: r.k, cls: "gh-" + (role || r.role) + (extra && r.role === "sym" ? " " + extra : "") });
+          }
+        };
         const building = rdGenTouched && gen.pos > 0 && gen.pos < rdLineList.length;
         const ev = rdState && rdState.event;
         const nowKey = building ? rdLineInfo[gen.pos - 1].key : ev ? ev.line : null;
@@ -377,22 +382,8 @@
           const tone = !building && ev ? rdToneClass[toneOf(ev)] : "";
           for (const r of rdpGrammarRanges(rdG, rdSpans, nowKey)) mark([r], r.role, tone);
         }
-        let h = "", i = 0;
-        while (i < text.length) {
-          let j = i + 1;
-          while (j < text.length && cls[j] === cls[i]) j++;
-          const piece = esc(text.slice(i, j));
-          h += cls[i] ? '<span class="' + cls[i].trim() + '">' + piece + "</span>" : piece;
-          i = j;
-        }
-        hl.innerHTML = h;
-        hl.scrollTop = $("grammar-input").scrollTop;
+        grammarEditor.mark(marks);
       }
-      (function keepGrammarHighlightScrolled() {
-        const input = $("grammar-input");
-        for (const ev of ["input", "keyup", "scroll", "mouseup"]) input.addEventListener(ev, () => { $("grammar-hl").scrollTop = input.scrollTop; });
-        input.addEventListener("input", paintGrammar); // typing: the highlight is dropped until the grammar is rebuilt
-      })();
 
       // Bring the lines into view in the code panel (only when they are not already), with a little context.
       function scrollCodeTo(keys) {
@@ -692,6 +683,8 @@
       registerStepper("p-code", { step: () => gen.next(), back: () => gen.prev(), reset: () => gen.reset(), end: () => gen.end() });
       registerStepper("p-search", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
 
+      const grammarEditor = GrammarEditor.attach($("grammar-input"));
+      $("grammar-input").addEventListener("input", paintGrammar); // typing: the marks are dropped until the grammar is rebuilt
       $("grammar-input").addEventListener("input", () => { clearTimeout(rdBuildTimer); rdBuildTimer = setTimeout(build, 300); });
       let rdBuildTimer = null;
       $("sim-input").addEventListener("input", () => { run(); saveShare(); });
@@ -724,19 +717,21 @@
         if (!ex) return;
         $("grammar-input").value = ex.text;
         $("examples-select").value = k;
+        exampleWatch();
         rdStrings = ex.strings || [];
         $("sim-input").value = rdStrings[0] || "";
         setMode(ex.mode || "full");
         build();
       }
 
-      const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("sim-input").value, m: rdMode }));
+      const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("sim-input").value, m: rdMode, x: exampleShareKey() }));
       let sharedStateApplied = false;
       function applyShareState() {
         const st = shareValidateTextState(readShareState(), "g", ["full", "ordered", "packrat"]);
         if (!st) return;
         sharedStateApplied = true;
         $("grammar-input").value = st.g;
+        exampleRestoreLater(st.x);
         $("sim-input").value = st.s;
         if (st.m) { rdMode = st.m; document.querySelector('input[name="rdp-mode"][value="' + st.m + '"]').checked = true; }
       }
