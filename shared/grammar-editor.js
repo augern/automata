@@ -361,15 +361,34 @@ const GrammarEditor = (() => {
         if (r) r.querySelectorAll(".ge-ref").forEach((e) => e.classList.remove("ge-ref"));
       };
       const refTarget = (r, n) => (n === "0" ? r.querySelector(".ge-lhs, .ge-lhsq") : r.querySelectorAll(".ge-rhs .ge-chip")[+n - 1]);
-      ta.addEventListener("input", drawMirror);
-      field.addEventListener("mousemove", (e) => {
+      // marked: what the pointer is on, and what the text cursor touches (the end of a $k counts)
+      let hoverRef = null, caretRef = null;
+      const applyRefs = () => {
         clearRefs();
         const r = rowEl();
+        if (!r) return;
+        for (const n of new Set([hoverRef, caretRef])) {
+          const target = n === null ? null : refTarget(r, n);
+          if (target) target.classList.add("ge-ref");
+        }
+      };
+      const caretToken = () => {
+        if (document.activeElement !== ta) return null;
+        const at = ta.selectionStart, v = ta.value;
+        if (ta.selectionEnd !== at) return null;
+        for (const m of v.matchAll(/\$\$|\$\d+/g)) if (at >= m.index && at <= m.index + m[0].length) return m[0] === "$$" ? "0" : m[0].slice(1);
+        return null;
+      };
+      const caretMoved = () => { caretRef = caretToken(); applyRefs(); };
+      ta.addEventListener("input", () => { drawMirror(); caretMoved(); });
+      for (const ev of ["keyup", "mouseup", "focus"]) ta.addEventListener(ev, caretMoved);
+      ta.addEventListener("blur", () => { caretRef = null; applyRefs(); });
+      field.addEventListener("mousemove", (e) => {
         const hit = [...mirror.querySelectorAll(".ge-tok")].find((t) => [...t.getClientRects()].some((q) => e.clientX >= q.left && e.clientX <= q.right && e.clientY >= q.top && e.clientY <= q.bottom));
-        const target = hit && r ? refTarget(r, hit.dataset.ref) : null;
-        if (target) target.classList.add("ge-ref");
+        const n = hit ? hit.dataset.ref : null;
+        if (n !== hoverRef) { hoverRef = n; applyRefs(); }
       });
-      field.addEventListener("mouseleave", clearRefs);
+      field.addEventListener("mouseleave", () => { hoverRef = null; applyRefs(); });
       field.append(mirror, ta);
       box.appendChild(field);
       drawMirror();
