@@ -49,7 +49,7 @@
       ]
     },
     {
-      "label": "Longest match",
+      "label": "Maximal munch",
       "examples": [
         {
           "label": "< against <=",

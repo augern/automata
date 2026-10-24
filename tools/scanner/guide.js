@@ -2,7 +2,7 @@
 // Legend colour names: blue, green, red, grey, orange.
 window.TOOL_GUIDE = {
   title: "Scanner",
-  intro: "Shows how a scanner is built from token rules: one NFA for all the rules, the characters cut into classes, the minimal DFA over those classes, and the scanner running on an input, one character at a time. A scanner returns the longest lexeme any rule matches; of two rules that match the same lexeme, the earlier wins.",
+  intro: "Shows how a scanner is built from token rules: one NFA for all the rules, the characters cut into classes, the minimal DFA over those classes, and the scanner running on an input, one character at a time. A scanner follows the maximal munch (longest match) rule: it returns the longest lexeme any rule matches; of two rules that match the same lexeme, the earlier wins.",
   use: [
     "Each row of the token rules is `name  pattern`; the order is the priority. A rule that discards what it matches (white space, a comment) is marked `→ skip`, from its menu (⋯). The entry row at the end makes a new rule. The panel menu switches to the text view of the same rules.",
     "A pattern uses `|`, `*`, `+`, `?`, `( )`, classes such as `[a-z0-9_]` and `[^\"]`, `.` for any character but a newline, `\\n`, `\\t`, and `\\c` for a special character c.",
@@ -13,6 +13,7 @@ window.TOOL_GUIDE = {
   notation: [
     ["q", "a state of the NFA or the DFA, by number; an accepting state is tagged with its token"],
     ["[a-z]", "an edge for every character of a class"],
+    ["maximal munch", "the scanner takes the longest lexeme any rule matches, reading ahead and backing up to the last accepting state"],
     ["other", "any character no rule mentions"],
     ["ε", "an edge that reads no character"],
     ["→ skip", "the rule discards its lexeme"],

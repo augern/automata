@@ -28,7 +28,7 @@
         },
         {
           "label": "Keywords and identifiers",
-          "purpose": "print is a keyword, printer an identifier: the longest match wins, and on a tie the earlier rule (the keyword) does.",
+          "purpose": "print is a keyword, printer an identifier: the longest match wins (maximal munch), and on a tie the earlier rule (the keyword) does.",
           "tokens": [
             "skip [ \\t\\n]+ -> skip",
             "print print",

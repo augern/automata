@@ -21,7 +21,7 @@ Compiler construction (a section of its own on the index page, not on the map; t
 
 | Tool | Coverage |
 |---|---|
-| **Scanner** | Token rules to a scanner: one NFA for all rules, the alphabet cut into character classes (`[a-z]`, `[^"]`, `.`, “other”), the minimal DFA with token tags, its transition table, and longest-match scanning with back-up, a frame per character (coarse or fine steps); rules in the scanner editor (priority order, `→ skip`, notes on rules that never match) |
+| **Scanner** | Token rules to a scanner (maximal munch): one NFA for all rules, the alphabet cut into character classes (`[a-z]`, `[^"]`, `.`, “other”), the minimal DFA with token tags, its transition table, and longest-match scanning with back-up, a frame per character (coarse or fine steps); rules in the scanner editor (priority order, `→ skip`, notes on rules that never match) |
 | **Compiler Front End** | A longest-match scanner and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner consumes lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, types and a symbol table |
 
 All tools share a common visual language (academic, high-contrast) and support
