@@ -9,6 +9,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=f20da596" />
     <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=d281c01b" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -531,11 +532,13 @@
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
+    <script src="../../shared/grammar-editor.js?v=587a871b"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=f8863898"></script>
+    <script src="guide.js?v=4d911df4"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       // Global error catcher — shows errors visibly on mobile
@@ -2319,6 +2322,7 @@ ${kw("loop")}
       registerStepper("p-tree", { step: simStep, back: simBack, reset: simReset, end: simRunAll });
 
       window.addEventListener("load", () => {
+        GrammarEditor.attach(document.getElementById("grammar-input"));
         loadPanelState();
         initAlgoModal();
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);
