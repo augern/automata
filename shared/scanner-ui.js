@@ -305,7 +305,8 @@ const ScannerTool = (() => {
     toks.forEach((t) => {
       const c = document.createElement("span");
       c.className = "cm-tok";
-      c.innerHTML = '<span class="cm-tok-name">' + esc(t.name) + '</span><span class="cm-tok-lex">' + esc(t.lexeme) + "</span>";
+      // a token named as its lexeme (an operator, a keyword) says it once
+      c.innerHTML = t.name === t.lexeme ? '<span class="cm-tok-lex">' + esc(t.lexeme) + "</span>" : '<span class="cm-tok-name">' + esc(t.name) + '</span><span class="cm-tok-lex">' + esc(t.lexeme) + "</span>";
       c.title = "Characters " + t.start + " to " + t.end;
       el.appendChild(c);
     });
