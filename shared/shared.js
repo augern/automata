@@ -944,6 +944,7 @@ function renderTree() {
     if (node.ruleIdx !== null)
       ng.append("text")
         .attr("class", "rule-label")
+        .attr("data-prod", node.ruleIdx)
         .attr("dy", "9")
         .text("r" + node.ruleIdx);
   });
@@ -1473,18 +1474,20 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
 
 // ── Production links ──
 // An element with data-prod="n" (a space-separated list for a cell with several) shows production n: the grammar editor's
-// rows, the items of an LR state, a reduction in a table. Pointing at one marks the others with is-hot (the target
-// colour), in all views at once; the one under the pointer keeps its own hover look.
+// rows, the items of an LR state, a reduction in a table. Pointing at one marks it in the other views with is-hot (the
+// target colour). A view is the nearest [data-prod-view], else the panel; elements of the view the pointer is in are
+// not marked, so that related items of one view do not light up each other.
 (function () {
   var marked = [];
   function clear() { marked.forEach(function (e) { e.classList.remove("is-hot"); }); marked = []; }
+  function viewOf(e) { return e.closest("[data-prod-view]") || e.closest(".panel"); }
   document.addEventListener("mouseover", function (ev) {
     var src = ev.target.closest && ev.target.closest("[data-prod]");
     clear();
     if (!src) return;
-    var ns = src.getAttribute("data-prod").split(" ");
+    var ns = src.getAttribute("data-prod").split(" "), view = viewOf(src);
     document.querySelectorAll("[data-prod]").forEach(function (e) {
-      if (e === src) return;
+      if (viewOf(e) === view) return;
       var mine = e.getAttribute("data-prod").split(" ");
       if (ns.some(function (n) { return mine.indexOf(n) >= 0; })) { e.classList.add("is-hot"); marked.push(e); }
     });

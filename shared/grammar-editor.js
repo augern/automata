@@ -145,10 +145,13 @@ const GrammarEditor = (() => {
     function buildRow(row, i, num, ghost, nts, last) {
       const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (last ? " is-last" : "") + (i % 2 ? " is-odd" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
-      // the number the tool uses for this production (opts.base: that of the first one); views mark it with data-prod
-      if (num !== null) d.dataset.prod = num - 1 + (opts.base === undefined ? 1 : opts.base);
-      const n = el("span", "ge-num", num === null ? "" : String(num));
-      n.title = num === null ? "" : "Production " + num;
+      // the number the tool uses for this production (opts.base: that of the first one, a number or a function; 0 is the
+      // added start production where the tool has one); views mark it with data-prod
+      const first = typeof opts.base === "function" ? opts.base() : opts.base === undefined ? 1 : opts.base;
+      const shown = num === null ? null : num - 1 + first;
+      if (shown !== null) d.dataset.prod = shown;
+      const n = el("span", "ge-num", shown === null ? "" : String(shown));
+      n.title = shown === null ? "" : "Production " + shown;
       const lhs = el("input", "ge-lhs");
       lhs.value = gmLhsKey(row);
       lhs.size = Math.max(4, Math.min(16, lhs.value.length + 1));
@@ -332,7 +335,7 @@ const GrammarEditor = (() => {
 
     readText(nativeValue.get.call(textarea));
     render();
-    return { setView, undo: doUndo, redo: doRedo, model: () => model };
+    return { setView, render, undo: doUndo, redo: doRedo, model: () => model };
   }
 
   return { attach };

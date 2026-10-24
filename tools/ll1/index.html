@@ -272,12 +272,12 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/ll1.js?v=70f066b7"></script>
-    <script src="../../shared/shared.js?v=e2c10972"></script>
+    <script src="../../shared/shared.js?v=345876dc"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
-    <script src="../../shared/grammar-editor.js?v=07e7cd0d"></script>
+    <script src="../../shared/grammar-editor.js?v=4ab29a77"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -332,7 +332,7 @@
             steps.push({
               type: "conflict",
               nt, term, key,
-              html: '<span class="lg-conf">conflict</span> M[<b>' + esc(nt) + '</b>, <b>' + esc(term) + '</b>]: rules ' + cur + ' and ' + ruleIdx +
+              html: '<span class="lg-conf">conflict</span> M[<b>' + esc(nt) + '</b>, <b>' + esc(term) + '</b>]: rules ' + (cur + 1) + ' and ' + (ruleIdx + 1) +
                     ' <span class="lg-seen">— grammar is not LL(1)</span>',
             });
           }
@@ -348,7 +348,7 @@
           for (const a of [...fa].sort()) {
             if (a === EPSILON) continue;
             addStep(lhs, a, i,
-              '<span class="lg-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(a) + '</b>] = ' + i +
+              '<span class="lg-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(a) + '</b>] = ' + (i + 1) +
               ' <span class="lg-seen">' + esc(lhs) + ' → ' + esc(rhsStr) +
               ' — ' + esc(a) + ' ∈ FIRST(' + esc(rhsStr) + ')</span>');
           }
@@ -357,7 +357,7 @@
           if (fa.has(EPSILON)) {
             for (const b of [...(follow[lhs] || [])].sort()) {
               addStep(lhs, b, i,
-                '<span class="lg-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(b) + '</b>] = ' + i +
+                '<span class="lg-op">add</span> M[<b>' + esc(lhs) + '</b>, <b>' + esc(b) + '</b>] = ' + (i + 1) +
                 ' <span class="lg-seen">' + esc(lhs) + ' → ' + esc(rhsStr) +
                 ' — ε ∈ FIRST(' + esc(rhsStr) + '), ' + esc(b) + ' ∈ FOLLOW(' + esc(lhs) + ')</span>');
             }
@@ -440,11 +440,12 @@
         const rd = document.createElement("div");
         rd.innerHTML = '<div class="tbl-section-label">Productions</div><div id="rules-list"></div>';
         wrap.appendChild(rd);
+        rd.dataset.prodView = "list";
         const rl = rd.querySelector("#rules-list");
         rules.forEach((r, i) => {
           const line = document.createElement("div");
-          line.dataset.prod = i;
-          line.innerHTML = '<span class="ri">' + i + ':</span><span class="rule">' + esc(r.lhs) + " \u2192 " + esc(r.rhs.join(" ") || EPSILON) + "</span>";
+          line.dataset.prod = i + 1;
+          line.innerHTML = '<span class="ri">' + (i + 1) + ':</span><span class="rule">' + esc(r.lhs) + " \u2192 " + esc(r.rhs.join(" ") || EPSILON) + "</span>";
           rl.appendChild(line);
         });
 
@@ -476,16 +477,16 @@
             const val = table[nt] && table[nt][t];
             if (val === undefined) {
             } else if (Array.isArray(val)) {
-              td.textContent = val.join("/");
+              td.textContent = val.map((v) => v + 1).join("/");
               td.className = "conflict";
-              td.title = "Conflict: productions " + val.join(", ");
-              td.dataset.prod = val.join(" ");
+              td.title = "Conflict: productions " + val.map((v) => v + 1).join(", ");
+              td.dataset.prod = val.map((v) => v + 1).join(" ");
             } else {
               // Show the production compactly
               const r = rules[val];
-              td.textContent = String(val);
+              td.textContent = String(val + 1);
               td.className = "rule-cell";
-              td.dataset.prod = val;
+              td.dataset.prod = val + 1;
               td.title = r.lhs + " \u2192 " + (r.rhs.join(" ") || EPSILON);
             }
             tr.appendChild(td);
@@ -757,7 +758,7 @@
         const nodeRef = simFront.shift(); // the tree node for this NT
 
         // Expand in tree
-        treeExpand(nodeRef, rule.rhs, ri);
+        treeExpand(nodeRef, rule.rhs, ri + 1);
 
         // Push rhs symbols and their tree nodes onto stack/frontier
         // ε is never pushed — an ε-production pops the NT and adds nothing
@@ -770,11 +771,11 @@
         // Use expansion (not rule.rhs) so ε never appears in the displayed form
         const prev = derivSteps[derivSteps.length - 1]?.form || [top];
         const newForm = [...expansion, ...prev.slice(1)];
-        addDerivStep(newForm, top + " \u2192 " + (rule.rhs.join(" ") || EPSILON) + "  (" + ri + ")", "");
+        addDerivStep(newForm, top + " \u2192 " + (rule.rhs.join(" ") || EPSILON) + "  (" + (ri + 1) + ")", "");
 
         renderSimStack();
         renderTree();
-        setSimLog("Expand  " + top + "  \u2192  " + (rule.rhs.join(" ") || EPSILON) + "  (" + ri + ")", "expand");
+        setSimLog("Expand  " + top + "  \u2192  " + (rule.rhs.join(" ") || EPSILON) + "  (" + (ri + 1) + ")", "expand");
         simSetBtns();
       }
 
@@ -938,7 +939,7 @@ ${kw("loop")}
       }
 
       window.addEventListener("load", () => {
-        GrammarEditor.attach(document.getElementById("grammar-input"), { base: 0 });
+        GrammarEditor.attach(document.getElementById("grammar-input"));
         loadPanelState();
         initAlgoModal();
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);

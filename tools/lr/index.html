@@ -351,7 +351,7 @@
         Merge lookahead sets
       </label>
       <label style="display: none" title="Prepend a fresh start production S′ → S to the grammar">
-        <input type="checkbox" id="augment-cb" checked onchange="if (currentGrammar) build();" />
+        <input type="checkbox" id="augment-cb" checked onchange="if (currentGrammar) { build(); grammarEditor.render(); }" />
         Augment grammar
       </label>
     </div>
@@ -528,12 +528,12 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=e2c10972"></script>
+    <script src="../../shared/shared.js?v=345876dc"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
-    <script src="../../shared/grammar-editor.js?v=07e7cd0d"></script>
+    <script src="../../shared/grammar-editor.js?v=4ab29a77"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -981,7 +981,6 @@
           if (node.ruleIdx !== null)
             ng.append("text")
               .attr("class", "rule-label")
-              .attr("data-prod", node.ruleIdx)
               .attr("dy", "9")
               .text("r" + node.ruleIdx);
         });
@@ -2314,8 +2313,9 @@ ${kw("loop")}
       registerStepper("p-tables", { step: tStep, back: tBack, reset: tReset, end: tRunAll });
       registerStepper("p-tree", { step: simStep, back: simBack, reset: simReset, end: simRunAll });
 
+      let grammarEditor = null;
       window.addEventListener("load", () => {
-        GrammarEditor.attach(document.getElementById("grammar-input"), { numbers: true, base: 1 });
+        grammarEditor = GrammarEditor.attach(document.getElementById("grammar-input"), { numbers: true, base: () => (currentGrammar && !currentGrammar.augmented ? 0 : 1) });
         loadPanelState();
         initAlgoModal();
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);
