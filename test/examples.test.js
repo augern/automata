@@ -228,6 +228,13 @@ test("compiler-construction examples: the strings give the results their descrip
   const quads = (s) => JSON.parse(JSON.stringify(last(bp, s).f.quads));
   assert.deepEqual(quads("if a = b then x := x + 1 else y := 20"), [["=", "a", "b", "t1"], ["JEQZ", "t1", "", "(6)"], ["+", "x", "1", "t2"], [":=", "t2", "", "x"], ["JUMP", "", "", "(7)"], [":=", "20", "", "y"]]);
   assert.deepEqual(quads("while i < 10 do i := i + 1"), [["<", "i", "10", "t1"], ["JEQZ", "t1", "", "(6)"], ["+", "i", "1", "t2"], [":=", "t2", "", "i"], ["JUMP", "", "", "(1)"]]);
+  // arrays and procedure calls, as on the lecture slides
+  const ar = comp("compiler", "Arrays and procedure calls");
+  const aq = (s) => JSON.parse(JSON.stringify(last(ar, s).f.quads));
+  assert.deepEqual(aq("a[i] := b"), [["[]=", "a", "i", "t1"], [":=", "b", "", "t1"]]);
+  assert.deepEqual(aq("b := a[i]"), [["=[]", "a", "i", "t1"], [":=", "t1", "", "b"]]);
+  assert.deepEqual(aq("write(a * b, x + 5)"), [["*", "a", "b", "t1"], ["+", "x", "5", "t2"], ["param", "t1", "", ""], ["param", "t2", "", ""], ["call", "write", 2, ""]]);
+  assert.deepEqual(aq("read(x)"), [["param", "x", "", ""], ["call", "read", 1, ""]]);
 });
 
 test("scanner examples: the token rules compile, every string scans to the end, and the mistake example is flagged", () => {

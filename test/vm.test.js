@@ -87,3 +87,30 @@ test("the control-structure examples of the compiler tool produce code the machi
   const tp = run(find("Translation to postfix"), "(a + b) * c").stack[1].attrs.val;
   assert.equal(final(V.vmPostfix(tp, { a: 1, b: 2, c: 4 })).stack[0], "12");
 });
+
+test("quadruples: array references and procedure calls, as in the lecture", () => {
+  // A[I] := B  (the address, then the store through it) and B := A[I]
+  const store = [["[]=", "a", "i", "t1"], [":=", "b", "", "t1"]];
+  assert.deepEqual(arr(V.vmQuadArrays(store)), ["a"]);
+  assert.deepEqual(arr(V.vmQuadVariables(store)), ["i", "t1", "b"].filter((x) => x !== "t1"));
+  const r = V.vmQuads(store, { i: 2, b: 99 }, { arrays: { a: [1, 2, 3, 4] } });
+  assert.deepEqual(arr(final(r).arrays.a), [1, 2, 99, 4]);
+  const load = [["=[]", "a", "i", "t2"], [":=", "t2", "", "b"]];
+  assert.equal(final(V.vmQuads(load, { i: 3, b: 0 }, { arrays: { a: [1, 2, 3, 4] } })).vars.b, 4);
+  assert.match(final(V.vmQuads(load, { i: 4, b: 0 }, { arrays: { a: [1, 2, 3, 4] } })).note, /outside the array/);
+  // WRITE(A*B, X+5): the arguments are computed, then param, param, call
+  const write = [["*", "a", "b", "t1"], ["+", "x", "5", "t2"], ["param", "t1", "", ""], ["param", "t2", "", ""], ["call", "WRITE", "2", ""]];
+  assert.deepEqual(arr(V.vmQuadVariables(write)), ["a", "b", "x"]);
+  const w = V.vmQuads(write, { a: 2, b: 3, x: 1 });
+  assert.deepEqual(arr(final(w).output), ["6 6"]);
+  assert.deepEqual(arr(w.states[4].params), ["6", "6"]);
+  assert.deepEqual(arr(final(w).params), []);
+  // READ(X)
+  const read = [["param", "x", "", ""], ["call", "READ", "1", ""]];
+  assert.equal(V.vmQuadsRead(read), true);
+  assert.equal(final(V.vmQuads(read, { x: 0 }, { input: [42] })).vars.x, 42);
+  assert.match(final(V.vmQuads(read, { x: 0 }, { input: [] })).note, /no more input/);
+  // an unknown procedure is only noted
+  assert.match(final(V.vmQuads([["param", "5", "", ""], ["call", "f", "1", ""]], {})).note, /f is called with 5/);
+  assert.match(final(V.vmQuads([["call", "f", "2", ""]], {})).note, /only 0 have been put/);
+});

@@ -71,5 +71,6 @@
 .cm-vm-item { font-family: var(--font-mono); font-size: var(--fs-xs); border: 1px solid var(--border-lo); border-radius: var(--radius); padding: 0 6px; margin: 2px 0; }
 .cm-vm-item.is-top { border-color: var(--st-active); color: var(--st-active); }
 .cm-vm-in { width: 5em; font-family: var(--font-mono); font-size: var(--fs-xs); background: var(--bg-input); color: var(--text); border: 1px solid var(--border-lo); border-radius: var(--radius); padding: 0 4px; }
+.cm-vm-in.is-wide { width: 100%; box-sizing: border-box; }
 .cm-vm td.is-changed { color: var(--hot); font-weight: bold; }
 .cm-vm[hidden] { display: none; }

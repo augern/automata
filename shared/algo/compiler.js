@@ -117,7 +117,7 @@ function cmpScan(sc, chars, pos) {
 // Statements separated by ;  —  $$.name = expr   $$ = expr (the attribute val)   local = expr   call(...)
 // Expressions: numbers, 'strings', $k (the attribute val of the k-th right-hand side symbol), $k.name, $$.name,
 // locals, a bare word (its own name as a string, so  $$.type = int  works), calls, ( ), unary - and not,
-// * /  + -  == != < > <= >=  and  or  and  c ? a : b. Functions: newtemp, newlabel, emit (returns the quadruple number), nextquad, patch (a jump's target, backpatching), install, lookup, widen, coerce, require, error, trunc. A rule with no action copies the attributes of $1.
+// * /  + -  == != < > <= >=  and  or  and  c ? a : b. Functions: newtemp, newlabel, emit (returns the quadruple number), emitparams, nextquad, patch (a jump's target, backpatching), install, lookup, widen, coerce, require, error, trunc. A rule with no action copies the attributes of $1.
 
 function cmpTokenizeAction(src) {
   const out = [];
@@ -385,6 +385,8 @@ function cmpRun(comp, input, opts) {
     newtemp: () => "t" + ++temps,
     // a quadruple is appended; its number (from 1) is returned, so that a jump can be patched later
     emit: (op, a, b, r) => { quads.push([op, a === undefined ? "" : a, b === undefined ? "" : b, r === undefined ? "" : r]); return quads.length; },
+    // one param quadruple for each place of a list written "t1,t2" (the arguments of a call, evaluated first); returns how many
+    emitparams: (list) => { const ps = String(list).split(",").filter((x) => x !== ""); ps.forEach((x) => quads.push(["param", x, "", ""])); return ps.length; },
     nextquad: () => quads.length + 1,
     // backpatching: the result field of quadruple i becomes the jump target (n)
     patch: (i, target) => { if (quads[i - 1]) quads[i - 1][3] = "(" + target + ")"; },

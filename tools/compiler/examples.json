@@ -271,6 +271,32 @@
             "if 1 + 3 then x := 4 * 5 + 6 else y := 2",
             "if a < b then if c = d then x := 1 else x := 2 else y := 3"
           ]
+        },
+        {
+          "label": "Arrays and procedure calls",
+          "purpose": "An element is the address []= (to store) or the value =[] (to load); a call evaluates its arguments, then param for each, then call with their number.",
+          "tokens": [
+            "ws [ \\t\\n]+ -> skip",
+            "id [a-z][a-z0-9]*",
+            "num [0-9]+",
+            "':=' :=",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "'(' \\(",
+            "')' \\)",
+            "'[' \\[",
+            "']' \\]",
+            "',' ,",
+            "';' ;"
+          ],
+          "text": "<prog> → <stmts>\n<stmts> → <stmts> ';' <stmt> | <stmt>\n<stmt> → id ':=' <expr> {{ emit(':=', $3.place, '', $1.lexeme) }}\n  | id '[' <expr> ']' ':=' <expr> {{ t = newtemp(); emit('[]=', $1.lexeme, $3.place, t); emit(':=', $6.place, '', t) }}\n  | id '(' <args> ')' {{ emitparams($3.places); emit('call', $1.lexeme, $3.n, '') }}\n<args> → <args> ',' <expr> {{ $$.places = $1.places + ',' + $3.place; $$.n = $1.n + 1 }}\n  | <expr> {{ $$.places = $1.place; $$.n = 1 }}\n<expr> → <expr> '+' <term> {{ $$.place = newtemp(); emit('+', $1.place, $3.place, $$.place) }}\n  | <expr> '-' <term> {{ $$.place = newtemp(); emit('-', $1.place, $3.place, $$.place) }}\n  | <term>\n<term> → <term> '*' <factor> {{ $$.place = newtemp(); emit('*', $1.place, $3.place, $$.place) }}\n  | <factor>\n<factor> → '(' <expr> ')' {{ $$.place = $2.place }}\n  | id '[' <expr> ']' {{ $$.place = newtemp(); emit('=[]', $1.lexeme, $3.place, $$.place) }}\n  | id {{ $$.place = $1.lexeme }}\n  | num {{ $$.place = $1.lexeme }}",
+          "strings": [
+            "a[i] := b",
+            "b := a[i + 1]",
+            "write(a * b, x + 5)",
+            "read(n); a[0] := n; a[1] := a[0] * 2; write(a[1], a[0] + n)"
+          ]
         }
       ]
     }

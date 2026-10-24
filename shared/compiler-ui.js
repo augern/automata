@@ -10,7 +10,7 @@
 //   cfg.storage    the key of the panel layout in localStorage
 const CompilerTool = (() => {
   let comp = null, run = null, strings = [], view = null, cfg = null;
-  let machine = null, machineSim = null, machineInputs = {}; // the machine that runs the generated code (see renderMachine)
+  let machine = null, machineSim = null, machineInputs = {}, machineArrays = {}, machineRead = "1 2 3"; // the machine that runs the generated code (see renderMachine)
   let fine = false, frames = [], scannerGraph = null, tokenEditor = null; // frames: the ones the stepper walks (coarse: without the one-character ones of the scanner)
   let feat = { annotate: false, out: [] };
   const $ = (id) => document.getElementById(id);
@@ -88,7 +88,7 @@ const CompilerTool = (() => {
     const box = $("cm-vm");
     machine = null;
     const fin = run && run.accepted ? run.frames[run.frames.length - 1] : null;
-    if (fin && fin.quads.length) machine = { kind: "quads", quads: fin.quads, names: vmQuadVariables(fin.quads) };
+    if (fin && fin.quads.length) machine = { kind: "quads", quads: fin.quads, names: vmQuadVariables(fin.quads), arrays: vmQuadArrays(fin.quads), read: vmQuadsRead(fin.quads) };
     else if (fin && fin.stack.length > 1) {
       const code = fin.stack[fin.stack.length - 1].attrs.val;
       if (vmIsPostfix(code)) machine = { kind: "postfix", code, names: vmPostfixVariables(code) };
@@ -97,6 +97,7 @@ const CompilerTool = (() => {
     if (machine) {
       // the starting values of the variables: kept while the name is the same, else 1, 2, 3, …
       machine.names.forEach((n, i) => { if (!(n in machineInputs)) machineInputs[n] = i + 1; });
+      (machine.arrays || []).forEach((n) => { if (!(n in machineArrays)) machineArrays[n] = [10, 20, 30, 40, 50, 60, 70, 80]; });
       $("vm-title").textContent = machine.kind === "quads" ? "Quadruple simulator" : "Stack machine (postfix code)";
     }
     runMachine();
@@ -105,7 +106,10 @@ const CompilerTool = (() => {
     if (machine) {
       const init = {};
       machine.names.forEach((n) => { init[n] = machineInputs[n]; });
-      machine.run = machine.kind === "quads" ? vmQuads(machine.quads, init) : vmPostfix(machine.code, init);
+      const arrays = {};
+      (machine.arrays || []).forEach((n) => { arrays[n] = machineArrays[n]; });
+      const input = machineRead.split(/[\s,]+/).filter(Boolean).map(Number).filter(Number.isFinite);
+      machine.run = machine.kind === "quads" ? vmQuads(machine.quads, init, { arrays, input }) : vmPostfix(machine.code, init);
     }
     machineSim.pos = 0;
     machineSim.refresh();
@@ -126,14 +130,36 @@ const CompilerTool = (() => {
       $("vm-prog").innerHTML = prog.map((t, i) => "<span class='cm-vm-tok" + (!st.done && i === st.pc ? " is-pc" : "") + (t.kind === "def" ? " is-def" : "") + "'>" + esc(t.text) + "</span>").join(" ");
       $("vm-stack").innerHTML = "<span class='ui-label'>Stack (top first)</span>" + (st.stack.length ? st.stack.slice().reverse().map((x, i) => "<div class='cm-vm-item" + (i === 0 ? " is-top" : "") + "'>" + esc(x) + "</div>").join("") : "<div class='cm-empty'>empty</div>");
     }
-    if (machine.kind === "quads") $("vm-stack").innerHTML = "";
+    if (machine.kind === "quads") {
+      // the argument list of a call in progress, and what WRITE has written
+      const hasCalls = machine.quads.some((q) => q[0] === "param" || q[0] === "call");
+      $("vm-stack").innerHTML = hasCalls ? "<span class='ui-label'>Arguments</span>" + (st.params.length ? st.params.map((x) => "<div class='cm-vm-item'>" + esc(x) + "</div>").join("") : "<div class='cm-empty'>none</div>") + "<span class='ui-label'>Output</span>" + (st.output.length ? st.output.map((x) => "<div class='cm-vm-item'>" + esc(x) + "</div>").join("") : "<div class='cm-empty'>none</div>") : "";
+    }
     // the variables: the starting values can be changed; the current ones are shown, a changed one marked
+    // a value, or the address of an array element (the result of []=) as →a[1]
+    const shown = (v) => (v && v.arr !== undefined ? "→" + v.arr + "[" + v.i + "]" : String(vmRound(v)));
+    const same = (n) => JSON.stringify(st.vars[n]) === JSON.stringify(prev.vars[n]);
     const temps = Object.keys(st.vars).filter((n) => !machine.names.includes(n));
     let h = "<span class='ui-label'>Variables (start, now)</span><table class='cm-table'><tbody>";
-    for (const n of machine.names) h += "<tr><td>" + esc(n) + "</td><td><input class='cm-vm-in' data-var='" + esc(n) + "' type='number' step='any' value='" + machineInputs[n] + "' /></td><td class='" + (st.vars[n] !== prev.vars[n] ? "is-changed" : "") + "'>" + (n in st.vars ? esc(String(vmRound(st.vars[n]))) : "") + "</td></tr>";
-    for (const n of temps) h += "<tr><td>" + esc(n) + "</td><td></td><td class='" + (st.vars[n] !== prev.vars[n] ? "is-changed" : "") + "'>" + esc(String(vmRound(st.vars[n]))) + "</td></tr>";
-    $("vm-vars").innerHTML = h + "</tbody></table>";
-    $("vm-vars").querySelectorAll("input").forEach((inp) => inp.addEventListener("change", () => {
+    for (const n of machine.names) h += "<tr><td>" + esc(n) + "</td><td><input class='cm-vm-in' data-var='" + esc(n) + "' type='number' step='any' value='" + machineInputs[n] + "' /></td><td class='" + (st.vars[n] !== prev.vars[n] ? "is-changed" : "") + "'>" + (n in st.vars ? esc(shown(st.vars[n])) : "") + "</td></tr>";
+    for (const n of temps) h += "<tr><td>" + esc(n) + "</td><td></td><td class='" + (same(n) ? "" : "is-changed") + "'>" + esc(shown(st.vars[n])) + "</td></tr>";
+    h += "</tbody></table>";
+    // arrays (their starting contents can be changed) and the numbers READ reads
+    if ((machine.arrays || []).length) {
+      h += "<span class='ui-label'>Arrays (start, now)</span><table class='cm-table'><tbody>";
+      for (const n of machine.arrays) h += "<tr><td>" + esc(n) + "</td><td><input class='cm-vm-in is-wide' data-array='" + esc(n) + "' value='" + esc(machineArrays[n].join(", ")) + "' /></td></tr><tr><td></td><td class='" + (JSON.stringify(st.arrays[n]) !== JSON.stringify(prev.arrays[n]) ? "is-changed" : "") + "'>" + esc("[" + st.arrays[n].map(vmRound).join(", ") + "]") + "</td></tr>";
+      h += "</tbody></table>";
+    }
+    if (machine.read) h += "<span class='ui-label'>Input for READ</span><input class='cm-vm-in is-wide' id='vm-read' value='" + esc(machineRead) + "' />";
+    $("vm-vars").innerHTML = h;
+    $("vm-vars").querySelectorAll("input[data-array]").forEach((inp) => inp.addEventListener("change", () => {
+      const xs = inp.value.split(/[\s,]+/).filter(Boolean).map(Number).filter(Number.isFinite);
+      machineArrays[inp.dataset.array] = xs.length ? xs : [0];
+      runMachine();
+    }));
+    const rd = $("vm-read");
+    if (rd) rd.addEventListener("change", () => { machineRead = rd.value; runMachine(); });
+    $("vm-vars").querySelectorAll("input[data-var]").forEach((inp) => inp.addEventListener("change", () => {
       const v = parseFloat(inp.value);
       machineInputs[inp.dataset.var] = Number.isFinite(v) ? v : 0;
       runMachine();

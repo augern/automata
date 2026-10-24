@@ -114,25 +114,55 @@ function vmPostfix(str, init) {
 
 // ── Quadruples ───────────────────────────────────────────────────────
 
-// The variables a quadruple program mentions (not temporaries, numbers or jump targets).
+// The arrays a quadruple program uses: the first argument of []= and =[].
+function vmQuadArrays(quads) {
+  return vmVariables(quads.filter((q) => q[0] === "[]=" || q[0] === "=[]").map((q) => q[1]));
+}
+// Does the program call READ (it then needs input)?
+const vmQuadsRead = (quads) => quads.some((q) => q[0] === "call" && /^read$/i.test(q[1]));
+
+// The variables a quadruple program mentions (not temporaries, numbers, jump targets, arrays or procedures).
 function vmQuadVariables(quads) {
+  const arrays = vmQuadArrays(quads);
   const names = [];
-  for (const q of quads) for (const x of [q[1], q[2], q[3]]) if (typeof x === "string" && /^[A-Za-z_][A-Za-z_0-9]*$/.test(x)) names.push(x);
+  for (const q of quads) {
+    if (q[0] === "call") continue; // a procedure and a count
+    const xs = q[0] === "[]=" || q[0] === "=[]" ? [q[2], q[3]] : [q[1], q[2], q[3]];
+    for (const x of xs) if (typeof x === "string" && /^[A-Za-z_][A-Za-z_0-9]*$/.test(x) && !arrays.includes(x)) names.push(x);
+  }
   // a name only written, never read, is not an input but still shown
   return vmVariables(names);
 }
 
-// Runs quadruples [op, arg1, arg2, result] (numbered from 1) from the variables in init. Returns { prog: quads, states }
-// with state i after i quadruples: { pc (0-based index of the next one), vars, note, done, error }. := (or = with no
-// second argument) copies; + - * / and comparisons compute; JEQZ jumps when its argument is 0, JUMP always; a target is (n).
-function vmQuads(quads, init) {
-  let pc = 0, vars = { ...(init || {}) };
+// Runs quadruples [op, arg1, arg2, result] (numbered from 1) from the variables in init and, in io, the arrays
+// ({ name: [number] }) and the numbers READ reads. Returns { prog: quads, states } with state i after i quadruples:
+// { pc (0-based index of the next one), vars, arrays, params (the pending arguments), output (what WRITE has written),
+// note, done, error }.
+//   := (or = with no second argument) copies, into a variable or, when the result holds an address, into an array element;
+//   + - * / and comparisons compute; JEQZ jumps when its argument is 0, JUMP always; a target is (n);
+//   []= A i t   t is the address of A[i];   =[] A i t   t is the value of A[i];
+//   param x   puts a value on the list of arguments;   call f n   calls f with the last n of them (WRITE writes them, READ
+//   reads into them; another procedure has no body here and is only noted).
+function vmQuads(quads, init, io) {
+  io = io || {};
+  let pc = 0, vars = { ...(init || {}) }, input = 0;
+  const arrays = {};
+  for (const [k, v] of Object.entries(io.arrays || {})) arrays[k] = v.slice();
+  let params = [], output = [];
   const states = [];
-  const snap = (note, extra) => states.push({ pc, vars: { ...vars }, note, done: pc >= quads.length, ...extra });
+  const showVal = (v) => (v && v.arr !== undefined ? v.arr + "[" + v.i + "]" : vmRound(v));
+  const snap = (note, extra) => states.push({ pc, vars: { ...vars }, arrays: JSON.parse(JSON.stringify(arrays)), params: params.map((p) => String(vmRound(p.value))), output: [...output], note, done: pc >= quads.length, ...extra });
   const val = (x) => {
     if (vmIsNumber(x)) return Number(x);
     if (!(x in vars)) throw new Error(x + " has no value");
-    return vars[x];
+    const v = vars[x];
+    if (v && v.arr !== undefined) throw new Error(x + " is an address, not a value");
+    return v;
+  };
+  const elem = (arr, i) => {
+    if (!(arr in arrays)) throw new Error(arr + " is not an array");
+    if (!Number.isInteger(i) || i < 0 || i >= arrays[arr].length) throw new Error(arr + "[" + i + "] is outside the array (0 to " + (arrays[arr].length - 1) + ")");
+    return i;
   };
   const target = (r) => {
     const m = /^\((\d+)\)$/.exec(r);
@@ -144,11 +174,34 @@ function vmQuads(quads, init) {
     const [op, a, b, r] = quads[pc];
     let note;
     try {
-      if (op === ":=" || (op === "=" && b === "") || /^[a-z]+2[a-z]+$/.test(op)) { vars[r] = val(a); note = r + " := " + vmRound(vars[r]); pc++; }
+      if (op === ":=" || (op === "=" && b === "") || /^[a-z]+2[a-z]+$/.test(op)) {
+        const v = val(a);
+        if (vars[r] && vars[r].arr !== undefined) { arrays[vars[r].arr][vars[r].i] = v; note = vars[r].arr + "[" + vars[r].i + "] := " + vmRound(v) + " (through the address in " + r + ")"; }
+        else { vars[r] = v; note = r + " := " + vmRound(v); }
+        pc++;
+      } else if (op === "[]=") { const i = val(b); elem(a, i); vars[r] = { arr: a, i }; note = r + " is the address of " + a + "[" + i + "]"; pc++; }
+      else if (op === "=[]") { const i = val(b); elem(a, i); vars[r] = arrays[a][i]; note = r + " = " + a + "[" + i + "] = " + vmRound(vars[r]); pc++; }
       else if (VM_BINARY.includes(op)) { const x = val(a), y = val(b); vars[r] = vmApply(op, x, y); note = r + " = " + vmRound(x) + " " + op + " " + vmRound(y) + " = " + vmRound(vars[r]); pc++; }
       else if (op === "JEQZ") { const c = val(a); if (c === 0) { pc = target(r); note = a + " is 0: jump to " + r; } else { note = a + " is " + vmRound(c) + ", not 0: go on"; pc++; } }
       else if (op === "JUMP") { pc = target(r); note = "jump to " + r; }
-      else throw new Error("unknown operation " + op);
+      else if (op === "param") { params.push({ name: /^[A-Za-z_][A-Za-z_0-9]*$/.test(a) ? a : null, value: vmIsNumber(a) || a in vars ? val(a) : undefined }); note = "param " + a + ": the list of arguments is now " + params.map((p) => vmRound(p.value)).join(", "); pc++; }
+      else if (op === "call") {
+        const n = Number(b);
+        if (params.length < n) throw new Error(a + " is called with " + n + " arguments, but only " + params.length + " have been put on the list");
+        const args = params.splice(params.length - n, n);
+        if (/^write$/i.test(a)) { output.push(args.map((p) => vmRound(p.value)).join(" ")); note = "write " + output[output.length - 1]; }
+        else if (/^read$/i.test(a)) {
+          const got = [];
+          for (const p of args) {
+            if (!p.name) throw new Error("READ needs a variable");
+            if (input >= (io.input || []).length) throw new Error("READ has no more input");
+            vars[p.name] = io.input[input++];
+            got.push(p.name + " = " + vmRound(vars[p.name]));
+          }
+          note = "read " + got.join(", ");
+        } else note = a + " is called with " + args.map((p) => vmRound(p.value)).join(", ") + " (its body is not part of the code)";
+        pc++;
+      } else throw new Error("unknown operation " + op);
     } catch (e) {
       snap("Error in quadruple " + (pc + 1) + ": " + e.message + ".", { error: true, done: true });
       return { prog: quads, states };
