@@ -133,3 +133,20 @@ test("scanner model: the text round trip, quoting, disabled rules and comments",
   const ex = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "tools", "compiler", "examples.json"), "utf8"));
   for (const g of ex.groups) for (const e of g.examples) assert.equal(M.smToText(M.smParse(e.tokens.join("\n"))), e.tokens.join("\n"), e.label);
 });
+
+test("the NFA is simplified: trivial ε-edges are contracted, and the DFA is the same", () => {
+  const sc = S.scnCompile(KW);
+  assert.equal(sc.nfa.n < sc.nfaRaw.n / 2, true, sc.nfa.n + " of " + sc.nfaRaw.n);
+  const epsCount = (n) => n.edges.filter((e) => !e.set).length;
+  assert.equal(epsCount(sc.nfa) < epsCount(sc.nfaRaw) / 2, true);
+  const dfaRaw = S.scnBuildDFA(sc.nfaRaw);
+  assert.equal(dfaRaw.states.length, sc.dfa.states.length);
+  assert.deepEqual(arr(dfaRaw.trans), arr(sc.dfa.trans));
+  // a single character stays one edge between two states under the start
+  const one = S.scnCompile("a a");
+  assert.equal(one.nfa.n, 2);
+  assert.deepEqual(arr(one.nfa.edges.map((e) => [e.from, e.to, !!e.set])), [[0, 1, true]]);
+  // every rule still has its own accepting state, and the start state is 0
+  assert.equal(sc.nfa.accept.size, sc.rules.length);
+  assert.equal(sc.nfa.edges.some((e) => e.to === 0), false);
+});

@@ -179,6 +179,50 @@ function scnBuildNFA(rules) {
   return { n, edges, accept, rules, alphabet: [...alpha].sort() };
 }
 
+// Thompson's construction leaves many ε-edges that say nothing. They are contracted, without changing what the NFA
+// accepts (so the DFA is the same): an ε-edge a → b joins its ends when b has no other way in, or when a has no other
+// way out (and does not accept). Two states that both accept are never joined. State 0 stays the start; the states are
+// numbered again. What is left is the structure: the union of the rules, and the loops and branches within each.
+function scnSimplifyNFA(nfa) {
+  let edges = nfa.edges.map((e) => ({ ...e }));
+  const accept = new Map(nfa.accept);
+  const alive = new Set(Array.from({ length: nfa.n }, (_, i) => i));
+  const merge = (gone, keep) => {
+    for (const e of edges) { if (e.from === gone) e.from = keep; if (e.to === gone) e.to = keep; }
+    if (accept.has(gone)) { accept.set(keep, accept.get(gone)); accept.delete(gone); }
+    alive.delete(gone);
+    // no ε-loops on one state, no duplicates
+    const seen = new Set();
+    edges = edges.filter((e) => {
+      if (!e.set && e.from === e.to) return false;
+      const k = e.from + ">" + e.to + ">" + (e.set ? (e.set.neg ? "^" : "") + e.set.chars.join("") : "ε");
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+  for (let again = true; again; ) {
+    again = false;
+    const inDeg = new Map(), outDeg = new Map();
+    for (const e of edges) { inDeg.set(e.to, (inDeg.get(e.to) || 0) + 1); outDeg.set(e.from, (outDeg.get(e.from) || 0) + 1); }
+    for (const e of edges) {
+      if (e.set || e.from === e.to) continue;
+      const a = e.from, b = e.to;
+      if (accept.has(a) && accept.has(b)) continue;
+      if (b !== 0 && inDeg.get(b) === 1 && !(accept.has(b) && outDeg.get(a) > 1)) { merge(b, a); again = true; break; }
+      if (outDeg.get(a) === 1 && !accept.has(a)) { if (a === 0) merge(b, a); else merge(a, b); again = true; break; }
+    }
+  }
+  const ids = new Map([...alive].sort((x, y) => x - y).map((s, k) => [s, k]));
+  return {
+    n: ids.size,
+    edges: edges.map((e) => ({ from: ids.get(e.from), to: ids.get(e.to), set: e.set })),
+    accept: new Map([...accept].map(([s, k]) => [ids.get(s), k])),
+    rules: nfa.rules,
+    alphabet: nfa.alphabet,
+  };
+}
+
 // ── Character classes ────────────────────────────────────────────────
 
 // Does the set contain the character (SCN_OTHER stands for every character the rules do not mention)?
@@ -298,13 +342,14 @@ function scnBuildDFA(nfa) {
 // Throws an Error with a message on a bad pattern.
 function scnCompile(text) {
   const rules = scnParseRules(text);
-  const nfa = scnBuildNFA(rules);
+  const raw = scnBuildNFA(rules);
+  const nfa = scnSimplifyNFA(raw);
   const dfa = scnBuildDFA(nfa);
   // a rule that never wins: no state accepts it as its token
   const wins = new Set(dfa.states.map((s) => s.accept));
   const shadowed = rules.map((r, k) => k).filter((k) => !wins.has(k));
   const conflicts = dfa.states.filter((s) => s.rules.length > 1).map((s) => s.id);
-  return { rules, nfa, dfa, shadowed, conflicts };
+  return { rules, nfa, nfaRaw: raw, dfa, shadowed, conflicts };
 }
 
 // One call of the scanner at pos of chars: the longest lexeme any rule matches (the earliest rule on a tie).
