@@ -67,3 +67,5 @@
 .ge-new { opacity: 0.75; }
 .ge-new:focus-within { opacity: 1; }
 .ge-new .ge-lhs::placeholder { color: var(--accent); opacity: 0.45; }
+.ge-new .ge-arrow { visibility: hidden; }
+.ge-new .ge-in::placeholder { opacity: 0.5; }
