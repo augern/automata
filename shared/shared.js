@@ -1215,6 +1215,10 @@ function loadExamplesInto(url, selectId, examplesObj, onReady) {
         sel.appendChild(og);
       });
       upgradeExamplesSelect(sel, groups);
+      if (sel._restoreKey && examplesObj[sel._restoreKey] && typeof exampleWatch === "function" && document.getElementById("grammar-input")) {
+        sel.value = sel._restoreKey;
+        exampleWatch();
+      }
       var fnName = ((sel.getAttribute("onchange") || "").match(/^\s*(\w+)\(/) || [])[1];
       if (fnName) _trackExample(fnName);
       if (typeof onReady === "function") onReady();
@@ -1292,15 +1296,9 @@ function setSimLog(msg, cls) {
   el.className = cls || "";
 }
 
-// Loads an example grammar. Depends on tool globals: EXAMPLES, setError, build.
-// The selector keeps the example's title; an asterisk after it marks a grammar edited since.
-function loadExample(k) {
-  if (!k) return;
-  const ex = EXAMPLES[k];
-  if (!ex) return;
+// The selector keeps the loaded example's title; an asterisk after it marks a grammar edited since.
+function exampleWatch() {
   const input = document.getElementById("grammar-input"), sel = document.getElementById("examples-select");
-  input.value = ex.text;
-  sel.value = k;
   const norm = (t) => t.split("\n").map((l) => l.trim().replace(/\s+/g, " ")).filter(Boolean).join("\n");
   const mark = () => {
     sel._exModified = !!EXAMPLES[sel.value] && norm(input.value) !== norm(EXAMPLES[sel.value].text);
@@ -1308,6 +1306,25 @@ function loadExample(k) {
   };
   mark();
   if (!input._exWatched) { input._exWatched = true; input.addEventListener("input", mark); }
+}
+// The key of the example the grammar came from, for a share link; and its restoring once the examples are loaded.
+function exampleShareKey() {
+  const sel = document.getElementById("examples-select");
+  return sel && /^ex\d+$/.test(sel.value) ? sel.value : undefined;
+}
+function exampleRestoreLater(key) {
+  const sel = document.getElementById("examples-select");
+  if (sel && key) sel._restoreKey = key;
+}
+
+// Loads an example grammar. Depends on tool globals: EXAMPLES, setError, build.
+function loadExample(k) {
+  if (!k) return;
+  const ex = EXAMPLES[k];
+  if (!ex) return;
+  document.getElementById("grammar-input").value = ex.text;
+  document.getElementById("examples-select").value = k;
+  exampleWatch();
   setError("");
   build();
 }

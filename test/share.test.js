@@ -60,6 +60,8 @@ test("text state: grammar with mode and simulation input", () => {
 
 test("text state: optional random seed must be a 32-bit unsigned integer", () => {
   assert.equal(S.shareValidateTextState({ g: "S -> a", sd: 12345 }, "g").sd, 12345);
+  assert.equal(S.shareValidateTextState({ g: "S -> a", x: "ex12" }, "g").x, "ex12");
+  assert.equal(S.shareValidateTextState({ g: "S -> a", x: "<b>" }, "g"), null);
   assert.equal(S.shareValidateTextState({ g: "S -> a", sd: 0 }, "g").sd, 0);
   assert.equal(S.shareValidateTextState({ g: "S -> a", sd: 4294967295 }, "g").sd, 4294967295);
   assert.equal("sd" in S.shareValidateTextState({ g: "S -> a" }, "g"), false);

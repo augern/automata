@@ -524,10 +524,10 @@
 
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
-    <script src="../../shared/algo/share.js?v=e7dd4a97"></script>
+    <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=cc0c414b"></script>
+    <script src="../../shared/shared.js?v=60b2112e"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -1343,6 +1343,7 @@
       // ── Shareable link ────────────────────────────────────────────────────
       const saveShare = createShareSaver(() => ({
         g: document.getElementById("grammar-input").value,
+        x: exampleShareKey(),
         m: currentMode,
         s: document.getElementById("sim-input").value,
       }));
@@ -1352,6 +1353,7 @@
         if (!st) return;
         document.getElementById("grammar-input").value = st.g;
         document.getElementById("sim-input").value = st.s;
+        exampleRestoreLater(st.x);
         if (st.m) setMode(st.m);
       }
 

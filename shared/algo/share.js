@@ -135,6 +135,11 @@ function shareValidateTextState(obj, field, modes) {
     if (!shareIsStr(obj.m) || (modes && !modes.includes(obj.m))) return null;
     out.m = obj.m;
   }
+  // Optional example key (the grammar tools' selector title).
+  if (obj.x !== undefined) {
+    if (!shareIsStr(obj.x) || !/^ex\d{1,3}$/.test(obj.x)) return null;
+    out.x = obj.x;
+  }
   // Optional flag (the error state shown in the NFA and regex tools).
   if (obj.e === true) out.e = true;
   // Optional random seed (the derivation tool's random choices): a 32-bit unsigned integer.
