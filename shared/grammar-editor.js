@@ -122,7 +122,7 @@ const GrammarEditor = (() => {
       const nts = gmNonterminals(model), nums = gmNumbers(model), ghosts = gmGhosts(model);
       model.rows.forEach((row, i) => {
         if (row.kind === "comment") { rowsEl.appendChild(el("div", "ge-comment", "// " + row.text)); return; }
-        rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts));
+        rowsEl.appendChild(buildRow(row, i, nums[i], ghosts[i], nts, row.kind === "rule" && !ghosts[i + 1]));
       });
       if (!model.rows.some((r) => r.kind === "rule")) rowsEl.appendChild(el("div", "ge-empty", parseError ? "The grammar text has an error (see Text)." : "No productions. + Nonterminal starts one."));
       if (focus) {
@@ -133,8 +133,8 @@ const GrammarEditor = (() => {
 
     function chipKind(sym, nts) { return nts.has(sym) ? "ge-nt" : "ge-t"; }
 
-    function buildRow(row, i, num, ghost, nts) {
-      const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (row.rhs.length ? "" : " is-empty"));
+    function buildRow(row, i, num, ghost, nts, last) {
+      const d = el("div", "ge-row" + (row.enabled ? "" : " is-off") + (ghost ? " is-ghost" : "") + (last ? " is-last" : "") + (i % 2 ? " is-odd" : "") + (row.rhs.length ? "" : " is-empty"));
       d.dataset.i = i;
       const n = el("span", "ge-num", num === null ? "" : String(num));
       n.title = num === null ? "" : "Production " + num;

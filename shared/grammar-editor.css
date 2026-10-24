@@ -15,9 +15,11 @@
 .ge-row > * { padding: 2px 2px; }
 .ge-row > :first-child { padding-left: var(--sp-3); }
 .ge-row > :last-child { padding-right: var(--sp-3); }
+.ge-row.is-odd > * { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.ge-row.is-last > * { border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent); }
 .ge-row:hover > * { background: var(--bg-hover); }
 .ge-row.is-off .ge-rhs, .ge-row.is-off .ge-lhs { opacity: 0.45; text-decoration: line-through; }
-.ge-num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-2xs); color: color-mix(in srgb, var(--text-lo) 50%, transparent); background: var(--bg-cell); align-self: stretch; }
+.ge-row > .ge-num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-2xs); color: color-mix(in srgb, var(--text-lo) 50%, transparent); background: var(--bg-cell); align-self: stretch; }
 .ge-row:hover > .ge-num { background: var(--bg-cell); }
 .ge-lhs { min-width: 0; max-width: 100%; box-sizing: border-box; background: transparent; border: 1px solid transparent; border-radius: var(--radius); color: var(--accent); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); padding: 0 3px; }
 .ge-lhs:hover { border-color: var(--border); }
