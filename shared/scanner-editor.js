@@ -9,8 +9,8 @@
 // A row: [priority] [name] [pattern] [menu]. The order is the priority: of two rules that match the same lexeme, the
 // earlier wins. A rule that discards what it matches (white space, comments) shows `→ skip`; the menu switches it. The
 // last row is always an empty entry for a new rule. A pattern that is not valid has its error under the row, and the
-// tool can put notes under rows (flag). A row has data-prod = its rule number + 1, which links it with the same
-// production in other views (see "Production links" in shared.js). Needs algo/grammar-model.js (the edits),
+// tool can put notes under rows (flag). A row has data-tok = its rule number + 1, which links it with the same
+// token rule in other views (see "Production and token links" in shared.js). Needs algo/grammar-model.js (the edits),
 // algo/scanner-model.js, algo/scanner.js (pattern errors) and ui.js.
 const ScannerEditor = (() => {
   const nativeValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
@@ -149,7 +149,7 @@ const ScannerEditor = (() => {
     function buildRow(row, i, k) {
       const d = el("div", "se-row" + (row.enabled ? "" : " is-off") + (row.skip ? " is-skip" : "") + (i % 2 ? " is-odd" : ""));
       d.dataset.i = i;
-      if (k !== null) { d.dataset.live = k; d.dataset.prod = k + 1; }
+      if (k !== null) { d.dataset.live = k; d.dataset.tok = k + 1; }
       const num = el("span", "se-num", k === null ? "" : String(k + 1));
       num.title = k === null ? "Disabled" : "Priority " + (k + 1) + ": on a tie, a lower number wins";
       const dirty = { on: false };

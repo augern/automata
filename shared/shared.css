@@ -1219,5 +1219,5 @@ body {
 #error-msg.is-note { color: var(--text-dim); }
 
 /* the other views of a production under the pointer (see "Production links" in shared.js) */
-[data-prod].is-hot { background: var(--hot-bg); color: var(--hot) !important; }
+[data-prod].is-hot, [data-tok].is-hot { background: var(--hot-bg); color: var(--hot) !important; }
 text[data-prod].is-hot, text[data-prod].is-hot tspan { fill: var(--hot) !important; font-weight: bold; }

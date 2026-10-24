@@ -186,7 +186,7 @@ test("the grammar library: every entry parses, is used by at least two examples,
 });
 
 test("compiler-construction examples: token rules and grammar compile without gaps or conflicts, and every string runs", () => {
-  const A2 = load("grammar.js", "strings.js", "regex.js", "lr.js", "compiler.js");
+  const A2 = load("grammar.js", "strings.js", "regex.js", "lr.js", "scanner.js", "compiler.js");
   for (const tool of ["compiler"]) {
     for (const ex of examples(tool)) {
       const tokens = Array.isArray(ex.tokens) ? ex.tokens.join("\n") : ex.tokens;
@@ -199,7 +199,7 @@ test("compiler-construction examples: token rules and grammar compile without ga
 });
 
 test("compiler-construction examples: the strings give the results their descriptions promise", () => {
-  const A2 = load("grammar.js", "strings.js", "regex.js", "lr.js", "compiler.js");
+  const A2 = load("grammar.js", "strings.js", "regex.js", "lr.js", "scanner.js", "compiler.js");
   const comp = (tool, label) => { const ex = examples(tool).find((e) => e.label === label); return A2.cmpCompile(Array.isArray(ex.tokens) ? ex.tokens.join("\n") : ex.tokens, textOf(ex)); };
   const last = (c, s) => { const r = A2.cmpRun(c, s); return { ok: r.accepted, f: r.frames[r.frames.length - 1] }; };
   const ev = comp("compiler", "Evaluate expressions");

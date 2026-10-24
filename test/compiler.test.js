@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const C = load("grammar.js", "strings.js", "regex.js", "lr.js", "compiler.js");
+const C = load("grammar.js", "strings.js", "regex.js", "lr.js", "scanner.js", "compiler.js");
 const arr = (x) => JSON.parse(JSON.stringify(x));
 
 const TOKENS = `skip [ \\t\\n]+ -> skip

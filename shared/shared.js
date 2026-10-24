@@ -1472,25 +1472,29 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
     });
 }
 
-// ── Production links ──
+// ── Production and token links ──
 // An element with data-prod="n" (a space-separated list for a cell with several) shows production n: the grammar editor's
-// rows, the items of an LR state, a reduction in a table. Pointing at one marks it in the other views with is-hot (the
-// target colour). A view is the nearest [data-prod-view], else the panel; elements of the view the pointer is in are
-// not marked, so that related items of one view do not light up each other.
+// rows, the items of an LR state, a reduction in a table. data-tok="n" is the same for token rules: the scanner editor's
+// rows, the states of the scanner's DFA that accept a rule, the tokens it has returned. Pointing at one marks it in the
+// other views with is-hot (the target colour). A view is the nearest [data-prod-view], else the panel; elements of the
+// view the pointer is in are not marked, so that related items of one view do not light up each other.
 (function () {
-  var marked = [];
+  var marked = [], KINDS = ["prod", "tok"];
   function clear() { marked.forEach(function (e) { e.classList.remove("is-hot"); }); marked = []; }
   function viewOf(e) { return e.closest("[data-prod-view]") || e.closest(".panel"); }
   document.addEventListener("mouseover", function (ev) {
-    var src = ev.target.closest && ev.target.closest("[data-prod]");
     clear();
-    if (!src) return;
-    var ns = src.getAttribute("data-prod").split(" "), view = viewOf(src);
-    document.querySelectorAll("[data-prod]").forEach(function (e) {
-      if (viewOf(e) === view) return;
-      var mine = e.getAttribute("data-prod").split(" ");
-      if (ns.some(function (n) { return mine.indexOf(n) >= 0; })) { e.classList.add("is-hot"); marked.push(e); }
+    if (!ev.target.closest) return;
+    KINDS.forEach(function (kind) {
+      var attr = "data-" + kind, src = ev.target.closest("[" + attr + "]");
+      if (!src) return;
+      var ns = src.getAttribute(attr).split(" "), view = viewOf(src);
+      document.querySelectorAll("[" + attr + "]").forEach(function (e) {
+        if (viewOf(e) === view) return;
+        var mine = e.getAttribute(attr).split(" ");
+        if (ns.some(function (n) { return mine.indexOf(n) >= 0; })) { e.classList.add("is-hot"); marked.push(e); }
+      });
     });
   });
-  document.addEventListener("mouseout", function (ev) { if (ev.target.closest && ev.target.closest("[data-prod]")) clear(); });
+  document.addEventListener("mouseout", function (ev) { if (ev.target.closest && ev.target.closest("[data-prod], [data-tok]")) clear(); });
 })();

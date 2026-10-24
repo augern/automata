@@ -318,10 +318,10 @@ function cmpParseGrammar(text) {
 
 // ── A compiled definition ────────────────────────────────────────────
 
-// Token rules + grammar + action table. method: "SLR1" (default) or "LR1". Throws on errors in the definition.
+// Token rules (the scanner, see algo/scanner.js) + grammar + action table. method: "SLR1" (default) or "LR1". Throws on errors in the definition.
 function cmpCompile(tokenText, grammarText, method) {
-  const tokenRules = cmpParseTokenRules(tokenText);
-  const scanner = cmpBuildScanner(tokenRules);
+  const scanner = scnCompile(tokenText); // algo/scanner.js: the rules, the NFA, the DFA the parser's scanner runs on
+  const tokenRules = scanner.rules;
   const grammar = cmpParseGrammar(grammarText);
   const m = method === "LR1" ? "LR1" : "SLR1";
   const auto = m === "LR1" ? buildLR1(grammar) : buildLR0(grammar);
@@ -344,16 +344,20 @@ function cmpNeedsLookahead(tables, state) {
 
 const CMP_MAX_FRAMES = 600;
 
-// Scanner and parser together on `input`. Returns { frames, accepted }. A frame describes the state after one event:
+// Scanner and parser together on `input` (opts.fine: a frame for every character the scanner reads). Returns { frames, accepted }. A frame describes the state after one event:
 //   type   start | scan | skip | shift | reduce | accept | error
 //   msg    what happened, in words
 //   cursor the input is consumed up to here (the end of the last token scanned or skipped)
+//   fine   true for the frames of single characters read by the scanner (only with opts.fine): type read | stop
+//   scn    the scanner's last call in the DFA: { state, path, edges, last }; machine: "scanner" | "parser", which moved
 //   lex    { start, end, readTo, name? } of the last scanner call (null for the other events)
 //   la     the look-ahead token's name, or null
 //   tokens [{ name, lexeme, start, end, val, type?, entry? }] produced so far
 //   reduced { rule, args: [{ sym, attrs }], result } for a reduce frame: the production, the values its action read, what it made
 //   stack  [{ state, sym, attrs }]    the forest [tree nodes], quads, symtab, messages: copies at this moment
-function cmpRun(comp, input) {
+function cmpRun(comp, input, opts) {
+  const fine = !!(opts && opts.fine);
+  const maxFrames = fine ? CMP_MAX_FRAMES * 4 : CMP_MAX_FRAMES;
   const { scanner, grammar, tables } = comp;
   const chars = [...input];
   const frames = [];
@@ -361,9 +365,10 @@ function cmpRun(comp, input) {
   let stack = [{ state: 0, sym: null, attrs: {}, node: null }];
   let cursor = 0, la = null, lex = null, nid = 0, temps = 0;
 
+  let lastScn = null; // the scanner's last call: { state, path, edges, last, dead? } (the DFA, as in scnRun)
   const snapshot = (type, msg, extra) => {
     frames.push(JSON.parse(JSON.stringify({
-      ...extra, type, msg, cursor, lex, la, tokens,
+      ...extra, type, msg, cursor, scn: lastScn, machine: type === "start" ? null : ["scan", "skip", "error", "read", "stop"].includes(type) ? "scanner" : "parser", lex, la, tokens,
       stack: stack.map((s) => ({ state: s.state, sym: s.sym, attrs: s.attrs })),
       forest: stack.filter((s) => s.node).map((s) => s.node),
       quads, symtab, messages,
@@ -393,7 +398,26 @@ function cmpRun(comp, input) {
   // the end, or false on a lexical error). Every call is a frame.
   const nextToken = () => {
     for (;;) {
-      const r = cmpScan(scanner, chars, cursor);
+      const r = scnScan(scanner.dfa, chars, cursor);
+      // the path through the DFA; with fine steps a frame for every character read
+      const path = [0], edges = [];
+      let seen = null;
+      for (const st of r.steps) {
+        const cls = scanner.dfa.classes[scanner.dfa.classOf(st.ch)].label;
+        if (st.to < 0) {
+          lastScn = { state: st.from, path: [...path], edges: edges.map((e) => [...e]), last: seen, dead: true };
+          if (fine) { lex = { start: r.start, end: st.i, readTo: st.i + 1 }; snapshot("stop", "No transition on " + JSON.stringify(st.ch) + " (class " + cls + ") from state " + st.from + ": the scanner stops" + (seen ? " and backs up to the last accepting state, " + seen.state + "." : "."), { fine: true }); }
+          continue;
+        }
+        path.push(st.to);
+        edges.push([st.from, st.to]);
+        if (st.rule !== null) seen = { state: st.to, end: st.i + 1, rule: st.rule };
+        lastScn = { state: st.to, path: [...path], edges: edges.map((e) => [...e]), last: seen };
+        if (fine) { lex = { start: r.start, end: st.i + 1, readTo: st.i + 1 }; snapshot("read", "Read " + JSON.stringify(st.ch) + " (class " + cls + "): state " + st.from + " → " + st.to + (st.rule !== null ? ", which accepts " + scanner.rules[st.rule].name + "." : "."), { fine: true }); }
+      }
+      if (r.rule >= 0) lastScn = { state: r.last.state, path, edges, last: r.last };
+      else if (r.rule === -2) lastScn = { state: 0, path: [0], edges: [], last: null };
+      else lastScn = { state: r.steps.length ? r.steps[0].from : 0, path, edges, last: null, dead: true };
       if (r.rule === -2) { lex = { start: cursor, end: cursor, readTo: cursor, name: "$" }; la = "$"; snapshot("scan", "The scanner is at the end of the input: it returns $."); return null; }
       if (r.rule === -1) { lex = { start: r.start, end: r.end, readTo: r.readTo }; snapshot("error", "Lexical error: no token rule matches at position " + r.start + ' (the character "' + chars[r.start] + '").'); return false; }
       const rule = scanner.rules[r.rule];
@@ -403,7 +427,7 @@ function cmpRun(comp, input) {
       const ahead = beyond ? " To see where it ends the scanner also read " + JSON.stringify(beyond) + " and backed up." : "";
       cursor = r.end;
       if (rule.skip) { snapshot("skip", "The scanner consumes " + JSON.stringify(lexeme) + " by the rule " + rule.name + " and discards it." + ahead); continue; }
-      const tok = { name: rule.name, lexeme, start: r.start, end: r.end, val: lexeme };
+      const tok = { name: rule.name, lexeme, start: r.start, end: r.end, val: lexeme, rule: r.rule };
       if (rule.name === "int" || rule.name === "float" || rule.name === "num") { tok.val = Number(lexeme); if (rule.name !== "num") tok.type = rule.name; }
       if (rule.name === "id") tok.entry = entryOf(lexeme);
       tokens.push(tok);
@@ -414,7 +438,7 @@ function cmpRun(comp, input) {
   };
 
   let tok = null, accepted = false;
-  for (let guard = 0; guard < 4000 && frames.length < CMP_MAX_FRAMES; guard++) {
+  for (let guard = 0; guard < 4000 && frames.length < maxFrames; guard++) {
     const state = stack[stack.length - 1].state;
     if (la === null && cmpNeedsLookahead(tables, state)) {
       tok = nextToken();
