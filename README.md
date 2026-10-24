@@ -22,7 +22,7 @@ Compiler construction (a section of its own on the index page, not on the map; t
 | Tool | Coverage |
 |---|---|
 | **Scanner** | Token rules to a scanner (maximal munch): one NFA for all rules, the alphabet cut into character classes (`[a-z]`, `[^"]`, `.`, “other”), the minimal DFA with token tags, its transition table, and longest-match scanning with back-up, a frame per character (coarse or fine steps); rules in the scanner editor (priority order, `→ skip`, notes on rules that never match) |
-| **Compiler Front End** | A maximal-munch scanner (the Scanner tool's DFA, drawn above the parser's automaton, with coarse or fine steps) and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner consumes lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, types and a symbol table |
+| **Compiler Front End** | A maximal-munch scanner (the Scanner tool's DFA, drawn above the parser's automaton, with coarse or fine steps) and an SLR(1) parser run together as one list of events (the parser pulls tokens, the scanner consumes lexemes with look-ahead and back-up shown, default reductions fetch no token), with `{{ … }}` actions on grammar rules in a small, safely interpreted action language: evaluation, quadruples, postfix, control structures with labels and backpatching, types and a symbol table; the generated postfix code runs on a stack machine and the quadruples in a simulator (`algo/vm.js`) |
 
 All tools share a common visual language (academic, high-contrast) and support
 step-by-step algorithm visualisation with Back/Forward controls.
@@ -64,6 +64,7 @@ parser-tools/
 │   │   ├── strings.js                  ← pure: random input strings (automaton walks, sampling, grammar sentences)
 │   │   ├── lr.js                       ← pure: LR(0)/LR(1)/LALR(1) automata, ACTION/GOTO tables
 │   │   ├── scanner.js                  ← pure: token-rule patterns with sets, the NFA of all rules, character classes, the minimal DFA, longest-match scanning and its frames
+│   │   ├── vm.js                       ← pure: a stack machine for postfix code and a quadruple simulator, as lists of states
 │   │   ├── scanner-model.js            ← pure: the token rules as editor rows, the text round trip
 │   │   ├── compiler.js                 ← pure: token rules and longest-match scanner, action language, the scanner+parser run as frames
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping

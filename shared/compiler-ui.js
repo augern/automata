@@ -10,6 +10,7 @@
 //   cfg.storage    the key of the panel layout in localStorage
 const CompilerTool = (() => {
   let comp = null, run = null, strings = [], view = null, cfg = null;
+  let machine = null, machineSim = null, machineInputs = {}; // the machine that runs the generated code (see renderMachine)
   let fine = false, frames = [], scannerGraph = null, tokenEditor = null; // frames: the ones the stepper walks (coarse: without the one-character ones of the scanner)
   let feat = { annotate: false, out: [] };
   const $ = (id) => document.getElementById(id);
@@ -77,6 +78,66 @@ const CompilerTool = (() => {
     sim.refresh();
     saveShare();
     render();
+    setupMachine();
+  }
+
+  // ── A machine for what the actions generate ───────────────
+  // Postfix code (a value that is a string of operands, operators, labels and jumps) runs on a stack machine, quadruples
+  // in a simulator; both with a stepper of their own. Shown only when the parse has been accepted and has produced one.
+  function setupMachine() {
+    const box = $("cm-vm");
+    machine = null;
+    const fin = run && run.accepted ? run.frames[run.frames.length - 1] : null;
+    if (fin && fin.quads.length) machine = { kind: "quads", quads: fin.quads, names: vmQuadVariables(fin.quads) };
+    else if (fin && fin.stack.length > 1) {
+      const code = fin.stack[fin.stack.length - 1].attrs.val;
+      if (vmIsPostfix(code)) machine = { kind: "postfix", code, names: vmPostfixVariables(code) };
+    }
+    box.hidden = !machine;
+    if (machine) {
+      // the starting values of the variables: kept while the name is the same, else 1, 2, 3, …
+      machine.names.forEach((n, i) => { if (!(n in machineInputs)) machineInputs[n] = i + 1; });
+      $("vm-title").textContent = machine.kind === "quads" ? "Quadruple simulator" : "Stack machine (postfix code)";
+    }
+    runMachine();
+  }
+  function runMachine() {
+    if (machine) {
+      const init = {};
+      machine.names.forEach((n) => { init[n] = machineInputs[n]; });
+      machine.run = machine.kind === "quads" ? vmQuads(machine.quads, init) : vmPostfix(machine.code, init);
+    }
+    machineSim.pos = 0;
+    machineSim.refresh();
+    renderMachine();
+  }
+  function renderMachine() {
+    if (!machine || !machine.run) return;
+    const { states, prog } = machine.run;
+    const st = states[Math.min(machineSim.pos, states.length - 1)], prev = states[Math.max(0, Math.min(machineSim.pos, states.length - 1) - 1)];
+    const note = $("vm-note");
+    note.textContent = st.note;
+    note.className = "cm-vm-note" + (st.error ? " is-error" : "");
+    // the program, the next instruction marked
+    if (machine.kind === "quads") {
+      $("vm-prog").innerHTML = "<table class='cm-table'><thead><tr><th>#</th><th>op</th><th>arg 1</th><th>arg 2</th><th>result</th></tr></thead><tbody>" +
+        prog.map((q, i) => "<tr" + (!st.done && i === st.pc ? " class='is-pc'" : "") + "><td>" + (i + 1) + "</td>" + q.map((x) => "<td>" + esc(x) + "</td>").join("") + "</tr>").join("") + "</tbody></table>";
+    } else {
+      $("vm-prog").innerHTML = prog.map((t, i) => "<span class='cm-vm-tok" + (!st.done && i === st.pc ? " is-pc" : "") + (t.kind === "def" ? " is-def" : "") + "'>" + esc(t.text) + "</span>").join(" ");
+      $("vm-stack").innerHTML = "<span class='ui-label'>Stack (top first)</span>" + (st.stack.length ? st.stack.slice().reverse().map((x, i) => "<div class='cm-vm-item" + (i === 0 ? " is-top" : "") + "'>" + esc(x) + "</div>").join("") : "<div class='cm-empty'>empty</div>");
+    }
+    if (machine.kind === "quads") $("vm-stack").innerHTML = "";
+    // the variables: the starting values can be changed; the current ones are shown, a changed one marked
+    const temps = Object.keys(st.vars).filter((n) => !machine.names.includes(n));
+    let h = "<span class='ui-label'>Variables (start, now)</span><table class='cm-table'><tbody>";
+    for (const n of machine.names) h += "<tr><td>" + esc(n) + "</td><td><input class='cm-vm-in' data-var='" + esc(n) + "' type='number' step='any' value='" + machineInputs[n] + "' /></td><td class='" + (st.vars[n] !== prev.vars[n] ? "is-changed" : "") + "'>" + (n in st.vars ? esc(String(vmRound(st.vars[n]))) : "") + "</td></tr>";
+    for (const n of temps) h += "<tr><td>" + esc(n) + "</td><td></td><td class='" + (st.vars[n] !== prev.vars[n] ? "is-changed" : "") + "'>" + esc(String(vmRound(st.vars[n]))) + "</td></tr>";
+    $("vm-vars").innerHTML = h + "</tbody></table>";
+    $("vm-vars").querySelectorAll("input").forEach((inp) => inp.addEventListener("change", () => {
+      const v = parseFloat(inp.value);
+      machineInputs[inp.dataset.var] = Number.isFinite(v) ? v : 0;
+      runMachine();
+    }));
   }
 
   // ── Rendering a frame ─────────────────────────────────────
@@ -380,6 +441,17 @@ const CompilerTool = (() => {
     panelMenuExtras["p-run"] = () => scannerGraph.menu();
     $("grain-coarse").addEventListener("change", () => setGrain(false));
     $("grain-fine").addEventListener("change", () => setGrain(true));
+    machineSim = createStepper({
+      buttons: { reset: "btn-vm-reset", back: "btn-vm-back", step: "btn-vm-step", all: "btn-vm-all" },
+      min: 0,
+      last: () => (machine && machine.run ? machine.run.states.length - 1 : null),
+      onChange: renderMachine,
+    });
+    $("btn-vm-reset").addEventListener("click", () => machineSim.reset());
+    $("btn-vm-back").addEventListener("click", () => machineSim.prev());
+    $("btn-vm-step").addEventListener("click", () => machineSim.next());
+    $("btn-vm-all").addEventListener("click", () => machineSim.end());
+    registerStepper("p-out", { step: () => machineSim.next(), back: () => machineSim.prev(), reset: () => machineSim.reset(), end: () => machineSim.end() });
     sim = createStepper({
       buttons: { reset: "btn-sim-reset", back: "btn-sim-back", step: "btn-sim-step", all: "btn-sim-all" },
       min: 0,

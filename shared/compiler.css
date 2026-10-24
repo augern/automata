@@ -56,3 +56,20 @@
 .cm-auto { flex: 1 1 30%; min-height: 150px; border-top: 1px solid var(--border-lo); }
 .cm-auto-head.is-active .ui-label { color: var(--accent); }
 .cm-auto-head.is-active .ui-label::before { content: "● "; }
+
+/* the machine that runs the generated code (shared/compiler-ui.js, algo/vm.js) */
+.cm-vm { border-top: 1px solid var(--border-lo); margin-top: var(--sp-4); padding-top: var(--sp-3); }
+.cm-vm h3 { margin: 0 0 var(--sp-3); }
+.cm-vm-note { margin-top: var(--sp-3); font-family: var(--font-serif); font-size: var(--fs-sm); min-height: 2.6em; line-height: 1.4; }
+.cm-vm-note.is-error { color: var(--st-reject); }
+.cm-vm-prog { margin: var(--sp-3) 0; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.9; }
+.cm-vm-tok { padding: 1px 3px; border-radius: var(--radius); }
+.cm-vm-tok.is-def { color: var(--text-dim); }
+.cm-vm-tok.is-pc, .cm-vm .cm-table tr.is-pc td { background: var(--st-active-bg); color: var(--st-active); }
+.cm-vm-cols { display: flex; gap: var(--sp-5); align-items: flex-start; }
+.cm-vm-cols > div { flex: 1; min-width: 0; }
+.cm-vm-item { font-family: var(--font-mono); font-size: var(--fs-xs); border: 1px solid var(--border-lo); border-radius: var(--radius); padding: 0 6px; margin: 2px 0; }
+.cm-vm-item.is-top { border-color: var(--st-active); color: var(--st-active); }
+.cm-vm-in { width: 5em; font-family: var(--font-mono); font-size: var(--fs-xs); background: var(--bg-input); color: var(--text); border: 1px solid var(--border-lo); border-radius: var(--radius); padding: 0 4px; }
+.cm-vm td.is-changed { color: var(--hot); font-weight: bold; }
+.cm-vm[hidden] { display: none; }

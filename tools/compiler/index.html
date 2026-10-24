@@ -9,7 +9,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=02a78cef" />
     <link rel="stylesheet" href="../../shared/ui.css?v=b0845852" />
-    <link rel="stylesheet" href="../../shared/compiler.css?v=09a5fdb5" />
+    <link rel="stylesheet" href="../../shared/compiler.css?v=87418257" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <link rel="stylesheet" href="../../shared/scanner-editor.css?v=d7a839ae" />
     <link rel="stylesheet" href="../../shared/scanner.css?v=1e3582f4" />
@@ -121,6 +121,20 @@
         </div>
         <div class="panel-body">
           <div id="cm-out"></div>
+          <div id="cm-vm" class="cm-vm" hidden>
+            <h3 id="vm-title">Stack machine</h3>
+            <div class="ui-sim__row">
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-vm-reset" title="Restart" disabled></button>
+                <button class="btn" id="btn-vm-back" disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-vm-step" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-vm-all" title="Run all" disabled></button>
+              </div>
+            </div>
+            <div id="vm-note" class="cm-vm-note"></div>
+            <div id="vm-prog" class="cm-vm-prog"></div>
+            <div class="cm-vm-cols"><div id="vm-stack"></div><div id="vm-vars"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -134,6 +148,7 @@
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
     <script src="../../shared/algo/scanner.js?v=83a39a9b"></script>
     <script src="../../shared/algo/compiler.js?v=6c071f54"></script>
+    <script src="../../shared/algo/vm.js?v=ece992ab"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -148,10 +163,10 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=4a07fe8d"></script>
+    <script src="guide.js?v=78a2a6f0"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
-    <script src="../../shared/compiler-ui.js?v=ba5864f7"></script>
+    <script src="../../shared/compiler-ui.js?v=b5d43a6e"></script>
     <script>
       const EXAMPLES = {};
       function loadExample(k) { CompilerTool.loadExample(k); }
