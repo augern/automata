@@ -39,66 +39,139 @@ const ScannerTool = (() => {
         const by = live.map((r, j) => j).filter((j) => j < k && sc.dfa.states.some((s) => s.accept === j && s.rules.includes(k)));
         notes.push({ rule: k, kind: "warn", text: "Never matches: " + (by.length ? by.map((j) => live[j].name).join(", ") + " is earlier and accepts every lexeme this rule does." : "an earlier rule accepts everything it does.") });
       }
-      const seen = new Set();
+      // a rule that loses to earlier rules where they match the same lexeme: one note, the winners listed
+      const beats = new Map();
       for (const st of sc.dfa.states) {
         if (st.rules.length < 2) continue;
-        const w = st.rules[0];
         for (const l of st.rules.slice(1)) {
-          if (sc.shadowed.includes(l) || seen.has(l + ">" + w)) continue;
-          seen.add(l + ">" + w);
-          notes.push({ rule: l, kind: "info", text: "Where it matches the same lexeme as " + live[w].name + " (state " + st.id + "), " + live[w].name + " wins: it is earlier." });
+          if (sc.shadowed.includes(l)) continue;
+          if (!beats.has(l)) beats.set(l, new Set());
+          beats.get(l).add(st.rules[0]);
         }
+      }
+      for (const [l, ws] of beats) {
+        const names = [...ws].sort((x, y) => x - y).map((w) => live[w].name);
+        notes.push({ rule: l, kind: "info", text: "Where it matches the same lexeme as " + names.join(", ") + ", the earlier rule wins." });
       }
     }
     editor.flag(notes);
   }
 
   // ── The graphs ────────────────────────────────────────────
+  // A real scanner's automata are too big to read as one picture, so above a size they show a part: the NFA of one rule
+  // (the one pointed at in the rules), the DFA around the state the scanner is in. The panel menus choose.
+  const NFA_BIG = 40, DFA_BIG = 30;
+  let nfaMode = "auto", dfaMode = "auto", nfaRule = 0;
+  const nfaOne = () => !!sc && (nfaMode === "rule" || (nfaMode === "auto" && sc.nfa.n > NFA_BIG));
+  const dfaFocus = () => !!sc && (dfaMode === "focus" || (dfaMode === "auto" && sc.dfa.states.length > DFA_BIG));
+  let nfaIx = new Map(), dfaIx = new Map(); // state → its index in what is drawn
+  panelMenuExtras["p-nfa"] = () => [
+    { heading: "NFA view" },
+    { label: "Automatic", checked: nfaMode === "auto", title: "All rules up to " + NFA_BIG + " states, else one rule", onSelect: () => { nfaMode = "auto"; drawNfa(); } },
+    { label: "All rules", checked: nfaMode === "whole", onSelect: () => { nfaMode = "whole"; drawNfa(); } },
+    { label: "One rule", checked: nfaMode === "rule", title: "The NFA of the rule pointed at in the token rules", onSelect: () => { nfaMode = "rule"; drawNfa(); } },
+  ];
+  panelMenuExtras["p-dfa"] = () => [
+    { heading: "DFA view" },
+    { label: "Automatic", checked: dfaMode === "auto", title: "The whole DFA up to " + DFA_BIG + " states, else the part around the current state", onSelect: () => { dfaMode = "auto"; drawDfa(); } },
+    { label: "Whole DFA", checked: dfaMode === "whole", onSelect: () => { dfaMode = "whole"; drawDfa(); } },
+    { label: "Around the current state", checked: dfaMode === "focus", title: "The states on the path so far, the current state and its successors", onSelect: () => { dfaMode = "focus"; drawDfa(); } },
+  ];
+
   function drawGraphs() {
-    if (!sc) {
-      drawAutomatonGraph("nfa", nfaView, { nodes: [], start: 0, edges: [] });
-      drawAutomatonGraph("dfa", dfaView, { nodes: [], start: 0, edges: [] });
-      return;
-    }
-    // the NFA: states as numbers, the accepting ones tagged with their rule; an edge has one label for each set
-    const { nfa, dfa, rules } = sc;
+    drawNfa();
+    drawDfa();
+  }
+
+  // The states `keep` (all when null) of an automaton with the edges between them: the indexes they are drawn by.
+  const indexOf = (n, keep) => new Map((keep ? [...keep].sort((a, b) => a - b) : Array.from({ length: n }, (_, i) => i)).map((s, k) => [s, k]));
+
+  function drawNfa() {
+    const note = $("nfa-note");
+    if (!sc) { drawAutomatonGraph("nfa", nfaView, { nodes: [], start: 0, edges: [] }); note.textContent = ""; return; }
+    const { nfa, rules } = sc;
+    let keep = null;
+    if (nfaOne()) {
+      // the states that lead to the accepting state of the rule, and the start state
+      const acc = [...nfa.accept].find(([, k]) => k === nfaRule);
+      keep = new Set([0]);
+      if (acc) {
+        const todo = [acc[0]];
+        keep.add(acc[0]);
+        while (todo.length) {
+          const t = todo.pop();
+          for (const e of nfa.edges) if (e.to === t && !keep.has(e.from)) { keep.add(e.from); if (e.from !== 0) todo.push(e.from); }
+        }
+      }
+      note.textContent = nfa.n + " states in all: the rule " + rules[nfaRule].name + ". Point at another rule.";
+    } else note.textContent = "";
+    nfaIx = indexOf(nfa.n, keep);
+    const ids = [...nfaIx.keys()];
     const pairs = new Map();
     for (const e of nfa.edges) {
+      if (!nfaIx.has(e.from) || !nfaIx.has(e.to)) continue;
       const key = e.from + ">" + e.to;
-      if (!pairs.has(key)) pairs.set(key, { from: e.from, to: e.to, labels: [], eps: true });
+      if (!pairs.has(key)) pairs.set(key, { from: nfaIx.get(e.from), to: nfaIx.get(e.to), labels: [], eps: true });
       const p = pairs.get(key);
       p.labels.push(e.set ? scnSetLabel(e.set) : "ε");
       if (e.set) p.eps = false;
     }
     drawAutomatonGraph("nfa", nfaView, {
-      nodes: Array.from({ length: nfa.n }, (_, i) => ({ label: String(i), accepting: nfa.accept.has(i), tag: nfa.accept.has(i) ? rules[nfa.accept.get(i)].name : undefined })),
-      start: 0,
+      nodes: ids.map((i) => ({ label: String(i), accepting: nfa.accept.has(i), tag: nfa.accept.has(i) ? rules[nfa.accept.get(i)].name : undefined })),
+      start: nfaIx.get(0),
       edges: [...pairs.values()],
       joinLabels: true,
-      reserveLabels: true,
+      reserveLabels: ids.length <= NFA_BIG,
       hideEps: true,
       radius: 13,
     });
-    nfa.accept.forEach((k, s) => d3.select("#nfa-state-" + s).attr("data-prod", k + 1));
-    // the DFA: an edge has a label for each character class that takes it
+    nfa.accept.forEach((k, s) => { if (nfaIx.has(s)) d3.select("#nfa-state-" + nfaIx.get(s)).attr("data-prod", k + 1); });
+  }
+
+  // The states of the DFA that are drawn in the part view: the path so far, the current state, the last accepting state,
+  // and where the scanner goes next: the successor on the next character, and all of them when there are few.
+  function dfaShown() {
+    if (!dfaFocus()) return null;
+    const { dfa } = sc, f = currentFrame();
+    const cur = f && f.state !== null && f.state !== undefined ? f.state : 0;
+    const keep = new Set([0, cur]);
+    for (const s of (f && f.path) || []) keep.add(s);
+    if (f && f.last) keep.add(f.last.state);
+    // the state the scanner reads from next: the one it is in, or the start state before a call
+    const from = f && f.type === "read" ? f.state : 0;
+    const succ = dfa.trans[from].filter((t) => t >= 0);
+    if (new Set(succ).size <= 8) succ.forEach((t) => keep.add(t));
+    const ch = f ? [...$("sim-input").value][f.forward] : undefined;
+    if (ch !== undefined) { const t = dfa.trans[from][dfa.classOf(ch)]; if (t >= 0) keep.add(t); }
+    return keep;
+  }
+
+  function drawDfa() {
+    const note = $("dfa-note");
+    if (!sc) { drawAutomatonGraph("dfa", dfaView, { nodes: [], start: 0, edges: [] }); note.textContent = ""; return; }
+    const { dfa, rules } = sc;
+    const keep = dfaShown();
+    dfaIx = indexOf(dfa.states.length, keep);
+    note.textContent = keep ? dfa.states.length + " states in all: the part around the current state. The table has them all." : "";
     const dp = new Map(), loops = new Map();
     dfa.trans.forEach((row, from) => row.forEach((to, c) => {
-      if (to < 0) return;
+      if (to < 0 || !dfaIx.has(from) || !dfaIx.has(to)) return;
       const m = from === to ? loops : dp, key = from + ">" + to;
-      if (!m.has(key)) m.set(key, { from, to, node: from, labels: [], ids: [] });
+      if (!m.has(key)) m.set(key, { from: dfaIx.get(from), to: dfaIx.get(to), node: dfaIx.get(from), labels: [], ids: [] });
       m.get(key).labels.push(dfa.classes[c].label);
       m.get(key).ids.push(c);
     }));
+    const ids = [...dfaIx.keys()];
     drawAutomatonGraph("dfa", dfaView, {
-      nodes: dfa.states.map((st) => ({ label: String(st.id), accepting: st.accept >= 0, tag: st.accept >= 0 ? rules[st.accept].name : undefined })),
-      start: 0,
+      nodes: ids.map((i) => { const st = dfa.states[i]; return { label: String(st.id), accepting: st.accept >= 0, tag: st.accept >= 0 ? rules[st.accept].name : undefined }; }),
+      start: dfaIx.get(0),
       edges: [...dp.values()],
       loops: [...loops.values()],
       joinLabels: true,
-      reserveLabels: true,
-      onHover: (ids) => markClasses(ids),
+      reserveLabels: ids.length <= DFA_BIG,
+      onHover: (hot) => markClasses(hot),
     });
-    dfa.states.forEach((st) => { if (st.rules.length) d3.select("#dfa-state-" + st.id).attr("data-prod", st.rules.map((r) => r + 1).join(" ")); });
+    ids.forEach((i) => { const st = dfa.states[i]; if (st.rules.length) d3.select("#dfa-state-" + dfaIx.get(i)).attr("data-prod", st.rules.map((r) => r + 1).join(" ")); });
   }
 
   // A class is marked where the pointer is: its row in the list, and its edges in the graph.
@@ -214,17 +287,22 @@ const ScannerTool = (() => {
   // The DFA at this frame: the state the scanner is in (blue), the path it has taken (blue edges, orange states), the
   // last accepting state it has seen (green); the same state in the table.
   function markPath(f) {
+    if (dfaFocus() && sc) drawDfa();
+    const ix = (s) => (dfaIx.has(s) ? dfaIx.get(s) : -1);
     d3.selectAll("#dfa-graph-root .ag-node").classed("is-hot", false).classed("is-last", false);
     d3.selectAll("#dfa-graph-root .ag-edge").classed("is-active", false);
     highlightAutomatonStates("dfa", []);
     document.querySelectorAll("#sc-table tr").forEach((r) => r.classList.remove("is-now"));
-    document.querySelectorAll("#sc-table td.is-taken").forEach((r) => r.classList.remove("is-taken"));
     if (!f || !sc) return;
-    for (const s of f.path || []) d3.select("#dfa-state-" + s).classed("is-hot", true);
-    for (const [a, b] of f.edges || []) d3.selectAll('#dfa-graph-root [data-edge="' + a + "-" + b + '"], #dfa-graph-root [data-self="' + a + '"]').filter(function () { return a === b ? this.dataset.self !== undefined : true; }).classed("is-active", true);
-    if (f.last) d3.select("#dfa-state-" + f.last.state).classed("is-last", true);
+    for (const s of f.path || []) d3.select("#dfa-state-" + ix(s)).classed("is-hot", true);
+    for (const [a, b] of f.edges || []) {
+      const x = ix(a), y = ix(b);
+      if (x < 0 || y < 0) continue;
+      d3.selectAll('#dfa-graph-root [data-edge="' + x + "-" + y + '"], #dfa-graph-root [data-self="' + x + '"]').filter(function () { return x === y ? this.dataset.self !== undefined : this.dataset.edge !== undefined; }).classed("is-active", true);
+    }
+    if (f.last) d3.select("#dfa-state-" + ix(f.last.state)).classed("is-last", true);
     if (f.state !== null && f.state !== undefined) {
-      highlightAutomatonStates("dfa", [f.state]);
+      highlightAutomatonStates("dfa", [ix(f.state)]);
       const row = document.querySelector('#sc-table tr[data-state="' + f.state + '"]');
       if (row) row.classList.add("is-now");
     }
@@ -273,6 +351,12 @@ const ScannerTool = (() => {
     $("btn-sim-step").addEventListener("click", () => sim.next());
     $("btn-sim-all").addEventListener("click", () => sim.end());
     registerStepper("p-run", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
+    const pickRule = (e) => {
+      const r = e.target.closest && e.target.closest(".se-row[data-live]");
+      if (r && +r.dataset.live !== nfaRule) { nfaRule = +r.dataset.live; if (nfaOne()) drawNfa(); }
+    };
+    $("p-rules").addEventListener("mouseover", pickRule);
+    $("p-rules").addEventListener("focusin", pickRule);
     $("grain-coarse").addEventListener("change", () => setGrain(false));
     $("grain-fine").addEventListener("change", () => setGrain(true));
     UI.stringInput("sim-input", { examples: () => strings, onPick: runString });

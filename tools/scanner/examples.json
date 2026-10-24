@@ -128,6 +128,168 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Programming languages",
+      "examples": [
+        {
+          "label": "A small C-like language",
+          "purpose": "Keywords, names, numbers, strings with escapes, operators and two kinds of comment: 35 rules, and the DFA that scans them all in one pass.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "comment //.* -> skip",
+            "blockcomment /\\*([^*]|\\*+[^*/])*\\*+/ -> skip",
+            "if if",
+            "else else",
+            "while while",
+            "return return",
+            "int int",
+            "char char",
+            "id [A-Za-z_][A-Za-z0-9_]*",
+            "hex 0[xX][0-9a-fA-F]+",
+            "num [0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?",
+            "str \"([^\"\\\\]|\\\\.)*\"",
+            "chr '([^'\\\\]|\\\\.)'",
+            "'==' ==",
+            "'!=' !=",
+            "'<=' <=",
+            "'>=' >=",
+            "'&&' &&",
+            "'||' \\|\\|",
+            "'++' \\+\\+",
+            "'<' <",
+            "'>' >",
+            "'=' =",
+            "'!' !",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "'/' /",
+            "';' ;",
+            "',' ,",
+            "'(' \\(",
+            "')' \\)",
+            "'{' {",
+            "'}' }"
+          ],
+          "strings": [
+            "if (x >= 0x1F && y != 3.5e-2) { return x++; } // done",
+            "/* a /* b */ c */ n = 1;",
+            "s = \"say \\\"hi\\\"\"; c = '\\n';"
+          ]
+        },
+        {
+          "label": "JSON",
+          "purpose": "The tokens of JSON: punctuation, three keywords, strings with escapes and numbers with an optional sign, fraction and exponent.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "str \"([^\"\\\\]|\\\\.)*\"",
+            "num -?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?",
+            "true true",
+            "false false",
+            "null null",
+            "'{' {",
+            "'}' }",
+            "'[' \\[",
+            "']' \\]",
+            "':' :",
+            "',' ,"
+          ],
+          "strings": [
+            "{\"name\": \"Ada\", \"tags\": [\"a\", \"b\"], \"age\": 36.5e0, \"ok\": true}",
+            "[1, -2.5, 0, 01]",
+            "[true, nul]"
+          ]
+        },
+        {
+          "label": "Pascal, case-insensitive",
+          "purpose": "Keywords ignore case, so each is a row of two-letter classes; comments come in two forms and strings double their quote.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "comment \\{[^}]*\\} -> skip",
+            "comment2 \\(\\*([^*]|\\*+[^*)])*\\*+\\) -> skip",
+            "program [Pp][Rr][Oo][Gg][Rr][Aa][Mm]",
+            "var [Vv][Aa][Rr]",
+            "begin [Bb][Ee][Gg][Ii][Nn]",
+            "end [Ee][Nn][Dd]",
+            "if [Ii][Ff]",
+            "then [Tt][Hh][Ee][Nn]",
+            "else [Ee][Ll][Ss][Ee]",
+            "while [Ww][Hh][Ii][Ll][Ee]",
+            "do [Dd][Oo]",
+            "integer [Ii][Nn][Tt][Ee][Gg][Ee][Rr]",
+            "real [Rr][Ee][Aa][Ll]",
+            "id [A-Za-z][A-Za-z0-9]*",
+            "num [0-9]+(\\.[0-9]+)?",
+            "str '([^']|'')*'",
+            "':=' :=",
+            "'<>' <>",
+            "'<=' <=",
+            "'>=' >=",
+            "'<' <",
+            "'>' >",
+            "'=' =",
+            "'+' \\+",
+            "'-' -",
+            "'*' \\*",
+            "'/' /",
+            "'(' \\(",
+            "')' \\)",
+            "';' ;",
+            "':' :",
+            "',' ,",
+            "'.' \\."
+          ],
+          "strings": [
+            "BEGIN x := x + 1; End.",
+            "If a <> b Then writeln('it''s') (* note *) { and this }",
+            "while i <= 10 do i := i * 2"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Applications",
+      "examples": [
+        {
+          "label": "Log lines",
+          "purpose": "Dates, times, levels, addresses and paths: the longest match tells 10.0.0.7 and 2024-03-05 from the number 10 or 2024.",
+          "tokens": [
+            "skip [ \\t]+ -> skip",
+            "date [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]",
+            "time [0-9][0-9]:[0-9][0-9]:[0-9][0-9]",
+            "level INFO|WARN|ERROR|DEBUG",
+            "ip [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+",
+            "num [0-9]+",
+            "path /[A-Za-z0-9_./-]*",
+            "note \\[[^\\]]*\\]",
+            "word [A-Za-z_][A-Za-z0-9_]*"
+          ],
+          "strings": [
+            "2024-03-05 12:01:07 ERROR 10.0.0.7 timeout /api/v1/items [retry 3]",
+            "2024-03-05 12:01:09 INFO started worker_2",
+            "12 ERRORS"
+          ]
+        },
+        {
+          "label": "Number literals of C",
+          "purpose": "Decimal, octal, hex, binary and floating-point literals share prefixes: 0, 0x and 0b all begin with the digit 0.",
+          "tokens": [
+            "skip [ \\t\\n]+ -> skip",
+            "dec 0|[1-9][0-9]*",
+            "oct 0[0-7]+",
+            "hex 0[xX][0-9a-fA-F]+",
+            "bin 0[bB][01]+",
+            "float ([0-9]+\\.[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+",
+            "suffix [uUlLfF]+"
+          ],
+          "strings": [
+            "0 017 0x1F 0b101 3.14 .5 1e10",
+            "08 12u 7.5f",
+            "0xg"
+          ]
+        }
+      ]
     }
   ]
 }

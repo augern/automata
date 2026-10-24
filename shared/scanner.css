@@ -20,3 +20,5 @@
 .ag-node.is-last circle { stroke: var(--st-accept); stroke-width: 3; }
 /* an edge label stays readable where it crosses a line */
 #nfa-graph-root .ag-edge text, #dfa-graph-root .ag-edge text { paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; stroke-linejoin: round; }
+.sc-viewnote { position: absolute; left: var(--sp-4); top: var(--sp-3); right: var(--sp-4); font-size: var(--fs-2xs); color: var(--text-dim); pointer-events: none; }
+.sc-viewnote:empty { display: none; }
