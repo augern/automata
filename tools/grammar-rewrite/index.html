@@ -7,6 +7,7 @@
 <title>Grammar Transformations | Parser Tools</title>
 <link rel="stylesheet" href="../../shared/shared.css?v=9bbd6824">
 <link rel="stylesheet" href="../../shared/ui.css?v=fb381b22">
+<link rel="stylesheet" href="../../shared/grammar-editor.css?v=128d6d30">
 <script src="../../shared/theme.js?v=9222f18e"></script>
 <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -171,11 +172,13 @@
 <script src="../../shared/shared.js?v=345876dc"></script>
 <script src="../../shared/share-link.js?v=0d17f714"></script>
 <script src="../../shared/ui.js?v=b7fb54c9"></script>
+<script src="../../shared/algo/grammar-model.js?v=02c3cdaa"></script>
+<script src="../../shared/grammar-editor.js?v=45ee4014"></script>
 <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
 <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
 <script src="../../shared/quick-link.js?v=fca552e1"></script>
 <script src="../../shared/view-menu.js?v=eada4185"></script>
-<script src="guide.js?v=281e0d19"></script>
+<script src="guide.js?v=470db6b3"></script>
 <script src="../../shared/guide.js?v=98cfe80c"></script>
 <script>
 'use strict';
@@ -199,7 +202,8 @@ const EXAMPLES = {};
 function loadExample(k) {
   if (!k) return;
   document.getElementById('grammar-input').value = (EXAMPLES[k] && EXAMPLES[k].text) || '';
-  document.getElementById('examples-select').value = '';
+  document.getElementById('examples-select').value = k;
+  exampleWatch();
   setError('');
   build();
 }
@@ -268,6 +272,7 @@ function build() {
 // ── Shareable link ────────────────────────────────────────────
 const saveShare = createShareSaver(() => ({
   g: document.getElementById('grammar-input').value,
+  x: exampleShareKey(),
   m: currentMode,
 }));
 
@@ -276,6 +281,7 @@ function applyShareState() {
   const st = shareValidateTextState(readShareState(), 'g', Object.keys(MODE_TITLES));
   if (!st) return false;
   document.getElementById('grammar-input').value = st.g;
+  exampleRestoreLater(st.x);
   if (st.m) setMode(st.m);
   build();
   return true;
@@ -653,6 +659,7 @@ window.onerror = function(msg, src, line, col, err) {
 
 // ── Init ──────────────────────────────────────────────────────
 window.addEventListener('load', () => {
+  GrammarEditor.attach(document.getElementById('grammar-input'));
   loadPanelState();
   initAlgoModal();
   let startMode = 'clean';
@@ -662,7 +669,7 @@ window.addEventListener('load', () => {
   loadExamplesInto('examples.json', 'examples-select', EXAMPLES, () => {
     if (!document.getElementById('grammar-input').value.trim()) {
       const firstKey = Object.keys(EXAMPLES)[0];
-      if (firstKey) { document.getElementById('grammar-input').value = EXAMPLES[firstKey].text; build(); }
+      if (firstKey) loadExample(firstKey);
     }
   });
   // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
