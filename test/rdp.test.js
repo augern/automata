@@ -344,7 +344,7 @@ test("predictive: predict sets and the generated procedures", () => {
   assert.deepEqual([...p.sets["E'"][1]].sort(), ["$", ")"]); // ε: FOLLOW(E')
   const procs = rdpProcedures(g, "predictive");
   const text = (nt) => procs.find((x) => x.nt === nt).lines.map((l) => l.segs.map((s) => s[1]).join(""));
-  assert.deepEqual(arr(text("E'")), ["E'()  ▷ the next token chooses the alternative", "if next ∈ {+}  E' → + T E'", "match(+)", "T()", "E'()", "return", "if next ∈ {⊣, )}  E' → ε", "return", "else  error(“E'”)"]);
+  assert.deepEqual(arr(text("E'")), ["E'()  ▷ the next token chooses the alternative", "if next ∈ {+}  ▷ E' → + T E'", "match(+)", "T()", "E'()", "return", "if next ∈ {⊣, )}  ▷ E' → ε", "return", "else  error(“E'”)"]);
   // a procedure with one alternative makes no choice
   assert.deepEqual(arr(text("E")), ["E()  ▷ the next token chooses the alternative", "T()", "E'()", "return"]);
   // every event's line is a line of the listing

@@ -133,7 +133,6 @@ function rdpProcedures(g, mode) {
   const ordered = mode === "ordered" || mode === "packrat";
   const memo = mode === "packrat";
   const jv = (k) => (k === 0 ? "i" : "j" + rdpSub(k));
-  const symSeg = (s) => [g.nonterminals.has(s) ? "nt" : "t", s];
   for (const nt of g.order) {
     const alts = g.alts[nt];
     const multi = alts.length > 1;
@@ -153,8 +152,7 @@ function rdpProcedures(g, mode) {
       const base = multi ? 2 : 1;
       if (multi) {
         add(rdpKey(nt, "alt", a), 1, "alt", "Alternative " + (a + 1) + " of " + nt + ": " + nt + " → " + (alt.rhs.join(" ") || "ε") + ". The alternatives are tried in the order written.", [
-          ["kw", "alt " + (a + 1)], ["", "  "], ["nt", nt], ["", " → "],
-          ...(alt.rhs.length ? alt.rhs.flatMap((s, x) => (x ? [["", " "], symSeg(s)] : [symSeg(s)])) : [["cm", "ε"]]),
+          ["cm", "▷ alt " + (a + 1) + ": " + nt + " → " + (alt.rhs.join(" ") || "ε")], // a label, not code
         ]);
       }
       alt.rhs.forEach((s, k) => {
@@ -299,7 +297,6 @@ function rdpFrameLines(g, key, mode) {
 function rdpPredictiveProcedures(g) {
   const { sets } = rdpPredict(g);
   const shown = (set) => [...set].sort().map((t) => (t === "$" ? "⊣" : t)).join(", ");
-  const symSeg = (s) => [g.nonterminals.has(s) ? "nt" : "t", s];
   const procs = [];
   for (const nt of g.order) {
     const alts = g.alts[nt];
@@ -311,8 +308,7 @@ function rdpPredictiveProcedures(g) {
       const base = multi ? 2 : 1;
       if (multi) {
         add(rdpKey(nt, "alt", a), 1, "alt", "Alternative " + (a + 1) + " of " + nt + ": " + nt + " → " + (alt.rhs.join(" ") || "ε") + ". It is used when the next token is one of {" + shown(sets[nt][a]) + "}" + (alt.rhs.length ? ": the tokens it can start with" : ": the tokens that can follow " + nt) + ".", [
-          ["kw", "if"], ["", " next ∈ {" + shown(sets[nt][a]) + "}  "], ["nt", nt], ["", " → "],
-          ...(alt.rhs.length ? alt.rhs.flatMap((s, x) => (x ? [["", " "], symSeg(s)] : [symSeg(s)])) : [["cm", "ε"]]),
+          ["kw", "if"], ["", " next ∈ {" + shown(sets[nt][a]) + "}  "], ["cm", "▷ " + nt + " → " + (alt.rhs.join(" ") || "ε")], // the production this branch carries out
         ]);
       }
       alt.rhs.forEach((s, k) => {
