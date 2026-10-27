@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Backtracking recursive-descent parser: the procedures generated from a grammar, and the search for a parse with its guesses and backtracking, step by step." />
-    <title>Backtracking Recursive Descent | Parser Tools</title>
+    <meta name="description" content="Recursive-descent parser: the procedures generated from a grammar, predictive (LL(1), no backtracking) or with backtracking, and the parse step by step." />
+    <title>Recursive Descent | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=02a78cef" />
     <link rel="stylesheet" href="../../shared/ui.css?v=b0845852" />
@@ -114,7 +114,7 @@
   </head>
   <body>
     <div id="topbar">
-      <h1>Backtracking Recursive Descent</h1>
+      <h1>Recursive Descent</h1>
     </div>
 
     <div id="panels">
@@ -152,9 +152,12 @@
         <div class="panel-body">
           <div id="mode-bar" class="ui-bar">
             <div class="ui-field">
+              <label title="Each procedure looks at the next token and picks the one alternative it predicts (LL(1)); nothing is tried and undone">
+                <input type="radio" name="rdp-mode" value="predictive" checked /> predictive (no backtracking)
+              </label>
               <span>Backtracking:</span>
               <label title="Every procedure yields all the positions where it can end, and is asked again when the rest of the parse fails">
-                <input type="radio" name="rdp-mode" value="full" checked /> complete
+                <input type="radio" name="rdp-mode" value="full" /> complete
               </label>
               <label title="The first alternative that matches is final; it is never revisited (as in PEG parsers)">
                 <input type="radio" name="rdp-mode" value="ordered" /> ordered choice
@@ -211,10 +214,10 @@
             <div class="rdp-row" id="rdp-stats">
               <span>step <b id="st-step">0</b></span>
               <span>calls <b id="st-calls">0</b></span>
-              <span>backtracks <b id="st-back">0</b></span>
+              <span id="st-back-wrap">backtracks <b id="st-back">0</b></span>
               <span id="st-memo-wrap" hidden>memo hits <b id="st-memo">0</b></span>
               <span>depth <b id="st-depth">0</b></span>
-              <label title="Keep the attempts that backtracking undid in the tree, greyed out"><input type="checkbox" id="show-dead" checked /> show abandoned attempts</label>
+              <label id="show-dead-wrap" title="Keep the attempts that backtracking undid in the tree, greyed out"><input type="checkbox" id="show-dead" checked /> show abandoned attempts</label>
             </div>
           </div>
           <div id="tree-wrap" class="ui-canvas">
@@ -243,7 +246,8 @@
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
-    <script src="../../shared/algo/rdp.js?v=1d801659"></script>
+    <script src="../../shared/algo/ll1.js?v=70f066b7"></script>
+    <script src="../../shared/algo/rdp.js?v=1cfdde5b"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -254,7 +258,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=318b242b"></script>
+    <script src="guide.js?v=4b04d928"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -266,7 +270,7 @@
 
       let rdG = null; // the parsed grammar, or null
       let rdTrace = null; // the recorded run
-      let rdMode = "full";
+      let rdMode = "predictive";
       let rdStrings = []; // example strings of the loaded example, offered in the string input's menu
       let rdSel = null; // id of the node whose explanation is open
       let rdSelStep = null; // step it was opened at: stepping or editing closes it
@@ -284,6 +288,7 @@
       const rdToneClass = { "is-good": "gh-good", "is-bad": "gh-bad", "is-warn": "gh-warn" };
       const rdTone = { mismatch: "is-bad", fail: "is-bad", loop: "is-bad", reject: "is-warn", yield: "is-good", match: "" };
       const MODE_HINT = {
+        predictive: "Each procedure looks at the next token and picks the one alternative that token predicts: its FIRST set, or FOLLOW for an empty alternative. Nothing is tried and undone. A token that predicts nothing, or one that does not match, is a syntax error and ends the run. If two alternatives are predicted by the same token the grammar is not LL(1), and the parser commits to the first.",
         full: "Each procedure yields every position where it can end. When the rest of the parse fails, control returns into it for the next one, so a parse is found whenever there is one.",
         ordered: "Each procedure returns the end of its first alternative that matches. That choice is final: it is never revisited, so some strings of the language are rejected.",
         packrat: "Ordered choice with a memo table: the result of every nonterminal at every position is remembered, and a repeated call is answered from the table. The verdicts are those of ordered choice; only the repeated work goes.",
@@ -306,13 +311,21 @@
           rdG = null;
           setError(e.message);
         }
-        const rec = rdG ? rdpLeftRecursive(rdG) : [];
-        $("grammar-note").textContent = rec.length
-          ? "Left-recursive: " + rec.join(", ") + ". A top-down parser would call itself forever there; the run stops at the first repeat."
-          : "";
+        renderNote();
         renderCode();
         run();
         saveShare();
+      }
+
+      // under the grammar: left recursion, and without backtracking what is not LL(1)
+      function renderNote() {
+        const rec = rdG ? rdpLeftRecursive(rdG) : [];
+        let note = rec.length ? "Left-recursive: " + rec.join(", ") + ". A top-down parser would call itself forever there; the run stops at the first repeat." : "";
+        if (rdG && rdMode === "predictive" && !rec.length) {
+          const cl = rdpPredict(rdG).clashes;
+          if (cl.length) note = "Not LL(1): " + cl.slice(0, 3).map((c) => (c.sym === "$" ? "the end of the input" : "“" + c.sym + "”") + " predicts alternatives " + c.alts.map((a) => a + 1).join(" and ") + " of " + c.nt).join("; ") + (cl.length > 3 ? "; …" : "") + ". Without backtracking the first is used, so a string of the language may be rejected.";
+        }
+        $("grammar-note").textContent = note;
       }
 
       function renderCode() {
@@ -376,7 +389,7 @@
         const ev = rdState && rdState.event;
         const nowKey = building ? rdLineInfo[gen.pos - 1].key : ev ? ev.line : null;
         const fk = !building && frameKey(ev);
-        if (fk) mark(rdpFrameRanges(rdG, rdSpans, fk), null);
+        if (fk) mark(rdpFrameRanges(rdG, rdSpans, fk, rdMode), null);
         if (rdHot) for (const k of rdHot.lines) mark(rdpGrammarRanges(rdG, rdSpans, k).filter((r) => r.role !== "sym"), "hot");
         if (nowKey) {
           const tone = !building && ev ? rdToneClass[toneOf(ev)] : "";
@@ -435,6 +448,7 @@
         log.set(esc(ev.text));
         if (sim.pos === rdTrace.events.length - 1) {
           if (rdTrace.accepted) verdict.show("accept", "✓  ACCEPTED");
+          else if (rdTrace.aborted === "syntax-error") verdict.show("reject", "✗  SYNTAX ERROR");
           else if (rdTrace.aborted === "left-recursion") verdict.show("warn", "⚠ LEFT RECURSION: would not terminate");
           else if (rdTrace.aborted === "limit") verdict.show("warn", "⚠  STOPPED: too large to follow");
           else verdict.show("reject", "✗  REJECTED");
@@ -456,6 +470,8 @@
         $("st-calls").textContent = rdState ? rdState.calls : 0;
         $("st-back").textContent = rdState ? rdState.backtracks : 0;
         $("st-memo-wrap").hidden = rdMode !== "packrat";
+        $("st-back-wrap").hidden = rdMode === "predictive";
+        $("show-dead-wrap").hidden = rdMode === "predictive"; // nothing is undone
         $("st-memo").textContent = rdState ? rdState.memoHits : 0;
         $("st-depth").textContent = rdState ? rdState.maxDepth : 0;
       }
@@ -523,7 +539,7 @@
         for (const k of rdpPendingLines(rdTrace, ev)) if (rdLines.has(k)) rdLines.get(k).classList.add("is-wait");
         const fk = frameKey(ev);
         if (fk) {
-          const fl = rdpFrameLines(rdG, fk);
+          const fl = rdpFrameLines(rdG, fk, rdMode);
           for (const d of fl.done) if (rdLines.has(d)) rdLines.get(d).classList.add("is-done");
           for (const d of fl.gone) if (rdLines.has(d)) rdLines.get(d).classList.add("is-gone");
         }
@@ -692,6 +708,7 @@
       document.querySelectorAll('input[name="rdp-mode"]').forEach((r) => r.addEventListener("change", () => setMode(r.value)));
       function setMode(m) {
         rdMode = m;
+        renderNote();
         document.querySelector('input[name="rdp-mode"][value="' + m + '"]').checked = true;
         renderCode();
         run();
@@ -727,7 +744,7 @@
       const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("sim-input").value, m: rdMode, x: exampleShareKey() }));
       let sharedStateApplied = false;
       function applyShareState() {
-        const st = shareValidateTextState(readShareState(), "g", ["full", "ordered", "packrat"]);
+        const st = shareValidateTextState(readShareState(), "g", ["predictive", "full", "ordered", "packrat"]);
         if (!st) return;
         sharedStateApplied = true;
         $("grammar-input").value = st.g;
@@ -750,6 +767,7 @@
       ${kw("if")} Xⱼ is a terminal  emit  “match Xⱼ”
       ${kw("else")}  emit  “call Xⱼ”
       ${cm("each step starts where the one before it ended; the first starts at i")}
+    ${kw("predictive")}  choose the alternative whose predict set contains the next token (FIRST, or FOLLOW for ε), then call and match the steps in a row; a token that does not fit is a syntax error, and  ${kw("return")}
     ${kw("complete")}  nest the steps as loops over every end position, then  ${kw("yield")} jₖ
     ${kw("ordered")}   chain the steps;  if one gives ✗ go to the next alternative, else  ${kw("return")} jₖ
   ${kw("complete")}  the procedure ends:  A fails

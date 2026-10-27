@@ -1,6 +1,65 @@
 {
   "groups": [
     {
+      "label": "Without backtracking",
+      "examples": [
+        {
+          "label": "aⁿbⁿ, no backtracking",
+          "grammar": "anbn",
+          "mode": "predictive",
+          "purpose": "The next token chooses: a starts S → a S b, anything else ends the recursion with ε. A string that does not fit is a syntax error, not a guess undone.",
+          "strings": [
+            "aabb",
+            "aaabbb",
+            "aab",
+            ""
+          ]
+        },
+        {
+          "label": "Expressions (LL(1))",
+          "mode": "predictive",
+          "purpose": "The standard LL(1) expression grammar: every choice is made by one token of look-ahead, so the parser never goes back. ε is chosen when the token can follow.",
+          "text": [
+            "E -> T E'",
+            "E' -> + T E' | eps",
+            "T -> F T'",
+            "T' -> * F T' | eps",
+            "F -> ( E ) | id"
+          ],
+          "strings": [
+            "id + id * id",
+            "( id + id ) * id",
+            "id + * id",
+            "( id"
+          ]
+        },
+        {
+          "label": "A common prefix (not LL(1))",
+          "mode": "predictive",
+          "purpose": "Both alternatives start with a, so one token cannot choose. The parser commits to the first and rejects a c, which is in the language; backtracking finds it.",
+          "text": [
+            "S -> a b | a c"
+          ],
+          "strings": [
+            "a b",
+            "a c"
+          ]
+        },
+        {
+          "label": "Statements (LL(1) form)",
+          "grammar": "python-statements-expressions-ll",
+          "mode": "predictive",
+          "purpose": "A Python-like statement grammar in LL(1) form: left recursion removed and common prefixes factored out, so each procedure can choose by the next token.",
+          "strings": [
+            "<id> = <num> NEWLINE",
+            "if <id> : NEWLINE INDENT pass NEWLINE DEDENT else : NEWLINE INDENT pass NEWLINE DEDENT",
+            "def <id> ( <id> , <id> ) : NEWLINE INDENT return <id> + <num> NEWLINE DEDENT",
+            "<id> = <id> ** <id> ** <num> NEWLINE"
+          ]
+        }
+      ]
+    },
+    {
       "label": "Guessing and undoing",
       "examples": [
         {

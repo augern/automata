@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const L = load("grammar.js", "strings.js", "rdp.js");
+const L = load("grammar.js", "strings.js", "ll1.js", "rdp.js");
 const { rdpParseGrammar, rdpTokenise, rdpLeftRecursive, rdpRun, rdpStateAt, rdpProcedures, rdpPendingLines, rdpExplainNode } = L;
 const arr = (x) => [...x];
 
@@ -281,4 +281,76 @@ test("recursive descent: a grammar with quoted operators parses unspaced input",
   assert.deepEqual(arr(rdpTokenise(g, "((a))")), ["(", "(", "a", ")", ")"]);
   assert.equal(L.rdpRun(g, rdpTokenise(g, "((a))"), { mode: "full" }).accepted, true);
   assert.equal(L.rdpRun(g, rdpTokenise(g, "((a)"), { mode: "full" }).accepted, false);
+});
+
+// ── Without backtracking: the predictive parser ───────────────────────
+
+const EXPR_LL1 = "E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id";
+
+test("predictive: an LL(1) grammar is parsed without a single backtrack, and only the next token chooses", () => {
+  const { t } = run(EXPR_LL1, "id + id * id", "predictive");
+  assert.equal(t.accepted, true);
+  assert.equal(t.mode, "predictive");
+  assert.equal(final(t).backtracks, 0);
+  assert.equal(t.events.some((e) => e.kind === "try" || e.kind === "reject"), false);
+  // where there is a choice there is a "choose" event; a procedure with one alternative has none
+  assert.equal(t.events.some((e) => e.kind === "choose"), true);
+  const first = t.events.find((e) => e.kind === "choose");
+  assert.match(first.text, /the next token is “id”/);
+  assert.deepEqual(arr(leaves(t)), ["id", "+", "id", "*", "id"]);
+  // no position is ever read twice: the position only grows
+  const pos = t.events.map((e) => e.pos);
+  assert.deepEqual(arr(pos), [...pos].sort((a, b) => a - b));
+});
+
+test("predictive: ε is chosen when the next token can follow, and a wrong token is a syntax error that ends the run", () => {
+  const ok = run(EXPR_LL1, "( id )", "predictive").t;
+  assert.equal(ok.accepted, true);
+  const bad = run(EXPR_LL1, "id + * id", "predictive").t;
+  assert.equal(bad.accepted, false);
+  assert.equal(bad.aborted, "syntax-error");
+  const lastEv = bad.events[bad.events.length - 1];
+  assert.match(lastEv.text, /Syntax error/);
+  assert.equal(final(bad).backtracks, 0);
+  // everything that was open fails at once
+  const st = final(bad).status;
+  assert.equal(st[0].st, "fail");
+  // the end of the input: ε-alternatives are chosen by $
+  assert.equal(run(ANBN, "", "predictive").t.accepted, true);
+  assert.equal(run(ANBN, "aab", "predictive").t.accepted, false);
+  assert.equal(run(ANBN, "aabbb", "predictive").t.accepted, false);
+});
+
+test("predictive: a grammar that is not LL(1) commits to the first alternative and can reject a string of the language", () => {
+  const g = rdpParseGrammar("S -> a b | a c");
+  const p = L.rdpPredict(g);
+  assert.deepEqual(arr(p.clashes.map((c) => [c.nt, c.sym, arr(c.alts)])), [["S", "a", [0, 1]]]);
+  const ab = run("S -> a b | a c", "a b", "predictive").t;
+  assert.equal(ab.accepted, true);
+  const ac = run("S -> a b | a c", "a c", "predictive").t;
+  assert.equal(ac.accepted, false);
+  assert.match(ac.events.find((e) => e.kind === "choose").text, /not LL\(1\)/);
+  // backtracking finds it
+  assert.equal(run("S -> a b | a c", "a c", "full").t.accepted, true);
+  // left recursion is still caught: the choice repeats the call at the same position
+  assert.equal(run("E -> E + id | id", "id + id", "predictive").t.aborted, "left-recursion");
+});
+
+test("predictive: predict sets and the generated procedures", () => {
+  const g = rdpParseGrammar(EXPR_LL1);
+  const p = L.rdpPredict(g);
+  assert.deepEqual(arr(p.clashes), []);
+  assert.deepEqual([...p.sets["E'"][0]].sort(), ["+"]);
+  assert.deepEqual([...p.sets["E'"][1]].sort(), ["$", ")"]); // ε: FOLLOW(E')
+  const procs = rdpProcedures(g, "predictive");
+  const text = (nt) => procs.find((x) => x.nt === nt).lines.map((l) => l.segs.map((s) => s[1]).join(""));
+  assert.deepEqual(arr(text("E'")), ["E'()  ▷ the next token chooses the alternative", "if next ∈ {+}  E' → + T E'", "match(+)", "T()", "E'()", "return", "if next ∈ {⊣, )}  E' → ε", "return", "else  error(“E'”)"]);
+  // a procedure with one alternative makes no choice
+  assert.deepEqual(arr(text("E")), ["E()  ▷ the next token chooses the alternative", "T()", "E'()", "return"]);
+  // every event's line is a line of the listing
+  const keys = new Set(procs.flatMap((x) => x.lines.map((l) => l.key)));
+  for (const ev of run(EXPR_LL1, "id + * id", "predictive").t.events) if (ev.line) assert.equal(keys.has(ev.line), true, ev.kind + " " + ev.line);
+  // no alternative of an earlier position is ever shown as given up
+  const fl = L.rdpFrameLines(g, L.rdpKey("E'", "sym", 1, 0), "predictive");
+  assert.deepEqual(arr(fl.gone), []);
 });

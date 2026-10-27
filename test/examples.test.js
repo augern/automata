@@ -70,11 +70,16 @@ test("recursive-descent examples parse, and their sample strings run in the exam
   for (const ex of examples("rdp")) {
     const g = A.rdpParseGrammar(textOf(ex));
     assert.ok(ex.strings && ex.strings.length > 0, `${ex.label}: no sample strings`);
-    assert.ok(["full", "ordered", "packrat"].includes(ex.mode) || ex.mode === undefined, `${ex.label}: bad mode`);
+    assert.ok(["predictive", "full", "ordered", "packrat"].includes(ex.mode) || ex.mode === undefined, `${ex.label}: bad mode`);
     for (const s of ex.strings) {
       const t = A.rdpRun(g, A.rdpTokenise(g, s), { mode: ex.mode || "full" });
       assert.ok(t.events.length > 0, `${ex.label}: "${s}"`);
     }
+  }
+  // The examples without backtracking are LL(1), except the one that shows what happens when a grammar is not.
+  for (const ex of examples("rdp").filter((e) => e.mode === "predictive")) {
+    const clashes = A.rdpPredict(A.rdpParseGrammar(textOf(ex))).clashes;
+    assert.equal(clashes.length > 0, ex.label === "A common prefix (not LL(1))", `${ex.label}: LL(1) clashes`);
   }
   // Only the examples about left recursion are left-recursive.
   const rec = examples("rdp").filter((ex) => A.rdpLeftRecursive(A.rdpParseGrammar(textOf(ex))).length > 0).map((ex) => ex.label);

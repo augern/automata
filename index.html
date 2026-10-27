@@ -188,7 +188,7 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
       desc: "Why the pumping lemmas hold — a repeated state on a DFA's path, a repeated nonterminal on a parse tree's path — with the loop pumped step by step.",
       builds: "NFA Simulator (DFAs), Grammar Derivations (parse trees)" },
     rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages",
-      desc: "Top-down parsing by recursive procedures — the procedures generated from a grammar, and the search for a parse with its guesses, backtracking and dead ends, with complete search or ordered choice.",
+      desc: "Top-down parsing by recursive procedures — generated from a grammar and run predictively (LL(1), the next token chooses, no backtracking) or by search, with guesses, backtracking and dead ends.",
       builds: "Grammar Derivations; Grammar Transformations removes the left recursion it cannot handle" },
     ll1: { href: "tools/ll1/", title: "Predictive Parsing", group: "LL(1) languages",
       desc: "Top-down predictive parsing with one symbol of lookahead (LL(1)) — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",

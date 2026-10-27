@@ -1,11 +1,17 @@
 // Pure model of a backtracking recursive-descent parser. No DOM access. Depends on grammar.js
-// (parseBNF, EPSILON, esc).
+// (parseBNF, EPSILON, esc, computeFirst/Follow) and ll1.js (buildLL1Table).
 //
 // rdpRun runs the parser and records everything it does as a list of events. The tool never
 // executes anything itself: the code listing, the input position, the call tree and the
 // explanations are all derived from the events up to the current step.
 //
-// Two ways of backtracking (mode):
+// Without backtracking (mode "predictive"): the classic recursive-descent parser for an LL(1) grammar. A procedure
+// looks at the next token and picks the one alternative whose predict set contains it (FIRST of the right side, or
+// FOLLOW of the nonterminal for an empty one); it never tries and undoes. A token that predicts nothing, or a terminal
+// that does not match, is a syntax error and ends the run. If the grammar is not LL(1) two alternatives are predicted
+// by the same token, and the parser commits to the first.
+//
+// Three ways of backtracking (mode):
 //   "full"    — complete search: a nonterminal can yield every position where it may end, and
 //               when the rest of the parse fails the parser returns into it for the next one.
 //   "ordered" — ordered choice (as in PEG parsers): the first alternative that matches wins and
@@ -20,7 +26,8 @@
 //   fail  — failed right here       dead — undone by backtracking
 //
 // Event: { kind, node, pos, line, depth, text, add?, set?, kill?, altIdx? }
-//   kind  call | try | match | mismatch | yield | reject | fail | memo | accept | leftover | loop | limit
+//   kind  call | try | choose | match | mismatch | yield | reject | fail | memo | accept | leftover | loop | limit
+//         (choose: the predictive parser picks an alternative by the next token; nothing is undone later)
 //   pos   input position (tokens read) after the event; line: key of the code line (rdpKey) or null
 //   Applied in this order: kill (every node with id >= kill that is alive becomes dead), add
 //   (new nodes, status open), set ([id, status, end?] triples).
@@ -44,6 +51,23 @@ function rdpParseGrammar(text) {
   });
   const terminals = new Set([...base.terminals].filter((t) => t !== "$"));
   return { base, rules: base.rules, start: base.start, nonterminals: base.nonterminals, terminals, alts, order };
+}
+
+// The predictive parser's table (algo/ll1.js) as it concerns the alternatives: { table, sets, clashes } where
+// sets[nt][a] is the set of tokens that predict alternative a of nt ($ is the end of the input), and clashes lists the
+// tokens that predict several alternatives (the grammar is not LL(1)): [{ nt, sym, alts: [a] }].
+function rdpPredict(g) {
+  if (g._predict) return g._predict;
+  const first = computeFirst(g.base), follow = computeFollow(g.base, first);
+  const { table, conflicts } = buildLL1Table(g.base, first, follow);
+  const where = new Map();
+  for (const nt of g.order) g.alts[nt].forEach((al, a) => where.set(al.rule, [nt, a]));
+  const sets = {};
+  for (const nt of g.order) sets[nt] = g.alts[nt].map(() => new Set());
+  for (const nt of g.order) for (const [sym, cell] of Object.entries(table[nt] || {})) for (const r of Array.isArray(cell) ? cell : [cell]) sets[nt][where.get(r)[1]].add(sym);
+  const clashes = conflicts.map((c) => ({ nt: c.nt, sym: c.sym, alts: c.rules.map((r) => where.get(r)[1]).sort((x, y) => x - y) }));
+  g._predict = { first, follow, table, sets, clashes };
+  return g._predict;
 }
 
 // Input string to tokens (see strTokenise in strings.js).
@@ -104,6 +128,7 @@ function rdpSub(n) {
 // kind: head | alt | sym | yield | end; note says in a sentence why the line is generated (the build stepper shows it).
 // cls: kw (keyword) | nt | t (terminal) | cm (comment) | "" (plain).
 function rdpProcedures(g, mode) {
+  if (mode === "predictive") return rdpPredictiveProcedures(g);
   const procs = [];
   const ordered = mode === "ordered" || mode === "packrat";
   const memo = mode === "packrat";
@@ -225,23 +250,24 @@ function rdpGrammarRanges(g, spans, key) {
 // How far a call has got, for the frame that a line key belongs to (ordered choice, where what is
 // matched is settled): the symbols of its alternative before the one at the line, and the earlier
 // alternatives, which have been given up. Returns { doneSyms: [[alt, k]], goneAlts: [alt] }.
-function rdpFrameProgress(g, key) {
+function rdpFrameProgress(g, key, mode) {
   const kp = rdpKeyParts(key);
   const out = { doneSyms: [], goneAlts: [] };
   if (!kp || !g.alts[kp.nt] || kp.part === "head" || kp.part === "memo") return out;
+  const never = mode === "predictive"; // the alternatives before the chosen one were never tried: none is given up
   if (kp.part === "end") { // every alternative has been given up
-    for (let a = 0; a < g.alts[kp.nt].length; a++) out.goneAlts.push(a);
+    if (!never) for (let a = 0; a < g.alts[kp.nt].length; a++) out.goneAlts.push(a);
     return out;
   }
-  for (let a = 0; a < kp.alt; a++) out.goneAlts.push(a);
+  if (!never) for (let a = 0; a < kp.alt; a++) out.goneAlts.push(a);
   if (kp.part === "sym") for (let k = 0; k < kp.k; k++) out.doneSyms.push([kp.alt, k]);
   return out;
 }
 
 // The same as ranges in the grammar text: [{ from, to, role: "done" | "gone" }].
-function rdpFrameRanges(g, spans, key) {
+function rdpFrameRanges(g, spans, key, mode) {
   const kp = rdpKeyParts(key);
-  const pr = rdpFrameProgress(g, key);
+  const pr = rdpFrameProgress(g, key, mode);
   const out = [];
   if (!kp || !g.alts[kp.nt]) return out;
   for (const [a, k] of pr.doneSyms) {
@@ -256,9 +282,9 @@ function rdpFrameRanges(g, spans, key) {
 }
 
 // And as keys of the lines in the procedures: { done: [key], gone: [key] }.
-function rdpFrameLines(g, key) {
+function rdpFrameLines(g, key, mode) {
   const kp = rdpKeyParts(key);
-  const pr = rdpFrameProgress(g, key);
+  const pr = rdpFrameProgress(g, key, mode);
   const out = { done: [], gone: [] };
   if (!kp || !g.alts[kp.nt]) return out;
   for (const [a, k] of pr.doneSyms) out.done.push(rdpKey(kp.nt, "sym", a, k));
@@ -269,11 +295,46 @@ function rdpFrameLines(g, key) {
   return out;
 }
 
+// The procedures of the predictive parser: no loops, no ✗; the next token chooses the alternative.
+function rdpPredictiveProcedures(g) {
+  const { sets } = rdpPredict(g);
+  const shown = (set) => [...set].sort().map((t) => (t === "$" ? "⊣" : t)).join(", ");
+  const symSeg = (s) => [g.nonterminals.has(s) ? "nt" : "t", s];
+  const procs = [];
+  for (const nt of g.order) {
+    const alts = g.alts[nt];
+    const multi = alts.length > 1;
+    const lines = [];
+    const add = (key, indent, kind, note, segs) => lines.push({ key, indent, kind, note, segs });
+    add(rdpKey(nt, "head"), 0, "head", "Procedure " + nt + "(): the next token decides which alternative to use, so nothing is tried and undone.", [["nt", nt], ["", "()  "], ["cm", "▷ the next token chooses the alternative"]]);
+    alts.forEach((alt, a) => {
+      const base = multi ? 2 : 1;
+      if (multi) {
+        add(rdpKey(nt, "alt", a), 1, "alt", "Alternative " + (a + 1) + " of " + nt + ": " + nt + " → " + (alt.rhs.join(" ") || "ε") + ". It is used when the next token is one of {" + shown(sets[nt][a]) + "}" + (alt.rhs.length ? ": the tokens it can start with" : ": the tokens that can follow " + nt) + ".", [
+          ["kw", "if"], ["", " next ∈ {" + shown(sets[nt][a]) + "}  "], ["nt", nt], ["", " → "],
+          ...(alt.rhs.length ? alt.rhs.flatMap((s, x) => (x ? [["", " "], symSeg(s)] : [symSeg(s)])) : [["cm", "ε"]]),
+        ]);
+      }
+      alt.rhs.forEach((s, k) => {
+        const isNt = g.nonterminals.has(s);
+        add(rdpKey(nt, "sym", a, k), base, "sym",
+          isNt ? s + " is a nonterminal: call its procedure. If the next token cannot start it, that is a syntax error and the parse stops."
+            : "“" + s + "” is a terminal: it must be the next token. If it is not, that is a syntax error and the parse stops.",
+          isNt ? [["nt", s], ["", "()"]] : [["kw", "match"], ["", "("], ["t", s], ["", ")"]]);
+      });
+      add(rdpKey(nt, "sym", a, alt.rhs.length), base, "yield", (alt.rhs.length ? "Every symbol matched. " : "The alternative is empty: it matches without reading anything. ") + "Return; the choice is final.", [["kw", "return"]]);
+    });
+    if (multi) add(rdpKey(nt, "end"), 1, "end", "No alternative is predicted by the next token: syntax error.", [["kw", "else"], ["", "  "], ["kw", "error"], ["", "(“" + nt + "”)"]]);
+    procs.push({ nt, lines });
+  }
+  return procs;
+}
+
 // ── The run ──────────────────────────────────────────────────────────
 
 function rdpRun(g, tokens, opts) {
   const o = opts || {};
-  const mode = o.mode === "ordered" || o.mode === "packrat" ? "ordered" : "full";
+  const mode = o.mode === "predictive" ? "predictive" : o.mode === "ordered" || o.mode === "packrat" ? "ordered" : "full";
   const memoOn = o.mode === "packrat";
   const memo = new Map(); // "nt<i" -> end position, or -1 for a failure
   const maxEvents = o.maxEvents || RDP_MAX_EVENTS;
@@ -348,7 +409,7 @@ function rdpRun(g, tokens, opts) {
   function yieldEv(node, a, j, altNode, ownerId) {
     const alt = g.alts[node.nt][a];
     const ev = { kind: "yield", node: node.id, pos: j, line: rdpKey(node.nt, "sym", a, alt.rhs.length), add: [], set: [[node.id, "ok", j]],
-      text: node.nt + " matches " + span(node.i, j) + (mode === "ordered" ? " and commits to it: this choice is not revisited." : ".") };
+      text: node.nt + " matches " + span(node.i, j) + (mode === "ordered" ? " and commits to it: this choice is not revisited." : mode === "predictive" ? " and returns." : ".") };
     if (altNode) ev.set.push([altNode.id, "ok", j]);
     if (!alt.rhs.length) {
       const leaf = mk({ kind: "tok", parent: ownerId, sym: EPSILON, i: node.i, site: rdpKey(node.nt, "sym", a, 0), eps: true });
@@ -437,13 +498,70 @@ function rdpRun(g, tokens, opts) {
     return -1;
   }
 
+  // Without backtracking: the next token chooses the alternative; a mismatch ends the run.
+  const pred = mode === "predictive" ? rdpPredict(g) : null;
+  const pframes = []; // the calls and chosen alternatives that are still open
+  function failPred(ev) {
+    ev.set = (ev.set || []).concat(pframes.flatMap((f) => [[f.node.id, "fail"]].concat(f.altNode ? [[f.altNode.id, "fail"]] : [])));
+    emit(ev);
+    throw { abort: "syntax-error" };
+  }
+  function callPred(nt, i, parentId, site) {
+    const node = enter(nt, i, parentId, site);
+    const alts = g.alts[nt];
+    const frame = { node, altNode: null };
+    pframes.push(frame);
+    let a = 0;
+    if (alts.length > 1) {
+      const tok = i < n ? tokens[i] : "$";
+      const cell = pred.table[nt][tok];
+      if (cell === undefined) {
+        failPred({ kind: "fail", node: node.id, pos: i, line: rdpKey(nt, "end"),
+          text: "Syntax error: " + nt + " has no alternative that starts with " + tokText(i) + ". A parser without backtracking cannot go back, so the parse stops here." });
+      }
+      const rules = Array.isArray(cell) ? cell : [cell];
+      a = Math.min(...rules.map((r) => alts.findIndex((al) => al.rule === r)));
+      const alt = alts[a];
+      const altNode = mk({ kind: "alt", parent: node.id, nt, alt: a, rule: alt.rule, i });
+      frame.altNode = altNode;
+      const why = alt.rhs.length ? "it is in FIRST(" + alt.rhs.join(" ") + ")" : "it can follow " + nt + " (FOLLOW), and the alternative is empty";
+      emit({ kind: "choose", node: node.id, altIdx: a, pos: i, line: rdpKey(nt, "alt", a), add: [altNode.id],
+        text: nt + ": the next token is " + tokText(i) + "; " + why + ", so alternative " + (a + 1) + ", " + nt + " → " + rhsText(alt) + (rules.length > 1 ? ". The grammar is not LL(1): this token also predicts another alternative. The first is used." : ". The choice is final.") });
+    }
+    const owner = frame.altNode ? frame.altNode.id : node.id;
+    const rhs = alts[a].rhs;
+    let p = i;
+    for (let k = 0; k < rhs.length; k++) {
+      if (g.nonterminals.has(rhs[k])) p = callPred(rhs[k], p, owner, rdpKey(nt, "sym", a, k));
+      else {
+        const site = rdpKey(nt, "sym", a, k);
+        const t = mk({ kind: "tok", parent: owner, sym: rhs[k], i: p, site });
+        if (tokens[p] === rhs[k]) {
+          emit({ kind: "match", node: t.id, pos: p + 1, line: site, add: [t.id], set: [[t.id, "ok", p + 1]], text: "Match “" + rhs[k] + "” against token " + (p + 1) + "." });
+          p++;
+        } else {
+          failPred({ kind: "mismatch", node: t.id, pos: p, line: site, add: [t.id], set: [[t.id, "fail"]],
+            text: "Syntax error: expected “" + rhs[k] + "” but found " + tokText(p) + ". A parser without backtracking cannot go back, so the parse stops here." });
+        }
+      }
+    }
+    yieldEv(node, a, p, frame.altNode, owner);
+    pframes.pop();
+    stack.pop();
+    return p;
+  }
+
   let accepted = false;
   let aborted = null;
   const acceptEv = () => emit({ kind: "accept", node: 0, pos: n, line: null, text: g.start + " has matched all " + n + " token" + (n === 1 ? "" : "s") + ": the input is accepted." });
   const leftoverEv = (j) => emit({ kind: "leftover", node: 0, pos: j, line: null,
     text: g.start + " matched only " + span(0, j) + " and " + (n - j) + " token" + (n - j === 1 ? "" : "s") + " remain" + (n - j === 1 ? "s" : "") + ", so this does not count as a parse." });
   try {
-    if (mode === "full") {
+    if (mode === "predictive") {
+      const j = callPred(g.start, 0, -1, null);
+      if (j === n) { acceptEv(); accepted = true; }
+      else leftoverEv(j);
+    } else if (mode === "full") {
       accepted = callFull(g.start, 0, -1, null, (j) => {
         if (j === n) { acceptEv(); return true; }
         leftoverEv(j);
@@ -515,7 +633,8 @@ function rdpExplainNode(g, trace, state, id) {
   const role = cur.st;
   const sym = (s) => "<b>" + esc(s) + "</b>";
   const tokens = trace.tokens;
-  const ordered = trace.mode === "ordered";
+  const ordered = trace.mode === "ordered" || trace.mode === "predictive"; // the choice is final
+  const predictive = trace.mode === "predictive";
   const kids = trace.nodes.filter((x) => x.parent === id && state.status[x.id]);
   const facts = [];
   const lines = [];
@@ -536,7 +655,8 @@ function rdpExplainNode(g, trace, state, id) {
     const alt = g.alts[nd.nt][nd.alt];
     title = nd.nt + " → " + (alt.rhs.join(" ") || "ε");
     facts.push(["Alternative", (nd.alt + 1) + " of " + g.alts[nd.nt].length + " for " + sym(nd.nt)]);
-    lines.push(role === "dead" ? "This alternative was given up: it failed, or the parse that used it failed later."
+    lines.push(predictive ? (role === "fail" ? "This alternative was chosen by the next token and then hit a syntax error." : "Chosen by the next token. The choice is final: the parser never goes back to try another alternative.")
+      : role === "dead" ? "This alternative was given up: it failed, or the parse that used it failed later."
       : role === "fail" ? "This alternative failed."
       : role === "ok" ? "Every symbol of this alternative matched."
       : "Being tried: its symbols are matched from left to right.");
@@ -556,7 +676,7 @@ function rdpExplainNode(g, trace, state, id) {
     const why = {
       open: sym(nd.nt) + " is trying to match from position " + nd.i + ".",
       ok: sym(nd.nt) + " matched " + (cur.end === nd.i ? "nothing" : "up to position " + cur.end) + "." +
-        (ordered ? " With ordered choice this is final: if what follows fails, " + sym(nd.nt) + " is not asked for another way." : " If what follows fails, " + sym(nd.nt) + " is asked for another way."),
+        (predictive ? " A parser without backtracking has already made its choices: if what follows is wrong, that is a syntax error." : ordered ? " With ordered choice this is final: if what follows fails, " + sym(nd.nt) + " is not asked for another way." : " If what follows fails, " + sym(nd.nt) + " is asked for another way."),
       fail: sym(nd.nt) + " has no alternative that matches from position " + nd.i + ".",
       dead: "Backtracking went back past this call, so it is tried again if another path reaches it.",
     }[role];
