@@ -893,8 +893,9 @@ else: ${kw("reject")}`
         }
 
         // Highlight NFA graph
-        const activeIdxs = _simSets[revealDepth].map((s) => nfaStates.indexOf(s));
-        if (nfaErr && _simSets[revealDepth].length === 0) activeIdxs.push(nfaStates.length); // the error state is drawn after the others
+        const last = _simSets[Math.min(revealDepth, maxDepth)]; // the verdict step (maxDepth + 1) shows the final set
+        const activeIdxs = last.map((s) => nfaStates.indexOf(s));
+        if (nfaErr && last.length === 0) activeIdxs.push(nfaStates.length); // the error state is drawn after the others
         nfaHighlightStates(activeIdxs, []);
 
         if (truncated) {
