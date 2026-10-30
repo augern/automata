@@ -1,4 +1,4 @@
-// Pure regular-language algorithms: regex → ε-NFA (Thompson), NFA → DFA (subset
+// Pure regular-language algorithms: regex → ε-NFA (Thompson-style), NFA → DFA (subset
 // construction), DFA minimisation (table filling), and DFA helpers. No DOM
 // access and no HTML: step records carry data only; the tool formats them.
 // Depends on grammar.js (EPSILON).
@@ -7,7 +7,9 @@
 // DFA: { dfaStates: Set<nfaState>[], dfaAccepts: Set<int>, dfaTrans: [{from, sym, to}], alpha }
 //      The start state is always 0.
 
-// ── Regex → NFA (Thompson's construction) ─────────────────────────────
+// ── Regex → NFA (Thompson-style construction) ─────────────────────────
+// Thompson's fragments for a symbol, ε, union, concatenation and star; + and ? have constructions of their own, and
+// concatenation joins two fragments by an ε-move instead of merging their end states.
 // Grammar (highest precedence first):
 //   atom   ::= literal | 'ε' | '(' expr ')' | '\' any
 //   unary  ::= atom ( '*' | '+' | '?' )*
@@ -101,7 +103,7 @@ function regexToNFA(str, onStep) {
   }
 
   // ── Recursive-descent parser ──
-  let pos = 0;
+  let pos = 0, depth = 0; // depth: open parentheses
   const peek = () => (pos < str.length ? str[pos] : null);
 
   function parseExpr() {
@@ -114,6 +116,8 @@ function regexToNFA(str, onStep) {
   }
 
   function parseConcat() {
+    if (peek() === ")" && depth === 0) throw new Error("Unmatched ) at position " + pos);
+    if (peek() === null || peek() === "|" || peek() === ")") throw new Error("Empty alternative at position " + pos + ": write ε for the empty string");
     let node = parseUnary();
     while (peek() !== null && peek() !== ")" && peek() !== "|") node = concat(node, parseUnary());
     return node;
@@ -128,34 +132,52 @@ function regexToNFA(str, onStep) {
     return node;
   }
 
+  // One symbol: a character, or a surrogate pair (a character outside the basic plane) as one symbol.
+  function takeSymbol() {
+    const c = str.codePointAt(pos);
+    const sym = String.fromCodePoint(c);
+    pos += sym.length;
+    return sym;
+  }
+
   function parseAtom() {
     const ch = peek();
     if (ch === null) throw new Error("Unexpected end of expression");
     if (ch === "(") {
       const lo = pos++;
+      if (peek() === ")") throw new Error("Empty group at position " + lo + ": write ε for the empty string");
+      depth++;
       const inner = parseExpr();
-      if (peek() !== ")") throw new Error("Unmatched ( — missing )");
+      if (peek() !== ")") throw new Error("Unmatched ( at position " + lo);
+      depth--;
       pos++;
       inner.span = [lo, pos]; // later steps treat the parentheses as part of the operand
       return inner;
     }
-    if (ch === ")") throw new Error("Unmatched )");
+    if (ch === ")") throw new Error("Unmatched ) at position " + pos);
     if (ch === "|" || ch === "*" || ch === "+" || ch === "?") throw new Error("Unexpected operator '" + ch + "' at position " + pos);
     if (ch === "\\") {
       // Escape: treat next character as a literal symbol
       const lo = pos++;
       if (peek() === null) throw new Error("Trailing \\");
-      return symbol(str[pos++], "symbol", [lo, pos]);
+      if (peek() === EPSILON) throw new Error("ε cannot be escaped: it always means the empty string");
+      return symbol(takeSymbol(), "symbol", [lo, pos]);
     }
-    const lo = pos++;
-    return ch === EPSILON ? symbol(EPSILON, "eps", [lo, pos]) : symbol(ch, "symbol", [lo, pos]);
+    const lo = pos;
+    const sym = takeSymbol();
+    return sym === EPSILON ? symbol(EPSILON, "eps", [lo, pos]) : symbol(sym, "symbol", [lo, pos]);
   }
 
   if (!str.trim()) throw new Error("Empty expression");
   const frag = parseExpr();
-  if (pos < str.length) throw new Error("Unexpected character '" + str[pos] + "' at position " + pos);
+  if (pos < str.length) throw new Error(str[pos] === ")" ? "Unmatched ) at position " + pos : "Unexpected character '" + str[pos] + "' at position " + pos);
   return { start: frag.start, accept: frag.accept, trans: frag.trans, numStates: next };
 }
+
+// The subset construction gives up above this many DFA states (the worst case is exponential in the NFA).
+const RX_MAX_DFA_STATES = 2000;
+// The minimisation records its steps and the pair table up to this many DFA states; above it only the result.
+const RX_MAX_TABLE_STATES = 64;
 
 // ── NFA → DFA (subset construction) ───────────────────────────────────
 // steps (data only):
@@ -164,7 +186,7 @@ function regexToNFA(str, onStep) {
 //   { type: "empty", dfaIdx, sym }
 //   { type: "trans", dfaIdx, sym, toIdx, isNew, mv, closure }
 //   { type: "done", nStates, nAccepts }
-function subsetConstruct(nfa) {
+function subsetConstruct(nfa, maxStates = RX_MAX_DFA_STATES) {
   const { start, accept, trans } = nfa;
 
   // ε-closure: all states reachable from `seeds` via ε-transitions only
@@ -222,6 +244,7 @@ function subsetConstruct(nfa) {
       const isNew = dfaMap[k] === undefined;
       let toIdx;
       if (isNew) {
+        if (dfaStates.length >= maxStates) throw new Error("The DFA has more than " + maxStates + " states: the subset construction stops here");
         toIdx = dfaStates.length;
         dfaStates.push(T);
         dfaMap[k] = toIdx;
@@ -245,40 +268,49 @@ function subsetConstruct(nfa) {
 // ── DFA minimisation — table-filling algorithm ────────────────────────
 // Input: the result of subsetConstruct. The result has the same shape (plus the
 // extra fields below) so renderers, generateExamples and dfaRun accept it.
-// Extra fields: groups, origN, n, DEAD, origScData, renumMap, alreadyMinimal.
-// DEAD is the index of the implicit dead state (origN), or -1 if none was needed.
+// Extra fields: groups, origN, n, DEAD, origScData, renumMap, alreadyMinimal, tooLarge.
+// DEAD is the index of the implicit dead state (origN), or -1 if none was needed. The dead state completes the
+// DFA for the table; it is not one of the groups, so the minimal DFA returned has no dead state: it is partial.
+// Each marked pair has a witness, a string on which exactly one of the two states accepts.
+// With more than maxTable states (RX_MAX_TABLE_STATES) no step but the result is recorded (tooLarge: true).
 // steps (data only):
-//   { type: "mark-base", markedSnapshot, activePair: [i, j] }
-//   { type: "mark-refine", markedSnapshot, activePair: [i, j], pass, sym, di, dj }
+//   { type: "mark-base", markedSnapshot, activePair: [i, j], witness: "" }
+//   { type: "mark-refine", markedSnapshot, activePair: [i, j], pass, sym, di, dj, witness }
 //   { type: "no-change", markedSnapshot, activePair: null, pass }
 //   { type: "result", markedSnapshot, equivPairs, activePair: null, groups, origN, alreadyMinimal }
-function minimizeDFA(scData) {
+function minimizeDFA(scData, maxTable = RX_MAX_TABLE_STATES) {
   const { dfaStates, dfaAccepts, dfaTrans, alpha } = scData;
   const origN = dfaStates.length;
+  const tooLarge = origN > maxTable;
+  const next = new Map(); // "state|symbol" → state
+  for (const t of dfaTrans) next.set(t.from + "|" + t.sym, t.to);
 
   // Complete the DFA: add implicit dead state at index origN if any
   // state is missing a transition on any alphabet symbol.
-  const deadNeeded = dfaStates.some((_, s) => alpha.some((a) => !dfaTrans.find((t) => t.from === s && t.sym === a)));
+  const deadNeeded = dfaStates.some((_, s) => alpha.some((a) => !next.has(s + "|" + a)));
   const n = deadNeeded ? origN + 1 : origN;
   const DEAD = deadNeeded ? origN : -1;
 
   const isAcc = (s) => s !== DEAD && dfaAccepts.has(s);
   const delta = (s, a) => {
     if (s === DEAD) return DEAD;
-    const t = dfaTrans.find((t) => t.from === s && t.sym === a);
-    return t !== undefined ? t.to : deadNeeded ? DEAD : undefined;
+    const t = next.get(s + "|" + a);
+    return t !== undefined ? t : deadNeeded ? DEAD : undefined;
   };
   const pairKey = (a, b) => (a < b ? a + "," + b : b + "," + a);
 
   const marked = new Set();
+  const witness = new Map(); // pair → a string that tells the two states apart
   const steps = [];
+  const record = (st) => { if (!tooLarge) steps.push(st); };
 
   // ── Base case: mark all (accepting, non-accepting) pairs ──
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       if (isAcc(i) !== isAcc(j)) {
         marked.add(pairKey(i, j));
-        steps.push({ type: "mark-base", markedSnapshot: new Set(marked), activePair: [i, j] });
+        witness.set(pairKey(i, j), "");
+        record({ type: "mark-base", markedSnapshot: new Set(marked), activePair: [i, j], witness: "" });
       }
     }
   }
@@ -298,15 +330,17 @@ function minimizeDFA(scData) {
           if (di === dj) continue;
           if (di === undefined || dj === undefined) continue;
           if (marked.has(pairKey(di, dj))) {
+            const w = a + witness.get(pairKey(di, dj));
             marked.add(pairKey(i, j));
+            witness.set(pairKey(i, j), w);
             changed = true;
-            steps.push({ type: "mark-refine", markedSnapshot: new Set(marked), activePair: [i, j], pass, sym: a, di, dj });
+            record({ type: "mark-refine", markedSnapshot: new Set(marked), activePair: [i, j], pass, sym: a, di, dj, witness: w });
             break;
           }
         }
       }
     }
-    if (!changed) steps.push({ type: "no-change", markedSnapshot: new Set(marked), activePair: null, pass });
+    if (!changed) record({ type: "no-change", markedSnapshot: new Set(marked), activePair: null, pass });
   }
 
   // ── Build equivalence classes via union-find ──
@@ -337,7 +371,7 @@ function minimizeDFA(scData) {
       if (!marked.has(pairKey(i, j))) equivPairs.add(pairKey(i, j));
 
   const alreadyMinimal = groups.length === origN;
-  steps.push({ type: "result", markedSnapshot: new Set(marked), equivPairs, activePair: null, groups, origN, alreadyMinimal });
+  steps.push({ type: "result", markedSnapshot: new Set(marked), equivPairs, activePair: null, groups, origN, alreadyMinimal, tooLarge });
 
   // ── Build minimized DFA ──
   const minN = groups.length;
@@ -350,10 +384,10 @@ function minimizeDFA(scData) {
   const minTrans = [];
   for (let i = 0; i < origN; i++) {
     for (const a of alpha) {
-      const t = dfaTrans.find((t) => t.from === i && t.sym === a);
-      if (t !== undefined) {
+      const tt = next.get(i + "|" + a);
+      if (tt !== undefined) {
         const from = repToGroup[find(i)];
-        const to = repToGroup[find(t.to)];
+        const to = repToGroup[find(tt)];
         const k = from + "," + a + "," + to;
         if (!minTransSet.has(k)) {
           minTransSet.add(k);
@@ -394,6 +428,8 @@ function minimizeDFA(scData) {
     origScData: scData,
     renumMap,
     alreadyMinimal,
+    tooLarge,
+    witness,
   };
 }
 
@@ -410,29 +446,28 @@ function dfaRun(dfa, input) {
   return { state, accepted: dfa.dfaAccepts.has(state) };
 }
 
-// Shortest accepted strings in BFS order (at most maxCount, up to maxLen long).
+// The first accepted strings in shortlex order (shortest first, equal lengths in alphabet order): at most maxCount,
+// none longer than maxLen. Only states from which an accepting state can be reached are explored.
 function generateExamples(dfa, maxLen = 7, maxCount = 12) {
   const { dfaAccepts, dfaTrans, alpha } = dfa;
+  const next = new Map();
+  for (const t of dfaTrans) next.set(t.from + "|" + t.sym, t.to);
+  // states that can reach an accepting state
+  const live = new Set(dfaAccepts);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const t of dfaTrans) if (live.has(t.to) && !live.has(t.from)) { live.add(t.from); grew = true; }
+  }
   const results = [];
-  const seen = new Set(["0|0"]);
+  if (!live.has(0)) return results;
   const queue = [[0, ""]];
-
-  while (queue.length && results.length < maxCount) {
-    const [state, str] = queue.shift();
-    if (dfaAccepts.has(state)) {
-      results.push(str);
-      if (results.length >= maxCount) break;
-    }
-    if (str.length >= maxLen) continue;
+  for (let head = 0, steps = 0; head < queue.length && results.length < maxCount && steps < 50000; head++, steps++) {
+    const [state, str] = queue[head];
+    if (dfaAccepts.has(state)) results.push(str);
+    if ([...str].length >= maxLen) continue;
     for (const a of alpha) {
-      const tx = dfaTrans.find((t) => t.from === state && t.sym === a);
-      if (tx !== undefined) {
-        const key = tx.to + "|" + (str.length + 1);
-        if (!seen.has(key)) {
-          seen.add(key);
-          queue.push([tx.to, str + a]);
-        }
-      }
+      const to = next.get(state + "|" + a);
+      if (to !== undefined && live.has(to)) queue.push([to, str + a]);
     }
   }
   return results;

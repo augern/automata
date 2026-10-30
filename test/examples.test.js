@@ -111,12 +111,22 @@ test("regex examples compile, and NFA/DFA/minimal DFA agree on short strings", (
     const nfa = A.regexToNFA(ex.text);
     const dfa = A.subsetConstruct(nfa);
     const min = A.minimizeDFA(dfa);
-    const re = new RegExp("^(?:" + ex.text + ")$");
+    const re = new RegExp("^(?:" + ex.text.replace(/ε/g, "(?:)") + ")$"); // JavaScript has no ε
     for (const w of ["", "a", "b", "ab", "abb", "aab", "abc", "abcd", "0", "12", "ba", "bb"]) {
       assert.equal(A.dfaRun(dfa, w).accepted, re.test(w), `${ex.text} on "${w}"`);
       assert.equal(A.dfaRun(min, w).accepted, re.test(w), `min ${ex.text} on "${w}"`);
     }
   }
+});
+
+test("regex examples: the sizes their descriptions state", () => {
+  const sizes = (text) => { const d = A.subsetConstruct(A.regexToNFA(text)); return [d.dfaStates.length, A.minimizeDFA(d).dfaStates.length]; };
+  const byLabel = (label) => examples("regex").find((e) => e.label.startsWith(label)).text;
+  assert.deepEqual(sizes(byLabel("(a|b)*abb")), [5, 4]);
+  assert.deepEqual(sizes(byLabel("3rd from last")), [9, 8]);
+  assert.deepEqual(sizes(byLabel("4th from last")), [17, 16]);
+  assert.deepEqual(sizes(byLabel("(a*b*)*")), [3, 1]);
+  assert.equal(sizes(byLabel("Even number of a's"))[1], 2);
 });
 
 test("grammar-rewrite examples run through all six transformations", () => {

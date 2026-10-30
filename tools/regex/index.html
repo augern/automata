@@ -397,7 +397,7 @@
             </select>
           </div>
           <div id="regex-input-wrap">
-            <div class="input-sublabel">Regular expression</div>
+            <div class="input-sublabel">Regular expression <button type="button" class="btn" id="btn-eps" title="Insert ε, the empty string" onclick="insertEpsilon()">ε</button></div>
             <div id="regex-field">
               <div id="regex-hl" aria-hidden="true"></div>
               <input id="regex-input" type="text" spellcheck="false" placeholder="e.g. (a|b)*abb" />
@@ -408,7 +408,8 @@
             <div class="syntax-hint">
               <code>|</code> union &nbsp; <code>*</code> Kleene star<br />
               <code>+</code> one or more &nbsp; <code>?</code> optional<br />
-              <code>( )</code> grouping &nbsp; <code>.</code> any symbol
+              <code>( )</code> grouping &nbsp; <code>ε</code> empty string<br />
+              <code>\x</code> the symbol x, for | * + ? ( ) \ itself. Every other character is a symbol.
             </div>
           </div>
         </div>
@@ -574,7 +575,7 @@
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
-    <script src="../../shared/algo/regex.js?v=f2d4691d"></script>
+    <script src="../../shared/algo/regex.js?v=8950e367"></script>
     <script src="../../shared/algo/nfa.js?v=b51b3518"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
@@ -584,7 +585,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=c2c1c121"></script>
+    <script src="guide.js?v=ff97c64d"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -705,22 +706,24 @@
       }
 
       function formatMinStep(st, DEAD) {
+        if (st.type === "result" && st.tooLarge) return '<span class="lg-new">✓</span>  ' + st.groups.length + "-state minimal DFA" + (DEAD >= 0 ? '  <span class="lg-dim">(the dead state ∅ is not counted)</span>' : "") + "  —  the pair table is not drawn for " + st.origN + " DFA states";
         const label = (s) => (s === DEAD ? "∅" : "D" + s);
         switch (st.type) {
           case "mark-base": {
             const [i, j] = st.activePair;
-            return '<span class="lg-op">Base case</span>  mark (' + label(i) + ", " + label(j) + ")  —  " + label(st.accepting.has(i) ? i : j) + " accepts, " + label(st.accepting.has(i) ? j : i) + " does not";
+            return '<span class="lg-op">Base case</span>  mark (' + label(i) + ", " + label(j) + ")  —  " + label(st.accepting.has(i) ? i : j) + " accepts, " + label(st.accepting.has(i) ? j : i) + ' does not (they differ on <span class="lg-sym">ε</span>)';
           }
           case "mark-refine": {
             const [i, j] = st.activePair;
-            return '<span class="lg-op">Pass ' + st.pass + '</span>  mark (' + label(i) + ", " + label(j) + ")  —  " + 'on <span class="lg-sym">' + esc(st.sym) + "</span>, " + label(i) + "→" + label(st.di) + ", " + label(j) + "→" + label(st.dj) + ", (" + label(Math.min(st.di, st.dj)) + ", " + label(Math.max(st.di, st.dj)) + ") is marked ✗";
+            return '<span class="lg-op">Pass ' + st.pass + '</span>  mark (' + label(i) + ", " + label(j) + ")  —  " + 'on <span class="lg-sym">' + esc(st.sym) + "</span>, " + label(i) + "→" + label(st.di) + ", " + label(j) + "→" + label(st.dj) + ", (" + label(Math.min(st.di, st.dj)) + ", " + label(Math.max(st.di, st.dj)) + ") is marked ✗  —  they differ on <span class=\"lg-sym\">" + esc(st.witness) + "</span>";
           }
           case "no-change":
             return '<span class="lg-new">✓</span>  Pass ' + st.pass + ": fixed point — no new pairs marked";
           case "result":
-            return st.alreadyMinimal
+            return (st.alreadyMinimal
               ? '<span class="lg-new">✓</span>  Already minimal — all ' + st.origN + " states are distinguishable"
-              : '<span class="lg-new">✓</span>  ' + st.groups.length + " equivalence class" + (st.groups.length === 1 ? "" : "es") + " → " + st.groups.length + "-state minimal DFA";
+              : '<span class="lg-new">✓</span>  ' + st.groups.length + " equivalence class" + (st.groups.length === 1 ? "" : "es") + " → " + st.groups.length + "-state minimal DFA") +
+              (DEAD >= 0 ? '  <span class="lg-dim">(the dead state ∅ is not counted)</span>' : "");
         }
       }
 
@@ -1195,6 +1198,7 @@
       // equivPairs may be null (not yet known). activePair may be null.
       function renderMinTable(n, origN, DEAD, markedPairs, equivPairs, activePair) {
         const lbl     = s => s === DEAD ? "∅" : "D" + s;
+        const deadTip = "The dead state: the DFA is completed with it for this table. It is not drawn or counted in the minimal DFA.";
         const pairKey = (a, b) => a < b ? a + "," + b : b + "," + a;
 
         const wrap = document.getElementById("min-table-wrap");
@@ -1206,7 +1210,7 @@
         tbl.className = "parse-table pair-table";
 
         let hdr = "<thead><tr><th></th>";
-        for (let j = 0; j < n - 1; j++) hdr += "<th>" + lbl(j) + "</th>";
+        for (let j = 0; j < n - 1; j++) hdr += "<th" + (j === DEAD ? ' title="' + deadTip + '"' : "") + ">" + lbl(j) + "</th>";
         hdr += "</tr></thead>";
         tbl.innerHTML = hdr;
 
@@ -1215,6 +1219,7 @@
           const tr = document.createElement("tr");
           const th = document.createElement("th");
           th.textContent = lbl(i);
+          if (i === DEAD) th.title = deadTip;
           tr.appendChild(th);
 
           for (let j = 0; j < n - 1; j++) {
@@ -1252,6 +1257,16 @@
         const step = mcStepper.pos >= 0 ? steps[mcStepper.pos] : null;
 
         document.getElementById("mc-log-bar").innerHTML = step ? step.html : "";
+
+        if (_minData.tooLarge) { // too many states for a pair table: only the result
+          const big = document.getElementById("min-table-wrap");
+          document.getElementById("min-empty").style.display = "none";
+          big.style.display = "";
+          big.innerHTML = '<div style="padding:var(--sp-4);font-size:var(--fs-xs);color:var(--text-dim)">The DFA has ' + origN + " states: the pair table is not drawn above " + RX_MAX_TABLE_STATES + ".</div>";
+          if (step) renderMinResult(big);
+          mcSetBtns();
+          return;
+        }
 
         if (mcStepper.pos < 0) {
           // Show the blank table so the student can see the pairs before stepping
@@ -1397,6 +1412,35 @@
       // CONTROLLER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // The DFA stages when the subset construction gave up (too many states): the NFA stays, they say why.
+      function clearDfaPanels(msg) {
+        _scData = null; _minData = null; _simSteps = null; _strExamples = [];
+        scStepper.pos = -1; mcStepper.pos = -1;
+        scSetBtns(); mcSetBtns(); sim.refresh();
+        for (const id of ["sc-log-bar", "mc-log-bar", "sim-log-bar"]) document.getElementById(id).innerHTML = "";
+        for (const [wrap, empty] of [["dfa-table-wrap", "dfa-empty"], ["min-table-wrap", "min-empty"]]) {
+          document.getElementById(wrap).style.display = "none";
+          const el = document.getElementById(empty);
+          el.textContent = msg;
+          el.style.display = "";
+        }
+        document.getElementById("sim-content").style.display = "none";
+        const se = document.getElementById("sim-empty");
+        se.textContent = msg;
+        se.style.display = "";
+        graphMessage(msg);
+        setError(msg);
+      }
+
+      function insertEpsilon() {
+        const input = document.getElementById("regex-input");
+        const a = input.selectionStart, b = input.selectionEnd;
+        input.value = input.value.slice(0, a) + "ε" + input.value.slice(b);
+        input.setSelectionRange(a + 1, a + 1);
+        input.focus();
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+
       function build() {
         setError("");
         saveShare();
@@ -1421,7 +1465,12 @@
         nfaRenderStep();
 
         // Pre-compute DFA steps and reset the DFA stepper
-        _scData = withSubsetHtml(subsetConstruct(nfa));
+        try {
+          _scData = withSubsetHtml(subsetConstruct(nfa));
+        } catch (e) {
+          clearDfaPanels(e.message);
+          return;
+        }
         scStepper.pos = -1;
         _scDone = false;
         scRenderStep();
@@ -1893,7 +1942,7 @@
           },
         ],
         `${cm("Base cases")}
-${kw("if")} ${it("r")} = ${it("a")}  ${cm("single symbol; also . for any")}
+${kw("if")} ${it("r")} = ${it("a")}  ${cm("a single symbol")}
   create states ${it("s")}, ${it("t")}
   δ ${_la} { ${_sarr("s", "a", "t")} }
   ${kw("return")} ${_frag("s", "t")}
@@ -1933,7 +1982,7 @@ ${kw("if")} ${it("r")} = r₁*
           {
             label: "Note",
             sym: "",
-            desc: hi("r+") + " and " + hi("r?") + " are defined in terms of Thompson's base cases above.",
+            desc: hi("r+") + " and " + hi("r?") + " are not among Thompson's base cases: each has a construction of its own, below. Concatenation joins the two fragments by an ε-move.",
           },
         ],
         `${cm("Plus  (one or more)")}
@@ -2050,7 +2099,7 @@ ${kw("else")}              ${kw("return")} reject`,
           {
             label: "Output",
             sym: it("D′"),
-            desc: "minimal DFA — fewest states recognising the same language (unique up to isomorphism)",
+            desc: "minimal DFA — fewest states recognising the same language (unique up to isomorphism), without the dead state",
           },
         ],
         `${cm("Base case")}
@@ -2097,8 +2146,8 @@ ${kw("return")} D′`,
           bodyEl.innerHTML = PC_MINIMIZE + '<div class="pc-note">' +
             "Two states are <em>distinguishable</em> if some input string leads one to an accepting state " +
             "and the other to a non-accepting state. The table-filling algorithm finds all distinguishable " +
-            "pairs in O(n² |Σ|) time. States that are never distinguished are equivalent and can be merged. " +
-            "The result is the unique minimal DFA for the language." +
+            "pairs: each sweep over the table costs O(n² |Σ|), and there are at most O(n²) sweeps. States that are never distinguished are equivalent and can be merged. " +
+            "The result is the unique minimal DFA for the language, apart from the dead state ∅, which completes the DFA for the table but is not drawn or counted." +
             "</div>";
         } else if (type === "sim") {
           titleEl.textContent = "DFA Simulation";

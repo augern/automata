@@ -27,6 +27,11 @@
           "label": "a?b",
           "purpose": "Optional: an ε-bypass around a symbol.",
           "text": "a?b"
+        },
+        {
+          "label": "(a|ε)b — ε as an alternative",
+          "text": "(a|ε)b",
+          "purpose": "An empty alternative is written ε: an optional a followed by b. The strings are b and ab."
         }
       ]
     },
@@ -66,13 +71,18 @@
       "examples": [
         {
           "label": "3rd from last is a — DFA blow-up",
-          "purpose": "A small NFA whose DFA needs 2³ states: the exponential worst case of subset construction.",
+          "purpose": "A small NFA whose minimal DFA needs 2³ = 8 states: the exponential worst case of subset construction.",
           "text": "(a|b)*a(a|b)(a|b)"
         },
         {
           "label": "(a*b*)* — same language as (a|b)*",
           "purpose": "Two different expressions for the same language: minimisation collapses the DFA to a single state.",
           "text": "(a*b*)*"
+        },
+        {
+          "label": "4th from last is a — the blow-up grows",
+          "text": "(a|b)*a(a|b)(a|b)(a|b)",
+          "purpose": "One more symbol than the 3rd-from-last example: the minimal DFA needs 2⁴ = 16 states, twice as many; each added symbol doubles it."
         },
         {
           "label": "Even number of a's",

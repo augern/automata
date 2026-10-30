@@ -146,9 +146,9 @@ test("syntax errors", () => {
   assert.throws(() => regexToNFA("(a"), /Unmatched \(/);
   assert.throws(() => regexToNFA("a)"), /Unmatched \)|Unexpected character/);
   assert.throws(() => regexToNFA("*a"), /Unexpected operator '\*'/);
-  assert.throws(() => regexToNFA("a|"), /Unexpected end/);
+  assert.throws(() => regexToNFA("a|"), /Empty alternative at position 2/);
   assert.throws(() => regexToNFA("a\\"), /Trailing/);
-  assert.throws(() => regexToNFA("()"), /Unmatched \)/);
+  assert.throws(() => regexToNFA("()"), /Empty group/);
 });
 
 test("generateExamples lists shortest accepted strings first and respects the limits", () => {
@@ -185,3 +185,59 @@ test("generateExamples lists shortest accepted strings first and respects the li
     assert.deepEqual([...eps.span], [3, 4]);
   });
 })();
+
+test("generateExamples lists every shortest accepted string, the same for the DFA and the minimal DFA", () => {
+  const d = (r) => subsetConstruct(regexToNFA(r));
+  assert.deepEqual([...generateExamples(d("(a|b)*"), 3, 8)], ["", "a", "b", "aa", "ab", "ba", "bb", "aaa"]);
+  assert.deepEqual([...generateExamples(minimizeDFA(d("(a|b)*")), 3, 8)], ["", "a", "b", "aa", "ab", "ba", "bb", "aaa"]);
+  assert.deepEqual([...generateExamples(minimizeDFA(d("a|b")))], ["a", "b"]);
+  assert.deepEqual([...generateExamples(d("(a|b)*abb"), 5, 6)], ["abb", "aabb", "babb", "aaabb", "ababb", "baabb"].filter((s) => s.length <= 5).slice(0, 6));
+  for (const r of ["(a|b)*abb", "a*b+", "(ab|ba)*", "b*(ab*ab*)*"]) {
+    const dfa = d(r), min = minimizeDFA(dfa);
+    assert.deepEqual([...generateExamples(dfa, 6, 20)], [...generateExamples(min, 6, 20)], r);
+  }
+  // the empty language has none, and a dead branch is not explored
+  assert.deepEqual([...generateExamples(subsetConstruct(regexToNFA("a")), 5, 5)], ["a"]);
+});
+
+test("minimisation: a witness tells every marked pair apart, and the dead state is not counted", () => {
+  const dfa = subsetConstruct(regexToNFA("(a|b)*abb"));
+  const min = minimizeDFA(dfa);
+  assert.equal(min.dfaStates.length, 4);
+  assert.equal(min.tooLarge, false);
+  for (const [pair, w] of min.witness) {
+    const [i, j] = pair.split(",").map(Number);
+    const end = (s) => { let q = s; for (const c of w) { const t = dfa.dfaTrans.find((x) => x.from === q && x.sym === c); q = t ? t.to : -1; if (q < 0) break; } return q >= 0 && dfa.dfaAccepts.has(q); };
+    if (i < dfa.dfaStates.length && j < dfa.dfaStates.length) assert.notEqual(end(i), end(j), pair + " on " + JSON.stringify(w));
+  }
+  // ab: 3 states, and the dead state completes the table but is not one of them
+  const ab = minimizeDFA(subsetConstruct(regexToNFA("ab")));
+  assert.equal(ab.dfaStates.length, 3);
+  assert.equal(ab.DEAD, 3);
+  assert.equal(ab.n, 4);
+});
+
+test("large DFAs: no pair table above the limit, and the subset construction stops far above it", () => {
+  // (a|b)*a(a|b)^7: 257 DFA states, 256 in the minimal one
+  const r = "(a|b)*a" + "(a|b)".repeat(7);
+  const dfa = subsetConstruct(regexToNFA(r));
+  assert.equal(dfa.dfaStates.length, 257);
+  const min = minimizeDFA(dfa);
+  assert.equal(min.tooLarge, true);
+  assert.equal(min.steps.length, 1);
+  assert.equal(min.steps[0].type, "result");
+  assert.equal(min.dfaStates.length, 256);
+  assert.throws(() => subsetConstruct(regexToNFA("(a|b)*a" + "(a|b)".repeat(7)), 100), /more than 100 states/);
+});
+
+test("syntax: ε cannot be escaped, empty alternatives say what to write, a surrogate pair is one symbol", () => {
+  assert.throws(() => regexToNFA("a\\ε"), /cannot be escaped/);
+  assert.throws(() => regexToNFA("a||b"), /Empty alternative at position 2.*ε/);
+  assert.throws(() => regexToNFA("(|a)"), /Empty alternative/);
+  assert.throws(() => regexToNFA(")("), /Unmatched \) at position 0/);
+  assert.throws(() => regexToNFA("(a"), /Unmatched \( at position 0/);
+  const n = regexToNFA("𝒜b");
+  assert.deepEqual([...new Set(n.trans.filter((t) => t.sym !== "ε").map((t) => t.sym))].sort(), ["b", "𝒜"]);
+  // an empty alternative is written ε
+  assert.equal(subsetConstruct(regexToNFA("(a|ε)b")).dfaAccepts.size > 0, true);
+});
