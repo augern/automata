@@ -241,3 +241,25 @@ test("syntax: ε cannot be escaped, empty alternatives say what to write, a surr
   // an empty alternative is written ε
   assert.equal(subsetConstruct(regexToNFA("(a|ε)b")).dfaAccepts.size > 0, true);
 });
+
+test("above the table limit the partition refinement gives the same classes as the pair table", () => {
+  for (const r of ["(a|b)*abb", "b*(ab*ab*)*", "(a|b)*a(a|b)(a|b)(a|b)(a|b)", "(ab|ba)*", "a*b+|c"]) {
+    const dfa = subsetConstruct(regexToNFA(r));
+    const table = minimizeDFA(dfa, 1000), fast = minimizeDFA(dfa, 0);
+    assert.equal(fast.tooLarge, true);
+    assert.equal(table.tooLarge, false);
+    const norm = (m) => JSON.stringify([...m.groups.map((g) => [...g].sort((x, y) => x - y))].sort());
+    assert.equal(norm(fast), norm(table), r);
+    assert.equal(fast.dfaStates.length, table.dfaStates.length);
+    assert.deepEqual([...generateExamples(fast, 5, 10)], [...generateExamples(table, 5, 10)], r);
+  }
+});
+
+test("a DFA of a thousand states is minimised at once", () => {
+  const dfa = subsetConstruct(regexToNFA("(a|b)*a" + "(a|b)".repeat(9)));
+  assert.equal(dfa.dfaStates.length, 1025);
+  const t = Date.now();
+  const min = minimizeDFA(dfa);
+  assert.equal(min.dfaStates.length, 1024);
+  assert.equal(Date.now() - t < 5000, true);
+});

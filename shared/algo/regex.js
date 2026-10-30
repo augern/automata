@@ -304,8 +304,25 @@ function minimizeDFA(scData, maxTable = RX_MAX_TABLE_STATES) {
   const steps = [];
   const record = (st) => { if (!tooLarge) steps.push(st); };
 
+  // Too large for a pair table: the classes by Moore's partition refinement, which is what the table computes at
+  // O(n |Σ|) per round (no pairs, no witnesses).
+  let block = null;
+  if (tooLarge) {
+    block = Array.from({ length: n }, (_, s) => (isAcc(s) ? 1 : 0));
+    for (let again = true; again; ) {
+      const ids = new Map();
+      const nextBlock = block.map((b, s) => {
+        const sig = b + "|" + alpha.map((a) => { const d = delta(s, a); return d === undefined ? -1 : block[d]; }).join(",");
+        if (!ids.has(sig)) ids.set(sig, ids.size);
+        return ids.get(sig);
+      });
+      again = new Set(nextBlock).size !== new Set(block).size;
+      block = nextBlock;
+    }
+  }
+
   // ── Base case: mark all (accepting, non-accepting) pairs ──
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n && !tooLarge; i++) {
     for (let j = i + 1; j < n; j++) {
       if (isAcc(i) !== isAcc(j)) {
         marked.add(pairKey(i, j));
@@ -317,7 +334,7 @@ function minimizeDFA(scData, maxTable = RX_MAX_TABLE_STATES) {
 
   // ── Refinement: propagate distinguishability ──
   let pass = 0;
-  let changed = true;
+  let changed = !tooLarge;
   while (changed) {
     changed = false;
     pass++;
@@ -348,7 +365,8 @@ function minimizeDFA(scData, maxTable = RX_MAX_TABLE_STATES) {
   function find(x) { return parent[x] === x ? x : (parent[x] = find(parent[x])); }
   function unite(x, y) { parent[find(x)] = find(y); }
 
-  for (let i = 0; i < n; i++)
+  if (tooLarge) { const first = new Map(); for (let i = 0; i < n; i++) { if (first.has(block[i])) unite(i, first.get(block[i])); else first.set(block[i], i); } }
+  else for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
       if (!marked.has(pairKey(i, j))) unite(i, j);
 
@@ -366,7 +384,7 @@ function minimizeDFA(scData, maxTable = RX_MAX_TABLE_STATES) {
 
   // Equiv pairs for final display (original states only)
   const equivPairs = new Set();
-  for (let i = 0; i < origN; i++)
+  for (let i = 0; i < origN && !tooLarge; i++)
     for (let j = i + 1; j < origN; j++)
       if (!marked.has(pairKey(i, j))) equivPairs.add(pairKey(i, j));
 
