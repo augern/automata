@@ -519,7 +519,8 @@
           <div id="sim-empty" class="ui-empty">Build the NFA first.</div>
           <div id="sim-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
             <div class="ui-bar">
-              <label title="Add an explicit error state: a state with no transition on a symbol goes to it, and it stays there"><input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state</label>
+              <label title="Add an explicit error (dead, trap) state: a state with no transition on a symbol goes to it, and it stays there"><input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state</label>
+              <span id="sim-which" class="ui-label" title="Apply and Skip in the stage panels choose the automaton that is drawn and run"></span>
             </div>
             <!-- DFA graph -->
             <div class="dfa-graph-wrap">
@@ -1568,6 +1569,7 @@
       UI.hoverItems("nfa-table-wrap", "td.nfa-state-cell", (td) => (nfaDirect() ? +td.dataset.s : null), nfaHoverState);
 
       function renderDFA(scData) {
+        document.getElementById("sim-which").textContent = "Drawn and run: " + (nfaDirect() ? "the Thompson NFA" : dfaMinimised() ? "the minimal DFA" : "the DFA from the subset construction");
         if (nfaDirect()) return renderNfaGraph();
         const { dfaStates, dfaAccepts, dfaTrans } = scData;
         if (tooLarge(dfaStates.length + (_errOn ? 1 : 0), dfaTrans.length)) return graphMessage(tooLargeMsg("DFA", dfaStates.length, dfaTrans.length));

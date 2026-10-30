@@ -139,6 +139,7 @@
           <!-- Accept / Reject banner -->
           <div id="sim-result" class="ui-result"></div>
           <!-- Tape -->
+          <div id="sim-sets" class="ui-logbar" hidden title="The set of states the NFA is in before the input and after each symbol (ε-closed)"></div>
           <div id="sim-tape-wrap" style="display:none">
             <div class="tape" id="sim-tape"></div>
             <span class="tape-eof">⊣</span>
@@ -845,6 +846,15 @@ else: ${kw("reject")}`
         });
         document.getElementById("sim-tape-wrap").style.display =
           _simChars.length > 0 ? "" : "none";
+
+        // The state sets, one after each symbol
+        const setsEl = document.getElementById("sim-sets");
+        setsEl.hidden = _simChars.length === 0;
+        setsEl.innerHTML = _simSets.map((set, k) => {
+          const name = nfaErr && set.length === 0 ? errName() : set.join(", ") || "∅";
+          return (k > 0 ? ' <span style="color:var(--text-lo)">–' + esc(_simChars[k - 1]) + "→</span> " : "") +
+            '<span style="' + (k === revealDepth ? "color:var(--accent);font-weight:bold" : k > revealDepth ? "color:var(--text-lo)" : "") + '">{' + esc(name) + "}</span>";
+        }).join("");
 
         // Render tree
         renderSimTree(vRoot, revealDepth, _simChars);
