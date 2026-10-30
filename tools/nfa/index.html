@@ -134,6 +134,7 @@
               </div>
             </div>
             <div id="sim-log-bar" class="ui-logbar"></div>
+            <div id="sim-warn" class="ui-logbar" hidden></div>
           </div>
           <!-- Accept / Reject banner -->
           <div id="sim-result" class="ui-result"></div>
@@ -177,7 +178,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
-    <script src="../../shared/algo/nfa.js?v=faf3a4ce"></script>
+    <script src="../../shared/algo/nfa.js?v=b51b3518"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -186,7 +187,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=a22485ff"></script>
+    <script src="guide.js?v=6d99aefc"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -288,10 +289,11 @@ else: ${kw("reject")}`
       }
 
       function addSymbol() {
-        let name = prompt("New symbol (single character):", "");
+        let name = prompt("New symbol (one character):", "");
         if (name === null) return;
         name = name.trim();
         if (!name || name === "ε") return;
+        if ([...name].length !== 1) { alert("A symbol is one character: the input is read one character at a time."); return; }
         if (nfaAlphabet.includes(name)) return;
         nfaAlphabet.push(name);
         for (const s of nfaStates) {
@@ -505,8 +507,14 @@ else: ${kw("reject")}`
       // Thin wrappers binding the pure algorithms in shared/algo/nfa.js to the
       // tool's current definition.
       const MAX_TREE_NODES = NFA_MAX_TREE_NODES;
+      // A cell that names a state that does not exist is ignored (it is marked invalid in the table).
       function currentNFA() {
-        return { states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts, trans: nfaTrans, alphabet: nfaAlphabet };
+        const trans = {};
+        for (const s of nfaStates) {
+          trans[s] = {};
+          for (const [sym, ts] of Object.entries(nfaTrans[s] || {})) trans[s][sym] = ts.filter((t) => nfaStates.includes(t));
+        }
+        return { states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts, trans, alphabet: nfaAlphabet };
       }
       function epsClosure(stateNames) {
         return nfaEpsClosure(currentNFA(), stateNames);
@@ -588,7 +596,7 @@ else: ${kw("reject")}`
         const e = nfaExplainConfig(currentNFA(), _simChars, node, ctx);
         const idx = nfaStates.indexOf(e.state);
         const tags = (idx === nfaStartIdx ? ' <span class="ui-explain__tag">start state</span>' : "") + (nfaAccepts.has(idx) ? ' <span class="ui-explain__tag">accepting state</span>' : "");
-        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Dead end", live: "Alive", expanded: "Expanded", error: "Error state" }[e.role];
+        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Stuck", live: "Alive", expanded: "Expanded", error: "Error state" }[e.role];
         let arrival = "The start state. Before any symbol is read, the NFA may already be in any state of its ε-closure; the first symbol is read from all of them.";
         if (node.depth > 0) {
           const a = e.arrival;
@@ -648,9 +656,9 @@ else: ${kw("reject")}`
 
           // Determine edge status/style
           let cls = "ct-edge";
-          if (child.dead) cls += " is-dead";
+          if (child.dead && child.depth < revealDepth) cls += " is-dead";
           else if (acceptPathIds.has(child.id)) cls += " is-accept-path";
-          else if (child.depth === revealDepth && !child.dead) cls += " is-active";
+          else if (child.depth === revealDepth) cls += " is-active";
           if (child.viaEps) cls += " ct-edge--eps";
 
           // Edge label: "ε,…,ε,sym,ε,…,ε" reflecting actual ε-hop counts on each leg
@@ -702,7 +710,8 @@ else: ${kw("reject")}`
 
           let cls = "ct-node";
           if (node.error) cls += " is-error";
-          if (node.dead) cls += " is-dead";
+          const stuck = node.dead && node.depth < revealDepth; // no move on the symbol that has been read
+          if (stuck) cls += " is-dead";
           else if (node.accepted) cls += " is-accept";
           else if (node.rejected) cls += " is-reject";
           else if (node.depth === revealDepth) cls += " is-active";
@@ -722,7 +731,8 @@ else: ${kw("reject")}`
             ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", -k).attr("x2", k).attr("y2", k);
             ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", k).attr("x2", k).attr("y2", -k);
           }
-          if (node.accepted) {
+          // the start node is accepted through its ε-closure, but it is not an accepting state itself
+          if (node.accepted && nfaAccepts.has(stateIdx(node))) {
             ng.append("circle").attr("class", "ct-ring").attr("r", TREE_R - 3);
           }
           ng.append("text")
@@ -730,7 +740,7 @@ else: ${kw("reject")}`
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
             .text(node.state);
-          if (node.dead) {
+          if (stuck) {
             ng.append("text")
               .attr("class", "ct-dead-mark")
               .attr("text-anchor", "middle")
@@ -743,7 +753,7 @@ else: ${kw("reject")}`
         // The explanation follows the selection, as long as that node is currently drawn.
         const sel = nodes.find((n) => n.id === _selNode);
         if (!sel) _selNode = null;
-        renderTreeInfo(sel || null, sel ? { active: sel.depth === revealDepth && !sel.dead, onAcceptPath: acceptPathIds.has(sel.id) } : null);
+        renderTreeInfo(sel || null, sel ? { active: sel.depth === revealDepth, onAcceptPath: acceptPathIds.has(sel.id) } : null);
 
         // Compute centering transform from layout positions (avoids getBBox/clientWidth on SVG)
         fitSimTreeFromLayout(posMap, vRoot, revealDepth);
@@ -794,12 +804,18 @@ else: ${kw("reject")}`
       function simRunAll() { sim.end(); }
       // sim.pos: current reveal depth; 0 = initial states shown
       let _simChars   = [];    // input characters
+      let _simSets    = [];    // the states the NFA is in after each prefix (nfaStateSets)
 
       function simRun() {
         saveShare();
         const input = document.getElementById("sim-string-input").value;
         _simChars = [...input];
         _simTree  = buildSimTree(input);
+        _simSets  = nfaStateSets(currentNFA(), input);
+        const outside = [...new Set(_simChars.filter((c) => !nfaAlphabet.includes(c)))];
+        const warn = document.getElementById("sim-warn");
+        warn.textContent = outside.length ? "Not in the alphabet: " + outside.join(" ") + (nfaErr ? "" : ". No state can read it.") : "";
+        warn.hidden = !outside.length;
         _selNode  = null;
         sim.pos   = 0;  // start at depth 0 (initial states visible immediately)
 
@@ -844,18 +860,17 @@ else: ${kw("reject")}`
           logBar.innerHTML = `Start: <span style="color:var(--accent)">${esc(startName)}</span>${epsNote}`;
         } else if (revealDepth <= maxDepth) {
           const sym = _simChars[revealDepth - 1];
-          // Collect active state names at this depth
-          const activeNodes = collectNodesAtDepth(vRoot, revealDepth).filter(n => !n.dead);
-          const names = activeNodes.map(n => n.state);
-          const uniqueNames = [...new Set(names)];
-          logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span> → active: {${esc(uniqueNames.join(", ")) || "∅"}}`;
+          const set = _simSets[revealDepth];
+          const next = _simChars[revealDepth];
+          const stuck = set.length > 0 && next !== undefined && !set.some((s) => nfaMove(currentNFA(), s, next).length > 0);
+          const inErr = nfaErr && set.length === 0;
+          logBar.innerHTML = `Read <span style="color:var(--amber);font-weight:bold">"${esc(sym)}"</span> → the NFA is in {${esc(inErr ? errName() : set.join(", ")) || "∅"}}` +
+            (stuck && !nfaErr ? ` <span style="color:var(--text-lo)">— no state can read "${esc(next)}"</span>` : "");
         } else {
           // Final step
-          const finalNodes = collectNodesAtDepth(vRoot, maxDepth);
-          const acceptNodes = finalNodes.filter(n => n.accepted);
-          const uNames = [...new Set(acceptNodes.map(n => n.state))];
+          const uNames = _simSets[maxDepth].filter((s) => nfaAccepts.has(nfaStates.indexOf(s)));
           logBar.innerHTML = accepted
-            ? `<span style="color:var(--green)">✓ Accepted</span> — accepting state(s): {${esc(uNames.join(", "))}}`
+            ? `<span style="color:var(--green)">✓ Accepted</span> — accepting state(s) reached: {${esc(uNames.join(", "))}}`
             : `<span style="color:var(--red)">✗ Rejected</span> — no active accepting state`;
         }
 
@@ -868,23 +883,13 @@ else: ${kw("reject")}`
         }
 
         // Highlight NFA graph
-        const active = collectNodesAtDepth(vRoot, revealDepth).filter(n => !n.dead);
-        const activeIdxs = [...new Set(active.map(stateIdx))];
+        const activeIdxs = _simSets[revealDepth].map((s) => nfaStates.indexOf(s));
+        if (nfaErr && _simSets[revealDepth].length === 0) activeIdxs.push(nfaStates.length); // the error state is drawn after the others
         nfaHighlightStates(activeIdxs, []);
 
         if (truncated) {
-          logBar.innerHTML += ` <span style="color:var(--red)">(tree truncated at ${MAX_TREE_NODES} nodes)</span>`;
+          logBar.innerHTML += ` <span style="color:var(--red)">(tree truncated at ${MAX_TREE_NODES} nodes; the sets and the verdict are exact)</span>`;
         }
-      }
-
-      function collectNodesAtDepth(vRoot, depth) {
-        const result = [];
-        function walk(n) {
-          if (n.depth === depth && n.depth >= 0) result.push(n);
-          for (const c of n.children) walk(c);
-        }
-        walk(vRoot);
-        return result;
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -898,7 +903,8 @@ else: ${kw("reject")}`
         onPick: () => simRun(),
         random() {
           const edges = [];
-          for (const s of nfaStates) for (const sym of Object.keys(nfaTrans[s] || {})) for (const t of nfaTrans[s][sym]) edges.push({ from: s, to: t, sym });
+          const nfa = currentNFA();
+          for (const s of nfaStates) for (const sym of Object.keys(nfa.trans[s] || {})) for (const t of nfa.trans[s][sym]) edges.push({ from: s, to: t, sym });
           return strWalkAccepted(edges, nfaStates[nfaStartIdx], [...nfaAccepts].map((i) => nfaStates[i]), Math.random);
         },
       });

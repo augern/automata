@@ -3,15 +3,28 @@
 // accepts: Set of indices into states, trans: { [state]: { [symbol]: string[] } } }
 // where the symbol "ε" labels ε-moves.
 
-// Exact acceptance by simulating the set of active states.
-function nfaAcceptsString(nfa, inputStr) {
+// The transitions of s on an input symbol. ε is not an input symbol: it has no moves here.
+const nfaMove = (nfa, s, sym) => (sym === "ε" ? [] : (nfa.trans[s] && nfa.trans[s][sym]) || []);
+
+// The set of states the NFA is in after each prefix of the input, ε-closed: sets[k] after k symbols, sets[0] the
+// closure of the start state. Names, in the order of nfa.states.
+function nfaStateSets(nfa, inputStr) {
+  const order = (set) => nfa.states.filter((s) => set.has(s));
   let active = nfaEpsClosure(nfa, [nfa.states[nfa.start]]);
+  const sets = [order(active)];
   for (const sym of inputStr) {
     const next = new Set();
-    for (const s of active) for (const t of nfa.trans[s]?.[sym] || []) next.add(t);
+    for (const s of active) for (const t of nfaMove(nfa, s, sym)) next.add(t);
     active = nfaEpsClosure(nfa, [...next]);
+    sets.push(order(active));
   }
-  return [...active].some((s) => nfa.accepts.has(nfa.states.indexOf(s)));
+  return sets;
+}
+
+// Exact acceptance by simulating the set of active states.
+function nfaAcceptsString(nfa, inputStr) {
+  const sets = nfaStateSets(nfa, inputStr);
+  return sets[sets.length - 1].some((s) => nfa.accepts.has(nfa.states.indexOf(s)));
 }
 
 function nfaEpsClosure(nfa, stateNames) {
@@ -42,8 +55,7 @@ const NFA_MAX_TREE_NODES = 512;
 
 // States reachable via sym + trailing ε from fromState, without ε-expanding fromState first.
 function nfaDirectReach(nfa, fromState, sym) {
-  const rawTargets = (nfa.trans[fromState] && nfa.trans[fromState][sym]) || [];
-  return nfaEpsClosure(nfa, rawTargets);
+  return nfaEpsClosure(nfa, nfaMove(nfa, fromState, sym));
 }
 
 // BFS: minimum number of ε-steps from fromState to toState (0 if equal, Infinity if unreachable).
@@ -218,8 +230,8 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
     role = "error";
     const sym = chars[node.depth - 1];
     why = node.parent && node.parent.error
-      ? `the error state absorbs the rest of the input (here ${sym}); it is not accepting, so the string is rejected.`
-      : `no state of the ε-closure of ${node.parent.state} has a transition on ${sym}, so the NFA enters the error state. It stays there for the rest of the input and is not accepting.`;
+      ? `this computation is in the error state and stays there (here ${sym} is read); the error state is not accepting. Other computations may still accept.`
+      : `no state of the ε-closure of ${node.parent.state} has a transition on ${sym}, so this computation enters the error state. It stays there and cannot accept. Other computations may still accept.`;
   } else if (node.accepted) {
     role = "accepted";
     why = node.depth === 0
@@ -232,7 +244,7 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
       : `all input is read, but ${node.state} is not an accepting state.`;
   } else if (node.dead && node.children.some((c) => c.error)) {
     role = "dead";
-    why = `no state of the ε-closure ${set(closure)} has a transition on ${next}, so the NFA enters the error state.`;
+    why = `no state of the ε-closure ${set(closure)} has a transition on ${next}, so this computation enters the error state.`;
   } else if (node.dead) {
     role = "dead";
     const canMove = closure.some((s) => (nfa.trans[s]?.[next] || []).length > 0);

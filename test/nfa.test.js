@@ -164,3 +164,28 @@ test("error state: an ε-move into a state that can move keeps the branch alive"
   const n = nfa(["p", "q"], "p", ["q"], [["p", "ε", "q"], ["q", "a", "q"]]);
   assert.deepEqual([...nfaErrorSymbols(n, ["a"], "p")], []);
 });
+
+test("the states the NFA is in after each symbol: the start closure, stuck sets and the empty set", () => {
+  const { nfaStateSets } = load("nfa.js");
+  const opt = nfa(["q0", "q1"], "q0", ["q1"], [["q0", "a", "q1"], ["q0", "ε", "q1"]]); // a?
+  assert.deepEqual(JSON.parse(JSON.stringify(nfaStateSets(opt, ""))), [["q0", "q1"]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(nfaStateSets(opt, "aa"))), [["q0", "q1"], ["q1"], []]);
+  assert.equal(accepts(opt, ""), true);
+});
+
+test("ε is not an input symbol", () => {
+  const n = nfa(["p", "q"], "p", ["q"], [["p", "ε", "q"]]);
+  assert.equal(accepts(n, ""), true);
+  assert.equal(accepts(n, "ε"), false);
+  assert.equal(nfaAcceptsString(n, "ε"), false);
+});
+
+test("the error-state sentences speak about one computation, not the whole NFA", () => {
+  const { nfaExplainConfig } = load("nfa.js");
+  const n = nfa(["q0", "q1"], "q0", ["q1"], [["q0", "a", "q0"], ["q0", "a", "q1"]]);
+  const t = nfaBuildSimTree(n, "ab", 512, { errorName: "err" });
+  const walk = (x, out = []) => { out.push(x); x.children.forEach((c) => walk(c, out)); return out; };
+  const err = walk(t.vRoot).find((x) => x.error);
+  assert.match(nfaExplainConfig(n, [..."ab"], err).why, /this computation/);
+  assert.match(nfaExplainConfig(n, [..."ab"], err).why, /Other computations may still accept/);
+});

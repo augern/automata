@@ -47,6 +47,51 @@
               "ε": []
             }
           }
+        },
+        {
+          "label": "A partial automaton: missing moves",
+          "purpose": "Only the string ab is accepted. A missing move ends that computation: the NFA needs no error state, and none of the other strings can finish.",
+          "states": [
+            "q0",
+            "q1",
+            "q2"
+          ],
+          "alphabet": [
+            "a",
+            "b"
+          ],
+          "start": "q0",
+          "accepts": [
+            "q2"
+          ],
+          "strings": [
+            "ab",
+            "a",
+            "aba",
+            "b",
+            ""
+          ],
+          "trans": {
+            "q0": {
+              "a": [
+                "q1"
+              ],
+              "b": [],
+              "ε": []
+            },
+            "q1": {
+              "a": [],
+              "b": [
+                "q2"
+              ],
+              "ε": []
+            },
+            "q2": {
+              "a": [],
+              "b": [],
+              "ε": []
+            }
+          }
         }
       ]
     },
@@ -255,7 +300,7 @@
       "label": "ε-moves",
       "examples": [
         {
-          "label": "ε* (ε-loop)",
+          "label": "ε-cycle: only the empty string",
           "purpose": "An ε-cycle: the ε-closure still terminates although q0 and q1 lead to each other.",
           "states": [
             "q0",
@@ -318,6 +363,45 @@
               ]
             },
             "q1": {
+              "a": [],
+              "ε": []
+            }
+          }
+        },
+        {
+          "label": "Accepted by the start state's ε-closure",
+          "purpose": "The start state is not accepting, but an ε-move reaches q1 before any symbol is read, so the empty string is accepted.",
+          "states": [
+            "q0",
+            "q1",
+            "q2"
+          ],
+          "alphabet": [
+            "a"
+          ],
+          "start": "q0",
+          "accepts": [
+            "q1"
+          ],
+          "strings": [
+            "",
+            "a",
+            "aa"
+          ],
+          "trans": {
+            "q0": {
+              "a": [],
+              "ε": [
+                "q1"
+              ]
+            },
+            "q1": {
+              "a": [
+                "q2"
+              ],
+              "ε": []
+            },
+            "q2": {
               "a": [],
               "ε": []
             }
