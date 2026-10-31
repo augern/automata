@@ -1219,5 +1219,7 @@ body {
 #error-msg.is-note { color: var(--text-dim); }
 
 /* the other views of a production under the pointer (see "Production links" in shared.js) */
-[data-prod].is-hot, [data-tok].is-hot { background: var(--hot-bg); color: var(--hot) !important; }
+[data-prod].is-hot, [data-tok].is-hot, [data-node].is-hot { background: var(--hot-bg); color: var(--hot) !important; }
+.tree-node[data-node].is-hot .tn-shape { fill: var(--hot-bg); stroke: var(--hot); }
+.tree-node[data-node].is-hot text { fill: var(--hot); }
 text[data-prod].is-hot, text[data-prod].is-hot tspan { fill: var(--hot) !important; font-weight: bold; }

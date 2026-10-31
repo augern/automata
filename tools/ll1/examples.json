@@ -87,6 +87,35 @@
           ]
         },
         {
+          "label": "Dangling else, factored",
+          "text": [
+            "// Left factoring leaves the dangling else: else can start S' and also follow it",
+            "S -> if E then S S' | other",
+            "S' -> else S | eps",
+            "E -> e"
+          ],
+          "purpose": "Factoring the common prefix leaves a conflict of its own: else can start S′ and also follow it. No LL(1) grammar removes the dangling else.",
+          "strings": [
+            "if e then other else other",
+            "if e then if e then other else other",
+            "if e then other"
+          ]
+        },
+        {
+          "label": "Conflict from a nullable alternative",
+          "text": [
+            "// A can derive ε, and what follows A also starts with a: FIRST and FOLLOW overlap",
+            "S -> A a | b",
+            "A -> a | eps"
+          ],
+          "purpose": "A can derive ε, but what follows A also starts with a, so M[A, a] holds two productions: the FIRST/FOLLOW overlap.",
+          "strings": [
+            "a a",
+            "a",
+            "b"
+          ]
+        },
+        {
           "label": "Sentences with an adjective list (left-recursive)",
           "purpose": "A list of adjectives written with left recursion: two productions compete for the first adjective, so the grammar is not LL(1).",
           "grammar": "sentences-adjective-list"
@@ -117,11 +146,11 @@
         },
         {
           "label": "Pascal excerpt (declarations)",
-          "purpose": "Program header, declarations and procedures of Pascal: left-recursive lists and nullable parts give 14 conflicts, to be removed by rewriting.",
+          "purpose": "Program header, declarations and procedures of Pascal: left-recursive lists and common prefixes give 14 conflicts, to be removed by rewriting.",
           "grammar": "pascal-declarations"
         },
         {
-          "label": "Java excerpt (LL(1) form)",
+          "label": "Java excerpt (left recursion removed)",
           "purpose": "Left recursion removed. One conflict remains: else can start the optional else part and also follow it (the dangling else).",
           "grammar": "java-statements-expressions-ll"
         },

@@ -935,6 +935,7 @@ function renderTree() {
     const ng = g
       .append("g")
       .attr("class", "tree-node" + (isTerm ? " terminal" : "") + (isNew ? " new-node" : ""))
+      .attr("data-node", node.id)
       .attr("transform", "translate(" + node._x + "," + node._y + ")");
     const nw = treeNodeW(node.symbol);
     ng.append("rect").attr("class", "tn-shape").attr("x", -nw / 2).attr("y", -TR).attr("width", nw).attr("height", 2 * TR).attr("rx", TR);
@@ -1474,12 +1475,13 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
 
 // ── Production and token links ──
 // An element with data-prod="n" (a space-separated list for a cell with several) shows production n: the grammar editor's
-// rows, the items of an LR state, a reduction in a table. data-tok="n" is the same for token rules: the scanner editor's
+// rows, the items of an LR state, a reduction in a table. data-node="id id …" is the same for the nodes of a parse tree: the
+// tree's own nodes, and the derivation step that expands or matches them. data-tok="n" is the same for token rules: the scanner editor's
 // rows, the states of the scanner's DFA that accept a rule, the tokens it has returned. Pointing at one marks it in the
 // other views with is-hot (the target colour). A view is the nearest [data-prod-view], else the panel; elements of the
 // view the pointer is in are not marked, so that related items of one view do not light up each other.
 (function () {
-  var marked = [], KINDS = ["prod", "tok"];
+  var marked = [], KINDS = ["prod", "tok", "node"];
   function clear() { marked.forEach(function (e) { e.classList.remove("is-hot"); }); marked = []; }
   function viewOf(e) { return e.closest("[data-prod-view]") || e.closest(".panel"); }
   document.addEventListener("mouseover", function (ev) {
@@ -1496,5 +1498,5 @@ function loadAutomataExamples(url, selectId, examplesObj, loadFn, shouldLoadFirs
       });
     });
   });
-  document.addEventListener("mouseout", function (ev) { if (ev.target.closest && ev.target.closest("[data-prod], [data-tok]")) clear(); });
+  document.addEventListener("mouseout", function (ev) { if (ev.target.closest && ev.target.closest("[data-prod], [data-tok], [data-node]")) clear(); });
 })();
