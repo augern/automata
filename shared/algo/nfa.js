@@ -250,7 +250,7 @@ function nfaExplainConfig(nfa, chars, node, ctx = {}) {
     const canMove = closure.some((s) => (nfa.trans[s]?.[next] || []).length > 0);
     why = canMove
       ? "the simulation stopped growing here (the tree size limit was reached)."
-      : `no state of the ε-closure ${set(closure)} has a transition on ${next}, so this branch ends here.`;
+      : `no state of the ε-closure ${set(closure)} has a transition on ${next}, so this computation is stuck: it has no move.`;
   } else if (ctx.active) {
     role = "live";
     why = rest

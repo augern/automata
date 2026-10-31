@@ -420,8 +420,8 @@
       <!-- 2. NFA — Thompson's construction -->
       <div class="panel" id="p-nfa" data-priority="3">
         <div class="panel-header">
-          <span class="panel-title">NFA — Thompson's Construction</span>
-          <button class="algo-btn" onclick="openAlgoModal('thompson')" title="Thompson's construction algorithm">Algorithm</button>
+          <span class="panel-title">NFA — Thompson-style Construction</span>
+          <button class="algo-btn" onclick="openAlgoModal('thompson')" title="The construction algorithm (Thompson-style)">Algorithm</button>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8250;</button>
         </div>
         <div class="panel-body">
@@ -519,7 +519,7 @@
           <div id="sim-empty" class="ui-empty">Build the NFA first.</div>
           <div id="sim-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
             <div class="ui-bar">
-              <label title="Add an explicit error (dead, trap) state: a state with no transition on a symbol goes to it, and it stays there"><input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state</label>
+              <label title="Add an explicit error state (also called the dead or trap state): a state with no transition on a symbol goes to it, and it stays there"><input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state</label>
               <span id="sim-which" class="ui-label" title="Apply and Skip in the stage panels choose the automaton that is drawn and run"></span>
             </div>
             <!-- DFA graph -->
@@ -577,7 +577,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
-    <script src="../../shared/algo/nfa.js?v=b51b3518"></script>
+    <script src="../../shared/algo/nfa.js?v=840395be"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -586,7 +586,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=ff97c64d"></script>
+    <script src="guide.js?v=adad35a8"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -707,7 +707,7 @@
       }
 
       function formatMinStep(st, DEAD) {
-        if (st.type === "result" && st.tooLarge) return '<span class="lg-new">✓</span>  ' + st.groups.length + "-state minimal DFA" + (DEAD >= 0 ? '  <span class="lg-dim">(the dead state ∅ is not counted)</span>' : "") + "  —  the pair table is not drawn for " + st.origN + " DFA states";
+        if (st.type === "result" && st.tooLarge) return '<span class="lg-new">✓</span>  ' + st.groups.length + "-state minimal DFA" + (DEAD >= 0 ? '  <span class="lg-dim">(the error state ∅ is not counted)</span>' : "") + "  —  the pair table is not drawn for " + st.origN + " DFA states";
         const label = (s) => (s === DEAD ? "∅" : "D" + s);
         switch (st.type) {
           case "mark-base": {
@@ -724,7 +724,7 @@
             return (st.alreadyMinimal
               ? '<span class="lg-new">✓</span>  Already minimal — all ' + st.origN + " states are distinguishable"
               : '<span class="lg-new">✓</span>  ' + st.groups.length + " equivalence class" + (st.groups.length === 1 ? "" : "es") + " → " + st.groups.length + "-state minimal DFA") +
-              (DEAD >= 0 ? '  <span class="lg-dim">(the dead state ∅ is not counted)</span>' : "");
+              (DEAD >= 0 ? '  <span class="lg-dim">(the error state ∅ is not counted)</span>' : "");
         }
       }
 
@@ -1199,7 +1199,7 @@
       // equivPairs may be null (not yet known). activePair may be null.
       function renderMinTable(n, origN, DEAD, markedPairs, equivPairs, activePair) {
         const lbl     = s => s === DEAD ? "∅" : "D" + s;
-        const deadTip = "The dead state: the DFA is completed with it for this table. It is not drawn or counted in the minimal DFA.";
+        const deadTip = "The error state (dead state): the DFA is completed with it for this table. It is not drawn or counted in the minimal DFA.";
         const pairKey = (a, b) => a < b ? a + "," + b : b + "," + a;
 
         const wrap = document.getElementById("min-table-wrap");
@@ -1569,7 +1569,7 @@
       UI.hoverItems("nfa-table-wrap", "td.nfa-state-cell", (td) => (nfaDirect() ? +td.dataset.s : null), nfaHoverState);
 
       function renderDFA(scData) {
-        document.getElementById("sim-which").textContent = "Drawn and run: " + (nfaDirect() ? "the Thompson NFA" : dfaMinimised() ? "the minimal DFA" : "the DFA from the subset construction");
+        document.getElementById("sim-which").textContent = "Drawn and run: " + (nfaDirect() ? "the NFA from the expression" : dfaMinimised() ? "the minimal DFA" : "the DFA from the subset construction");
         if (nfaDirect()) return renderNfaGraph();
         const { dfaStates, dfaAccepts, dfaTrans } = scData;
         if (tooLarge(dfaStates.length + (_errOn ? 1 : 0), dfaTrans.length)) return graphMessage(tooLargeMsg("DFA", dfaStates.length, dfaTrans.length));
@@ -1779,7 +1779,7 @@
           if (set.size === 0) break;
         }
         const accepted = set.has(nfa.accept);
-        steps.push({ set: [...set], pos: chars.length, sym: null, final: true, accepted, logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>  &#8212; q' + nfa.accept + " is in " + setLabel(set) : '<span style="color:var(--red);font-weight:bold">REJECT</span>  &#8212; ' + (set.size ? "the accepting state q" + nfa.accept + " is not in " + setLabel(set) : "no state left (dead)") });
+        steps.push({ set: [...set], pos: chars.length, sym: null, final: true, accepted, logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>  &#8212; q' + nfa.accept + " is in " + setLabel(set) : '<span style="color:var(--red);font-weight:bold">REJECT</span>  &#8212; ' + (set.size ? "the accepting state q" + nfa.accept + " is not in " + setLabel(set) : "no state left (stuck)") });
         return { steps, chars };
       }
 
@@ -1821,7 +1821,7 @@
               pos: i + 1,
               sym: a,
               prevState: prev,
-              logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>" + "  " + simName(prev) + ' &#8594; <span style="color:var(--red)">dead</span>' + '  <span class="lg-dim">(no transition on ' + escHtml(a) + ")</span>",
+              logHtml: '<span class="lg-op">Read</span>  <span class="lg-sym">' + escHtml(a) + "</span>" + "  " + simName(prev) + ' &#8594; <span style="color:var(--red)">stuck</span>' + '  <span class="lg-dim">(no transition on ' + escHtml(a) + ")</span>",
             });
             state = -1;
             break;
@@ -1845,7 +1845,7 @@
           prevState: null,
           final: true,
           accepted,
-          logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>' + "  &#8212; " + stateLabel(state) + " is an accepting state" : '<span style="color:var(--red);font-weight:bold">REJECT</span>' + "  &#8212; " + (state === -1 ? "no transition (dead)" : stateLabel(state) + " is not an accepting state"),
+          logHtml: accepted ? '<span style="color:var(--green);font-weight:bold">ACCEPT</span>' + "  &#8212; " + stateLabel(state) + " is an accepting state" : '<span style="color:var(--red);font-weight:bold">REJECT</span>' + "  &#8212; " + (state === -1 ? "no transition (stuck)" : stateLabel(state) + " is not an accepting state"),
         });
 
         return { steps, chars };
@@ -2084,7 +2084,7 @@ ${kw("return")} D`,
         `${it("s")} ${_la} q₀${cm("start in the initial state")}
 ${kw("for each")} symbol ${it("aᵢ")} in ${it("w")}
   ${it("s")} ${_la} δ(${it("s")}, ${it("aᵢ")})${cm("follow the transition")}
-  ${kw("if")} δ(${it("s")}, ${it("aᵢ")}) undefined  ${kw("return")} reject${cm("no transition — dead")}
+  ${kw("if")} δ(${it("s")}, ${it("aᵢ")}) undefined  ${kw("return")} reject${cm("no transition: the error state")}
 ${kw("if")} ${it("s")} ${sym("∈")} F<sub>D</sub>  ${kw("return")} accept
 ${kw("else")}              ${kw("return")} reject`,
       );
@@ -2096,12 +2096,12 @@ ${kw("else")}              ${kw("return")} reject`,
             label: "Input",
             sym: it("D"),
             desc: "complete DFA — states Q, alphabet Σ, transition δ, start q₀, accept states F " +
-              "(complete by adding a non-accepting dead state ∅ → ∅ on all symbols if needed)",
+              "(complete by adding a non-accepting error state ∅ → ∅ on all symbols if needed)",
           },
           {
             label: "Output",
             sym: it("D′"),
-            desc: "minimal DFA — fewest states recognising the same language (unique up to isomorphism), without the dead state",
+            desc: "minimal DFA — fewest states recognising the same language (unique up to isomorphism), without the error state",
           },
         ],
         `${cm("Base case")}
@@ -2135,7 +2135,7 @@ ${kw("return")} D′`,
         const bodyEl    = document.getElementById("algo-body");
 
         if (type === "thompson") {
-          titleEl.textContent = "Thompson's Construction";
+          titleEl.textContent = "Thompson-style Construction";
           subtitleEl.textContent = "RE → NFA";
           bodyEl.innerHTML = PC_THOMPSON + PC_THOMPSON_DERIVED + '<div class="pc-note">' + "Each application of Thompson's construction produces a fragment with exactly one start " + "and one accept state. The total number of states is at most 2|r| where |r| is the number " + "of symbols and operators in the regex. The resulting NFA is converted to a DFA via " + "the subset construction (ε-closure + move)." + "</div>";
         } else if (type === "subset") {
@@ -2149,7 +2149,7 @@ ${kw("return")} D′`,
             "Two states are <em>distinguishable</em> if some input string leads one to an accepting state " +
             "and the other to a non-accepting state. The table-filling algorithm finds all distinguishable " +
             "pairs: each sweep over the table costs O(n² |Σ|), and there are at most O(n²) sweeps. States that are never distinguished are equivalent and can be merged. " +
-            "The result is the unique minimal DFA for the language, apart from the dead state ∅, which completes the DFA for the table but is not drawn or counted." +
+            "The result is the unique minimal DFA for the language, apart from the error state ∅ (the dead state), which completes the DFA for the table but is not drawn or counted." +
             "</div>";
         } else if (type === "sim") {
           titleEl.textContent = "DFA Simulation";

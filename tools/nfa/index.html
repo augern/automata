@@ -78,7 +78,7 @@
             </select>
           </div>
           <div class="ui-bar">
-            <label title="Add an explicit error state: a state that cannot move on a symbol goes to it, and it stays there">
+            <label title="Add an explicit error state (also called the dead or trap state): a state that cannot move on a symbol goes to it, and it stays there">
               <input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state
             </label>
           </div>
@@ -179,7 +179,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
-    <script src="../../shared/algo/nfa.js?v=b51b3518"></script>
+    <script src="../../shared/algo/nfa.js?v=840395be"></script>
     <script src="../../shared/shared.js?v=9c2fa6ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -188,7 +188,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=6d99aefc"></script>
+    <script src="guide.js?v=17dc4828"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -218,7 +218,7 @@ for i ${_in} 1..n:${cm("consume each input symbol")}
         for each r ${_in} ε-closure({q}):${cm("ε-expand before sym")}
             reach ${_la} reach ${_cup} ε-closure(δ(r, aᵢ))${cm("sym-transition + ε-close after")}
     current ${_la} reach
-    if current = ${_emp}: ${kw("reject")}${cm("no active states")}
+    if current = ${_emp}: ${kw("reject")}${cm("the set of states is empty")}
 if ε-closure(current) ∩ F ${_neq} ${_emp}: ${kw("accept")}${cm("n=0: checks ε-closure({q₀})")}
 else: ${kw("reject")}`
       );
@@ -357,7 +357,7 @@ else: ${kw("reject")}`
         const allSyms = [...nfaAlphabet, "ε"];
 
         let h = T.open() + "<thead><tr>";
-        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting state" }) + T.th("state", { left: true });
+        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting state" }) + T.th("δ", { left: true, title: "δ(q, a): the cell in row q and column a lists the states reached from q on a. Column ε lists the ε-moves." });
         for (const [si, sym] of nfaAlphabet.entries()) {
           h += T.th(esc(sym) + T.rmInline(`removeSymbol(${si})`, `Remove symbol '${sym}'`), { sym: true });
         }
@@ -597,7 +597,7 @@ else: ${kw("reject")}`
         const e = nfaExplainConfig(currentNFA(), _simChars, node, ctx);
         const idx = nfaStates.indexOf(e.state);
         const tags = (idx === nfaStartIdx ? ' <span class="ui-explain__tag">start state</span>' : "") + (nfaAccepts.has(idx) ? ' <span class="ui-explain__tag">accepting state</span>' : "");
-        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Stuck", live: "Alive", expanded: "Expanded", error: "Error state" }[e.role];
+        const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Stuck", live: "Current", expanded: "Expanded", error: "Error state" }[e.role];
         let arrival = "The start state. Before any symbol is read, the NFA may already be in any state of its ε-closure; the first symbol is read from all of them.";
         if (node.depth > 0) {
           const a = e.arrival;
@@ -612,7 +612,7 @@ else: ${kw("reject")}`
             : `From <b>${esc(node.parent.state)}</b> by reading ${esc(_simChars[node.depth - 1])}.`;
         }
         UI.explain("tree-info", {
-          title: `Configuration (${e.state}, ${e.remaining || "ε"})`,
+          title: `${e.state} after reading ${e.consumed ? "“" + e.consumed + "”" : "nothing"}`,
           onClose: () => selectConfig(node.id),
           facts: [
             ["State", esc(e.state) + tags],
@@ -725,7 +725,7 @@ else: ${kw("reject")}`
             .on("mouseenter", () => nfaHoverState(stateIdx(node)))
             .on("mouseleave", () => nfaHoverState(null))
             .on("click", (ev) => { ev.stopPropagation(); selectConfig(node.id); });
-          ng.append("title").text("Click to explain this configuration");
+          ng.append("title").text("Click to explain this node");
           ng.append("circle").attr("r", TREE_R);
           if (node.error) {
             const k = TREE_R * Math.SQRT1_2;
@@ -881,7 +881,7 @@ else: ${kw("reject")}`
           const uNames = _simSets[maxDepth].filter((s) => nfaAccepts.has(nfaStates.indexOf(s)));
           logBar.innerHTML = accepted
             ? `<span style="color:var(--green)">✓ Accepted</span> — accepting state(s) reached: {${esc(uNames.join(", "))}}`
-            : `<span style="color:var(--red)">✗ Rejected</span> — no active accepting state`;
+            : `<span style="color:var(--red)">✗ Rejected</span> — no accepting state in the final set`;
         }
 
         // Result banner
