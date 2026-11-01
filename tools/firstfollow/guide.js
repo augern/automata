@@ -6,7 +6,7 @@ window.TOOL_GUIDE = {
   use: [
     "Results: click a member to show its witness.",
     "Construction: Step, Round and the phase buttons build the sets; a row of the log shows its step in the witness. Skip idle steps leaves out the steps that add nothing.",
-    "Witness: ‹ › steps through the other derivations of a member, or through the members a step adds. Whole set does so for every member of a set. Nullable, FIRST and FOLLOW show the general case. Show sample strings spells out the faded …",
+    "Witness: ‹ › steps through the other derivations of a member, or through the members a step adds. Nullable, FIRST and FOLLOW show the general case. Shorten strings replaces example strings by a faded …",
     "The box under the sets gives FIRST of any string of symbols.",
   ],
   notation: [

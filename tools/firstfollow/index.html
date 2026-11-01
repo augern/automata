@@ -79,10 +79,9 @@
       #wit-ctl { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
       #wit-alt { display: flex; align-items: center; gap: var(--sp-2); }
       #wit-alt-n { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-dim); min-width: 3.2em; text-align: center; }
-      #wit-all-wrap, #wit-samples-wrap { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; }
+      #wit-shorten-wrap { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; }
       #wit-theory .btn { height: 22px; font-size: var(--fs-2xs); padding: 0 var(--sp-3); }
       #wit-theory .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
-      #wit-all-wrap.is-off { opacity: 0.45; cursor: default; }
       #wit-canvas { flex: 1; min-height: 160px; }
 
       /* Sets */
@@ -177,8 +176,7 @@
                 <button class="btn" data-theory="first">FIRST</button>
                 <button class="btn" data-theory="follow">FOLLOW</button>
               </div>
-              <label id="wit-samples-wrap" class="wit-opt" title="Spell out the strings that only stand for what a symbol derives, faded, instead of …"><input type="checkbox" id="wit-samples" /> Show sample strings</label>
-              <label id="wit-all-wrap" title="Step through a witness for every member of this set"><input type="checkbox" id="wit-all" /> Whole set</label>
+              <label id="wit-shorten-wrap" title="Show a faded … for the strings that only stand for what a symbol derives, instead of an example"><input type="checkbox" id="wit-shorten" /> Shorten strings</label>
             </div>
           </div>
           <div id="wit-canvas" class="ui-canvas">
@@ -238,7 +236,7 @@
     <script src="../../shared/algo/tex.js?v=3d7f89b1"></script>
     <script src="definitions.js?v=1a4fca3d"></script>
     <script src="../../shared/definitions.js?v=d92b81b8"></script>
-    <script src="guide.js?v=97c157a7"></script>
+    <script src="guide.js?v=d23b4b87"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar", +1);
@@ -329,10 +327,10 @@ ${kw("return")} Follow`,
       let rec = null; // ffRecord of the grammar
       let sel = null; // the member shown in the witness panel: { kind: "first" | "follow" | "nullable", nt, tok }
       let alt = 0; // which way of showing it (the shortest is 0)
-      let which = 0, whichCount = 0; // with several members shown (a step that adds some, the whole set): which one, and how many
+      let which = 0, whichCount = 0; // with several members shown (a step that adds some): which one, and how many
       let theory = null; // nullable | first | follow: the general case is shown instead of a member
       let shownStep = null; // the step of the construction whose member (or phase) the witness shows
-      const ctgPref = ctgPrefs({ all: false, skip: false, samples: false }); // remembered for this tool: a witness for the whole set; sample strings in the witness; steps that add nothing left out
+      const ctgPref = ctgPrefs({ skip: false, shorten: false }); // remembered for this tool: steps that add nothing left out; … in place of example strings in the witness;  steps that add nothing left out
       const el = (id) => document.getElementById(id);
       const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
       // what a step adds, as set notation: one member ∈ the set, several ⊆ it
@@ -427,23 +425,18 @@ ${kw("return")} Follow`,
         document.querySelectorAll("#wit-theory .btn").forEach((b) => b.classList.toggle("is-on", b.dataset.theory === theory));
         const stepEv = shownStep !== null ? rec.events[shownStep] : null;
         const added = !theory && stepEv && stepEv.phase !== "nullable" && stepEv.added.length > 1 && sel && sel.kind === stepEv.phase && sel.nt === stepEv.target ? stepEv.added : null; // the members that the shown step adds
-        const whole = !theory && !stepEv && ctgPref.get().all && sel && sel.kind !== "nullable";
-        const noSet = theory || !sel || sel.kind === "nullable";
-        el("wit-all").checked = ctgPref.get().all;
-        el("wit-all").disabled = !!noSet;
-        el("wit-all-wrap").classList.toggle("is-off", !!noSet);
         if (theory) {
           const spec = ffwTheory(theory);
           showFigures(spec.figures || [spec], 60);
           return;
         }
         if (!sel) return;
-        const many = added || (whole && [...rec[sel.kind][sel.nt]]);
+        const many = added;
         if (many) {
           const toks = [...many].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
           whichCount = toks.length;
           which = Math.min(which, whichCount - 1);
-          const spec = ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: toks[which] }, 0), { samples: ctgPref.get().samples });
+          const spec = ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: toks[which] }, 0), { samples: !ctgPref.get().shorten });
           showFigures([spec], 0);
           el("wit-alt").hidden = whichCount < 2;
           el("wit-alt-n").textContent = which + 1 + " / " + whichCount;
@@ -452,7 +445,7 @@ ${kw("return")} Follow`,
         whichCount = 0;
         const w = witnessOf(sel, alt);
         if (!w) { sel = null; drawWitness(); return; }
-        const spec = ffwSpec(w, { samples: ctgPref.get().samples });
+        const spec = ffwSpec(w, { samples: !ctgPref.get().shorten });
         showFigures([spec], 0);
         if (w.unreachable) el("wit-bar").textContent = "Not reachable from the start symbol";
         el("wit-alt").hidden = w.count < 2;
@@ -634,9 +627,8 @@ ${kw("return")} Follow`,
       el("btn-alt-prev").addEventListener("click", () => way(-1));
       el("btn-alt-next").addEventListener("click", () => way(1));
       document.querySelectorAll("#wit-theory .btn").forEach((b) => b.addEventListener("click", () => { theory = b.dataset.theory; drawWitness(); }));
-      el("wit-samples").checked = ctgPref.get().samples;
-      el("wit-samples").addEventListener("change", () => { ctgPref.set({ samples: el("wit-samples").checked }); drawWitness(); });
-      el("wit-all").addEventListener("change", () => { ctgPref.set({ all: el("wit-all").checked }); drawWitness(); });
+      el("wit-shorten").checked = ctgPref.get().shorten;
+      el("wit-shorten").addEventListener("change", () => { ctgPref.set({ shorten: el("wit-shorten").checked }); drawWitness(); });
       el("ff-sets").addEventListener("click", (e) => {
         const m = e.target.closest("[data-set]");
         if (m) selectMember({ kind: m.dataset.set, nt: m.dataset.nt, tok: m.dataset.tok });
