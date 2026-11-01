@@ -4,6 +4,6 @@ window.TOOL_DEFINITIONS = {
   sections: [
     { title: "Grammars", items: ["cfg", "derivation", "leftmost", "parseTree"] },
     { title: "FIRST and FOLLOW", items: ["first", "follow"] },
-    { title: "LR parsing", items: ["handle", "lrItem", "lrClosure", "lrTable"] },
+    { title: "LR parsing", items: ["handle", "lrItem", "lrTable"] },
   ],
 };

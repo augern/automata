@@ -2,7 +2,7 @@
 window.TOOL_DEFINITIONS = {
   title: "Regular expressions",
   sections: [
-    { title: "Regular expressions and automata", items: ["regex", "thompson", "kleene"] },
-    { title: "Automata", items: ["nfa", "eclose", "dfa", "subset", "minimise"] },
+    { title: "Regular expressions and automata", items: ["regex", "kleene"] },
+    { title: "Automata", items: ["nfa", "eclose", "dfa", "minimise"] },
   ],
 };

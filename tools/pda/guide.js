@@ -2,23 +2,23 @@
 // Legend colour names: blue, green, red, grey.
 window.TOOL_GUIDE = {
   title: "PDA simulator",
-  intro: "Defines a pushdown automaton (an NFA with a stack) and traces its reading of a string. There may be several computations at once; the Configuration Tree shows all of them.",
+  intro: "Defines a pushdown automaton and traces its reading of a string; the Configuration Tree shows every computation.",
   use: [
-    "Each row of the rules table is a transition: in state `from`, reading `input`, with `pop` on top of the stack, go to state `to` and push `push`.",
-    "Leave `input` blank for an ε-move. Leave `pop` or `push` blank to pop or push nothing. A pushed string is written top first: its leftmost symbol ends up on top.",
+    "Each row is a transition: in state `from`, reading `input`, with `pop` on top of the stack, go to `to` and push `push`.",
+    "A blank `input` is an ε-move; a blank `pop` or `push` pops or pushes nothing. A pushed string is written top first.",
     "Acceptance is by final state or by empty stack, after all input is read.",
-    "Step through a string. Click a tree node to explain its configuration and how it arose.",
+    "Step through a string. Click a tree node to explain its configuration.",
   ],
   notation: [
-    ["(q, w, γ)", "a configuration: the current state, the input still unread, and the stack (top first)"],
-    ["a, A/BC", "on an edge: read a, pop A, push BC (ε when nothing)"],
+    ["(q, w, γ)", "state, unread input, stack (top first)"],
+    ["a, A/BC", "on an edge: read a, pop A, push BC"],
     ["⊥", "the initial stack symbol"],
-    ["A ⊥ ↑", "a stack listed top first; ↑ marks its bottom end, … means more symbols are hidden"],
+    ["A ⊥ ↑", "a stack, top first; ↑ marks its bottom end, … hidden symbols"],
   ],
   legend: [
-    ["blue", "start state; the configurations the PDA is in now"],
+    ["blue", "start state; the configurations now"],
     ["green", "accepted"],
-    ["red", "rejected: the input ran out without acceptance"],
+    ["red", "rejected: input ran out without acceptance"],
     ["grey", "dead end: no rule applied"],
   ],
 };

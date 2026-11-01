@@ -3,6 +3,6 @@ window.TOOL_DEFINITIONS = {
   title: "Grammar transformations",
   sections: [
     { title: "Grammars", items: ["cfg", "derivation", "nullable"] },
-    { title: "Transformations", items: ["useless", "epsilonRemoval", "unitRemoval", "leftRecursion", "leftRecursionRemoval", "cnf", "gnf"] },
+    { title: "Transformations", items: ["useless", "unit", "leftRecursion", "cnf", "gnf"] },
   ],
 };

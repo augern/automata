@@ -2,7 +2,6 @@
 window.TOOL_DEFINITIONS = {
   title: "Scanner",
   sections: [
-    { title: "Regular languages", items: ["regex", "nfa", "eclose", "subset", "minimise"] },
-    { title: "Scanning", items: ["token", "munch"] },
+    { title: "Scanning", items: ["token", "regex", "nfa", "eclose", "minimise"] },
   ],
 };

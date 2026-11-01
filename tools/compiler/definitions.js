@@ -2,7 +2,7 @@
 window.TOOL_DEFINITIONS = {
   title: "Compiler front end",
   sections: [
-    { title: "Scanning and parsing", items: ["token", "munch", "cfg", "handle", "lrTable"] },
+    { title: "Scanning and parsing", items: ["token", "cfg", "handle", "lrTable"] },
     { title: "Translation", items: ["sdd", "tac"] },
   ],
 };

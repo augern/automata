@@ -13,6 +13,8 @@
     ["T", "switch the arrow keys to the next stepping panel (its header is tinted)"],
     ["F", "focus the current panel; again to restore the layout"],
   ];
+  // tools with the grammar table set grammarEditor: true
+  const GRAMMAR_USE = "Grammar: click a symbol to edit it. The field ending a row takes new symbols (Space or Enter closes a chip); `|` starts another production for the same left side; a quoted symbol such as `'|'` is a literal terminal (`''''` is `'`); an empty production is ε. The ⋯ menu of a row disables, duplicates, moves or deletes it; the panel menu switches to the text view. The first left side is the start symbol.";
   const COMMON_USE = "The View menu (top right) copies a link to the current state, switches theme and rearranges the panels. Hovering an item in one panel marks the same item in the others, in orange.";
 
 
@@ -24,7 +26,7 @@
     const legend = g.legend.concat([["orange", "the hovered item, in every panel where it appears"]]);
     return (
       "<p class=\"guide-intro\">" + fmt(g.intro) + "</p>" +
-      "<h3 class=\"guide-h\">How to use it</h3>" + list(g.use.concat([COMMON_USE])) +
+      "<h3 class=\"guide-h\">How to use it</h3>" + list((g.grammarEditor ? [GRAMMAR_USE] : []).concat(g.use, [COMMON_USE])) +
       (g.notation.length ? "<h3 class=\"guide-h\">Notation</h3>" + dl(g.notation) : "") +
       "<h3 class=\"guide-h\">Colours</h3><ul class=\"guide-list guide-legend\">" +
         legend.map((l) => "<li><span class=\"guide-dot\" style=\"background:" + DOT[l[0]] + "\"></span>" + fmt(l[1]) + "</li>").join("") + "</ul>" +

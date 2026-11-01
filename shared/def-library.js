@@ -18,7 +18,6 @@ window.DEF_LIBRARY = {
     rabin: "M. O. Rabin, D. Scott: Finite automata and their decision problems. IBM Journal of Research and Development 3(2), 1959, pp. 114–125.",
     rs: "D. J. Rosenkrantz, R. E. Stearns: Properties of deterministic top-down grammars. Information and Control 17(3), 1970, pp. 226–256.",
     sipser: "M. Sipser: Introduction to the Theory of Computation, 3rd ed. Cengage, 2012.",
-    thompson: "K. Thompson: Programming techniques: Regular expression search algorithm. Communications of the ACM 11(6), 1968, pp. 419–422.",
     turing: "A. M. Turing: On computable numbers, with an application to the Entscheidungsproblem. Proceedings of the London Mathematical Society s2-42, 1936–37, pp. 230–265.",
   },
   items: {
@@ -26,13 +25,11 @@ window.DEF_LIBRARY = {
     dfa: {
       term: "Deterministic finite automaton",
       formal: [T`M = (Q, \Sigma, \delta, q_0, F)`, T`\delta : Q \times \Sigma \to Q`, T`\delta^{*}(q, \varepsilon) = q, \quad \delta^{*}(q, wa) = \delta(\delta^{*}(q, w), a)`, T`L(M) = \{\, w \in \Sigma^{*} \mid \delta^{*}(q_0, w) \in F \,\}`],
-      text: "Q is a finite set of states, Σ the alphabet, q₀ the start state, F ⊆ Q the accepting states.",
       refs: ["hmu §2.2", "sipser Def. 1.5"],
     },
     nfa: {
       term: "Nondeterministic finite automaton",
       formal: [T`N = (Q, \Sigma, \delta, q_0, F)`, T`\delta : Q \times (\Sigma \cup \{\varepsilon\}) \to \mathcal{P}(Q)`],
-      text: "A move on ε changes state without reading input.",
       refs: ["hmu §2.3, §2.5", "sipser Def. 1.37", "rabin"],
     },
     eclose: {
@@ -42,7 +39,7 @@ window.DEF_LIBRARY = {
         T`\delta^{*}(S, \varepsilon) = \mathrm{ECLOSE}(S), \quad \delta^{*}(S, wa) = \mathrm{ECLOSE}(\bigcup_{p \in \delta^{*}(S, w)} \delta(p, a))`,
         T`L(N) = \{\, w \in \Sigma^{*} \mid \delta^{*}(\{q_0\}, w) \cap F \ne \emptyset \,\}`,
       ],
-      text: "ECLOSE(q) is the least set of states reachable from q by ε-moves.",
+      text: "The least set of states reachable by ε-moves.",
       refs: ["hmu §2.5"],
     },
     regex: {
@@ -57,35 +54,19 @@ window.DEF_LIBRARY = {
     kleene: {
       term: "Regular languages",
       formal: [],
-      text: "Regular expressions, DFAs and NFAs (with or without ε-moves) define the same class of languages.",
+      text: "Regular expressions, DFAs and NFAs, with or without ε-moves, define the same languages.",
       refs: ["hmu §3.2", "rabin", "kleene"],
-    },
-    thompson: {
-      term: "Thompson's construction",
-      formal: [],
-      text: "Each regular expression R becomes an ε-NFA N(R) with one start state and one accepting state, and no move out of the accepting state. ε and a each give two states; R | S, RS and R* join the automata of their parts with new ε-moves.",
-      refs: ["thompson", "alsu §3.7"],
-    },
-    subset: {
-      term: "Subset construction",
-      formal: [
-        T`d_0 = \mathrm{ECLOSE}(\{q_0\}), \quad \delta_D(S, a) = \mathrm{ECLOSE}(\bigcup_{p \in S} \delta_N(p, a))`,
-        T`F_D = \{\, S \mid S \cap F_N \ne \emptyset \,\}`,
-      ],
-      text: "The states of the DFA are the sets of NFA states reached from d₀.",
-      refs: ["hmu §2.3, §2.5", "rabin"],
     },
     minimise: {
       term: "Minimal DFA",
       formal: [T`p \equiv q \quad\text{iff}\quad \forall w \in \Sigma^{*} : \delta^{*}(p, w) \in F \Leftrightarrow \delta^{*}(q, w) \in F`],
-      text: "The minimal DFA has one state for each class of ≡ among the reachable states; it is unique up to renaming.",
+      text: "Its states are the classes of ≡ among the reachable states.",
       refs: ["hmu §4.4"],
     },
     // ── Grammars and derivations ──
     cfg: {
       term: "Context-free grammar",
       formal: [T`G = (N, \Sigma, P, S)`, T`N, \Sigma \text{ finite and disjoint};\quad P \subseteq N \times (N \cup \Sigma)^{*}, \text{ written } A \to \alpha;\quad S \in N`],
-      text: "N holds the nonterminals, Σ the terminals, S is the start symbol.",
       refs: ["hmu §5.1.2", "sipser Def. 2.2"],
     },
     derivation: {
@@ -101,19 +82,18 @@ window.DEF_LIBRARY = {
     leftmost: {
       term: "Leftmost and rightmost derivation",
       formal: [T`\alpha \Rightarrow_{\mathrm{lm}} \beta \quad\text{iff}\quad \alpha = wA\gamma,\; A \to \eta \in P,\; \beta = w\eta\gamma,\; w \in \Sigma^{*}`, T`\alpha \Rightarrow_{\mathrm{rm}} \beta \quad\text{iff}\quad \alpha = \gamma A w,\; A \to \eta \in P,\; \beta = \gamma\eta w,\; w \in \Sigma^{*}`],
-      text: "Each step rewrites the leftmost (rightmost) nonterminal.",
       refs: ["hmu §5.1.4"],
     },
     parseTree: {
       term: "Parse tree",
       formal: [T`A \to X_1 \ldots X_k \in P \quad\text{for an interior node } A \text{ with children } X_1, \ldots, X_k`],
-      text: "The root is the start symbol; the yield, the leaves read from left to right, is a sentential form. Parse trees, leftmost derivations and rightmost derivations of a sentence correspond one to one.",
+      text: "Parse trees, leftmost derivations and rightmost derivations of a sentence correspond one to one.",
       refs: ["hmu §5.2"],
     },
     ambiguity: {
       term: "Ambiguity",
       formal: [],
-      text: "G is ambiguous when some sentence of L(G) has two different parse trees, equivalently two different leftmost derivations.",
+      text: "Some sentence of L(G) has two parse trees, equivalently two leftmost derivations.",
       refs: ["hmu §5.4"],
     },
     chomsky: {
@@ -124,7 +104,7 @@ window.DEF_LIBRARY = {
         T`\alpha = A \in N \qquad \text{type 2, context-free}`,
         T`A \to aB, \quad A \to a, \quad A \to \varepsilon \qquad \text{type 3, regular}`,
       ],
-      text: "Each class contains the next. In type 1 a start symbol that occurs on no right side may derive ε.",
+      text: "Each class contains the next; in type 1 a start symbol that occurs on no right side may derive ε.",
       refs: ["chomsky59"],
     },
     // ── Nullable, FIRST and FOLLOW ──
@@ -136,19 +116,17 @@ window.DEF_LIBRARY = {
     first: {
       term: "FIRST",
       formal: [T`\mathrm{FIRST}(\alpha) = \{\, a \in \Sigma \mid \alpha \overset{*}{\Rightarrow} a\beta \text{ for some } \beta \in (N \cup \Sigma)^{*} \,\}`, T`\varepsilon \in \mathrm{FIRST}(\alpha) \quad\text{iff}\quad \alpha \overset{*}{\Rightarrow} \varepsilon`],
-      text: "The terminals a string derived from α can start with. ε is included when α is nullable.",
       refs: ["alsu §4.4.2", "appel §3.2", "rs"],
     },
     firstString: {
       term: "FIRST of a string",
       formal: [T`\mathrm{FIRST}(X_1 \ldots X_n) = \bigcup_{X_1 \ldots X_{i-1} \text{ nullable}} \mathrm{FIRST}(X_i) \setminus \{\varepsilon\}`, T`\varepsilon \in \mathrm{FIRST}(X_1 \ldots X_n) \quad\text{iff}\quad X_1 \ldots X_n \text{ nullable}`],
-      text: "FIRST of each symbol up to and including the first that is not nullable.",
       refs: ["alsu §4.4.2"],
     },
     follow: {
       term: "FOLLOW",
       formal: [T`\mathrm{FOLLOW}(A) = \{\, a \in \Sigma \mid S \overset{*}{\Rightarrow} \alpha A a \beta \text{ for some } \alpha, \beta \in (N \cup \Sigma)^{*} \,\}`, T`\$ \in \mathrm{FOLLOW}(A) \quad\text{iff}\quad S \overset{*}{\Rightarrow} \alpha A;\quad \text{in particular } \$ \in \mathrm{FOLLOW}(S)`],
-      text: "The terminals that can come right after A in a sentential form. $ is an end marker, not a terminal of the grammar.",
+      text: "$ is an end marker, not a terminal of the grammar.",
       refs: ["alsu §4.4.2", "appel §3.2", "rs"],
     },
     // ── Pushdown automata and Turing machines ──
@@ -161,7 +139,6 @@ window.DEF_LIBRARY = {
     pdaConfig: {
       term: "Configuration and move",
       formal: [T`(q, w, \gamma) \in Q \times \Sigma^{*} \times \Gamma^{*}`, T`(q, aw, X\gamma) \vdash (p, w, \beta\gamma) \quad\text{if}\quad (p, \beta) \in \delta(q, a, X),\; a \in \Sigma \cup \{\varepsilon\}`],
-      text: "⊢* is the reflexive and transitive closure of ⊢.",
       refs: ["hmu §6.2"],
     },
     pdaAccept: {
@@ -183,7 +160,7 @@ window.DEF_LIBRARY = {
         T`u c\, q\, a v \vdash u\, p\, c b\, v \quad\text{if}\quad \delta(q, a) = (p, b, L)`,
         T`L(M) = \{\, w \in \Sigma^{*} \mid q_0 w \overset{*}{\vdash} u\, q_{\mathrm{acc}}\, v \,\}`,
       ],
-      text: "A configuration u q v has tape content uv, the head on the first symbol of v, state q. L(M) is recursively enumerable; if M halts on every input, L(M) is decidable.",
+      text: "u q v: tape uv, head on the first symbol of v, state q. L(M) is recursively enumerable; decidable if M halts on every input.",
       refs: ["sipser §3.1", "hmu §8.2"],
     },
     // ── Pumping lemmas ──
@@ -196,21 +173,15 @@ window.DEF_LIBRARY = {
     pumpContextFree: {
       term: "Pumping lemma for context-free languages",
       formal: [T`L \text{ context-free} \Longrightarrow \exists p \ge 1\; \forall w \in L,\; |w| \ge p :`, T`w = uvxyz, \quad |vxy| \le p, \quad |vy| \ge 1, \quad uv^{i}xy^{i}z \in L \text{ for all } i \ge 0`],
-      text: "A long enough parse tree has a root-to-leaf path on which a nonterminal A occurs twice, with A ⇒* vAy and A ⇒* x; the part between the occurrences can be repeated or left out.",
+      text: "On a long enough path some nonterminal A repeats, with A ⇒* vAy and A ⇒* x.",
       refs: ["hmu §7.2", "sipser Thm. 2.34", "bps"],
     },
     // ── Top-down parsing ──
     leftRecursion: {
       term: "Left recursion",
       formal: [T`A \overset{+}{\Rightarrow} A\alpha \quad\text{for some } A \in N,\; \alpha`],
-      text: "A top-down parser that expands the leftmost nonterminal first loops on a left-recursive grammar.",
+      text: "A top-down parser that expands the leftmost nonterminal first loops on it.",
       refs: ["alsu §4.3.3"],
-    },
-    recursiveDescent: {
-      term: "Recursive-descent parsing",
-      formal: [],
-      text: "One procedure for each nonterminal A: it chooses a production A → X₁ … Xₖ and handles each Xᵢ in turn, calling the procedure of a nonterminal and matching a terminal against the next input token. With backtracking it tries the alternatives in turn; predictively, the next token decides.",
-      refs: ["alsu §4.4.1"],
     },
     ll1: {
       term: "LL(1) grammar",
@@ -231,24 +202,14 @@ window.DEF_LIBRARY = {
     handle: {
       term: "Handle",
       formal: [T`S \overset{*}{\Rightarrow}_{\mathrm{rm}} \alpha A w \Rightarrow_{\mathrm{rm}} \alpha \beta w`],
-      text: "The production A → β at the position after α is a handle of αβw: reducing it undoes a step of a rightmost derivation. A shift–reduce parser finds the handles from left to right.",
+      text: "Reducing a handle undoes a step of a rightmost derivation.",
       refs: ["alsu §4.5", "knuth65"],
     },
     lrItem: {
       term: "LR(0) and LR(1) items",
       formal: [T`[A \to \alpha \cdot \beta] \qquad [A \to \alpha \cdot \beta, a]`],
-      text: "A production with a dot marking how much of its right side has been recognised; an LR(1) item also carries a lookahead terminal a.",
+      text: "The dot marks how much of the right side has been recognised; an LR(1) item adds a lookahead terminal.",
       refs: ["alsu §4.6, §4.7", "knuth65"],
-    },
-    lrClosure: {
-      term: "Closure and goto",
-      formal: [
-        T`[A \to \alpha \cdot B\beta] \in I,\; B \to \gamma \in P \Longrightarrow [B \to \cdot \gamma] \in \mathrm{closure}(I)`,
-        T`\mathrm{goto}(I, X) = \mathrm{closure}(\{\, [A \to \alpha X \cdot \beta] \mid [A \to \alpha \cdot X\beta] \in I \,\})`,
-        T`[A \to \alpha \cdot B\beta, a] \in I,\; B \to \gamma \in P,\; b \in \mathrm{FIRST}(\beta a) \Longrightarrow [B \to \cdot \gamma, b] \in \mathrm{closure}(I)`,
-      ],
-      text: "The first rule is for LR(0) and SLR(1) items, the last for LR(1) items. The states of the automaton are the sets reachable from the closure of the start item by goto.",
-      refs: ["alsu §4.6.2, §4.7.2"],
     },
     lrTable: {
       term: "ACTION and GOTO",
@@ -257,33 +218,21 @@ window.DEF_LIBRARY = {
         T`\mathrm{reduce}\; A \to \alpha \in \mathrm{ACTION}[i, a] \quad\text{if}\quad [A \to \alpha \cdot] \in I_i \;\text{and}\; a \in \Lambda`,
         T`\mathrm{GOTO}[i, A] = j \quad\text{if}\quad \mathrm{goto}(I_i, A) = I_j`,
       ],
-      text: "Λ is the lookahead set of the reduction: every terminal for LR(0), FOLLOW(A) for SLR(1), the lookahead a of the LR(1) item [A → α·, a] for LR(1) and, after merging item sets that differ only in lookaheads, LALR(1). A cell with two actions is a conflict; the grammar is in the class exactly when there is none.",
+      text: "Λ is all terminals for LR(0), FOLLOW(A) for SLR(1), the lookahead of the LR(1) item for LR(1), and the same after merging item sets that differ only in lookaheads for LALR(1). A cell with two actions is a conflict.",
       refs: ["alsu §4.6, §4.7", "deremer71", "knuth65"],
     },
     // ── Grammar transformations ──
     useless: {
       term: "Useless symbols",
       formal: [T`X \text{ generating} \quad\text{iff}\quad X \overset{*}{\Rightarrow} w \text{ for some } w \in \Sigma^{*}`, T`X \text{ reachable} \quad\text{iff}\quad S \overset{*}{\Rightarrow} \alpha X \beta \text{ for some } \alpha, \beta`],
-      text: "A symbol is useful when it is both; removing the other symbols, and the productions that mention them, does not change L(G).",
+      text: "A symbol is useful when it is both generating and reachable.",
       refs: ["hmu §7.1.1"],
     },
-    epsilonRemoval: {
-      term: "ε-elimination",
-      formal: [T`A \to X_1 \ldots X_k \;\Longrightarrow\; A \to \alpha, \quad \alpha \ne \varepsilon \text{ obtained by deleting nullable } X_i`],
-      text: "Every production is replaced by all the variants with some of its nullable symbols left out, and the ε-productions are removed. The new grammar generates L(G) ∖ {ε}.",
-      refs: ["hmu §7.1.3"],
-    },
-    unitRemoval: {
-      term: "Unit-production elimination",
-      formal: [T`(A, B) \text{ unit pair} \quad\text{iff}\quad A \overset{*}{\Rightarrow} B \text{ by unit productions only}`, T`A \to \alpha \quad\text{for each unit pair } (A, B) \text{ and non-unit } B \to \alpha`],
+    unit: {
+      term: "Unit pair",
+      formal: [T`(A, B) \text{ unit pair} \quad\text{iff}\quad A \overset{*}{\Rightarrow} B \text{ by unit productions only}`],
       text: "A unit production has a single nonterminal as its right side.",
       refs: ["hmu §7.1.4"],
-    },
-    leftRecursionRemoval: {
-      term: "Eliminating left recursion",
-      formal: [T`A \to A\alpha_1 \mid \ldots \mid A\alpha_m \mid \beta_1 \mid \ldots \mid \beta_n \;\Longrightarrow\; A \to \beta_1 A' \mid \ldots \mid \beta_n A', \quad A' \to \alpha_1 A' \mid \ldots \mid \alpha_m A' \mid \varepsilon`],
-      text: "No βⱼ starts with A. Indirect left recursion is removed by first substituting productions in a fixed order of the nonterminals.",
-      refs: ["alsu §4.3.3"],
     },
     cnf: {
       term: "Chomsky normal form",
@@ -301,25 +250,19 @@ window.DEF_LIBRARY = {
     token: {
       term: "Token, pattern and lexeme",
       formal: [],
-      text: "A token rule pairs a token name with a pattern, a regular expression. A lexeme is a string of the input that matches the pattern of some rule.",
+      text: "A token rule pairs a name with a pattern, a regular expression; a lexeme is a string of the input that matches it.",
       refs: ["alsu §3.1"],
-    },
-    munch: {
-      term: "Maximal munch",
-      formal: [],
-      text: "From the current position the scanner takes the longest prefix of the remaining input that matches some rule; when several rules match that prefix, the rule listed first wins. The rules are combined into one NFA, then a DFA by the subset construction.",
-      refs: ["alsu §3.8"],
     },
     sdd: {
       term: "Syntax-directed definition",
       formal: [T`A \to \alpha \quad\text{with rules}\quad b = f(c_1, \ldots, c_k)`],
-      text: "Each production carries semantic rules that compute an attribute b of a grammar symbol from attributes c₁ … cₖ of symbols of the production. An attribute is synthesized when it is computed from the children, inherited when from the parent and siblings; a definition with synthesized attributes only is S-attributed and can be evaluated bottom-up while parsing.",
+      text: "Synthesized: computed from the children; inherited: from the parent and siblings. S-attributed: synthesized attributes only, evaluable bottom-up while parsing.",
       refs: ["alsu §5.1"],
     },
     tac: {
       term: "Three-address code",
       formal: [T`x = y \;\mathrm{op}\; z`],
-      text: "Each instruction has at most one operator and at most three addresses: names, constants and compiler-generated temporaries.",
+      text: "At most one operator and three addresses (names, constants, temporaries).",
       refs: ["alsu §6.2"],
     },
   },

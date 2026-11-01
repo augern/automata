@@ -1,24 +1,22 @@
 // The Guide pop-up for this tool (see shared/guide.js): what it does, how to use it, notation and colours.
-// Legend colour names: blue, green, red, grey, orange.
+// Legend colour names: blue, green, red, grey.
 window.TOOL_GUIDE = {
   title: "Pumping",
-  intro: "Shows why the pumping lemmas hold. A long path in a DFA visits some state twice; a tall path in a parse tree repeats some nonterminal. Repeating the loop, or the part between the two nonterminals, gives more strings of the same language.",
+  intro: "Shows why the pumping lemmas hold: a path in a DFA or a parse tree repeats a state or a nonterminal, and the loop can be repeated or removed.",
   use: [
-    "Regular: define a DFA as text (`q0 a q1` is a transition; `start:` and `accept:` name states) or convert a regular expression to its minimal DFA. For a string, the path through the DFA is shown; the first state visited twice splits the string into x, y and z.",
-    "The slider repeats y i times (0 removes the loop). Stepping follows the DFA through the string. The pumped string ends in the same state, so it is accepted exactly when the original was.",
-    "Context-free: enter a grammar and a string it generates. The longest path of its parse tree repeats a nonterminal; the part between the two occurrences (v and y) is repeated or removed. The result is a parse tree of the same grammar. “Another repeat” selects another pair.",
-    "Without a string the figure is the general case. Path draws the nonterminals on the way to the repeat as nested triangles joined by a jagged line (several derivation steps), with the string beside them; the slider changes the number of copies of the repeated part. Tree draws the full parse tree. Unify baselines puts the whole string on one base line; unchecked, each extra copy has a base line of its own, and the frame of one copy stays unchanged. The figure pans and zooms like the other graphs; double-click fits the figure as it is now.",
+    "Regular: define a DFA as text (`q0 a q1` is a transition; `start:` and `accept:` name states) or convert a regular expression. For a string, the first state visited twice splits it into x, y and z.",
+    "The slider repeats y (regular) or v and y (context-free) i times; 0 removes the loop. Stepping follows the DFA through the string.",
+    "Context-free: enter a grammar and a string it generates. “Another repeat” selects another repeating pair.",
+    "Without a string the figure is the general case. Path draws the repeated nonterminals as nested triangles; Tree draws the parse tree. Unify baselines puts the string on one base line. The figure pans and zooms; double-click fits it.",
   ],
   notation: [
-    ["p", "the pumping length: the number of states of the DFA; for a grammar b^(|V|+1), with b the longest right-hand side (at least 2) and |V| the number of nonterminals. A string of at least p symbols can be pumped; a shorter one may or may not be"],
-    ["w = x y z", "regular: |xy| ≤ p and |y| ≥ 1; xyⁱz is accepted exactly when w is"],
-    ["w = u v x y z", "context-free: |vxy| ≤ p and |vy| ≥ 1; u vⁱ x yⁱ z is generated whenever w is"],
-    ["i", "the number of repetitions; i = 1 is the original string, i = 0 cuts the loop out"],
+    ["p", "the pumping length used here: the number of DFA states; for a grammar b^(|V|+1), b the longest right-hand side (at least 2), |V| the number of nonterminals. Shorter strings may be pumpable too"],
+    ["i", "repetitions; i = 1 is the original string"],
   ],
   legend: [
-    ["blue", "x: the part before the loop (regular), or the part inside the lower repeated nonterminal (context-free)"],
-    ["orange", "y, the loop: the part that is repeated; for trees v and y"],
-    ["green", "z: the part after the loop"],
-    ["grey", "u: the part before the repeated nonterminal (context-free trees)"],
+    ["blue", "x: before the loop (regular); inside the lower repeated nonterminal (context-free)"],
+    ["orange", "y, the loop; v and y in trees"],
+    ["green", "z: after the loop"],
+    ["grey", "u: before the repeated nonterminal (trees)"],
   ],
 };

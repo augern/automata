@@ -3,6 +3,6 @@ window.TOOL_DEFINITIONS = {
   title: "Recursive descent",
   sections: [
     { title: "Grammars", items: ["cfg", "derivation", "leftmost"] },
-    { title: "Top-down parsing", items: ["recursiveDescent", "leftRecursion", "nullable", "first", "follow", "ll1"] },
+    { title: "Top-down parsing", items: ["leftRecursion", "nullable", "first", "follow", "ll1"] },
   ],
 };

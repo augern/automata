@@ -113,10 +113,7 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
 <body data-view="map">
 <header>
   <h1>Automata and Parsing Tools</h1>
-  <p>Interactive companions for the study of formal languages, automata and parsing.
-     Each tool exposes the stages of a classical construction or algorithm for inspection and stepwise
-     execution, and lets the reader test recognition of input strings and examine the resulting
-     derivations and parse trees.</p>
+  <p>Interactive companions for the study of formal languages, automata and parsing. Each tool steps through a classical construction or algorithm and tests strings on the result.</p>
   <p class="views"><a href="#list" id="to-list">List view</a><a href="#map" id="to-map" hidden>Map view</a></p>
 </header>
 
@@ -182,39 +179,34 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   // Every tool once: its page, a description, and what it builds on.
   const TOOLS = {
     nfa: { href: "tools/nfa/", title: "NFA Simulator", group: "Regular languages",
-      desc: "Nondeterministic finite automata with ε-transitions — transition table and state graph, and the computation tree of a nondeterministic run.",
-      builds: "the idea of a finite automaton (states, transitions, DFAs)" },
+      desc: "Nondeterministic finite automata with ε-transitions: transition table, state graph and the computation tree of a run.",
+      basis: "the idea of a finite automaton (states, transitions, DFAs)" },
     regex: { href: "tools/regex/", title: "Regular Expressions", group: "Regular languages", after: ["nfa"],
-      desc: "Thompson's construction, subset construction and DFA minimisation — the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition.",
-      builds: "NFA Simulator" },
+      desc: "Thompson's construction, subset construction and DFA minimisation: from a regular expression to an NFA, a DFA and the minimal DFA, with string simulation.", },
     derivation: { href: "tools/derivation/", title: "Grammar Derivations", group: "Grammars of any class",
-      desc: "Derivations in grammars of types 0, 1 and 2 — construct a derivation by choosing a production and the substring it rewrites, or sample one at random.",
-      builds: "context-free grammars" },
+      desc: "Derivations in grammars of types 0, 1 and 2, built by choosing a production and the substring it rewrites, or sampled at random.",
+      basis: "context-free grammars" },
     rewrite: { href: "tools/grammar-rewrite/", title: "Grammar Transformations", group: "Grammars of any class",
-      desc: "Normalisation of context-free grammars — removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form.",
-      builds: "context-free grammars" },
+      desc: "Normalisation of context-free grammars: useless symbols, ε- and unit productions, left recursion; Chomsky and Greibach normal forms.",
+      basis: "context-free grammars" },
     pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages", after: ["nfa", "derivation"],
-      desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
-      builds: "NFA Simulator, Grammar Derivations" },
+      desc: "Nondeterministic pushdown automata: transition relation, state graph, acceptance by final state or empty stack, and the reachable configurations.", },
     pumping: { href: "tools/pumping/", title: "Pumping", group: "Context-free languages", after: ["nfa", "derivation"],
-      desc: "Why the pumping lemmas hold — a repeated state on a DFA's path, a repeated nonterminal on a parse tree's path — with the loop pumped step by step.",
-      builds: "NFA Simulator (DFAs), Grammar Derivations (parse trees)" },
+      desc: "Why the pumping lemmas hold: a repeated state on a DFA path, a repeated nonterminal on a parse tree path, with the loop pumped step by step.", },
     rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages", after: ["derivation"], soft: ["rewrite"],
-      desc: "Top-down parsing by recursive procedures — generated from a grammar and run predictively (LL(1), the next token chooses, no backtracking) or by search, with guesses, backtracking and dead ends.",
-      builds: "Grammar Derivations; Grammar Transformations removes the left recursion it cannot handle" },
+      desc: "Top-down parsing by recursive procedures, run predictively (LL(1)) or by search with backtracking.", },
     firstfollow: { href: "tools/firstfollow/", title: "FIRST & FOLLOW", group: "LL(1) languages",
-      desc: "Nullable symbols, FIRST and FOLLOW sets of a context-free grammar by fixpoint iteration — one rule application at a time, with the right-hand side read past nullable symbols.",
-      builds: "context-free grammars" },
+      desc: "Nullable symbols, FIRST and FOLLOW sets by fixpoint iteration, one rule application at a time, with a witness derivation for each member.",
+      basis: "context-free grammars" },
     ll1: { href: "tools/ll1/", title: "Predictive Parsing", group: "LL(1) languages", after: ["rdp", "firstfollow"], soft: ["rewrite"],
-      desc: "Top-down predictive parsing with one symbol of lookahead (LL(1)) — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
-      builds: "FIRST & FOLLOW; Recursive Descent (LL(1) is the case that never has to backtrack); Grammar Transformations removes the left recursion LL(1) cannot handle" },
+      desc: "Predictive parsing with one symbol of lookahead: FIRST and FOLLOW, the table M[A, a], LL(1) conflicts, and a traced leftmost derivation with its parse tree.", },
     lr: { href: "tools/lr/", title: "LR Parser", group: "Deterministic context-free languages", after: ["ll1", "nfa"],
-      desc: "Bottom-up shift–reduce parsing — LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree.",
-      builds: "Predictive Parsing, NFA Simulator (the automaton of items)" },
+      desc: "Bottom-up shift–reduce parsing: LR(0), SLR(1), LALR(1) and LR(1) automata, ACTION and GOTO tables, conflicts, and a traced rightmost derivation with its parse tree.", },
     tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages", after: ["pda"],
-      desc: "Deterministic single-tape Turing machines — transition function, tape and head, and stepwise execution of the computation.",
-      builds: "PDA Simulator" },
+      desc: "Deterministic single-tape Turing machines: transition function, tape and head, stepwise execution.", },
   };
+  // what a tool builds on, from its after, soft and basis
+  for (const t of Object.values(TOOLS)) t.builds = [...(t.after || []).map((k) => TOOLS[k].title), ...(t.soft || []).map((k) => TOOLS[k].title + " (optional)"), ...(t.basis ? [t.basis] : [])].join(", ");
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
   // ── List view, built from TOOLS in prerequisite order ──
@@ -237,8 +229,8 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
 
   // ── Compiler construction section, below the map and the list ──
   const COMPILER_TOOLS = [
-    { href: "tools/scanner/", title: "Scanner", desc: "How a scanner is built from token rules: the NFA of all rules, the characters cut into classes, the minimal DFA, and maximal-munch scanning one character at a time.", builds: "Regular Expressions" },
-    { href: "tools/compiler/", title: "Compiler Front End", desc: "A scanner, an LR parser and semantic actions on one input: the parser asks for a token when it needs one, the scanner consumes the next lexeme, and actions compute values, types and three-address code.", builds: "Regular Expressions, LR Parser" },
+    { href: "tools/scanner/", title: "Scanner", desc: "A scanner built from token rules: one NFA, character classes, the minimal DFA, and maximal-munch scanning.", builds: "Regular Expressions" },
+    { href: "tools/compiler/", title: "Compiler Front End", desc: "A scanner, an LR parser and semantic actions on one input; actions compute values, types and three-address code.", builds: "Regular Expressions, LR Parser" },
   ];
   const ccLinks = document.getElementById("compiler-links");
   for (const t of COMPILER_TOOLS) {

@@ -2,7 +2,6 @@
 window.TOOL_DEFINITIONS = {
   title: "NFA simulator",
   sections: [
-    { title: "Finite automata", items: ["dfa", "nfa", "eclose"] },
-    { title: "Regular languages", items: ["kleene"] },
+    { title: "Finite automata", items: ["dfa", "nfa", "eclose", "kleene"] },
   ],
 };
