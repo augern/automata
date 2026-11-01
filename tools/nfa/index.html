@@ -86,8 +86,8 @@
             <!-- transition table rendered by JS -->
           </div>
           <div class="ui-footer">
-            <button class="btn" onclick="addState()">+ State</button>
-            <button class="btn" onclick="addSymbol()">+ Symbol</button>
+            <button class="btn" onclick="nfaTable.addState()">+ State</button>
+            <button class="btn" onclick="nfaTable.addSymbol()">+ Symbol</button>
             <span class="ui-hint">Transitions: comma-separated state names, e.g. <code>q0,q1</code>. Leave blank for no transition.</span>
           </div>
         </div>
@@ -184,6 +184,7 @@
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/automaton-table.js?v=3d8c5285"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -249,170 +250,28 @@ else: ${kw("reject")}`
       // NFA STATE
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      let nfaStates   = ["q0", "q1"];   // ordered list of state names
-      let nfaAlphabet = ["a"];           // user-editable symbols; ε always implicit
-      let nfaStartIdx = 0;               // index into nfaStates
-      let nfaAccepts  = new Set([1]);    // indices into nfaStates
-      let nfaErr      = false;           // show the error state (a view option, not part of the automaton)
-      let nfaTrans    = {                // nfaTrans[state][sym] = [state, ...]
-        "q0": { "a": ["q1"], "ε": [] },
-        "q1": { "a": [],     "ε": [] }
-      };
+      // the automaton, edited by the table and read by everything else; ε is always implicit
+      const nfaM = { states: ["q0", "q1"], alphabet: ["a"], start: 0, accepts: new Set([1]), trans: { q0: { a: ["q1"], ε: [] }, q1: { a: [], ε: [] } } };
+      let nfaErr = false; // show the error state (a view option, not part of the automaton)
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // NFA MUTATION HELPERS
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      function addState() {
-        const name = freshStateName(nfaStates);
-        nfaStates.push(name);
-        nfaTrans[name] = {};
-        for (const sym of nfaAlphabet) nfaTrans[name][sym] = [];
-        nfaTrans[name]["ε"] = [];
-        renderDefTable();
-        onNFAChange();
-      }
-
-      function removeState(idx) {
-        const removed = removeStateAt({ states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts }, idx);
-        if (!removed) return; // keep at least one
-        const name = removed.name;
-        nfaStates.splice(idx, 1);
-        delete nfaTrans[name];
-        // Remove references from other states
-        for (const s of nfaStates) {
-          for (const sym of [...nfaAlphabet, "ε"]) {
-            if (nfaTrans[s] && nfaTrans[s][sym]) {
-              nfaTrans[s][sym] = nfaTrans[s][sym].filter(t => t !== name);
-            }
-          }
-        }
-        nfaStartIdx = removed.start;
-        nfaAccepts = removed.accepts;
-        renderDefTable();
-        onNFAChange();
-      }
-
-      function addSymbol() {
-        let name = prompt("New symbol (one character):", "");
-        if (name === null) return;
-        name = name.trim();
-        if (!name || name === "ε") return;
-        if ([...name].length !== 1) { alert("A symbol is one character: the input is read one character at a time."); return; }
-        if (nfaAlphabet.includes(name)) return;
-        nfaAlphabet.push(name);
-        for (const s of nfaStates) {
-          if (!nfaTrans[s]) nfaTrans[s] = {};
-          if (!nfaTrans[s][name]) nfaTrans[s][name] = [];
-        }
-        renderDefTable();
-        onNFAChange();
-      }
-
-      function removeSymbol(idx) {
-        const sym = nfaAlphabet[idx];
-        if (sym === undefined) return;
-        nfaAlphabet.splice(idx, 1);
-        for (const s of nfaStates) {
-          if (nfaTrans[s]) delete nfaTrans[s][sym];
-        }
-        renderDefTable();
-        onNFAChange();
-      }
-
-      function setStart(idx) {
-        nfaStartIdx = idx;
-        rerenderStateNameCells();
-        onNFAChange();
-      }
-
       function setErrorState(on) {
         nfaErr = on;
         document.getElementById("opt-err").checked = on;
-        renderDefTable();
+        nfaTable.render();
         onNFAChange();
       }
       const errName = () => nfaErrorName(currentNFA());
 
-      function toggleAccept(idx, checked) {
-        if (checked) nfaAccepts.add(idx);
-        else nfaAccepts.delete(idx);
-        rerenderStateNameCells();
-        onNFAChange();
-      }
-
-      function rerenderStateNameCells() {
-        UI.table.refreshStates((i) => UI.table.kind(i === nfaStartIdx, nfaAccepts.has(i)));
-      }
-
-      function setTransCell(stateName, sym, value) {
-        if (!nfaTrans[stateName]) nfaTrans[stateName] = {};
-        const parts = value.split(",").map(s => s.trim()).filter(Boolean);
-        nfaTrans[stateName][sym] = parts;
-        onNFAChange();
-      }
-
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // DEFINITION TABLE RENDERING
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-      function renderDefTable() {
-        const T = UI.table;
-        const allSyms = [...nfaAlphabet, "ε"];
-
-        let h = T.open() + "<thead><tr>";
-        h += T.th("") + T.th("→", { title: "Start state" }) + T.th("★", { title: "Accepting state" }) + T.th("δ", { left: true, title: "δ(q, a): the cell in row q and column a lists the states reached from q on a. Column ε lists the ε-moves." });
-        for (const [si, sym] of nfaAlphabet.entries()) {
-          h += T.th(esc(sym) + T.rmInline(`removeSymbol(${si})`, `Remove symbol '${sym}'`), { sym: true });
-        }
-        h += T.th("ε", { sym: true, muted: true });
-        if (nfaErr) h += T.th('<span class="ui-wild">?</span>', { sym: true, title: "Any symbol outside the alphabet" });
-        h += "</tr></thead><tbody>";
-        const errN = errName();
-
-        for (let i = 0; i < nfaStates.length; i++) {
-          const sn = nfaStates[i];
-          const isStart = i === nfaStartIdx;
-          const isAccept = nfaAccepts.has(i);
-          h += `<tr data-si="${i}">`;
-          h += T.rm(`removeState(${i})`, "Remove state");
-          h += T.marker(`<input type="radio" name="nfa-start" ${isStart ? "checked" : ""} onchange="setStart(${i})">`);
-          h += T.marker(`<input type="checkbox" ${isAccept ? "checked" : ""} onchange="toggleAccept(${i}, this.checked)">`);
-          h += T.state(sn, T.kind(isStart, isAccept));
-          const errSyms = nfaErr ? nfaErrorSymbols(currentNFA(), nfaAlphabet, sn) : [];
-          for (const sym of allSyms) {
-            const val = (nfaTrans[sn] && nfaTrans[sn][sym]) ? nfaTrans[sn][sym].join(", ") : "";
-            h += T.input(val,
-              `placeholder="${errSyms.includes(sym) ? esc(errN) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
-              ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"`,
-              { muted: sym === "ε" });
-          }
-          if (nfaErr) h += T.cell(esc(errN), "is-error").replace("<td", `<td data-state="${esc(sn)}" data-sym="${NFA_WILD}"`);
-          h += "</tr>";
-        }
-        if (nfaErr) {
-          h += `<tr class="is-error-row"><td class="ui-td--rm"></td><td class="ui-td--marker"></td><td class="ui-td--marker"></td>` + T.state(errN, "reject");
-          for (const sym of nfaAlphabet) h += T.cell(esc(errN), "is-error").replace("<td", `<td data-state="${esc(errN)}" data-sym="${esc(sym)}"`);
-          h += T.cell("", "is-muted");
-          h += T.cell(esc(errN), "is-error").replace("<td", `<td data-state="${esc(errN)}" data-sym="${NFA_WILD}"`);
-          h += "</tr>";
-        }
-        h += "</tbody></table>";
-        document.getElementById("def-table-scroll").innerHTML = h;
-      }
-
-      function onTransInput(input) {
-        const stateName = input.dataset.state;
-        const sym = input.dataset.sym;
-        setTransCell(stateName, sym, input.value);
-        validateTransInput(input);
-      }
-
-      function validateTransInput(input) {
-        const parts = input.value.split(",").map(s => s.trim()).filter(Boolean);
-        const bad = parts.some(p => !nfaStates.includes(p));
-        input.classList.toggle("invalid", bad);
-      }
+      const nfaTable = createAutomatonTable("def-table-scroll", {
+        model: nfaM,
+        epsilon: true,
+        error: { on: () => nfaErr, name: () => errName(), symbols: (sn) => nfaErrorSymbols(currentNFA(), nfaM.alphabet, sn), wild: NFA_WILD },
+        onChange: () => onNFAChange(),
+      });
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // NFA GRAPH RENDERING  (D3 + Dagre, circles for states)
@@ -420,18 +279,18 @@ else: ${kw("reject")}`
 
       const NFA_R = 16; // node circle radius
 
-      const nfaGraph = createGraphView("nfa", { hasNodes: () => nfaStates.length > 0, onRelayout: () => { renderNFAGraph(); if (_simTree) simRender(); } });
+      const nfaGraph = createGraphView("nfa", { hasNodes: () => nfaM.states.length > 0, onRelayout: () => { renderNFAGraph(); if (_simTree) simRender(); } });
       function fitNFA() { nfaGraph.fit(); }
 
       function renderNFAGraph() {
         // One edge per (from, to) pair, labelled with all its symbols; self-loops separately.
         const edgeMap = new Map(); // "f-t" → { from, to, labels[], eps }
         const loopMap = new Map(); // stateIdx → { node, labels[], eps }
-        for (let fi = 0; fi < nfaStates.length; fi++) {
-          const sn = nfaStates[fi];
-          for (const sym of [...nfaAlphabet, "ε"]) {
-            for (const t of (nfaTrans[sn] && nfaTrans[sn][sym]) || []) {
-              const ti = nfaStates.indexOf(t);
+        for (let fi = 0; fi < nfaM.states.length; fi++) {
+          const sn = nfaM.states[fi];
+          for (const sym of [...nfaM.alphabet, "ε"]) {
+            for (const t of (nfaM.trans[sn] && nfaM.trans[sn][sym]) || []) {
+              const ti = nfaM.states.indexOf(t);
               if (ti === -1) continue;
               const isEps = sym === "ε";
               let e;
@@ -449,7 +308,7 @@ else: ${kw("reject")}`
             }
           }
         }
-        const nodes = nfaStates.map((name, i) => ({ label: name, accepting: nfaAccepts.has(i) }));
+        const nodes = nfaM.states.map((name, i) => ({ label: name, accepting: nfaM.accepts.has(i) }));
         const edges = [...edgeMap.values()];
         const loops = [...loopMap.values()];
         if (nfaErr) {
@@ -457,15 +316,15 @@ else: ${kw("reject")}`
           // the wildcard for every symbol outside the alphabet. The error state loops on everything.
           const ei = nodes.length, en = errName(), cur = currentNFA();
           nodes.push({ label: en, error: true });
-          nfaStates.forEach((sn, fi) => {
-            const miss = nfaErrorSymbols(cur, nfaAlphabet, sn);
+          nfaM.states.forEach((sn, fi) => {
+            const miss = nfaErrorSymbols(cur, nfaM.alphabet, sn);
             edges.push({ from: fi, to: ei, labels: [...miss, NFA_WILD], ids: [...miss.map((a) => sn + "|" + a), sn + "|" + NFA_WILD], eps: false });
           });
-          loops.push({ node: ei, labels: [...nfaAlphabet, NFA_WILD], ids: [...nfaAlphabet.map((a) => en + "|" + a), en + "|" + NFA_WILD], eps: false });
+          loops.push({ node: ei, labels: [...nfaM.alphabet, NFA_WILD], ids: [...nfaM.alphabet.map((a) => en + "|" + a), en + "|" + NFA_WILD], eps: false });
         }
         drawAutomatonGraph("nfa", nfaGraph, {
           nodes,
-          start: nfaStartIdx,
+          start: nfaM.start,
           edges,
           loops,
           radius: NFA_R,
@@ -515,11 +374,11 @@ else: ${kw("reject")}`
       // A cell that names a state that does not exist is ignored (it is marked invalid in the table).
       function currentNFA() {
         const trans = {};
-        for (const s of nfaStates) {
+        for (const s of nfaM.states) {
           trans[s] = {};
-          for (const [sym, ts] of Object.entries(nfaTrans[s] || {})) trans[s][sym] = ts.filter((t) => nfaStates.includes(t));
+          for (const [sym, ts] of Object.entries(nfaM.trans[s] || {})) trans[s][sym] = ts.filter((t) => nfaM.states.includes(t));
         }
-        return { states: nfaStates, start: nfaStartIdx, accepts: nfaAccepts, trans, alphabet: nfaAlphabet };
+        return { states: nfaM.states, start: nfaM.start, accepts: nfaM.accepts, trans, alphabet: nfaM.alphabet };
       }
       function epsClosure(stateNames) {
         return nfaEpsClosure(currentNFA(), stateNames);
@@ -544,7 +403,7 @@ else: ${kw("reject")}`
       });
 
       // Graph index of a tree node's state; the error state is drawn after the ordinary states.
-      const stateIdx = (node) => (node.error ? nfaStates.length : nfaStates.indexOf(node.state));
+      const stateIdx = (node) => (node.error ? nfaM.states.length : nfaM.states.indexOf(node.state));
 
       // Collect all nodes up to revealDepth
       function collectVisible(vRoot, revealDepth) {
@@ -599,8 +458,8 @@ else: ${kw("reject")}`
       function renderTreeInfo(node, ctx) {
         if (!node) { UI.explain("tree-info", null); return; }
         const e = nfaExplainConfig(currentNFA(), _simChars, node, ctx);
-        const idx = nfaStates.indexOf(e.state);
-        const tags = (idx === nfaStartIdx ? ' <span class="ui-explain__tag">start state</span>' : "") + (nfaAccepts.has(idx) ? ' <span class="ui-explain__tag">accepting state</span>' : "");
+        const idx = nfaM.states.indexOf(e.state);
+        const tags = (idx === nfaM.start ? ' <span class="ui-explain__tag">start state</span>' : "") + (nfaM.accepts.has(idx) ? ' <span class="ui-explain__tag">accepting state</span>' : "");
         const roleLabel = { initial: "Start", accepted: "Accepted", rejected: "Rejected", dead: "Stuck", live: "Current", expanded: "Expanded", error: "Error state" }[e.role];
         let arrival = "The start state. Before any symbol is read, the NFA may already be in any state of its ε-closure; the first symbol is read from all of them.";
         if (node.depth > 0) {
@@ -608,7 +467,7 @@ else: ${kw("reject")}`
           const hop = (from, to, n) => (n > 0 ? `${esc(from)} →ε ${esc(to)}, ` : "");
           arrival = a && a.error
             ? `From <b>${esc(a.fromState)}</b> by reading ${esc(a.sym)}: the error move ` +
-              `<span class="ui-explain__rule" data-cell="${esc(a.fromState)}|${esc(nfaAlphabet.includes(a.sym) ? a.sym : NFA_WILD)}">${esc(a.fromState)} –${esc(a.sym)}→ ${esc(node.state)}</span>.`
+              `<span class="ui-explain__rule" data-cell="${esc(a.fromState)}|${esc(nfaM.alphabet.includes(a.sym) ? a.sym : NFA_WILD)}">${esc(a.fromState)} –${esc(a.sym)}→ ${esc(node.state)}</span>.`
             : a
             ? `From <b>${esc(a.fromState)}</b>: ${hop(a.fromState, a.via, a.epsBefore)}reading ${esc(a.sym)} by the transition ` +
               `<span class="ui-explain__rule" data-cell="${esc(a.via)}|${esc(a.sym)}">${esc(a.via)} –${esc(a.sym)}→ ${esc(a.to)}</span>` +
@@ -737,7 +596,7 @@ else: ${kw("reject")}`
             ng.append("line").attr("class", "ag-err-x").attr("x1", -k).attr("y1", k).attr("x2", k).attr("y2", -k);
           }
           // the start node is accepted through its ε-closure, but it is not an accepting state itself
-          if (node.accepted && nfaAccepts.has(stateIdx(node))) {
+          if (node.accepted && nfaM.accepts.has(stateIdx(node))) {
             ng.append("circle").attr("class", "ct-ring").attr("r", TREE_R - 3);
           }
           ng.append("text")
@@ -817,7 +676,7 @@ else: ${kw("reject")}`
         _simChars = [...input];
         _simTree  = buildSimTree(input);
         _simSets  = nfaStateSets(currentNFA(), input);
-        const outside = [...new Set(_simChars.filter((c) => !nfaAlphabet.includes(c)))];
+        const outside = [...new Set(_simChars.filter((c) => !nfaM.alphabet.includes(c)))];
         const warn = document.getElementById("sim-warn");
         warn.textContent = outside.length ? "Not in the alphabet: " + outside.join(" ") + (nfaErr ? "" : ". No state can read it.") : "";
         warn.hidden = !outside.length;
@@ -866,7 +725,7 @@ else: ${kw("reject")}`
         // Log bar
         const logBar = document.getElementById("sim-log-bar");
         if (revealDepth === 0) {
-          const startName = nfaStates[nfaStartIdx];
+          const startName = nfaM.states[nfaM.start];
           const epsNames = [...epsClosure([startName])].filter(s => s !== startName);
           const epsNote = epsNames.length > 0
             ? `  <span style="color:var(--text-lo)">ε-closure: {${esc([startName, ...epsNames].join(", "))}}</span>`
@@ -882,7 +741,7 @@ else: ${kw("reject")}`
             (stuck && !nfaErr ? ` <span style="color:var(--text-lo)">— no state can read "${esc(next)}"</span>` : "");
         } else {
           // Final step
-          const uNames = _simSets[maxDepth].filter((s) => nfaAccepts.has(nfaStates.indexOf(s)));
+          const uNames = _simSets[maxDepth].filter((s) => nfaM.accepts.has(nfaM.states.indexOf(s)));
           logBar.innerHTML = accepted
             ? `<span style="color:var(--green)">✓ Accepted</span> — accepting state(s) reached: {${esc(uNames.join(", "))}}`
             : `<span style="color:var(--red)">✗ Rejected</span> — no accepting state in the final set`;
@@ -898,8 +757,8 @@ else: ${kw("reject")}`
 
         // Highlight NFA graph
         const last = _simSets[Math.min(revealDepth, maxDepth)]; // the verdict step (maxDepth + 1) shows the final set
-        const activeIdxs = last.map((s) => nfaStates.indexOf(s));
-        if (nfaErr && last.length === 0) activeIdxs.push(nfaStates.length); // the error state is drawn after the others
+        const activeIdxs = last.map((s) => nfaM.states.indexOf(s));
+        if (nfaErr && last.length === 0) activeIdxs.push(nfaM.states.length); // the error state is drawn after the others
         nfaHighlightStates(activeIdxs, []);
 
         if (truncated) {
@@ -919,8 +778,8 @@ else: ${kw("reject")}`
         random() {
           const edges = [];
           const nfa = currentNFA();
-          for (const s of nfaStates) for (const sym of Object.keys(nfa.trans[s] || {})) for (const t of nfa.trans[s][sym]) edges.push({ from: s, to: t, sym });
-          return strWalkAccepted(edges, nfaStates[nfaStartIdx], [...nfaAccepts].map((i) => nfaStates[i]), Math.random);
+          for (const s of nfaM.states) for (const sym of Object.keys(nfa.trans[s] || {})) for (const t of nfa.trans[s][sym]) edges.push({ from: s, to: t, sym });
+          return strWalkAccepted(edges, nfaM.states[nfaM.start], [...nfaM.accepts].map((i) => nfaM.states[i]), Math.random);
         },
       });
 
@@ -929,18 +788,18 @@ else: ${kw("reject")}`
         document.getElementById("examples-select").value = k;
         const ex = EXAMPLES[k];
         if (!ex) return;
-        nfaStates   = [...ex.states];
-        nfaAlphabet = [...ex.alphabet];
-        nfaStartIdx = ex.states.indexOf(ex.start);
-        nfaAccepts  = new Set(ex.accepts.map(s => ex.states.indexOf(s)));
-        nfaTrans    = {};
-        for (const s of nfaStates) {
-          nfaTrans[s] = {};
-          for (const sym of [...nfaAlphabet, "ε"]) {
-            nfaTrans[s][sym] = (ex.trans[s] && ex.trans[s][sym]) ? [...ex.trans[s][sym]] : [];
+        nfaM.states   = [...ex.states];
+        nfaM.alphabet = [...ex.alphabet];
+        nfaM.start = ex.states.indexOf(ex.start);
+        nfaM.accepts  = new Set(ex.accepts.map(s => ex.states.indexOf(s)));
+        nfaM.trans    = {};
+        for (const s of nfaM.states) {
+          nfaM.trans[s] = {};
+          for (const sym of [...nfaM.alphabet, "ε"]) {
+            nfaM.trans[s][sym] = (ex.trans[s] && ex.trans[s][sym]) ? [...ex.trans[s][sym]] : [];
           }
         }
-        renderDefTable();
+        nfaTable.render();
         onNFAChange();
         _strExamples = ex.strings || [];
         if (ex.errorState && !nfaErr) setErrorState(true);
@@ -979,7 +838,7 @@ else: ${kw("reject")}`
 
       // ── Shareable link ──────────────────────────────────────────
       const saveShare = createShareSaver(() => ({
-        nfa: { states: nfaStates, alphabet: nfaAlphabet, start: nfaStartIdx, accepts: [...nfaAccepts], trans: nfaTrans },
+        nfa: { states: nfaM.states, alphabet: nfaM.alphabet, start: nfaM.start, accepts: [...nfaM.accepts], trans: nfaM.trans },
         s: document.getElementById("sim-string-input").value,
         ...(nfaErr ? { err: true } : {}),
       }));
@@ -989,11 +848,11 @@ else: ${kw("reject")}`
         if (!st) return;
         sharedStateApplied = true;
         const d = st.nfa;
-        nfaStates = d.states;
-        nfaAlphabet = d.alphabet;
-        nfaStartIdx = d.start;
-        nfaAccepts = new Set(d.accepts);
-        nfaTrans = d.trans;
+        nfaM.states = d.states;
+        nfaM.alphabet = d.alphabet;
+        nfaM.start = d.start;
+        nfaM.accepts = new Set(d.accepts);
+        nfaM.trans = d.trans;
         nfaErr = !!st.err;
         document.getElementById("opt-err").checked = nfaErr;
         document.getElementById("sim-string-input").value = st.s;
@@ -1002,7 +861,7 @@ else: ${kw("reject")}`
       initPanelStorage("nfa-tool-v1", ["p-def", "p-nfa", "p-sim"]);
       loadPanelState();
       applyShareState();
-      renderDefTable();
+      nfaTable.render();
       onNFAChange();
     </script>
   </body>
