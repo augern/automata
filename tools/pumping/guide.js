@@ -7,6 +7,7 @@ window.TOOL_GUIDE = {
     "Regular: define a DFA as text (`q0 a q1` is a transition; `start:` and `accept:` name states) or convert a regular expression to its minimal DFA. For a string, the path through the DFA is shown; the first state visited twice splits the string into x, y and z.",
     "The slider repeats y i times (0 removes the loop). Stepping follows the DFA through the string. The pumped string ends in the same state, so it is accepted exactly when the original was.",
     "Context-free: enter a grammar and a string it generates. The longest path of its parse tree repeats a nonterminal; the part between the two occurrences (v and y) is repeated or removed. The result is a parse tree of the same grammar. “Another repeat” selects another pair.",
+    "Without a string the figure is the general case. Path draws the nonterminals on the way to the repeat as nested triangles joined by a jagged line (several derivation steps), with the string beside them; the slider changes the number of copies of the repeated part. Tree draws the full parse tree. Unify baselines puts the whole string on one base line; unchecked, each extra copy has a base line of its own, and the frame of one copy stays unchanged.",
   ],
   notation: [
     ["p", "the pumping length: the number of states of the DFA; for a grammar in Chomsky normal form 2 to the power of the number of nonterminals"],

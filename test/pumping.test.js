@@ -123,18 +123,6 @@ test("v and y when the repeat spans an intermediate nonterminal", () => {
   assert.deepEqual([parts.u, parts.v, parts.x, parts.y, parts.z].map((a) => a.join("")), ["", "ab", "abcd", "cd", ""]);
 });
 
-test("pumpCTG: triangles for the marked paths, the five parts as tokens, repeated copies of the middle part", () => {
-  const g = P.rdpParseGrammar("S -> a S b | eps");
-  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "aabb")).tree;
-  const pair = P.pumpPairs(tree)[0];
-  const tagged = P.pumpTag(tree, pair);
-  const count = (i) => { const r = P.pumpCTG(P.pumpTree(tagged, pair, i)); let n = 0; (function w(x) { n++; for (const k of x.kids) if (k.sym !== undefined) w(k); })(r.tree); return { n, parts: arr(r.parts).join("") }; };
-  assert.equal(count(1).n, 3); // the root and the two chosen S
-  assert.equal(count(3).n, 5);
-  assert.equal(count(0).n, 2);
-  assert.equal(count(2).parts.split("v").length - 1, 2); // v once per copy
-});
-
 test("pumpSpine: the spine of marked nodes, the strings beside each stretch, repeated per copy of the middle part", () => {
   const g = P.rdpParseGrammar("S -> a S b | eps");
   const tree = P.pumpParseTree(g, P.rdpTokenise(g, "aabb")).tree;
@@ -159,21 +147,19 @@ test("pumpSpine: the right-hand string of a stretch with several nodes is in the
 });
 
 test("pumpGeneralCF: i copies of the middle part between the first A and the lowest one", () => {
-  const sizes = (i) => { const g = P.pumpGeneralCF(i); let n = 0; (function w(x) { n++; for (const k of x.kids) if (k.sym !== undefined) w(k); })(g.tree); return [g.spine.nodes.length, g.spine.segments.length, n]; };
-  assert.deepEqual(sizes(0), [2, 1, 2]);
-  assert.deepEqual(sizes(1), [3, 2, 3]);
-  assert.deepEqual(sizes(3), [5, 4, 5]);
+  const sizes = (i) => { const g = P.pumpGeneralCF(i); return [g.spine.nodes.length, g.spine.segments.length]; };
+  assert.deepEqual(sizes(0), [2, 1]);
+  assert.deepEqual(sizes(1), [3, 2]);
+  assert.deepEqual(sizes(3), [5, 4]);
   const parts = P.pumpGeneralCF(2).spine.segments.map((s) => s.left.part + s.right.part);
   assert.deepEqual(JSON.parse(JSON.stringify(parts)), ["uz", "vy", "vy"]);
 });
 
-test("empty parts are ε in the triangles and the path figures, in the part they belong to", () => {
+test("empty parts are ε in the path figure, in the part they belong to", () => {
   const g = P.rdpParseGrammar("S -> a A d | eps\nA -> b S c");
   const tree = P.pumpParseTree(g, P.rdpTokenise(g, "abcd")).tree;
   const pair = P.pumpPairs(tree)[0]; // the root S and the S below A: u, x and z are empty
   const tagged = P.pumpTag(tree, pair);
-  const ctg = P.pumpCTG(P.pumpTree(tagged, pair, 1));
-  assert.deepEqual(JSON.parse(JSON.stringify(ctg.parts)), ["v", "v", "x", "y", "y"]); // the root is the repeated node, the empty x is ε
   const sp = P.pumpSpine(P.pumpTree(tagged, pair, 1));
   assert.equal(sp.bottom.text, "ε");
   assert.equal(sp.bottom.part, "x");

@@ -235,54 +235,6 @@ function pumpTree(tree, pair, i) {
   return pumpReplace(tree, pair.up, cur);
 }
 
-// A pumped (tagged) parse tree as a Christmas-tree graph (see algo/ctg.js): the nonterminals on the paths to the two
-// chosen nodes are triangles, everything off the paths is the string it derives, cut into the parts u v x y z.
-// -> { tree, parts }: the CTG input, and the part (u v x y z) of each of its tokens in order.
-function pumpCTG(tree, sep = "") {
-  const CLS = { up: "pp-up", low: "pp-low", both: "pp-both" };
-  const marked = (n) => !n.leaf && (!!n.mark || n.children.some(marked));
-  const parts = [];
-  let k = 0;
-  // the strings to the left and right of the path from a node down to the next marked node, over all the nodes between
-  function stretch(node) {
-    let left = 0, right = 0;
-    for (let cur = node; ; ) {
-      const next = cur.children.findIndex(marked);
-      if (next < 0) break;
-      cur.children.forEach((c, j) => { if (j !== next) (j < next ? (left += pumpLeaves(c).length) : (right += pumpLeaves(c).length)); });
-      cur = cur.children[next];
-      if (cur.mark) break;
-    }
-    return { left, right };
-  }
-  // top: the node starts a stretch (the root or a marked node): an empty string beside the stretch is one ε, on that node
-  function conv(node, inside, top) {
-    inside = inside || node.mark === "up" || node.mark === "both";
-    const kids = [];
-    const push = (sym, part) => {
-      const last = kids[kids.length - 1];
-      if (last && last.part === part && typeof last !== "string" && last.text !== undefined) last.text += sep + sym;
-      else { kids.push({ text: sym, part, cls: part ? "pp-" + part : "" }); }
-    };
-    const eps = (part) => kids.push({ text: "ε", part, cls: "pp-" + part });
-    const next = node.children.findIndex(marked);
-    const st = top && next >= 0 ? stretch(node) : { left: 1, right: 1 };
-    node.children.forEach((c, j) => {
-      if (j === next && next >= 0) {
-        if (!st.left && top) eps(inside ? "v" : "u");
-        kids.push(conv(c, inside, !!c.mark));
-      } else if (c.leaf) { if (!c.eps) push(c.sym, c.part); }
-      else for (const l of pumpLeaves(c)) push(l.sym, l.part);
-    });
-    if (next >= 0 && top && !st.right) eps(inside ? "y" : "z");
-    else if (next < 0 && !kids.length) eps("x"); // an empty lowest node
-    return { sym: node.sym, id: "p" + k++, cls: node.mark ? CLS[node.mark] : "", kids };
-  }
-  const out = conv(tree, false, true);
-  (function collect(n) { for (const kid of n.kids) { if (kid.text !== undefined) parts.push(kid.part || ""); else collect(kid); } })(out);
-  return { tree: out, parts };
-}
-
 // The same pumped (tagged) tree as the spine figure of algo/ctg.js (ctgSpineTree): the path from the root through every
 // marked node, the strings left and right of each stretch of the path, and what the lowest marked node derives.
 function pumpSpine(tree, sep = "") {
@@ -323,7 +275,7 @@ function pumpSplitFigure(root, a, parts, sep, i, rootIsUp) {
 }
 
 // The general case of the context-free pumping lemma for the spine and triangle figures: S ⇒* uAz, A ⇒* vAy, A ⇒* x,
-// with the middle part taken i times. -> { spine, tree, split }: input of ctgSpineTree, ctgLayout and ctgSplitLayout.
+// with the middle part taken i times. -> { spine, split }: input of ctgSpineTree and ctgSplitLayout.
 function pumpGeneralCF(i) {
   const part = (p) => ({ text: p, part: p, cls: "pp-" + p });
   const letters = { root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
@@ -331,7 +283,5 @@ function pumpGeneralCF(i) {
   for (let k = 0; k < i; k++) { nodes.push({ sym: "A", cls: "pp-up" }); segments.push({ left: part("v"), right: part("y"), jag: true }); }
   nodes.push({ sym: "A", cls: "pp-low" });
   const spine = { nodes, segments, bottom: part("x") };
-  let cur = { sym: "A", cls: "pp-low", kids: [part("x")] };
-  for (let k = 0; k < i; k++) cur = { sym: "A", cls: "pp-up", kids: [part("v"), cur, part("y")] };
-  return { spine, tree: { sym: "S", kids: [part("u"), cur, part("z")] }, split: letters };
+  return { spine, split: letters };
 }

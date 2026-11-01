@@ -70,19 +70,19 @@
       .pt-n.pt-both .pt-shape { stroke: var(--pp-y); stroke-width: 3; fill: var(--st-active-bg); }
       .pt-e { fill: none; stroke: var(--border-hi); stroke-width: 1.2; }
 
-      /* ── Triangles (the Christmas-tree graph) ── */
+      /* ── The path figure (the Christmas-tree graph) ── */
       #canvas-ctg { flex: 1; position: relative; overflow: auto; display: flex; }
       #ctg-host { margin: auto; padding: var(--sp-6) var(--sp-5); }
       #view-group .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
       .ctg-node.pp-up .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--hot-bg); }
       .ctg-node.pp-low .ctg-tri { stroke: var(--pp-x); stroke-width: 2.4; fill: var(--st-active-bg); }
       .ctg-node.pp-both .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
+      #base-group { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; }
       .ctg-tok.pp-u { fill: var(--pp-u); } .ctg-tok.pp-v, .ctg-tok.pp-y { fill: var(--pp-y); } .ctg-tok.pp-x { fill: var(--pp-x); } .ctg-tok.pp-z { fill: var(--pp-z); }
       .ctg-tok { font-weight: 600; }
       .ctg-snode.pp-up rect { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--hot-bg); }
       .ctg-snode.pp-low rect { stroke: var(--pp-x); stroke-width: 2.4; fill: var(--st-active-bg); }
       .ctg-snode.pp-both rect { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
-      .ctg-tok.is-in { text-decoration: underline; text-underline-offset: 4px; }
 
       #explain { padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
       #explain p { margin: 0 0 var(--sp-4); }
@@ -148,14 +148,10 @@
               </div>
               <span class="ui-label" id="view-label" hidden>view</span>
               <div class="step-group" id="view-group" hidden>
+                <button class="btn is-on" id="btn-view-path" onclick="setView('path')" title="The path between the repeated nonterminals as a jagged line over nested triangles">Path</button>
                 <button class="btn" id="btn-view-tree" onclick="setView('tree')" title="The parse tree">Tree</button>
-                <button class="btn" id="btn-view-ctg" onclick="setView('ctg')" title="The nonterminals on the paths as triangles over the string they derive">Triangles</button>
-                <button class="btn is-on" id="btn-view-path" onclick="setView('path')" title="The path between the repeated nonterminals as a jagged line, with the string beside it">Path</button>
               </div>
-              <div class="step-group" id="base-group" hidden>
-                <button class="btn" id="btn-base-split" onclick="setBase('split')" title="Every piece has its own base line">Split</button>
-                <button class="btn is-on" id="btn-base-joined" onclick="setBase('joined')" title="One base line: the string reads from left to right">Joined</button>
-              </div>
+              <label id="base-group" hidden title="One base line for the whole string, instead of a base line for each copy of the repeated part"><input type="checkbox" id="unify" checked onchange="setBase(this.checked ? 'joined' : 'split')" /> Unify baselines</label>
               <button class="btn" id="btn-other" onclick="otherRepeat()" title="Use another repeated nonterminal on the path" hidden>Another repeat</button>
             </div>
           </div>
@@ -191,7 +187,7 @@
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
     <script src="../../shared/algo/ctg.js?v=3c51083e"></script>
-    <script src="../../shared/algo/pumping.js?v=50fb0927"></script>
+    <script src="../../shared/algo/pumping.js?v=b9085f2e"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
     <script src="../../shared/ctg.js?v=de1f4ac5"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
@@ -201,7 +197,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=ada4854a"></script>
+    <script src="guide.js?v=bacb2c32"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -212,7 +208,7 @@
       const $ = (id) => document.getElementById(id);
 
       let ppMode = "regular"; // regular | cf
-      let ppView = "path"; // context-free drawing: tree | ctg | path
+      let ppView = "path"; // context-free drawing: path | tree
       let ppBase = "joined"; // base lines of the path drawing: split | joined
       let ppDFA = null; // the parsed DFA (regular mode)
       let ppG = null; // the parsed grammar (context-free mode)
@@ -257,7 +253,6 @@
       function setView(v) {
         ppView = v;
         $("btn-view-tree").classList.toggle("is-on", v === "tree");
-        $("btn-view-ctg").classList.toggle("is-on", v === "ctg");
         $("btn-view-path").classList.toggle("is-on", v === "path");
         $("canvas-tree").hidden = ppMode !== "cf" || v !== "tree";
         $("canvas-ctg").hidden = ppMode !== "cf" || v === "tree";
@@ -266,8 +261,7 @@
       }
       function setBase(b) {
         ppBase = b;
-        $("btn-base-split").classList.toggle("is-on", b === "split");
-        $("btn-base-joined").classList.toggle("is-on", b === "joined");
+        $("unify").checked = b === "joined";
         if (ppMode === "cf") redraw();
       }
 
@@ -341,9 +335,8 @@
         if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
-        if (ppView === "path" && ppBase === "split") drawCTGSplit("ctg-host", gen.split, { scale: 1.25, tile: true });
-        else if (ppView === "path") drawCTGPath("ctg-host", gen.spine, { scale: 1.4 });
-        else drawCTG("ctg-host", gen.tree, { scale: 1.5, padStep: 0, minGap: 6, slope: 0.9, stepH: 36 });
+        if (ppBase === "split") drawCTGSplit("ctg-host", gen.split, { scale: 1.25, tile: true });
+        else drawCTGPath("ctg-host", gen.spine, { scale: 1.4 });
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
@@ -550,8 +543,7 @@
 
       function drawCF(tree) {
         if (ppView === "tree") { drawTree(tree); return; }
-        if (ppView === "path") { drawPath(tree); return; }
-        drawTriangles(tree);
+        drawPath(tree);
       }
 
       // The path between the repeated nonterminals: a jagged spine with the strings hanging off it.
@@ -564,25 +556,6 @@
           const fig = pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), +$("pump-i").value, pair.up.length === 0);
           drawCTGSplit("ctg-host", fig, { scale: 1.4 });
         } else drawCTGPath("ctg-host", pumpSpine(tree, ppSep()), { scale: 1.4 });
-      }
-
-      // The triangles: the paths to the two repeated nonterminals, the rest as the five parts of the string.
-      function drawTriangles(tree) {
-        $("ctg-host").innerHTML = "";
-        $("ctg-empty").hidden = !!tree;
-        if (!tree) { $("ctg-empty").textContent = ppG ? "Enter a string the grammar generates." : ""; return; }
-        const sep = ppSep();
-        const { tree: ctg, parts } = pumpCTG(tree, sep);
-        const { svg, layout } = drawCTG("ctg-host", ctg, {
-          scale: 1.5, padStep: 0, minGap: 6, slope: 0.9, stepH: 36, // every part has a token (ε when empty): the triangles hug the string
-          spans: parts.map((p, k) => ({ from: k, to: k, label: p })),
-          title: (n, lay) => n.sym + (n.empty ? " derives ε" : " derives “" + lay.leaves.slice(n.first, n.last + 1).map((l) => l.text).join(sep) + "”"),
-        });
-        svg.querySelectorAll(".ctg-node").forEach((g) => {
-          const n = layout.byId[g.dataset.ctg];
-          g.addEventListener("mouseenter", () => svg.querySelectorAll(".ctg-tok").forEach((t) => t.classList.toggle("is-in", +t.dataset.leaf >= n.first && +t.dataset.leaf <= n.last)));
-          g.addEventListener("mouseleave", () => svg.querySelectorAll(".ctg-tok.is-in").forEach((t) => t.classList.remove("is-in")));
-        });
       }
 
       let treeView = null;
