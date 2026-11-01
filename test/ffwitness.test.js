@@ -207,14 +207,18 @@ test("ways of showing a member: the different ways are different derivations", (
 
 test("the general case: a figure for nullable, FIRST and FOLLOW that reads as the definition says", () => {
   for (const kind of ["first", "follow"]) {
-    const spec = A.ffwTheory(kind);
+    assert.equal(A.ffwTheory(kind).cases.length, 2, `${kind}: the member and the special case of the definition`);
+    const spec = A.ffwTheory(kind).cases[0];
     assert.equal(spec.nodes.length, spec.levels.length + 1, kind);
     const lay = A.ctgSpineLayout(spec);
     assert.ok(Number.isFinite(lay.width) && Number.isFinite(lay.height), kind);
     if (kind === "first") {
       assert.equal(lay.tokens.find((t) => !t.eps).text, "a", "the first token seen from the left");
     }
+    const special = A.ctgSpineLayout(A.ffwTheory(kind).cases[1]);
+    assert.ok(special.tokens.some((t) => t.id === "t" || t.mark), `${kind}: the special case marks its member`);
     if (kind === "follow") {
+      assert.ok(special.tokens.some((t) => t.text === "$" && t.id === "t"), "$ after the whole string");
       const bottom = lay.tokens.find((t) => Math.abs(t.x + t.w / 2 - lay.cx) < 1e-6);
       const next = lay.tokens.filter((t) => t.x > bottom.x && !t.eps)[0];
       assert.equal(next.id, "t");
@@ -225,9 +229,10 @@ test("the general case: a figure for nullable, FIRST and FOLLOW that reads as th
 
 test("jagged edges: a figure of the general case has them everywhere, a witness has none (every step is a rule)", () => {
   for (const kind of ["first", "follow"]) {
-    const spec = A.ffwTheory(kind);
-    assert.ok(spec.nodes.slice(1).every((n) => n.jag === true), `${kind}: every edge of the general case is jagged`);
-    assert.ok(A.ctgSpineLayout(spec).jags.every((j) => j.jag));
+    for (const spec of A.ffwTheory(kind).cases) {
+      assert.ok(spec.nodes.slice(1).every((n) => n.jag === true), `${kind}: every edge of the general case is jagged`);
+      assert.ok(A.ctgSpineLayout(spec).jags.every((j) => j.jag));
+    }
   }
   const g = A.parseBNF("E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id", false);
   const rec = A.ffRecord(g);
@@ -266,17 +271,17 @@ test("the line down to the string: jagged where the lowest node derives it in mo
   const indirect = A.ctgSpineLayout(A.ffwTheory("nullable").figures[1]);
   assert.ok(indirect.span && indirect.span.mark.label === "A derives ε", "one staple and the marker under the whole base line");
   assert.ok(Math.abs(indirect.span.x0 - indirect.base[0].x0) < 1e-9 && Math.abs(indirect.span.x1 - indirect.base[0].x1) < 1e-9);
-  assert.equal(A.ffwTheory("follow").terminus, true, "B derives x in any number of steps");
+  assert.equal(A.ffwTheory("follow").cases[0].terminus, true, "A derives x in any number of steps");
 });
 
 test("the general case: a string that is not spelled out is a faded … with its name as the label, never the name on the base line", () => {
   for (const kind of ["first", "follow"]) {
-    const lay = A.ctgSpineLayout(A.ffwTheory(kind));
+    const lay = A.ctgSpineLayout(A.ffwTheory(kind).cases[0]);
     for (const tok of lay.tokens) assert.ok(["ε", "a", "…", "a …"].includes(tok.text), `${kind}: ${tok.text} on the base line`);
     const unspelled = lay.tokens.filter((t) => t.text === "…");
     assert.ok(unspelled.length >= 1 && unspelled.every((t) => (["β", "A"].includes(t.label) || (t.label === "" && /^(?:α|)$/.test(t.group))) && t.cls === "is-dim"), `${kind}: the names are below`);
   }
-  const follow = A.ctgSpineLayout(A.ffwTheory("follow"));
+  const follow = A.ctgSpineLayout(A.ffwTheory("follow").cases[0]);
   assert.equal(follow.tokens.find((t) => t.id === "t").head, "a", "the token that follows is spelled, the rest of its string is not");
 });
 

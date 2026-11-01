@@ -302,23 +302,45 @@ function ffwTheory(kind) {
   const cell = (text, label, extra = {}) => ({ text, label, ...extra });
   // every edge of a general figure stands for derivations of any length (⇒*), so it is jagged
   const node = (sym, extra = {}) => ({ sym, jag: true, ...extra });
+  // FIRST and FOLLOW each have a second case in their definitions: the figures are cases, shown one at a time
   if (kind === "first") {
     return {
-      nodes: [node("A", { kind: "focus", jag: false })],
-      levels: [],
-      bottom: [cell("ε", "X₁ … Xᵢ"), cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }), cell("…", "β", { cls: "is-dim" })],
-      terminus: true, // A derives the string in as many steps as it needs
+      cases: [
+        {
+          nodes: [node("A", { kind: "focus", jag: false })],
+          levels: [],
+          bottom: [cell("ε", "X₁ … Xᵢ"), cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }), cell("…", "β", { cls: "is-dim" })],
+          terminus: true, // A derives the string in as many steps as it needs
+        },
+        {
+          nodes: [node("A", { kind: "focus", jag: false })],
+          levels: [],
+          bottom: cell("ε", "", { kind: "first", mark: { kind: "first", label: "ε ∈ FIRST(A)" } }),
+          terminus: true,
+        },
+      ],
     };
   }
   if (kind === "follow") {
     return {
-      nodes: [node("S"), node("B"), node("A", { kind: "focus" })],
-      levels: [
-        { left: [cell("…", "", { cls: "is-dim", group: "α" })], right: [cell("a …", "aβ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] },
-        { left: [cell("…", "", { cls: "is-dim", group: "α" })], right: [cell("ε", "")] },
+      cases: [
+        {
+          nodes: [node("S"), node("B"), node("A", { kind: "focus" })],
+          levels: [
+            { left: [cell("…", "", { cls: "is-dim", group: "α" })], right: [cell("a …", "aβ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] },
+            { left: [cell("…", "", { cls: "is-dim", group: "α" })], right: [cell("ε", "")] },
+          ],
+          bottom: cell("…", "A", { cls: "is-dim" }),
+          terminus: true, // A derives its string in as many steps as it needs
+        },
+        {
+          nodes: [node("S"), node("A", { kind: "focus" })],
+          levels: [{ left: [cell("…", "α", { cls: "is-dim" })], right: null }],
+          bottom: cell("…", "A", { cls: "is-dim" }),
+          outer: { left: null, right: { text: "$", id: "t", kind: "follow", mark: { kind: "follow", label: "$ ∈ FOLLOW(A)" } } },
+          terminus: true,
+        },
       ],
-      bottom: cell("…", "A", { cls: "is-dim" }),
-      terminus: true, // A derives x in as many steps as it needs
     };
   }
   // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in
