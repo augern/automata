@@ -589,12 +589,30 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         ctgNow = { x: lay.cx - own.width / 2, y: 0, width: own.width, height: own.height };
         ctgView.refit();
       }
-      // typing "xmas" outside a field dresses the figure
-      let typed = "";
+      // typing "xmas" outside a field dresses the figure and loads a grammar for it; typing it again puts everything back
+      let typed = "", undress = null;
+      function dress() {
+        const root = $("ctg-root");
+        if (undress) { root.classList.remove("xmas"); undress(); undress = null; return; }
+        const was = { mode: ppMode, g: $("grammar-input").value, w: $("w-input").value, i: $("pump-i").value, ex: $("examples-select").value };
+        root.classList.add("xmas");
+        $("grammar-input").value = "S -> Happy H lidays!\nH -> Ho H | eps";
+        $("w-input").value = "Happy Ho lidays!";
+        $("pump-i").value = 5;
+        ppMode === "cf" ? buildDef() : setMode("cf");
+        setTimeout(() => $("ctg-svg").dispatchEvent(new MouseEvent("dblclick", { bubbles: true })), 60); // fit the figure
+        undress = () => {
+          $("grammar-input").value = was.g;
+          $("w-input").value = was.w;
+          $("pump-i").value = was.i;
+          $("examples-select").value = was.ex;
+          ppMode === was.mode ? buildDef() : setMode(was.mode);
+        };
+      }
       document.addEventListener("keydown", (e) => {
         if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || (e.target.closest && e.target.closest("input, textarea, select, [contenteditable]"))) return;
         typed = (typed + e.key.toLowerCase()).slice(-4);
-        if (typed === "xmas") $("ctg-root").classList.toggle("xmas");
+        if (typed === "xmas") dress();
       });
       function clearFigure(message) {
         $("ctg-root").innerHTML = "";
