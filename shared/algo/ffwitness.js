@@ -286,48 +286,17 @@ function ffwFigure(w, opts = {}) {
   return spec([nodeOf(root, 0, "focus")], [], root.kids.map((k, i) => ({ text: "ε", label: "", ...(i ? {} : { kind: "focus", mark }), node: { sym: k.sym, jag: k.kids.length > 0 } })));
 }
 
-// The derivation along the path, as the sentential forms from the symbol at the top down to the one that shows the member:
-// ["E", "T E'", "F T' E'", "id T' E'"]. (FOLLOW stops at the form that has the symbol asked about.)
-function ffwForms(w, nodes) {
-  const forms = [nodes[0].sym];
-  let left = [], right = [];
-  const last = w.kind === "follow" ? nodes.length - 1 : nodes.length;
-  for (let k = 0; k < last; k++) {
-    const n = nodes[k];
-    forms.push([...left, ...n.kids.map(ffwLabel), ...right].join(" ") || "ε");
-    const j = k + 1 < nodes.length ? n.kids.findIndex((x) => x === nodes[k + 1]) : -1;
-    if (j >= 0) {
-      left = [...left, ...n.kids.slice(0, j).map(ffwLabel)];
-      right = [...n.kids.slice(j + 1).map(ffwLabel), ...right];
-    }
-  }
-  return forms;
-}
-
-// ffwSpec(w, { samples }) -> the spec of ctgSpineLayout (see ffwFigure) with the derivation ("forms") and a sentence on what the
-// figure shows ("statement") added. A string that is only some string a symbol derives is a faded …; with samples, the shortest one.
+// ffwSpec(w, { samples }) -> the spec of ctgSpineLayout (see ffwFigure) with alt and count of the ways of showing the member added.
+// A string that is only some string a symbol derives is a faded …; with samples, the shortest one.
 function ffwSpec(w, opts = {}) {
   const spec = ffwFigure(w, opts);
-  const path = [];
-  for (let cur = w.tree; ; ) {
-    path.push(cur);
-    const j = w.kind === "first" ? cur.kids.findIndex((k) => ffwHas(k, "t")) : w.kind === "follow" ? cur.kids.findIndex((k) => ffwHas(k, "target")) : -1;
-    if (j < 0 || typeof cur.kids[j] === "string" || cur.kids[j].text !== undefined) break;
-    cur = cur.kids[j];
-  }
-  spec.forms = w.kind === "nullable" ? [w.tree.sym, ...(w.tree.kids.length ? [w.tree.kids.map(ffwLabel).join(" "), "ε"] : ["ε"])] : ffwForms(w, path);
   spec.alt = w.alt;
   spec.count = w.count;
-  const side = (l) => (w.kind === "first" ? l.left : l.right) || [];
-  const vanishing = spec.levels.some((l) => side(l).some((f) => f.text === EPSILON));
-  if (w.kind === "first") spec.statement = `${w.token} ∈ FIRST(${w.sym}): ${w.sym} can derive a string that starts with ${w.token}` + (vanishing ? ", after symbols that derive ε" : "");
-  else if (w.kind === "follow") spec.statement = `${w.token} ∈ FOLLOW(${w.sym}): in a sentence derived from the start symbol, ${w.sym} ` + (w.token === "$" ? "can be the last thing" : `can be followed by ${w.token}`) + (vanishing ? ", over symbols that derive ε" : "");
-  else spec.statement = `${w.sym} is nullable: ${w.sym} can derive the empty string`;
   return spec;
 }
 
 // ── The general case ───────────────────────────────────────────────────────────────────────────────────────────
-// ffwTheory(kind) -> a spec of ctgSpineLayout (with "statement" and "forms" as ffwSpec has) that shows what nullable, FIRST or
+// ffwTheory(kind) -> a spec of ctgSpineLayout that shows what nullable, FIRST or
 // FOLLOW mean for any grammar, with symbols in place of a grammar: the null state of the witness figure.
 function ffwTheory(kind) {
   const cell = (text, label, extra = {}) => ({ text, label, ...extra });
@@ -339,8 +308,6 @@ function ffwTheory(kind) {
       levels: [{ left: [cell("ε", "X₁ … Xᵢ")], right: [cell("…", "β", { cls: "is-dim" })] }],
       bottom: cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }),
       arrows: [{ fromNode: 0, side: "left", toId: "t" }],
-      forms: ["A", "X₁ … Xᵢ a β"],
-      statement: "a ∈ FIRST(A) when A derives X₁ … Xᵢ a β and each of X₁ … Xᵢ derives ε: from the left foot of A the first token that is not ε is a",
     };
   }
   if (kind === "follow") {
@@ -353,8 +320,6 @@ function ffwTheory(kind) {
       bottom: cell("…", "x", { cls: "is-dim" }),
       terminus: true, // B derives x in as many steps as it needs
       arrows: [{ fromNode: 2, side: "right", toId: "t" }],
-      forms: ["S", "α A δ", "α γ B β δ"],
-      statement: "a ∈ FOLLOW(B) when S derives α A δ with δ starting with a, and A derives γ B β with β deriving ε: the end of B is the end of A, so a comes next",
     };
   }
   // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in
@@ -375,8 +340,5 @@ function ffwTheory(kind) {
   };
   return {
     figures: [direct, indirect],
-    forms: ["A", "ε"],
-    formsText: "A ⇒ ε   |   A ⇒ X₁ … Xₙ ⇒* ε",
-    statement: "A is nullable when a rule gives ε at once (A → ε), or when every symbol of some rule A → X₁ … Xₙ is nullable in its turn, directly or through other symbols",
   };
 }

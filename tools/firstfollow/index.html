@@ -72,7 +72,7 @@
       .ff-row.is-shown { outline: 1.5px solid var(--amber); outline-offset: -1.5px; }
       .ff-row .ff-occ { color: var(--amber); font-weight: 600; }
 
-      /* Witness: the controls, the figure; its statement is the tooltip of the figure */
+      /* Witness: the controls and the figure */
       #wit-head { flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--sp-5); padding: var(--sp-3) var(--sp-5); border-bottom: 1px solid var(--border); background: var(--bg-panel); }
       #wit-bar { flex: 1; font-family: var(--font-serif); font-size: var(--fs-sm); color: var(--amber); }
       #wit-bar:empty { display: none; }
@@ -228,7 +228,7 @@
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=2073bbbb"></script>
+    <script src="../../shared/algo/ffwitness.js?v=5a7bb085"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/ctg.js?v=67191c10"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
@@ -420,7 +420,6 @@ ${kw("return")} Follow`,
       function drawWitness() {
         el("wit-root").innerHTML = "";
         el("wit-bar").textContent = "";
-        el("wit-canvas").title = "";
         el("wit-alt").hidden = true;
         whichCount = 0;
         witBox = null;
@@ -436,7 +435,6 @@ ${kw("return")} Follow`,
         if (theory) {
           const spec = ffwTheory(theory);
           showFigures(spec.figures || [spec], 60);
-          el("wit-canvas").title = spec.statement;
           return;
         }
         if (!sel) return;
@@ -447,7 +445,6 @@ ${kw("return")} Follow`,
           which = Math.min(which, whichCount - 1);
           const spec = ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: toks[which] }, 0), { samples: ctgPref.get().samples });
           showFigures([spec], 0);
-          el("wit-canvas").title = (added ? "{ " + toks.join(", ") + " } ⊆ " : SET_LABEL[sel.kind] + "(" + sel.nt + ") = { " + toks.join(", ") + " }: ") + (added ? SET_LABEL[sel.kind] + "(" + sel.nt + "): added by this step. " : "the shortest witness of each member. ") + spec.statement;
           el("wit-alt").hidden = whichCount < 2;
           el("wit-alt-n").textContent = which + 1 + " / " + whichCount;
           return;
@@ -457,7 +454,6 @@ ${kw("return")} Follow`,
         if (!w) { sel = null; drawWitness(); return; }
         const spec = ffwSpec(w, { samples: ctgPref.get().samples });
         showFigures([spec], 0);
-        el("wit-canvas").title = spec.statement;
         if (w.unreachable) el("wit-bar").textContent = "Not reachable from the start symbol";
         el("wit-alt").hidden = w.count < 2;
         el("wit-alt-n").textContent = w.alt + 1 + " / " + w.count;

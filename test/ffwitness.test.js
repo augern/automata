@@ -188,36 +188,6 @@ test("witness specs: FIRST(E) of the expression grammar: the path E, T, F, id wi
   assert.deepEqual(js(spec.levels.map((l) => [l.left, l.right && l.right.map((f) => f.text + ":" + f.label)])), [[null, ["ε:E'"]], [null, ["ε:T'"]], [null, null]]);
 });
 
-test("witness specs: the derivation along the path and the sentence", () => {
-  const g = A.parseBNF("E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id", false);
-  const rec = A.ffRecord(g);
-  const first = A.ffwSpec(A.ffwFirst(g, rec, "E", "id"));
-  assert.deepEqual(js(first.forms), ["E", "T E'", "F T' E'", "id T' E'"]);
-  assert.equal(first.statement, "id ∈ FIRST(E): E can derive a string that starts with id");
-  const follow = A.ffwSpec(A.ffwFollow(g, rec, "T", ")"));
-  assert.equal(follow.forms[0], "E");
-  assert.ok(follow.forms[follow.forms.length - 1].split(" ").includes("T"), "the last form has the symbol");
-  assert.match(follow.statement, /^\) ∈ FOLLOW\(T\): .*can be followed by \)/);
-  const end = A.ffwSpec(A.ffwFollow(g, rec, "E", "$"));
-  assert.match(end.statement, /can be the last thing/);
-  const nul = A.ffwSpec(A.ffwNullable(g, rec, "E'"));
-  assert.deepEqual(js(nul.forms), ["E'", "ε"]);
-  assert.equal(nul.statement, "E' is nullable: E' can derive the empty string");
-});
-
-test("witness specs: every form follows from the one before by one rule", () => {
-  const g = A.parseBNF("S -> A B C d\nA -> a | eps\nB -> b | eps\nC -> c | eps", false);
-  const rec = A.ffRecord(g);
-  const split = (f) => (f === "ε" ? [] : f.split(" "));
-  // one symbol of the earlier form is replaced by the right-hand side of one of its rules
-  const steps = (before, after) => before.some((sym, i) => g.rules.some((r) => r.lhs === sym &&
-    JSON.stringify([...before.slice(0, i), ...r.rhs, ...before.slice(i + 1)]) === JSON.stringify(after)));
-  for (const nt of g.nonterminals) for (const kind of ["first", "follow"]) for (const t of rec[kind][nt]) {
-    const spec = A.ffwSpec(kind === "first" ? A.ffwFirst(g, rec, nt, t) : A.ffwFollow(g, rec, nt, t));
-    for (let k = 1; k < spec.forms.length; k++) assert.ok(steps(split(spec.forms[k - 1]), split(spec.forms[k])), `${kind}(${nt}) ∋ ${t}: ${spec.forms[k - 1]} ⇒ ${spec.forms[k]}`);
-  }
-});
-
 test("ways of showing a member: the fewest nodes first, a left recursion does not loop", () => {
   const g = A.parseBNF("S -> S b b | eps | a S | b", false);
   const rec = A.ffRecord(g);
@@ -232,7 +202,7 @@ test("ways of showing a member: the fewest nodes first, a left recursion does no
 test("ways of showing a member: the different ways are different derivations", () => {
   const g = A.parseBNF("S -> A a | B b\nA -> c\nB -> c", false);
   const rec = A.ffRecord(g);
-  const forms = (alt) => JSON.stringify(A.ffwSpec(A.ffwFirst(g, rec, "S", "c", alt)).forms);
+  const forms = (alt) => JSON.stringify(A.ffwSpec(A.ffwFirst(g, rec, "S", "c", alt)).nodes.map((n) => n.sym));
   assert.equal(A.ffwFirst(g, rec, "S", "c").count, 2);
   assert.notEqual(forms(0), forms(1));
 });
@@ -243,7 +213,6 @@ test("the general case: a figure for nullable, FIRST and FOLLOW that reads as th
     assert.equal(spec.nodes.length, spec.levels.length + 1, kind);
     const lay = A.ctgSpineLayout(spec);
     assert.ok(Number.isFinite(lay.width) && Number.isFinite(lay.height), kind);
-    assert.ok(spec.statement.length > 20 && spec.forms.length >= 2, kind);
     if (kind === "first") {
       assert.equal(lay.tokens.find((t) => !t.eps).text, "a", "the first token seen from the left");
       assert.ok(lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9);
@@ -277,8 +246,6 @@ test("a nullable witness: the root bare over a node with a small triangle for ea
   const spec = A.ffwSpec(A.ffwNullable(g, rec, "S"));
   assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["S"], "only the root is on the spine");
   assert.deepEqual(js(spec.bottom.map((b) => [b.text, b.node.sym, b.node.jag])), [["ε", "A", true], ["ε", "A", true]], "each A derives ε through other symbols");
-  assert.equal(spec.statement, "S is nullable: S can derive the empty string");
-  assert.deepEqual(js(spec.forms), ["S", "A A", "ε"]);
   const lay = A.ctgSpineLayout(spec);
   assert.equal(lay.tris[0].hidden, true);
   assert.equal(lay.subs.length, 2);
@@ -320,8 +287,6 @@ test("the general case: a string that is not spelled out is a faded … with its
 test("the general case of nullable: two figures, directly and through other symbols, the symbols drawn as nodes of their own", () => {
   const theory = A.ffwTheory("nullable");
   assert.equal(theory.figures.length, 2);
-  assert.ok(theory.statement.includes("directly") && theory.statement.includes("through other symbols"));
-  assert.ok(theory.formsText.includes("A ⇒ ε") && theory.formsText.includes("⇒*"));
   const [direct, indirect] = theory.figures.map((f) => A.ctgSpineLayout(f));
   assert.deepEqual(js([direct.caption, indirect.caption]), ["directly", "through other symbols"]);
   assert.deepEqual(js(direct.tokens.map((t) => [t.text, t.label])), [["ε", "A → ε"]]);
