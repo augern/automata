@@ -138,7 +138,7 @@ function ctgSpineTree(spec) {
 //        tokens: [{ text, part, cls, x, w, y, label, eps }], jags: [{ from, to }] }
 //   with no copy there is a { blank: true } triangle over the place of the first copy, to be drawn in the background colour
 function ctgSplitLayout(fig, opts = {}) {
-  const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, tile: false, tan: 0.45, ...opts };
+  const o = { charW: 9, tokPad: 6, tokGap: 0, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 0, padUp: 0, padLow: 0, tile: false, tan: 0.45, ...opts };
   const i = fig.i;
   const order = ["u", "v", "x", "y", "z"];
   const w = {};
