@@ -52,40 +52,61 @@ function ffwBuilder(g, rec) {
   return b;
 }
 
-// The tree of "A derives a string starting with t" and the marks; path is built from the event that put t into FIRST(A).
-function ffwFirstTree(g, rec, b, A, t, leafId) {
-  const ev = rec.events[b.st.by.first[A][t]];
-  const r = g.rules[ev.rule];
-  const at = ev.cells.findIndex((c) => c.toks.includes(t)); // the symbol that starts with t; the ones before it derive ε
-  const kids = r.rhs.map((s, j) => {
-    if (j < at) return b.vanish(s);
-    if (j > at) return b.rest(s);
-    if (!g.nonterminals.has(s)) return { text: s, id: leafId };
-    return ffwFirstTree(g, rec, b, s, t, leafId);
+// How many ways of showing a member there are at most: the ones with the fewest nodes first.
+const FFW_LIMIT = 12;
+const ffwSize = (x) => (typeof x === "string" || x.text !== undefined ? 1 : 1 + x.kids.reduce((n, k) => n + ffwSize(k), 0));
+const ffwBest = (trees, size = ffwSize) => trees.map((t) => [size(t), t]).sort((x, y) => x[0] - y[0]).slice(0, FFW_LIMIT).map((x) => x[1]);
+
+// The trees of "A derives a string starting with t": one for each rule of A that has t first (after symbols that derive ε), and
+// for each way the symbol with t does it. seen: the (symbol, token) pairs on the way down, so that a left recursion is not followed.
+function ffwFirstTrees(g, rec, b, A, t, leafId, seen) {
+  const key = A + "\u0000" + t;
+  if (seen.has(key)) return [];
+  const next = new Set(seen).add(key);
+  const out = [];
+  g.rules.forEach((r) => {
+    if (r.lhs !== A) return;
+    const sc = ffScan(r.rhs, g.nonterminals, rec.nullable, rec.first, true);
+    // each symbol that can start with t, the ones before it deriving ε
+    sc.cells.forEach((cell, at) => {
+      if (cell.state === "unread" || !cell.toks.includes(t)) return;
+      const subs = g.nonterminals.has(r.rhs[at]) ? ffwFirstTrees(g, rec, b, r.rhs[at], t, leafId, next) : [null];
+      for (const sub of subs) out.push(b.node(A, r.rhs.map((s, j) => (j < at ? b.vanish(s) : j > at ? b.rest(s) : sub === null ? { text: s, id: leafId } : sub))));
+    });
   });
-  return b.node(A, kids);
+  return ffwBest(out);
 }
 
-function ffwFirst(g, rec, A, t) {
+// A witness of FIRST: alt picks one of the ways (the shortest first); count says how many there are.
+function ffwFirst(g, rec, A, t, alt = 0) {
   if (!g.nonterminals.has(A) || !rec.first[A].has(t)) return null;
-  const b = ffwBuilder(g, rec);
-  const tree = ffwFirstTree(g, rec, b, A, t, "t");
+  const trees = ffwFirstTrees(g, rec, ffwBuilder(g, rec), A, t, "t", new Set());
+  if (!trees.length) return null;
+  const tree = trees[alt % trees.length];
   tree.id = "target";
-  return { kind: "first", sym: A, token: t, tree, marks: [{ leafId: "t", kind: "first", label: `${t} ∈ FIRST(${A})` }], nodeKinds: { target: "focus" } };
+  return { kind: "first", sym: A, token: t, alt: alt % trees.length, count: trees.length, tree, marks: [{ leafId: "t", kind: "first", label: `${t} ∈ FIRST(${A})` }], nodeKinds: { target: "focus" } };
 }
 
-// A derivation of A to ε, every step shown: each symbol of the rule is itself such a derivation.
-function ffwNullableTree(g, rec, b, A) {
-  const r = g.rules[rec.events[b.st.by.nullable[A]].rule];
-  return b.node(A, r.rhs.map((s) => ffwNullableTree(g, rec, b, s)));
+// The trees of "A derives ε": one for each rule whose symbols all do, each symbol shown by its shortest way.
+function ffwNullableTrees(g, rec, b, A, seen) {
+  if (seen.has(A)) return [];
+  const next = new Set(seen).add(A);
+  const out = [];
+  g.rules.forEach((r) => {
+    if (r.lhs !== A || !ffScan(r.rhs, g.nonterminals, rec.nullable, rec.first, false).end) return;
+    const kids = r.rhs.map((s) => ffwNullableTrees(g, rec, b, s, next)[0]);
+    if (kids.every(Boolean)) out.push(b.node(A, kids));
+  });
+  return ffwBest(out);
 }
 
-function ffwNullable(g, rec, A) {
+function ffwNullable(g, rec, A, alt = 0) {
   if (!rec.nullable.has(A)) return null;
-  const b = ffwBuilder(g, rec);
-  const tree = ffwNullableTree(g, rec, b, A);
+  const trees = ffwNullableTrees(g, rec, ffwBuilder(g, rec), A, new Set());
+  if (!trees.length) return null;
+  const tree = trees[alt % trees.length];
   tree.id = "target";
-  return { kind: "nullable", sym: A, tree, marks: [], nodeKinds: { target: "focus" } };
+  return { kind: "nullable", sym: A, alt: alt % trees.length, count: trees.length, tree, marks: [], nodeKinds: { target: "focus" } };
 }
 
 // For every nonterminal, the rule and position through which it is first reached from the start symbol: { A: { rule, pos } }.
@@ -116,36 +137,52 @@ function ffwContext(g, b, via, A) {
   return { root: up.root, at, unreachable: up.unreachable };
 }
 
-// A tree of the start symbol in which B is followed by t; { root, at (the node of B), unreachable }.
-function ffwFollowTree(g, rec, b, via, B, t) {
-  const ev = rec.events[b.st.by.follow[B][t]];
-  if (ev.rule < 0) { const n = b.node(B, []); return { root: n, at: n }; }
-  const r = g.rules[ev.rule];
-  const fromParent = ev.viaFollow.includes(t);
-  const ctx = fromParent ? ffwFollowTree(g, rec, b, via, r.lhs, t) : ffwContext(g, b, via, r.lhs);
-  const at = b.node(B, []);
-  const from = ev.cells.findIndex((c) => c.toks.includes(t)); // in what follows B: the symbol that starts with t
-  ctx.at.kids = r.rhs.map((s, j) => {
-    if (j < ev.pos) return b.rest(s);
-    if (j === ev.pos) return at;
-    const k = j - ev.pos - 1;
-    if (fromParent || k < from) return b.vanish(s);
-    if (k > from) return b.rest(s);
-    return g.nonterminals.has(s) ? ffwFirstTree(g, rec, b, s, t, "t") : { text: s, id: "t" };
+// The trees of the start symbol in which B is followed by t: { root, at, unreachable }, one for each rule that has B with t after it,
+// and for each way of showing it. Either t starts what comes after B in the rule (after symbols that derive ε), or what comes after
+// B can vanish and t follows the left side.
+function ffwFollowTrees(g, rec, b, via, B, t, seen) {
+  const key = B + "\u0000" + t;
+  if (seen.has(key)) return [];
+  const next = new Set(seen).add(key);
+  const out = [];
+  if (B === g.start && t === "$") { const n = b.node(B, []); out.push({ root: n, at: n }); }
+  g.rules.forEach((r) => {
+    r.rhs.forEach((s, pos) => {
+      if (s !== B) return;
+      const sc = ffScan(r.rhs.slice(pos + 1), g.nonterminals, rec.nullable, rec.first, true);
+      // the symbols after B, in the tree of the left side
+      const place = (ctx, tail) => {
+        const at = b.node(B, []);
+        ctx.at.kids = r.rhs.map((x, j) => (j < pos ? b.rest(x) : j === pos ? at : tail(x, j - pos - 1)));
+        return { root: ctx.root, at, unreachable: ctx.unreachable };
+      };
+      // in what follows B: each symbol that can start with t, the ones before it deriving ε
+      sc.cells.forEach((cell, from) => {
+        if (cell.state === "unread" || !cell.toks.includes(t)) return;
+        const sym = r.rhs[pos + 1 + from];
+        const subs = g.nonterminals.has(sym) ? ffwFirstTrees(g, rec, b, sym, t, "t", new Set()) : [{ text: sym, id: "t" }];
+        for (const sub of subs) out.push(place(ffwContext(g, b, via, r.lhs), (x, k) => (k < from ? b.vanish(x) : k > from ? b.rest(x) : sub)));
+      });
+      if (sc.end && rec.follow[r.lhs].has(t)) {
+        for (const ctx of ffwFollowTrees(g, rec, b, via, r.lhs, t, next)) out.push(place(ctx, (x) => b.vanish(x)));
+      }
+    });
   });
-  return { root: ctx.root, at, unreachable: ctx.unreachable };
+  return ffwBest(out, (w) => ffwSize(w.root));
 }
 
-function ffwFollow(g, rec, B, t) {
+function ffwFollow(g, rec, B, t, alt = 0) {
   if (!g.nonterminals.has(B) || !rec.follow[B].has(t)) return null;
   const b = ffwBuilder(g, rec);
-  const w = ffwFollowTree(g, rec, b, ffwReach(g), B, t);
+  const ways = ffwFollowTrees(g, rec, b, ffwReach(g), B, t, new Set());
+  if (!ways.length) return null;
+  const w = ways[alt % ways.length];
   // the symbol asked about is drawn over its shortest string
   const y = b.shortest[B];
   w.at.id = "target";
   w.at.abstract = true;
   w.at.kids = y ? y.slice() : ["…"];
-  return { kind: "follow", sym: B, token: t, tree: w.root, marks: [{ leafId: t === "$" ? "end" : "t", kind: "follow", label: `${t} ∈ FOLLOW(${B})` }], nodeKinds: { target: "focus" }, endMarker: t === "$", unreachable: !!w.unreachable };
+  return { kind: "follow", sym: B, token: t, alt: alt % ways.length, count: ways.length, tree: w.root, marks: [{ leafId: t === "$" ? "end" : "t", kind: "follow", label: `${t} ∈ FOLLOW(${B})` }], nodeKinds: { target: "focus" }, endMarker: t === "$", unreachable: !!w.unreachable };
 }
 
 // ── The witness as a spine figure (ctgSpineLayout) ─────────────────────────────────────────────────────────────
@@ -160,11 +197,10 @@ const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [
 const ffwLabel = (x) => (typeof x === "string" ? x : x.text !== undefined ? x.text : x.sym);
 const ffwHas = (x, id) => typeof x !== "string" && (x.id === id || (x.kids !== undefined && x.kids.some((k) => ffwHas(k, id))));
 
-// the string beside the path: the tokens of the symbols, ε if none; the symbols as its label
-function ffwFlank(sibs, extra = {}) {
+// the strings beside the path: one cell for each symbol, the tokens it derives (ε if none), the symbol as its label; null for none
+function ffwFlank(sibs) {
   if (!sibs.length) return null;
-  const toks = sibs.flatMap(ffwTokens);
-  return { text: toks.length ? toks.join(" ") : "ε", label: sibs.map(ffwLabel).join(" "), ...extra };
+  return sibs.map((x) => { const toks = ffwTokens(x); return { text: toks.length ? toks.join(" ") : "ε", label: ffwLabel(x) }; });
 }
 
 function ffwFigure(w) {
@@ -179,7 +215,7 @@ function ffwFigure(w) {
     }
     return nodes;
   };
-  const level = (node, j, extra = {}) => ({ left: ffwFlank(node.kids.slice(0, j)), right: ffwFlank(node.kids.slice(j + 1), extra) });
+  const level = (node, j) => ({ left: ffwFlank(node.kids.slice(0, j)), right: ffwFlank(node.kids.slice(j + 1)) });
   const spec = (nodes, levels, bottom, extra = {}) => ({ nodes, levels, bottom, ...extra });
   const nodeOf = (n, k, kind) => ({ sym: n.sym, jag: false, kind: k === 0 && kind ? kind : "", cls: "" });
 
@@ -205,7 +241,8 @@ function ffwFigure(w) {
     else {
       for (let k = m - 1; k >= 0; k--) {
         const n = nodes[k], j = n.kids.findIndex((x) => x === nodes[k + 1]);
-        if (n.kids.slice(j + 1).some((x) => ffwHas(x, "t"))) { levels[k].right = { ...levels[k].right, id: "t", kind: "follow", head: w.token, mark }; break; }
+        const i = n.kids.slice(j + 1).findIndex((x) => ffwHas(x, "t")); // the symbol whose string starts with the token
+        if (i >= 0) { Object.assign(levels[k].right[i], { id: "t", kind: "follow", head: w.token, mark }); break; }
       }
     }
     const target = nodes[m];
@@ -253,8 +290,11 @@ function ffwSpec(w) {
     cur = cur.kids[j];
   }
   spec.forms = ffwForms(w, path);
+  spec.alt = w.alt;
+  spec.count = w.count;
   if (w.kind === "nullable" && spec.forms[spec.forms.length - 1] !== "ε") spec.forms.push("ε");
-  const vanishing = spec.levels.some((l) => (w.kind === "first" ? l.left : l.right) && (w.kind === "first" ? l.left : l.right).text === EPSILON);
+  const side = (l) => (w.kind === "first" ? l.left : l.right) || [];
+  const vanishing = spec.levels.some((l) => side(l).some((f) => f.text === EPSILON));
   if (w.kind === "first") spec.statement = `${w.token} ∈ FIRST(${w.sym}): ${w.sym} can derive a string that starts with ${w.token}` + (vanishing ? ", after symbols that derive ε" : "");
   else if (w.kind === "follow") spec.statement = `${w.token} ∈ FOLLOW(${w.sym}): in a sentence derived from the start symbol, ${w.sym} ` + (w.token === "$" ? "can be the last thing" : `can be followed by ${w.token}`) + (vanishing ? ", over symbols that derive ε" : "");
   else spec.statement = `${w.sym} is nullable: ${w.sym} can derive the empty string`;

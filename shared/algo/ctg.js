@@ -101,7 +101,9 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 // wide (as wide as the widest string), so the triangles tile. The string reads left to right along the base: the strips of the
 // outer levels first, then the bottom, then the strips on the right from the innermost level out.
 //   spec: { nodes: [{ sym, cls?, colour?, tone?, kind?, jag? }],      top to bottom; jag: the step from the node above hides steps
-//           levels: [{ left, right }],                                one per pair of neighbouring nodes
+//           levels: [{ left, right }],                                one per pair of neighbouring nodes; a side is a flank, or an
+//                                                                     array of them, one column each (a level with several columns
+//                                                                     on a side is that many steps tall, the other side padded)
 //           bottom: flank,                                            what the last node derives
 //           outer?: { left, right },                                  strings outside the top triangle
 //           arrows?: [{ fromNode, side: "left" | "right", toId }] }    a scan arrow from the foot of a node to the token with that id
@@ -117,11 +119,16 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 function ctgSpineLayout(spec, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, ...opts };
   const m = spec.nodes.length - 1;
-  const flanks = [spec.bottom, ...(spec.outer ? [spec.outer.left, spec.outer.right] : []), ...spec.levels.flatMap((l) => [l.left, l.right])].filter(Boolean);
+  const cells = (f) => (f ? (Array.isArray(f) ? f : [f]) : []); // a strip is one flank or several, one column each
+  const flanks = [...cells(spec.bottom), ...(spec.outer ? [...cells(spec.outer.left), ...cells(spec.outer.right)] : []), ...spec.levels.flatMap((l) => [...cells(l.left), ...cells(l.right)])];
   const c = Math.max(o.minCol, o.colWidth || 0, ...flanks.map((f) => Math.max(1, f.text.length) * o.charW + 2 * o.tokPad));
   // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
   const step = Math.min(c / o.tan, o.maxStep), tan = c / step, baseH = step / 2;
-  const apexY = (k) => o.topPad + 11 + k * step;
+  // a level with several columns on a side is that many steps tall, the strips on both sides as wide as the wider one
+  const cols = spec.levels.map((l) => Math.max(1, cells(l.left).length, cells(l.right).length));
+  const apex = [o.topPad + 11];
+  for (let k = 0; k < m; k++) apex.push(apex[k] + cols[k] * step);
+  const apexY = (k) => (k <= m ? apex[k] : apex[m] + (k - m) * step);
   const B = apexY(Math.max(m, o.depth || 0)) + baseH;
   const half = (k) => (B - apexY(k)) * tan;
   const width = Math.max(o.minWidth || 0, 2 * o.marginX + 2 * half(0) + (spec.outer ? 2 * c : 0));
@@ -130,18 +137,26 @@ function ctgSpineLayout(spec, opts = {}) {
   // a triangle without a colour of its own gets a grey that deepens with the depth, so that the nested ones can be told apart
   const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour || (k ? "var(--text-lo)" : ""), tone: n.tone !== undefined ? n.tone : k }));
   const tokens = [];
-  const tok = (f, centre) => { if (f) tokens.push({ text: f.text, id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
+  const tok = (f, centre) => { tokens.push({ text: f.text, id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
   for (let k = 0; k < m; k++) {
-    tok(spec.levels[k].left, (nodes[k].footL + nodes[k + 1].footL) / 2);
-    tok(spec.levels[k].right, (nodes[k].footR + nodes[k + 1].footR) / 2);
+    // the cells stand next to the spine: on the left the last one is the nearest, on the right the first
+    const left = cells(spec.levels[k].left), right = cells(spec.levels[k].right);
+    left.forEach((f, i) => tok(f, nodes[k + 1].footL - (left.length - i - 0.5) * c));
+    right.forEach((f, i) => tok(f, nodes[k + 1].footR + (i + 0.5) * c));
   }
-  tok(spec.bottom, cx);
-  if (spec.outer) { tok(spec.outer.left, nodes[0].footL - c / 2); tok(spec.outer.right, nodes[0].footR + c / 2); }
+  cells(spec.bottom).forEach((f) => tok(f, cx));
+  if (spec.outer) {
+    cells(spec.outer.left).forEach((f) => tok(f, nodes[0].footL - c / 2));
+    cells(spec.outer.right).forEach((f) => tok(f, nodes[0].footR + c / 2));
+  }
   tokens.sort((a, b) => a.x - b.x);
   const base = tokens.length ? [{ x0: tokens[0].x, x1: tokens[tokens.length - 1].x + c, y: B }] : [];
   const jags = [];
   for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
   const pointers = tokens.some((t) => t.mark) ? 30 : 0;
+  // a pointer's label runs to the right of its token: make room for it, on both sides so that the spine stays in the middle
+  const reach = Math.max(0, ...tokens.filter((t) => t.mark && t.mark.label).map((t) => t.x + t.w / 2 + 8 + t.mark.label.length * 6.4 + o.marginX - width));
+  if (reach > 0 && !o.widened) return ctgSpineLayout(spec, { ...opts, minWidth: width + 2 * reach, widened: true });
   // a scan arrow runs along the base line from the foot of a node to a token, over the columns between
   const arrows = [];
   for (const a of spec.arrows || []) {

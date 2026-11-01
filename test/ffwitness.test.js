@@ -104,35 +104,47 @@ function checkSpecs(g, label) {
     assert.equal(real.map((t) => t.text).join(" "), A.ffwTokens(w.tree).join(" "), `${where}: the sentence`);
     return { spec, lay };
   };
+  // every way of showing a member, not only the first
+  const each = (make, where, check) => {
+    const first = make(0);
+    assert.ok(first && first.count >= 1, `${where}: a witness`);
+    for (let alt = 0; alt < first.count; alt++) {
+      const w = make(alt);
+      assert.equal(w.alt, alt);
+      check(w, `${where} (way ${alt + 1} of ${first.count})`);
+    }
+  };
   for (const nt of g.nonterminals) {
     if (rec.nullable.has(nt)) {
-      const { lay } = figure(A.ffwNullable(g, rec, nt), `${label}: nullable ${nt}`);
-      assert.ok(lay.tokens.every((t) => t.eps), `${label}: ${nt} nullable shows only ε`);
+      each((alt) => A.ffwNullable(g, rec, nt, alt), `${label}: nullable ${nt}`, (w, where) => {
+        const { lay } = figure(w, where);
+        assert.ok(lay.tokens.every((t) => t.eps), `${where}: only ε`);
+      });
     }
     for (const t of rec.first[nt]) {
-      const where = `${label}: FIRST(${nt}) ∋ ${t}`;
-      const { spec, lay } = figure(A.ffwFirst(g, rec, nt, t), where);
-      const seen = lay.tokens.find((k) => !k.eps);
-      assert.equal(seen.text, t, `${where}: the first token seen from the left`);
-      assert.equal(seen.id, "t");
-      assert.equal(seen.kind, "first");
-      assert.equal(spec.nodes[0].sym, nt);
-      assert.equal(lay.arrows.length, 1);
-      assert.ok(lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9, `${where}: from the left foot`);
+      each((alt) => A.ffwFirst(g, rec, nt, t, alt), `${label}: FIRST(${nt}) ∋ ${t}`, (w, where) => {
+        const { spec, lay } = figure(w, where);
+        const seen = lay.tokens.find((k) => !k.eps);
+        assert.equal(seen.text, t, `${where}: the first token seen from the left`);
+        assert.equal(seen.id, "t");
+        assert.equal(seen.kind, "first");
+        assert.equal(spec.nodes[0].sym, nt);
+        assert.ok(lay.arrows.length === 1 && lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9, `${where}: from the left foot`);
+      });
     }
     for (const t of rec.follow[nt]) {
-      const where = `${label}: FOLLOW(${nt}) ∋ ${t}`;
-      const w = A.ffwFollow(g, rec, nt, t);
-      const { spec, lay } = figure(w, where);
-      const bottom = lay.tokens.find((k) => Math.abs(k.x + k.w / 2 - lay.cx) < 1e-6);
-      const after = lay.tokens.filter((k) => k.x > bottom.x && !k.eps);
-      assert.ok(after.length > 0, `${where}: something follows`);
-      assert.equal(after[0].id, "t", `${where}: the next token`);
-      assert.ok(t === "$" ? after[0].text === "$" : after[0].text.split(" ")[0] === t, `${where}: ${after[0].text}`);
-      assert.equal(after[0].kind, "follow");
-      const arrow = lay.arrows[0];
-      assert.ok(arrow.side === "right" && Math.abs(arrow.x0 - lay.nodes[lay.nodes.length - 1].footR) < 1e-9, `${where}: from the right foot of the symbol`);
-      assert.ok(spec.nodes[spec.nodes.length - 1].sym === nt, `${where}: the path ends at the symbol`);
+      each((alt) => A.ffwFollow(g, rec, nt, t, alt), `${label}: FOLLOW(${nt}) ∋ ${t}`, (w, where) => {
+        const { spec, lay } = figure(w, where);
+        const bottom = lay.tokens.find((k) => Math.abs(k.x + k.w / 2 - lay.cx) < 1e-6);
+        const after = lay.tokens.filter((k) => k.x > bottom.x && !k.eps);
+        assert.ok(after.length > 0, `${where}: something follows`);
+        assert.equal(after[0].id, "t", `${where}: the next token`);
+        assert.ok(t === "$" ? after[0].text === "$" : after[0].text.split(" ")[0] === t, `${where}: ${after[0].text}`);
+        assert.equal(after[0].kind, "follow");
+        const arrow = lay.arrows[0];
+        assert.ok(arrow.side === "right" && Math.abs(arrow.x0 - lay.nodes[lay.nodes.length - 1].footR) < 1e-9, `${where}: from the right foot of the symbol`);
+        assert.ok(spec.nodes[spec.nodes.length - 1].sym === nt, `${where}: the path ends at the symbol`);
+      });
     }
   }
 }
@@ -166,7 +178,7 @@ test("witness specs: FIRST(E) of the expression grammar: the path E, T, F, id wi
   const rec = A.ffRecord(g);
   const spec = A.ffwSpec(A.ffwFirst(g, rec, "E", "id"));
   assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["E", "T", "F", "id"]);
-  assert.deepEqual(js(spec.levels.map((l) => [l.left && l.left.text, l.right && l.right.text, l.right && l.right.label])), [[null, "ε", "E'"], [null, "ε", "T'"], [null, null, null]]);
+  assert.deepEqual(js(spec.levels.map((l) => [l.left, l.right && l.right.map((f) => f.text + ":" + f.label)])), [[null, ["ε:E'"]], [null, ["ε:T'"]], [null, null]]);
 });
 
 test("witness specs: the derivation along the path and the sentence", () => {
@@ -197,4 +209,23 @@ test("witness specs: every form follows from the one before by one rule", () => 
     const spec = A.ffwSpec(kind === "first" ? A.ffwFirst(g, rec, nt, t) : A.ffwFollow(g, rec, nt, t));
     for (let k = 1; k < spec.forms.length; k++) assert.ok(steps(split(spec.forms[k - 1]), split(spec.forms[k])), `${kind}(${nt}) ∋ ${t}: ${spec.forms[k - 1]} ⇒ ${spec.forms[k]}`);
   }
+});
+
+test("ways of showing a member: the fewest nodes first, a left recursion does not loop", () => {
+  const g = A.parseBNF("S -> S b b | eps | a S | b", false);
+  const rec = A.ffRecord(g);
+  const w = A.ffwFirst(g, rec, "S", "b", 0);
+  assert.ok(w.count >= 2, "several ways");
+  const sizes = Array.from({ length: w.count }, (_, alt) => A.ffwSize(A.ffwFirst(g, rec, "S", "b", alt).tree));
+  assert.deepEqual(js(sizes), js([...sizes].sort((x, y) => x - y)), "the shortest first");
+  assert.equal(A.ffwFirst(g, rec, "S", "b", w.count).alt, 0, "the ways go round");
+  assert.ok(A.ffwFollow(g, rec, "S", "b").count >= 1);
+});
+
+test("ways of showing a member: the different ways are different derivations", () => {
+  const g = A.parseBNF("S -> A a | B b\nA -> c\nB -> c", false);
+  const rec = A.ffRecord(g);
+  const forms = (alt) => JSON.stringify(A.ffwSpec(A.ffwFirst(g, rec, "S", "c", alt)).forms);
+  assert.equal(A.ffwFirst(g, rec, "S", "c").count, 2);
+  assert.notEqual(forms(0), forms(1));
 });

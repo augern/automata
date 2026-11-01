@@ -70,7 +70,13 @@
       .ff-row .ff-occ { color: var(--amber); font-weight: 600; }
 
       /* Witness: the statement, the figure, the derivation */
-      #wit-bar { flex-shrink: 0; padding: var(--sp-3) var(--sp-5); border-bottom: 1px solid var(--border); background: var(--bg-panel); font-family: var(--font-serif); font-size: var(--fs-sm); min-height: 2.2em; }
+      #wit-head { flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--sp-5); padding: var(--sp-3) var(--sp-5); border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+      #wit-bar { flex: 1; font-family: var(--font-serif); font-size: var(--fs-sm); min-height: 2.2em; }
+      #wit-ctl { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
+      #wit-alt { display: flex; align-items: center; gap: var(--sp-2); }
+      #wit-alt-n { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-dim); min-width: 3.2em; text-align: center; }
+      #wit-all-wrap { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; }
+      #wit-all-wrap.is-off { opacity: 0.45; cursor: default; }
       #wit-canvas { flex: 1; min-height: 160px; }
       #wit-forms { flex-shrink: 0; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border); background: var(--bg-panel); font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.7; overflow-x: auto; white-space: nowrap; }
       #wit-forms:empty { display: none; }
@@ -138,7 +144,17 @@
           <span class="panel-title">Witness</span>
         </div>
         <div class="panel-body ff-body">
-          <div id="wit-bar"></div>
+          <div id="wit-head">
+            <div id="wit-bar"></div>
+            <div id="wit-ctl">
+              <div class="step-group" id="wit-alt" hidden>
+                <button class="btn" id="btn-alt-prev" title="Previous way of showing it">&#8249;</button>
+                <span id="wit-alt-n"></span>
+                <button class="btn" id="btn-alt-next" title="Next way of showing it">&#8250;</button>
+              </div>
+              <label id="wit-all-wrap" title="Show a witness for every member of this set, side by side"><input type="checkbox" id="wit-all" /> Whole set</label>
+            </div>
+          </div>
           <div id="wit-canvas" class="ui-canvas">
             <svg id="wit-svg"><g id="wit-root" class="ctg"></g></svg>
             <div id="wit-empty" class="ui-canvas__empty">Pick a member of a set.</div>
@@ -180,7 +196,7 @@
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
-    <script src="../../shared/algo/ctg.js?v=c5e7ccf3"></script>
+    <script src="../../shared/algo/ctg.js?v=cf362b0d"></script>
     <script src="../../shared/algo/firstfollow.js?v=36abb92e"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -188,14 +204,14 @@
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=fa33fa2b"></script>
+    <script src="../../shared/algo/ffwitness.js?v=5e76baa5"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
-    <script src="../../shared/ctg.js?v=a305f471"></script>
+    <script src="../../shared/ctg.js?v=1e3a5f39"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=254ef341"></script>
+    <script src="guide.js?v=f7304497"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar", +1);
@@ -209,6 +225,8 @@
       let grammar = null;
       let rec = null; // ffRecord of the grammar
       let sel = null; // the member shown in the witness panel: { kind: "first" | "follow" | "nullable", nt, tok }
+      let alt = 0; // which way of showing it (the shortest is 0)
+      const ctgPref = ctgPrefs({ all: false }); // remembered for this tool: a witness for the whole set
       const el = (id) => document.getElementById(id);
       const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
 
@@ -248,28 +266,68 @@
       const sameMember = (a, b) => a && b && a.kind === b.kind && a.nt === b.nt && a.tok === b.tok;
       function selectMember(m) {
         sel = m;
+        alt = 0;
         saveShare();
         renderSets(sim.pos);
         drawWitness();
       }
+      // The construction names the member it has just added: show why it is there.
+      function followStep() {
+        const ev = sim.pos >= 0 ? rec.events[sim.pos] : null;
+        if (!ev || !ev.added.length) return;
+        const m = ev.phase === "nullable" ? { kind: "nullable", nt: ev.added[0] } : { kind: ev.phase, nt: ev.target, tok: ev.added[0] };
+        if (memberExists(m) && !sameMember(sel, m)) { sel = m; alt = 0; renderSets(sim.pos); drawWitness(); }
+      }
+      const witnessOf = (m, k) => (m.kind === "first" ? ffwFirst(grammar, rec, m.nt, m.tok, k) : m.kind === "follow" ? ffwFollow(grammar, rec, m.nt, m.tok, k) : ffwNullable(grammar, rec, m.nt, k));
       let witView = null, witBox = null;
-      function drawWitness() {
+      // the figures, side by side, in the witness view, their base lines on one line
+      function showFigures(specs, gap) {
         const root = el("wit-root");
         root.innerHTML = "";
-        el("wit-bar").textContent = "";
-        el("wit-forms").innerHTML = "";
-        el("wit-empty").hidden = !!sel;
-        witBox = null;
-        if (!sel) return;
-        const w = sel.kind === "first" ? ffwFirst(grammar, rec, sel.nt, sel.tok) : sel.kind === "follow" ? ffwFollow(grammar, rec, sel.nt, sel.tok) : ffwNullable(grammar, rec, sel.nt);
-        if (!w) { sel = null; drawWitness(); return; }
-        const spec = ffwSpec(w);
-        const lay = drawCTGSpineInto(root, spec);
-        witBox = { x: 0, y: 0, width: lay.width, height: lay.height };
+        const lays = specs.map((spec) => ctgSpineLayout(spec));
+        const lowest = Math.max(...lays.map((l) => l.B));
+        let x = 0, height = 0;
+        specs.forEach((spec, i) => {
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          const dy = lowest - lays[i].B;
+          g.setAttribute("transform", "translate(" + x + "," + dy + ")");
+          root.appendChild(g);
+          drawCTGSpineInto(g, spec);
+          x += lays[i].width + gap;
+          height = Math.max(height, dy + lays[i].height);
+        });
+        witBox = { x: 0, y: 0, width: Math.max(1, x - gap), height };
         if (!witView) witView = createFitView({ svg: "wit-svg", root: "wit-root", scaleExtent: [0.08, 4], maxScale: 2, pad: 16, align: "top", bounds: () => witBox, hasContent: () => !!witBox });
         witView.fit();
+      }
+      const SET_LABEL = { first: "FIRST", follow: "FOLLOW" };
+      function drawWitness() {
+        el("wit-root").innerHTML = "";
+        el("wit-bar").textContent = "";
+        el("wit-forms").innerHTML = "";
+        el("wit-alt").hidden = true;
+        witBox = null;
+        el("wit-empty").hidden = !!sel;
+        const whole = ctgPref.get().all && sel && sel.kind !== "nullable";
+        el("wit-all").checked = ctgPref.get().all;
+        el("wit-all").disabled = !sel || sel.kind === "nullable";
+        el("wit-all-wrap").classList.toggle("is-off", !sel || sel.kind === "nullable");
+        if (!sel) return;
+        if (whole) {
+          const toks = [...rec[sel.kind][sel.nt]].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
+          const specs = toks.map((t) => ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: t }, 0)));
+          showFigures(specs, 60);
+          el("wit-bar").textContent = SET_LABEL[sel.kind] + "(" + sel.nt + ") = { " + toks.join(", ") + " }: the shortest witness of each member";
+          return;
+        }
+        const w = witnessOf(sel, alt);
+        if (!w) { sel = null; drawWitness(); return; }
+        const spec = ffwSpec(w);
+        showFigures([spec], 0);
         el("wit-bar").textContent = spec.statement + (w.unreachable ? " (the symbol cannot be reached from the start symbol)" : "");
         el("wit-forms").innerHTML = spec.forms.map(esc).join(' <span class="wit-arrow">⇒</span> ');
+        el("wit-alt").hidden = w.count < 2;
+        el("wit-alt-n").textContent = w.alt + 1 + " / " + w.count;
       }
 
       // ── The rule being applied ───────────────────────────────────────────
@@ -402,7 +460,7 @@
         buttons: { reset: "btn-reset", back: "btn-back", step: "btn-step", all: "btn-all" },
         min: -1,
         last: () => (rec && rec.events.length ? rec.events.length - 1 : null),
-        onChange: () => render(),
+        onChange: () => { render(); followStep(); },
       });
       el("btn-reset").addEventListener("click", () => sim.reset());
       el("btn-back").addEventListener("click", () => sim.prev());
@@ -419,6 +477,10 @@
           sim.go(last);
         })
       );
+      const way = (d) => { if (sel) { const w = witnessOf(sel, alt); alt = (w.alt + d + w.count) % w.count; drawWitness(); } };
+      el("btn-alt-prev").addEventListener("click", () => way(-1));
+      el("btn-alt-next").addEventListener("click", () => way(1));
+      el("wit-all").addEventListener("change", () => { ctgPref.set({ all: el("wit-all").checked }); drawWitness(); });
       el("ff-sets").addEventListener("click", (e) => {
         const m = e.target.closest("[data-set]");
         if (m) selectMember({ kind: m.dataset.set, nt: m.dataset.nt, tok: m.dataset.tok });

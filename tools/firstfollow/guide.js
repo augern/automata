@@ -6,9 +6,10 @@ window.TOOL_GUIDE = {
   use: [
     "The grammar is edited as in the other grammar tools. The first left side is the start symbol.",
     "Sets: one row per nonterminal. Click a member (a token, a ✓ or the ε of FIRST) to see its witness.",
-    "Witness: the path of a derivation as nested triangles, one nonterminal per triangle, joined by the spine. Beside each step stand the strings that the other symbols of the rule derive, on the left and on the right; ε where a symbol vanishes, with the symbols named under the string. The base line reads as a sentence of the language, and the derivation is written under the figure.",
+    "Witness: the path of a derivation as nested triangles, one nonterminal per triangle, joined by the spine. Beside each step stand the strings that the other symbols of the rule derive, on the left and on the right, one column for each symbol, ε where a symbol vanishes, with the symbol named under it. The base line reads as a sentence of the language, and the derivation is written under the figure.",
+    "Several ways: a member often has more than one derivation. When it does, the arrows next to the statement step through them, the shortest first. Whole set shows the shortest witness of every member of the selected set side by side, on one base line: FIRST(A) as the row of what can be seen at the left foot of A.",
     "FIRST(A) ∋ t: the arrow runs along the base line from the left foot of A to the first token that is not ε, which is t. FOLLOW(B) ∋ t: the arrow runs from the right foot of B to the next token that is not ε; its first token, t, is in bold. $ stands after the whole string.",
-    "Construction, the collapsed panel on the right, finds the sets one rule at a time: nullable symbols, then FIRST, then FOLLOW, round by round until a round adds nothing. Restart empties the sets; the witness stays.",
+    "Construction, the collapsed panel on the right, finds the sets one rule at a time: nullable symbols, then FIRST, then FOLLOW, round by round until a round adds nothing. Each step that adds a member shows that member's witness. Restart empties the sets.",
     "The box under the sets gives FIRST and nullability of any string of symbols, from the finished sets.",
     "Pointing at a member of a set, or at a row of the construction, marks the production in the grammar.",
   ],
