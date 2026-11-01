@@ -163,12 +163,6 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       if (sp.mark.label) make("text", { x: cx + 8, y: my + 8 }, m, sp.mark.label);
     }
   }
-  for (const a of lay.arrows || []) { // from a node's foot to a token, along the base line
-    const dir = a.side === "right" ? 1 : -1, tip = a.x1 - dir * 2;
-    const g = make("g", { class: "ctg-arrow" + kindCls(a.kind) }, svg);
-    make("line", { x1: a.x0, x2: tip - dir * 5, y1: a.y, y2: a.y }, g);
-    make("path", { d: `M${tip},${a.y} L${tip - dir * 7},${a.y - 4} L${tip - dir * 7},${a.y + 4} Z` }, g);
-  }
   const nodeH = 22;
   for (const j of lay.jags) {
     const a = lay.nodes[j.from], b = lay.nodes[j.to];

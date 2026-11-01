@@ -196,9 +196,9 @@ function ffwFollow(g, rec, B, t, alt = 0) {
 // ffwSpec(w) -> the spec of ctgSpineLayout for a witness of ffwFirst, ffwFollow or ffwNullable.
 // The spine is the path of the derivation to the member; what stands beside the path at each step is a string on each side, the
 // shortest strings that the other symbols of the rule derive (ε for the ones that vanish), the symbols named under them.
-//   FIRST(A) ∋ t    the path from A down to the rule that has t; t is the last node. An arrow runs from the left foot of A to t.
+//   FIRST(A) ∋ t    the path from A down to the rule that has t; t is the last node.
 //   FOLLOW(B) ∋ t   the path from the start symbol down to B, whose string is the bottom. The first string on its right that
-//                   is not ε starts with t (marked); an arrow runs from the right foot of B to it. $ stands after the whole string.
+//                   is not ε starts with t (marked) $ stands after the whole string.
 //   nullable A      A as a bare node over the symbols of its rule, each a node with a small triangle over its ε: a straight edge
 //                   down for a symbol with an empty rule, a jagged one for a symbol that derives ε through others.
 const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [x.text] : x.kids.flatMap(ffwTokens));
@@ -224,7 +224,7 @@ function ffwCompact(spec) {
   const kept = spec.nodes.map((_, k) => k).filter((k) => k === 0 || k === n - 1 || !(bare(spec.levels[k - 1]) && bare(spec.levels[k])));
   const nodes = kept.map((k, i) => (i && k - kept[i - 1] > 1 ? { ...spec.nodes[k], jag: true } : spec.nodes[k]));
   const levels = kept.slice(1).map((k, i) => (k - kept[i] > 1 ? { left: null, right: null } : spec.levels[kept[i]]));
-  return { ...spec, nodes, levels, arrows: (spec.arrows || []).map((a) => ({ ...a, fromNode: kept.indexOf(a.fromNode) })) };
+  return { ...spec, nodes, levels };
 }
 
 function ffwFigure(w, opts = {}) {
@@ -251,7 +251,7 @@ function ffwFigure(w, opts = {}) {
     levels.push(level(last, at));
     const specNodes = nodes.map((n, k) => nodeOf(n, k, "focus"));
     specNodes.push({ sym: w.token, jag: false, kind: "first", colour: "var(--accent)", tone: 1, cls: "" });
-    return ffwCompact(spec(specNodes, levels, { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } }, { arrows: [{ fromNode: 0, side: "left", toId: "t" }] }));
+    return ffwCompact(spec(specNodes, levels, { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } }));
   }
 
   if (w.kind === "follow") {
@@ -274,7 +274,7 @@ function ffwFigure(w, opts = {}) {
     const specNodes = nodes.map((n, k) => ({ sym: n.sym, jag: false, kind: k === m ? "focus" : "", cls: "" }));
     // the symbol derives its string in more than one rule step: a jagged line down to it
     const bottom = !toks.length ? { text: "ε", label: "" } : { text: opts.samples ? toks.join(" ") : "…", label: "", cls: "is-dim", tip: "e.g. " + toks.join(" ") };
-    return ffwCompact(spec(specNodes, levels, bottom, { outer, terminus: !w.oneStep, arrows: [{ fromNode: m, side: "right", toId: "t" }] }));
+    return ffwCompact(spec(specNodes, levels, bottom, { outer, terminus: !w.oneStep }));
   }
 
   // nullable: the root's rule: each of its symbols is a node of its own with a small triangle over its ε, the root bare. A symbol with an
@@ -307,7 +307,6 @@ function ffwTheory(kind) {
       nodes: [node("A", { kind: "focus" }), node("a", { kind: "first", colour: "var(--accent)", tone: 1 })],
       levels: [{ left: [cell("ε", "X₁ … Xᵢ")], right: [cell("…", "β", { cls: "is-dim" })] }],
       bottom: cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }),
-      arrows: [{ fromNode: 0, side: "left", toId: "t" }],
     };
   }
   if (kind === "follow") {
@@ -319,7 +318,6 @@ function ffwTheory(kind) {
       ],
       bottom: cell("…", "x", { cls: "is-dim" }),
       terminus: true, // B derives x in as many steps as it needs
-      arrows: [{ fromNode: 2, side: "right", toId: "t" }],
     };
   }
   // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in

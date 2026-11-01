@@ -108,7 +108,6 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //                                                                     on a side is that many steps tall, the other side padded)
 //           bottom: flank,                                            what the last node derives
 //           outer?: { left, right },                                  strings outside the top triangle
-//           arrows?: [{ fromNode, side: "left" | "right", toId }],   a scan arrow from the foot of a node to the token with that id
 //           caption?: string,                                         a line of text above the figure
 //           span?: { label?, mark? },                                 a staple under the whole base line, with a pointer below it (free layout)
 //           terminus?: boolean }                                      a jagged line from the last node down to its string: what it derives
@@ -117,14 +116,14 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //     the last node (the symbols of a rule, each deriving its string); the layout has these as subs, and the last node's own triangle is
 //     marked hidden, since the triangles of its children cover all of it (free layout only)
 //     flank: { text, id?, head?, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
-//       head: the leading part of the text that is emphasised; id: what an arrow points at
+//       head: the leading part of the text that is emphasised; id: what a test or a caller looks the token up by
 //       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
 //       mark: { kind, label } is a pointer under the token
 //     colour is a CSS colour for the triangle of the node, tone how much of it (default: a grey in two shades that alternate down
 //     the spine; colour "" is the page's own grey)
 //   opts: depth (the base line is where a spine of that many nodes would have it, default: the spine's own), colWidth and
 //         minWidth (at least that wide), and the constants below
-//   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags, arrows }
+//   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags }
 //      footL and footR are where the legs of a node's triangle meet the base line
 function ctgSpineTiled(spec, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, ...opts };
@@ -168,16 +167,8 @@ function ctgSpineTiled(spec, opts = {}) {
   // a pointer's label runs to the right of its token: make room for it, on both sides so that the spine stays in the middle
   const reach = Math.max(0, ...tokens.filter((t) => t.mark && t.mark.label).map((t) => t.x + t.w / 2 + 8 + t.mark.label.length * 6.4 + o.marginX - width));
   if (reach > 0 && !o.widened) return ctgSpineTiled(spec, { ...opts, minWidth: width + 2 * reach, widened: true });
-  // a scan arrow runs along the base line from the foot of a node to a token, over the columns between
-  const arrows = [];
-  for (const a of spec.arrows || []) {
-    const to = tokens.find((t) => t.id === a.toId);
-    if (!to) continue;
-    const right = a.side === "right";
-    arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
-  }
   const ends = spec.terminus ? [{ x: cx, y0: nodes[m].y + 11, y1: B - 4 }] : [];
-  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows, ends, caption: spec.caption || "" };
+  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, ends, caption: spec.caption || "" };
 }
 
 // The spine figure with a column for each cell of its own width. Nothing needs to be similar: the triangles all have their apex on the
@@ -243,15 +234,8 @@ function ctgSpineFree(spec, opts = {}) {
     const w = wOf(f), centre = cx + x0 + w / 2;
     subs.push({ sym: f.node.sym, x: centre, y: subApex + 6, x0: cx + x0, x1: cx + x0 + w, apex: centre, ay: subApex, base: B, jag: !!f.node.jag, kind: f.node.kind || "", cls: f.node.cls || "", share: otherShade });
   }
-  const arrows = [];
-  for (const a of spec.arrows || []) {
-    const to = tokens.find((t) => t.id === a.toId);
-    if (!to) continue;
-    const right = a.side === "right";
-    arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
-  }
   const span = spec.span && tokens.length ? { x0: base[0].x0, x1: base[0].x1, y: B, label: spec.span.label || "", mark: spec.span.mark || null } : null;
-  return { width, height: B + 56 + (tokens.some((t) => t.mark) || (span && span.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, subs, ends, span, caption: spec.caption || "" };
+  return { width, height: B + 56 + (tokens.some((t) => t.mark) || (span && span.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, subs, ends, span, caption: spec.caption || "" };
 }
 
 // The spine figure: with opts.tile the tiled one (one apex angle, equal columns: the pumping figures), else a column for each

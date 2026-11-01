@@ -299,12 +299,11 @@ test("free spine layout: much narrower than the tiled one when the strings diffe
   assert.ok(free.height < tiled.height);
 });
 
-test("free spine layout: outer strings, arrows, pointers, minimum width and depth", () => {
-  const spec = { nodes: [{ sym: "A" }, { sym: "B" }], levels: [{ left: flank("l"), right: flank("m", { id: "t", kind: "follow", mark: { kind: "follow", label: "a rather long pointer label" } }) }], bottom: flank("x"), outer: { left: flank("ε"), right: flank("$") }, arrows: [{ fromNode: 1, side: "right", toId: "t" }] };
+test("free spine layout: outer strings, pointers, minimum width and depth", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B" }], levels: [{ left: flank("l"), right: flank("m", { id: "t", kind: "follow", mark: { kind: "follow", label: "a rather long pointer label" } }) }], bottom: flank("x"), outer: { left: flank("ε"), right: flank("$") } };
   const lay = A.ctgSpineLayout(spec);
   assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["ε", "l", "x", "m", "$"]);
   assert.ok(lay.tokens[0].x + lay.tokens[0].w <= lay.nodes[0].footL + 1e-9 && lay.tokens[4].x >= lay.nodes[0].footR - 1e-9, "outside the top triangle");
-  assert.ok(Math.abs(lay.arrows[0].x0 - lay.nodes[1].footR) < 1e-9 && Math.abs(lay.arrows[0].x1 - lay.tokens[3].x) < 1e-9);
   const m = lay.tokens[3];
   assert.ok(m.x + m.w / 2 + 8 + "a rather long pointer label".length * 6.4 <= lay.width, "the pointer label fits");
   assert.equal(lay.height, A.ctgSpineLayout({ ...spec, levels: [{ left: flank("l"), right: flank("m") }] }).height + 30, "room for the pointer");

@@ -136,7 +136,6 @@ function checkSpecs(g, label) {
         assert.equal(seen.id, "t");
         assert.equal(seen.kind, "first");
         assert.equal(spec.nodes[0].sym, nt);
-        assert.ok(lay.arrows.length === 1 && lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9, `${where}: from the left foot`);
       });
     }
     for (const t of rec.follow[nt]) {
@@ -148,8 +147,6 @@ function checkSpecs(g, label) {
         assert.equal(after[0].id, "t", `${where}: the next token`);
         assert.ok(t === "$" ? after[0].text === "$" : after[0].text.split(" ")[0] === t, `${where}: ${after[0].text}`);
         assert.equal(after[0].kind, "follow");
-        const arrow = lay.arrows[0];
-        assert.ok(arrow.side === "right" && Math.abs(arrow.x0 - lay.nodes[lay.nodes.length - 1].footR) < 1e-9, `${where}: from the right foot of the symbol`);
         assert.ok(spec.nodes[spec.nodes.length - 1].sym === nt, `${where}: the path ends at the symbol`);
       });
     }
@@ -215,14 +212,12 @@ test("the general case: a figure for nullable, FIRST and FOLLOW that reads as th
     assert.ok(Number.isFinite(lay.width) && Number.isFinite(lay.height), kind);
     if (kind === "first") {
       assert.equal(lay.tokens.find((t) => !t.eps).text, "a", "the first token seen from the left");
-      assert.ok(lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9);
     }
     if (kind === "follow") {
       const bottom = lay.tokens.find((t) => Math.abs(t.x + t.w / 2 - lay.cx) < 1e-6);
       const next = lay.tokens.filter((t) => t.x > bottom.x && !t.eps)[0];
       assert.equal(next.id, "t");
       assert.equal(next.text.split(" ")[0], "a", "what follows B starts with a");
-      assert.ok(Math.abs(lay.arrows[0].x0 - lay.nodes[2].footR) < 1e-9, "from the right foot of B");
     }
   }
 });
@@ -322,5 +317,4 @@ test("unit-rule chains are one jagged edge", () => {
   const spec = A.ffwSpec(A.ffwFirst(g, A.ffRecord(g), "S", "a", 0));
   assert.deepEqual(js(spec.nodes.map((n) => [n.sym, n.jag])), [["S", false], ["a", true]]);
   assert.equal(spec.levels.length, 1);
-  assert.equal(spec.arrows[0].fromNode, 0);
 });

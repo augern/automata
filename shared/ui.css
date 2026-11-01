@@ -848,10 +848,5 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ctg-snode.ctg-k-focus rect { stroke: var(--amber); stroke-width: 2.2; }
 .ctg-head { font-weight: 700; }
 .ctg-head.ctg-k-first { fill: var(--accent); } .ctg-head.ctg-k-follow { fill: var(--green); } .ctg-head.ctg-k-focus { fill: var(--amber); }
-.ctg-arrow line { stroke-width: 1.8; stroke-dasharray: 5 3; }
-.ctg-arrow line, .ctg-arrow path { stroke: var(--text-dim); }
-.ctg-arrow path { fill: var(--text-dim); }
-.ctg-arrow.ctg-k-first line, .ctg-arrow.ctg-k-first path { stroke: var(--accent); } .ctg-arrow.ctg-k-first path { fill: var(--accent); }
-.ctg-arrow.ctg-k-follow line, .ctg-arrow.ctg-k-follow path { stroke: var(--green); } .ctg-arrow.ctg-k-follow path { fill: var(--green); }
 .ctg-tok.is-dim, .ctg-rest { opacity: 0.45; }
 .ctg-caption { fill: var(--text-dim); font-family: var(--font-serif); font-size: var(--fs-xs); font-style: italic; }
