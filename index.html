@@ -124,12 +124,12 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
 <section id="view-map" aria-label="Map of the tools">
 <svg id="map" viewBox="0 0 700 490" role="group" aria-label="The tools placed on the Chomsky hierarchy">
   <!-- Rings, outermost first. Solid: Chomsky's classes; dashed: subclasses of the context-free languages. -->
-  <rect class="ring ring-0" data-ring="re" x="10" y="10" width="680" height="470" rx="64"/>
-  <rect class="ring ring-1" data-ring="cs" x="38" y="66" width="624" height="398" rx="54"/>
-  <rect class="ring ring-2" data-ring="cf" x="66" y="122" width="568" height="326" rx="46"/>
-  <rect class="ring ring-3 ring-sub" data-ring="dcf" x="94" y="178" width="512" height="254" rx="38"/>
-  <rect class="ring ring-4 ring-sub" data-ring="ll1" x="122" y="234" width="456" height="182" rx="30"/>
-  <rect class="ring ring-5" data-ring="reg" x="150" y="290" width="400" height="110" rx="22"/>
+  <path class="ring ring-0" data-ring="re" d="M50,10 H650 A40,40 0 0 1 690,50 V370 A110,110 0 0 1 580,480 H120 A110,110 0 0 1 10,370 V50 A40,40 0 0 1 50,10 Z"/>
+  <path class="ring ring-1" data-ring="cs" d="M72,66 H628 A34,34 0 0 1 662,100 V374 A90,90 0 0 1 572,464 H128 A90,90 0 0 1 38,374 V100 A34,34 0 0 1 72,66 Z"/>
+  <path class="ring ring-2" data-ring="cf" d="M94,122 H606 A28,28 0 0 1 634,150 V378 A70,70 0 0 1 564,448 H136 A70,70 0 0 1 66,378 V150 A28,28 0 0 1 94,122 Z"/>
+  <path class="ring ring-3 ring-sub" data-ring="dcf" d="M116,178 H584 A22,22 0 0 1 606,200 V382 A50,50 0 0 1 556,432 H144 A50,50 0 0 1 94,382 V200 A22,22 0 0 1 116,178 Z"/>
+  <path class="ring ring-4 ring-sub" data-ring="ll1" d="M138,234 H562 A16,16 0 0 1 578,250 V384 A32,32 0 0 1 546,416 H154 A32,32 0 0 1 122,384 V250 A16,16 0 0 1 138,234 Z"/>
+  <path class="ring ring-5" data-ring="reg" d="M162,290 H538 A12,12 0 0 1 550,302 V386 A14,14 0 0 1 536,400 H164 A14,14 0 0 1 150,386 V302 A12,12 0 0 1 162,290 Z"/>
 
   <!-- Ring names; hover a ring for its Chomsky type, what accepts it, and an example language -->
   <text x="40" y="44" class="ring-name">Recursively enumerable</text>
