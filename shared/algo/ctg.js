@@ -96,7 +96,7 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 
 // ── The spine figure ──────────────────────────────────────────────────────────────────────────────────────────
 // A path of nonterminals from the top down, drawn as nested triangles on one base line with a vertical spine of nodes at their
-// apexes. Between two neighbouring triangles the legs enclose one strip on each side; a strip is one column of the base line
+// apexes (ctgSpineLayout: a column for each cell of its own width; with opts.tile, the tiled figure described next). Between two neighbouring triangles the legs enclose one strip on each side; a strip is one column of the base line
 // and holds the string that the symbols on that side derive. All triangles have the same apex angle and the columns are equally
 // wide (as wide as the widest string), so the triangles tile. The string reads left to right along the base: the strips of the
 // outer levels first, then the bottom, then the strips on the right from the innermost level out.
@@ -117,7 +117,7 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //         minWidth (at least that wide), and the constants below
 //   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags, arrows }
 //      footL and footR are where the legs of a node's triangle meet the base line
-function ctgSpineLayout(spec, opts = {}) {
+function ctgSpineTiled(spec, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, ...opts };
   const m = spec.nodes.length - 1;
   const cells = (f) => (f ? (Array.isArray(f) ? f : [f]) : []); // a strip is one flank or several, one column each
@@ -158,7 +158,7 @@ function ctgSpineLayout(spec, opts = {}) {
   const pointers = tokens.some((t) => t.mark) ? 30 : 0;
   // a pointer's label runs to the right of its token: make room for it, on both sides so that the spine stays in the middle
   const reach = Math.max(0, ...tokens.filter((t) => t.mark && t.mark.label).map((t) => t.x + t.w / 2 + 8 + t.mark.label.length * 6.4 + o.marginX - width));
-  if (reach > 0 && !o.widened) return ctgSpineLayout(spec, { ...opts, minWidth: width + 2 * reach, widened: true });
+  if (reach > 0 && !o.widened) return ctgSpineTiled(spec, { ...opts, minWidth: width + 2 * reach, widened: true });
   // a scan arrow runs along the base line from the foot of a node to a token, over the columns between
   const arrows = [];
   for (const a of spec.arrows || []) {
@@ -169,6 +169,65 @@ function ctgSpineLayout(spec, opts = {}) {
   }
   return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows };
 }
+
+// The spine figure with a column for each cell of its own width. Nothing needs to be similar: the triangles all have their apex on the
+// spine and their feet where the strips on each side end, so the nested ones always lie inside the outer ones whatever the widths; a
+// level is one fixed step tall however many cells it has, and the two sides of a level need not be equally wide. Much narrower than
+// the tiled figure when the strings differ in length. Options: step, baseH, minCol (the narrowest column), minWidth, depth.
+function ctgSpineFree(spec, opts = {}) {
+  const o = { charW: 9, tokPad: 6, minCol: 26, gapMin: 14, step: 58, baseH: 42, topPad: 26, marginX: 22, ...opts };
+  const m = spec.nodes.length - 1;
+  const cells = (f) => (f ? (Array.isArray(f) ? f : [f]) : []);
+  const wOf = (f) => Math.max(o.minCol, Math.max(1, f.text.length) * o.charW + 2 * o.tokPad);
+  const apexAt = (k) => o.topPad + 11 + k * o.step;
+  const B = apexAt(Math.max(m, o.depth || 0)) + o.baseH;
+  // x relative to the spine; the bottom is centred on it
+  const bottom = cells(spec.bottom), wb = Math.max(o.minCol, bottom.reduce((n, f) => n + wOf(f), 0));
+  const footL = new Array(m + 1), footR = new Array(m + 1);
+  footL[m] = -wb / 2;
+  footR[m] = wb / 2;
+  const put = [];
+  let x = -wb / 2;
+  for (const f of bottom) { put.push([f, x]); x += wOf(f); }
+  for (let k = m - 1; k >= 0; k--) {
+    const left = cells(spec.levels[k].left), right = cells(spec.levels[k].right);
+    let xl = footL[k + 1];
+    for (let i = left.length - 1; i >= 0; i--) { xl -= wOf(left[i]); put.push([left[i], xl]); } // the last cell is the nearest
+    footL[k] = left.length ? xl : footL[k + 1] - o.gapMin;
+    let xr = footR[k + 1];
+    for (const f of right) { put.push([f, xr]); xr += wOf(f); }
+    footR[k] = right.length ? xr : footR[k + 1] + o.gapMin;
+  }
+  if (spec.outer) {
+    let xl = footL[0], xr = footR[0];
+    for (let i = cells(spec.outer.left).length - 1; i >= 0; i--) { const f = cells(spec.outer.left)[i]; xl -= wOf(f); put.push([f, xl]); }
+    for (const f of cells(spec.outer.right)) { put.push([f, xr]); xr += wOf(f); }
+  }
+  let minX = Math.min(footL[0], ...put.map(([, x0]) => x0));
+  let maxX = Math.max(footR[0], ...put.map(([f, x0]) => x0 + wOf(f)));
+  // a pointer's label runs to the right of its token
+  for (const [f, x0] of put) if (f.mark && f.mark.label) maxX = Math.max(maxX, x0 + wOf(f) / 2 + 8 + f.mark.label.length * 6.4);
+  let width = maxX - minX + 2 * o.marginX, cx = o.marginX - minX;
+  if (o.minWidth && o.minWidth > width) { cx += (o.minWidth - width) / 2; width = o.minWidth; }
+  const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, x: cx, y: apexAt(k) + 6, cls: n.cls || "", kind: n.kind || "", footL: cx + footL[k], footR: cx + footR[k] }));
+  const tris = spec.nodes.map((n, k) => ({ x0: cx + footL[k], x1: cx + footR[k], apex: cx, ay: apexAt(k), y: B, cls: n.cls || "", colour: n.colour !== undefined ? n.colour : "var(--text-lo)", tone: n.tone !== undefined ? n.tone : 0, share: n.colour !== undefined ? undefined : k % 2 ? 21 : 10 }));
+  const tokens = put.map(([f, x0]) => ({ text: f.text, id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: cx + x0, w: wOf(f), y: B, eps: f.text === CTG_EPS })).sort((a, b) => a.x - b.x);
+  const base = tokens.length ? [{ x0: tokens[0].x, x1: tokens[tokens.length - 1].x + tokens[tokens.length - 1].w, y: B }] : [];
+  const jags = [];
+  for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
+  const arrows = [];
+  for (const a of spec.arrows || []) {
+    const to = tokens.find((t) => t.id === a.toId);
+    if (!to) continue;
+    const right = a.side === "right";
+    arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
+  }
+  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows };
+}
+
+// The spine figure: with opts.tile the tiled one (one apex angle, equal columns: the pumping figures), else a column for each
+// cell of its own width.
+const ctgSpineLayout = (spec, opts = {}) => (opts.tile ? ctgSpineTiled(spec, opts) : ctgSpineFree(spec, opts));
 
 // ── The split figure ──────────────────────────────────────────────────────────────────────────────────────────
 // The pumping figure. The figure for one copy of the middle part (i = 1) is the frame: nested triangles over u v x y z on one
@@ -205,7 +264,7 @@ function ctgSplitLayout(fig, opts = {}) {
     nodes.forEach((n, k) => { if (k) n.jag = jag(k); });
     for (let k = 0; k + 1 < nodes.length; k++) levels.push(!fig.rootIsUp && k === 0 ? { left: flank("u"), right: flank("z") } : { left: flank("v"), right: flank("y") });
     const spec = { nodes, levels, bottom: flank("x"), outer: fig.rootIsUp ? { left: flank("u"), right: flank("z") } : null };
-    return ctgSpineLayout(spec, { ...o, colWidth: c, depth: first + Math.max(i, 1), minWidth: Math.max(o.minWidth || 0, 2 * o.marginX + 5 * c) });
+    return ctgSpineTiled(spec, { ...o, colWidth: c, depth: first + Math.max(i, 1), minWidth: Math.max(o.minWidth || 0, 2 * o.marginX + 5 * c) });
   }
   // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
   const step = Math.min(c / o.tan, o.maxStep), tan = c / step, baseH = step / 2;

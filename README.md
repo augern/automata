@@ -72,7 +72,7 @@ parser-tools/
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping
 │   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
 │   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations
-│   │   ├── ctg.js                      ← pure: layout of the Christmas-tree graph: the spine figure (a path of nested triangles with a string on each side, one base line; also the unified pumping figure), the pumping figure with split base lines, and the general nested layout
+│   │   ├── ctg.js                      ← pure: layout of the Christmas-tree graph: the spine figure (a path of nested triangles with a string on each side, one base line: a column of its own width for each string, or with the tiled option equal columns and one apex angle, as the pumping figures need), the pumping figure with split base lines, and the general nested layout
 │   │   ├── ffwitness.js                ← pure: a Christmas-tree graph proving each member of a nullable, FIRST or FOLLOW set (shortest derivations, the path from the start symbol)
 │   │   ├── firstfollow.js              ← pure: nullable, FIRST and FOLLOW as recorded fixpoint iterations, the sets after each step
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step

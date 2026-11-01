@@ -155,6 +155,7 @@ test("ctgTone: the share of the colour grows with the tone and stays a valid per
 
 // FIRST(E) ∋ id for E → T E′, T → F T′, F → id: the path E, T, F with nothing on the left and the rest on the right
 const flank = (text, extra = {}) => ({ text, ...extra });
+const TILE = { tile: true }; // the tiled figure: one angle, equal columns
 const firstSpec = () => ({
   nodes: [{ sym: "E" }, { sym: "T", jag: false }, { sym: "F", jag: false }],
   levels: [{ left: null, right: flank("+ id", { label: "E′" }) }, { left: null, right: flank("ε", { label: "T′" }) }],
@@ -174,7 +175,7 @@ test("spine layout: the string reads along the base, outer levels first on the l
 });
 
 test("spine layout: the triangles share one apex angle and tile, the feet are where the strips begin", () => {
-  const lay = A.ctgSpineLayout(firstSpec());
+  const lay = A.ctgSpineLayout(firstSpec(), TILE);
   const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
   for (const t of lay.tris) assert.ok(Math.abs(slope(t) - slope(lay.tris[0])) < 1e-9);
   for (let k = 0; k + 1 < lay.nodes.length; k++) {
@@ -204,15 +205,15 @@ test("spine layout: connections are jagged where the node says so, outer strings
 });
 
 test("spine layout: depth reserves room, a minimum width centres the figure on the same axis", () => {
-  const deep = A.ctgSpineLayout(firstSpec(), { depth: 5 }), plain = A.ctgSpineLayout(firstSpec());
+  const deep = A.ctgSpineLayout(firstSpec(), { tile: true, depth: 5 }), plain = A.ctgSpineLayout(firstSpec(), TILE);
   assert.ok(deep.B > plain.B && deep.nodes[0].y === plain.nodes[0].y);
-  const wide = A.ctgSpineLayout(firstSpec(), { minWidth: 800 });
+  const wide = A.ctgSpineLayout(firstSpec(), { tile: true, minWidth: 800 });
   assert.equal(wide.width, 800);
   assert.equal(wide.cx, 400);
 });
 
 test("spine layout: a long string makes the triangles flatter, not taller", () => {
-  const long = A.ctgSpineLayout({ ...firstSpec(), bottom: flank("a very long string indeed") });
+  const long = A.ctgSpineLayout({ ...firstSpec(), bottom: flank("a very long string indeed") }, TILE);
   assert.ok(long.step <= 104 + 1e-9);
   const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
   for (const t of long.tris) assert.ok(Math.abs(slope(t) - slope(long.tris[0])) < 1e-9);
@@ -224,12 +225,12 @@ test("spine layout: a side with several cells has a column for each, nearest the
     levels: [{ left: [flank("a"), flank("ε")], right: [flank("b"), flank("ε"), flank("d")] }],
     bottom: flank("x"),
   };
-  const lay = A.ctgSpineLayout(spec);
+  const lay = A.ctgSpineLayout(spec, TILE);
   assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["a", "ε", "x", "b", "ε", "d"]);
   const x = lay.tokens[2];
   assert.ok(Math.abs(lay.tokens[1].x + lay.tokens[1].w - x.x) < 1e-9, "the last cell on the left touches the bottom");
   assert.ok(Math.abs(lay.tokens[3].x - (x.x + x.w)) < 1e-9, "the first cell on the right touches it too");
-  const single = A.ctgSpineLayout({ ...spec, levels: [{ left: flank("a"), right: flank("b") }] });
+  const single = A.ctgSpineLayout({ ...spec, levels: [{ left: flank("a"), right: flank("b") }] }, TILE);
   assert.ok(Math.abs((lay.nodes[1].y - lay.nodes[0].y) - 3 * (single.nodes[1].y - single.nodes[0].y)) < 1e-9, "three columns: three steps");
   // the triangles still tile: one angle, and the strip beside the legs is as wide as the columns it holds
   const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
@@ -239,7 +240,7 @@ test("spine layout: a side with several cells has a column for each, nearest the
 
 test("spine layout: the shorter side of a level is padded on its outer end", () => {
   const spec = { nodes: [{ sym: "S" }, { sym: "A" }], levels: [{ left: flank("a"), right: [flank("b"), flank("c")] }], bottom: flank("x") };
-  const lay = A.ctgSpineLayout(spec);
+  const lay = A.ctgSpineLayout(spec, TILE);
   assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["a", "x", "b", "c"]);
   assert.ok(Math.abs(lay.tokens[1].x - (lay.tokens[0].x + lay.tokens[0].w)) < 1e-9, "the one cell on the left is next to the bottom");
   assert.ok(lay.tokens[0].x - lay.nodes[0].footL >= lay.c - 1e-9, "a blank column outside it");
@@ -247,11 +248,11 @@ test("spine layout: the shorter side of a level is padded on its outer end", () 
 
 test("spine layout: the label of a pointer fits inside the figure, which is widened on both sides to keep the spine in the middle", () => {
   const spec = { nodes: [{ sym: "S" }, { sym: "A" }], levels: [{ left: null, right: flank("ε") }], bottom: flank("d", { mark: { kind: "follow", label: "d ∈ FOLLOW(A) and a long label" } }) };
-  const lay = A.ctgSpineLayout(spec);
+  const lay = A.ctgSpineLayout(spec, TILE);
   const d = lay.tokens.find((t) => t.text === "d");
   assert.ok(d.x + d.w / 2 + 8 + "d ∈ FOLLOW(A) and a long label".length * 6.4 <= lay.width, "the label ends inside");
   assert.ok(Math.abs(lay.cx - lay.width / 2) < 1e-9);
-  const plain = A.ctgSpineLayout({ ...spec, bottom: flank("d") });
+  const plain = A.ctgSpineLayout({ ...spec, bottom: flank("d") }, TILE);
   assert.ok(lay.width > plain.width);
 });
 
@@ -260,4 +261,56 @@ test("spine layout: triangles without a colour alternate two shades; a colour gi
   const lay = A.ctgSpineLayout(spec);
   assert.deepEqual(js(lay.tris.slice(0, 4).map((t) => [t.colour, t.share])), [["var(--text-lo)", 10], ["var(--text-lo)", 21], ["var(--text-lo)", 10], ["var(--text-lo)", 21]]);
   assert.deepEqual(js([lay.tris[4].colour, lay.tris[4].tone, lay.tris[4].share, lay.tris[5].colour]), ["var(--accent)", 1, null, ""]); // JSON turns undefined into null
+});
+
+test("free spine layout: each column has the width of its own text, no padding columns, the two sides of a level independent", () => {
+  const spec = { nodes: [{ sym: "S" }, { sym: "A" }], levels: [{ left: flank("a"), right: [flank("b"), flank("a rather long string"), flank("ε")] }], bottom: flank("x") };
+  const lay = A.ctgSpineLayout(spec);
+  assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["a", "x", "b", "a rather long string", "ε"]);
+  const w = (text) => lay.tokens.find((t) => t.text === text).w;
+  assert.ok(w("a rather long string") > 3 * w("b"), "a long string has a wide column of its own");
+  assert.equal(w("ε"), w("b"), "short ones the narrowest column");
+  for (let k = 1; k < lay.tokens.length; k++) assert.ok(Math.abs(lay.tokens[k].x - (lay.tokens[k - 1].x + lay.tokens[k - 1].w)) < 1e-9, "the columns touch, none is blank");
+  const x = lay.tokens[1];
+  assert.ok(Math.abs(x.x + x.w / 2 - lay.cx) < 1e-9, "the bottom is on the spine");
+  assert.ok(lay.nodes[0].footR - lay.nodes[1].footR > 3 * (lay.nodes[1].footL - lay.nodes[0].footL), "the right strip is much wider than the left");
+});
+
+test("free spine layout: the nested triangles lie inside the outer ones, every level is one step", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B" }, { sym: "C" }, { sym: "D" }], levels: [{ left: [flank("long left string")], right: null }, { left: null, right: [flank("r"), flank("another long one")] }, { left: [flank("l1"), flank("l2")], right: [flank("r")] }], bottom: flank("wide bottom") };
+  const lay = A.ctgSpineLayout(spec);
+  lay.tris.forEach((t, k) => {
+    if (!k) return;
+    const o = lay.tris[k - 1];
+    assert.ok(t.x0 > o.x0 && t.x1 < o.x1, `triangle ${k} is narrower on both sides`);
+    assert.ok(t.ay > o.ay && t.apex === o.apex, "its apex is lower, on the same spine");
+    // the apex and both feet of the inner one are inside the outer one: at its apex height the outer triangle spans the spine
+    const at = (side, y) => (side < 0 ? o.apex + (o.x0 - o.apex) * ((y - o.ay) / (o.y - o.ay)) : o.apex + (o.x1 - o.apex) * ((y - o.ay) / (o.y - o.ay)));
+    assert.ok(at(-1, t.ay) < t.apex && t.apex < at(1, t.ay));
+  });
+  const steps = lay.nodes.slice(1).map((n, k) => n.y - lay.nodes[k].y);
+  assert.ok(steps.every((d) => Math.abs(d - steps[0]) < 1e-9), "the same step at every level, however many cells it has");
+});
+
+test("free spine layout: much narrower than the tiled one when the strings differ in length", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B" }, { sym: "C" }], levels: [{ left: null, right: [flank("ε"), flank("ε"), flank("ε")] }, { left: null, right: [flank("a long phrase of tokens"), flank("ε")] }], bottom: flank("x") };
+  const free = A.ctgSpineLayout(spec), tiled = A.ctgSpineLayout(spec, TILE);
+  assert.ok(free.width * 2 < tiled.width, `${free.width} against ${tiled.width}`);
+  assert.ok(free.height < tiled.height);
+});
+
+test("free spine layout: outer strings, arrows, pointers, minimum width and depth", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B" }], levels: [{ left: flank("l"), right: flank("m", { id: "t", kind: "follow", mark: { kind: "follow", label: "a rather long pointer label" } }) }], bottom: flank("x"), outer: { left: flank("ε"), right: flank("$") }, arrows: [{ fromNode: 1, side: "right", toId: "t" }] };
+  const lay = A.ctgSpineLayout(spec);
+  assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["ε", "l", "x", "m", "$"]);
+  assert.ok(lay.tokens[0].x + lay.tokens[0].w <= lay.nodes[0].footL + 1e-9 && lay.tokens[4].x >= lay.nodes[0].footR - 1e-9, "outside the top triangle");
+  assert.ok(Math.abs(lay.arrows[0].x0 - lay.nodes[1].footR) < 1e-9 && Math.abs(lay.arrows[0].x1 - lay.tokens[3].x) < 1e-9);
+  const m = lay.tokens[3];
+  assert.ok(m.x + m.w / 2 + 8 + "a rather long pointer label".length * 6.4 <= lay.width, "the pointer label fits");
+  assert.equal(lay.height, A.ctgSpineLayout({ ...spec, levels: [{ left: flank("l"), right: flank("m") }] }).height + 30, "room for the pointer");
+  const wide = A.ctgSpineLayout(spec, { minWidth: lay.width + 300 });
+  assert.equal(wide.width, lay.width + 300);
+  assert.ok(Math.abs(wide.cx - (lay.cx + 150)) < 1e-9, "centred in the extra width");
+  const deep = A.ctgSpineLayout(spec, { depth: 4 });
+  assert.ok(deep.B > lay.B && deep.nodes[0].y === lay.nodes[0].y);
 });
