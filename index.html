@@ -55,11 +55,12 @@ body[data-view="list"] #view-map { display: none; }
 .pill { cursor: pointer; }
 .ring-name { pointer-events: none; }
 
-/* Prerequisite arrows, drawn from TOOLS; only those at a hovered or focused tool show, dashed where the need is a soft one */
-.flow path { fill: none; stroke: var(--accent); stroke-width: 1.4; marker-end: url(#flow-head); opacity: 0; transition: opacity var(--dur) var(--ease); pointer-events: none; }
-.flow path.is-on { opacity: 0.9; }
+/* Prerequisite arrows, drawn from TOOLS: lines start under the needed tool's pill and the heads sit just inside the pill of the tool that builds on it; only those at a hovered or focused tool show, dashed where the need is a soft one */
+.flow path, .flow-heads polygon { opacity: 0; transition: opacity var(--dur) var(--ease); pointer-events: none; }
+.flow path { fill: none; stroke: var(--accent); stroke-width: 1.4; }
+.flow-heads polygon { fill: var(--accent); }
+.flow path.is-on, .flow-heads polygon.is-on { opacity: 0.9; }
 .flow path.is-soft { stroke-dasharray: 4 3; }
-#flow-head path { fill: var(--accent); }
 
 /* Tooltip for rings and tools: fixed, so showing it never moves anything */
 #tip {
@@ -139,7 +140,6 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   <text x="180" y="322" class="ring-name">Regular</text>
 
   <!-- Prerequisite arrows, below the tools -->
-  <defs><marker id="flow-head" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 Z"/></marker></defs>
   <g class="flow"></g>
 
   <!-- Tools: placed by the languages they work with; their text comes from TOOLS below -->
@@ -156,6 +156,7 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="515" y="306" width="169" height="34" rx="17"/><text x="599.5" y="323">Grammar Derivations</text></a>
   <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="482" y="350" width="202" height="34" rx="17"/><text x="583" y="367">Grammar Transformations</text></a>
 
+  <g class="flow-heads"></g>
 </svg>
 <div id="tip" role="tooltip" hidden></div>
 </section>
@@ -279,28 +280,38 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   map.addEventListener("focusin", (e) => { if (tipFor(e.target)) { const r = e.target.getBoundingClientRect(); place(r.left, r.bottom + 8); } });
   map.addEventListener("focusout", () => { tip.hidden = true; });
 
-  // ── Prerequisite arrows: from the edge of a needed tool's pill to the edge of the tool that builds on it, bowed a little ──
-  const flow = map.querySelector(".flow");
+  // ── Prerequisite arrows: a line from the middle of the needed tool's pill (under it) to the edge of the tool that builds on it, bowed a little ──
+  const flow = map.querySelector(".flow"), heads = map.querySelector(".flow-heads");
   const box = (id) => { const r = document.querySelector("#t-" + id + " rect").getBBox(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, hw: r.width / 2, hh: r.height / 2 }; };
-  const edge = (a, b, gap) => { // where the line from a's centre to b's centre leaves a's pill
-    const dx = b.x - a.x, dy = b.y - a.y, k = Math.min(dx ? (a.hw + gap) / Math.abs(dx) : Infinity, dy ? (a.hh + gap) / Math.abs(dy) : Infinity);
+  const edge = (a, b) => { // where the line from a's centre to b's centre leaves a's pill
+    const dx = b.x - a.x, dy = b.y - a.y, k = Math.min(dx ? a.hw / Math.abs(dx) : Infinity, dy ? a.hh / Math.abs(dy) : Infinity);
     return [a.x + dx * k, a.y + dy * k];
   };
+  const svgEl = (tag, attrs) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
   for (const [id, t] of Object.entries(TOOLS)) {
     for (const [needs, soft] of [...(t.after || []).map((n) => [n, false]), ...(t.soft || []).map((n) => [n, true])]) {
-      const a = box(needs), b = box(id), [x0, y0] = edge(a, b, 3), [x1, y1] = edge(b, a, 5);
-      const bow = 0.12, side = Math.sign(b.x - a.x);
-      const next = Math.abs(b.y - a.y) < 10 && Math.abs(b.x - a.x) - a.hw - b.hw < 24; // pills side by side: too close for a line between them, so an arc over the tops
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", next
-        ? `M${a.x + side * a.hw * 0.55},${a.y - a.hh - 2} Q${(a.x + b.x) / 2},${a.y - a.hh - 30} ${b.x - side * b.hw * 0.55},${b.y - b.hh - 5}`
-        : `M${x0},${y0} Q${(x0 + x1) / 2 - (y1 - y0) * bow},${(y0 + y1) / 2 + (x1 - x0) * bow} ${x1},${y1}`);
-      path.dataset.from = needs; path.dataset.to = id;
-      if (soft) path.classList.add("is-soft");
-      flow.appendChild(path);
+      const a = box(needs), b = box(id), side = Math.sign(b.x - a.x);
+      const next = Math.abs(b.y - a.y) < 10 && Math.abs(b.x - a.x) - a.hw - b.hw < 24; // pills side by side: an arc over the tops
+      let p0, p1, c;
+      if (next) {
+        p0 = [a.x + side * a.hw * 0.55, a.y];
+        p1 = [b.x - side * b.hw * 0.55, b.y - b.hh];
+        c = [(a.x + b.x) / 2, a.y - a.hh - 34];
+      } else {
+        p0 = [a.x, a.y];
+        p1 = edge(b, a);
+        c = [(p0[0] + p1[0]) / 2 - (p1[1] - p0[1]) * 0.12, (p0[1] + p1[1]) / 2 + (p1[0] - p0[0]) * 0.12];
+      }
+      const dir = [p1[0] - c[0], p1[1] - c[1]], len = Math.hypot(...dir) || 1, u = [dir[0] / len, dir[1] / len];
+      const tip = [p1[0] + u[0] * 3, p1[1] + u[1] * 3], base = [tip[0] - u[0] * 9, tip[1] - u[1] * 9]; // the head reaches 3px inside the pill
+      const pts = `${tip} ${base[0] - u[1] * 4.5},${base[1] + u[0] * 4.5} ${base[0] + u[1] * 4.5},${base[1] - u[0] * 4.5}`;
+      const line = svgEl("path", { d: `M${p0} Q${c} ${base}` }), head = svgEl("polygon", { points: pts });
+      for (const e of [line, head]) { e.dataset.from = needs; e.dataset.to = id; if (soft) e.classList.add("is-soft"); }
+      flow.appendChild(line);
+      heads.appendChild(head);
     }
   }
-  const lit = (a) => flow.querySelectorAll("path").forEach((p) => p.classList.toggle("is-on", !!a && (a === "t-" + p.dataset.from || a === "t-" + p.dataset.to)));
+  const lit = (a) => map.querySelectorAll(".flow path, .flow-heads polygon").forEach((p) => p.classList.toggle("is-on", !!a && (a === "t-" + p.dataset.from || a === "t-" + p.dataset.to)));
   map.addEventListener("mouseover", (e) => { const a = e.target.closest && e.target.closest(".pill"); lit(a && a.id); });
   map.addEventListener("mouseleave", () => lit(null));
   map.addEventListener("focusin", (e) => { const a = e.target.closest && e.target.closest(".pill"); lit(a && a.id); });
