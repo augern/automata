@@ -75,3 +75,17 @@ test("spine layout: split mode keeps the width whatever the number of segments, 
   const left = joined.flanks.filter((f) => f.side === "left");
   assert.ok(left.every((f, i) => i === 0 || f.x0 >= left[i - 1].x1), "joined: the left pieces read in order and do not overlap");
 });
+
+test("ctgSpineTree: the spine as nested nodes, the string in order, the anchor the lowest node", () => {
+  const part = (p) => ({ text: p, part: p, cls: "pp-" + p });
+  const spec = { nodes: [{ sym: "S" }, { sym: "A" }, { sym: "A" }], segments: [{ left: part("u"), right: part("z"), jag: true }, { left: part("v"), right: part("y"), jag: false }], bottom: part("x") };
+  const t = A.ctgSpineTree(spec);
+  assert.deepEqual(js(t.parts.map((p) => p.part)), ["u", "v", "x", "y", "z"]);
+  assert.equal(t.anchor, "s2");
+  const lay = A.ctgLayout(t.tree, { padStep: 0, minGap: 10, anchor: t.anchor });
+  assert.deepEqual(js(lay.leaves.map((l) => l.text)), ["u", "v", "x", "y", "z"]);
+  const cx = (n) => n.ax;
+  assert.ok(Math.abs(cx(lay.byId.s0) - cx(lay.byId.s2)) < 1e-6 && Math.abs(cx(lay.byId.s1) - cx(lay.byId.s2)) < 1e-6, "the apexes lie on one vertical line");
+  assert.equal(lay.byId.s1.src.jag, true); // reached from S over the first, abstract stretch
+  assert.equal(lay.byId.s2.src.jag, false);
+});

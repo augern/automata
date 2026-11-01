@@ -62,12 +62,13 @@ function drawCTG(host, tree, opts = {}) {
     if (opts.title) make("title", {}, g, opts.title(n, lay));
     if (n.point) {
       make("circle", { class: "ctg-point", cx: n.px, cy: base, r: 3.5 }, g);
-      make("text", { class: "ctg-sym", x: n.px, y: base - n.h, "text-anchor": "middle" }, g, n.sym);
+      if (!opts.spine) make("text", { class: "ctg-sym", x: n.px, y: base - n.h, "text-anchor": "middle" }, g, n.sym);
       continue;
     }
     make("polygon", { class: "ctg-tri", points: `${n.x0},${base} ${n.ax},${base - n.h} ${n.x1},${base}` }, g);
-    make("text", { class: "ctg-sym", x: n.ax, y: base - n.h + 15, "text-anchor": "middle" }, g, n.sym);
+    if (!opts.spine) make("text", { class: "ctg-sym", x: n.ax, y: base - n.h + 15, "text-anchor": "middle" }, g, n.sym);
   }
+  if (opts.spine) drawCTGSpineNodes(svg, lay, base, make);
 
   for (const m of marks) {
     const l = lay.leaves[m.leaf];
@@ -134,4 +135,41 @@ function drawCTGSpine(host, spec, opts = {}) {
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }
   return { svg, layout: lay };
+}
+
+// The nodes of a spine figure over nested triangles: a bubble at each apex, joined to its parent's by a straight or jagged line.
+function drawCTGSpineNodes(svg, lay, base, make) {
+  const nodeH = 22;
+  const at = (n) => (n.point ? { x: n.px, y: base - 30 } : { x: n.ax, y: base - n.h + 6 });
+  for (const n of lay.nodes) {
+    if (!n.parent) continue;
+    const a = at(n.parent), b = at(n);
+    const y0 = a.y + nodeH / 2, y1 = b.y - nodeH / 2;
+    let d = `M${a.x},${y0}`;
+    if (n.src.jag) {
+      const steps = Math.max(2, Math.round((y1 - y0) / 9));
+      for (let i = 1; i < steps; i++) d += ` L${a.x + (b.x - a.x) * (i / steps) + (i % 2 ? 5 : -5)},${y0 + ((y1 - y0) * i) / steps}`;
+    }
+    make("path", { class: "ctg-jag", d: d + ` L${b.x},${y1}` }, svg);
+  }
+  for (const n of lay.nodes) {
+    const p = at(n), w = Math.max(26, String(n.sym).length * 8 + 14);
+    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
+    make("rect", { x: p.x - w / 2, y: p.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
+    make("text", { x: p.x, y: p.y + 4, "text-anchor": "middle" }, g, n.sym);
+  }
+}
+
+// The spine figure over nested triangles ("joined": one base line, the string reads along it) or over separate base lines
+// ("split"). spec as for ctgSpineLayout. Options: mode, scale.
+function drawCTGPath(host, spec, opts = {}) {
+  if (opts.mode === "split") return drawCTGSpine(host, spec, opts);
+  const { tree, parts, anchor } = ctgSpineTree(spec);
+  const spans = parts.map((p, k) => ({ from: k, to: k, label: p.label })).filter((s, k) => s.label && s.label !== ctgLeafText(tree, k));
+  return drawCTG(host, tree, { padStep: 4, minGap: 6, baseH: 46, stepH: 60, anchor, spine: true, spans, scale: opts.scale, title: opts.title });
+}
+function ctgLeafText(tree, k) {
+  const out = [];
+  (function walk(n) { for (const x of n.kids) { if (x.text !== undefined) out.push(x.text); else if (typeof x !== "string") walk(x); } })(tree);
+  return out[k];
 }

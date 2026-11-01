@@ -190,10 +190,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=dc7b905c"></script>
+    <script src="../../shared/algo/ctg.js?v=d615510f"></script>
     <script src="../../shared/algo/pumping.js?v=447a436f"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=1e55afe7"></script>
+    <script src="../../shared/ctg.js?v=b63877ac"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -341,7 +341,7 @@
         if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
-        if (ppView === "path") drawCTGSpine("ctg-host", gen.spine, { mode: ppBase, scale: 1.4 });
+        if (ppView === "path") drawCTGPath("ctg-host", gen.spine, { mode: ppBase, scale: 1.4 });
         else drawCTG("ctg-host", gen.tree, { scale: 1.5 });
       }
 
@@ -558,7 +558,7 @@
         $("ctg-host").innerHTML = "";
         $("ctg-empty").hidden = !!tree;
         if (!tree) { $("ctg-empty").textContent = ppG ? "Enter a string the grammar generates." : ""; return; }
-        drawCTGSpine("ctg-host", pumpSpine(tree, ppSep()), { mode: ppBase, scale: 1.4 });
+        drawCTGPath("ctg-host", pumpSpine(tree, ppSep()), { mode: ppBase, scale: 1.4 });
       }
 
       // The triangles: the paths to the two repeated nonterminals, the rest as the five parts of the string.

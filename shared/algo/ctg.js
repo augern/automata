@@ -11,6 +11,7 @@
 //             x0..x1 is the base, ax the apex x, h the apex height above the base line. point: an empty node with nothing under it
 //             (not even empty children): drawn as a point at px; an empty node with empty children is a triangle over their points.
 //     top     height above the base line that the drawing needs (the tallest apex and its label)
+//   opts.anchor: id of a node; the apexes of it and of its ancestors are put over its centre where the parent allows
 // Triangles nest: a triangle's base is wider than its children's by a margin that grows with its level, and its apex is
 // kept inside the parent triangle, so a child never crosses an edge of its parent.
 
@@ -20,7 +21,7 @@ function ctgLayout(tree, opts = {}) {
   const padOf = (level) => Math.min(o.padStep * level, o.padMax);
 
   function walk(n, parent) {
-    const node = { id: n.id !== undefined ? String(n.id) : "n" + nodes.length, sym: n.sym, kids: [], parent, cls: n.cls || "", level: 0, first: leaves.length, firstItem: items.length };
+    const node = { id: n.id !== undefined ? String(n.id) : "n" + nodes.length, sym: n.sym, src: n, kids: [], parent, cls: n.cls || "", level: 0, first: leaves.length, firstItem: items.length };
     nodes.push(node);
     byId[node.id] = node;
     for (const k of n.kids || []) {
@@ -62,6 +63,12 @@ function ctgLayout(tree, opts = {}) {
   const width = x + endPad[items.length - 1] + o.marginX;
   for (const it of items) if (it.leaf >= 0) { leaves[it.leaf].x = it.x; leaves[it.leaf].w = it.w; }
 
+  // the apexes of the nodes above the anchor node lie over its centre, so the path down to it is a vertical line
+  const anchor = opts.anchor !== undefined ? byId[opts.anchor] : null;
+  const anchorX = anchor ? (items[anchor.firstItem].x + items[anchor.lastItem].x + items[anchor.lastItem].w) / 2 : 0;
+  const above = new Set();
+  for (let a = anchor; a; a = a.parent) above.add(a.id);
+
   // triangles, parents before children
   let top = 0;
   for (const n of nodes) {
@@ -76,7 +83,7 @@ function ctgLayout(tree, opts = {}) {
     n.x0 = items[n.firstItem].x - pad;
     n.x1 = items[n.lastItem].x + items[n.lastItem].w + pad;
     n.h = o.baseH + o.stepH * (n.level - 1);
-    let ax = (n.x0 + n.x1) / 2;
+    let ax = above.has(n.id) ? anchorX : (n.x0 + n.x1) / 2;
     const p = n.parent;
     if (p) {
       const t = n.h / p.h; // the parent's edges at this height
@@ -138,4 +145,23 @@ function ctgSpineLayout(spec, opts = {}) {
   nodes.forEach((n) => { n.x = cx; });
   const bottom = { text: spec.bottom.text || "", part: spec.bottom.part || "", cls: spec.bottom.cls || "", label: spec.bottom.label || "", x0: cx - bw / 2, x1: cx + bw / 2, apex: cx, y0: lastY, y1: base, empty: !spec.bottom.text };
   return { width, height: base + 44, cx, base, nodes, flanks, segs, bottom, nodeH: o.nodeH, mode: o.mode };
+}
+
+// A spine spec (see ctgSpineLayout) as nested triangles: the tree of the path, each node holding the string to its left,
+// the next node and the string to its right. -> { tree, parts, anchor } with the part letter of each token in order and the id
+// of the lowest node; a node reached over an abstract stretch has jag: true.
+function ctgSpineTree(spec) {
+  const parts = [];
+  const tok = (f) => { if (!f || !f.text) return []; parts.push({ part: f.part || "", label: f.label || "" }); return [{ text: f.text, cls: f.cls || "" }]; };
+  const build = (k) => {
+    const n = spec.nodes[k];
+    if (k === spec.nodes.length - 1) return { sym: n.sym, id: "s" + k, cls: n.cls || "", jag: k > 0 && spec.segments[k - 1].jag, kids: tok(spec.bottom) };
+    const seg = spec.segments[k];
+    const left = tok(seg.left); // the order of the parts is the order of the tokens
+    const child = build(k + 1);
+    const right = tok(seg.right);
+    return { sym: n.sym, id: "s" + k, cls: n.cls || "", jag: k > 0 && spec.segments[k - 1].jag, kids: [...left, child, ...right] };
+  };
+  const tree = build(0);
+  return { tree, parts, anchor: "s" + (spec.nodes.length - 1) };
 }
