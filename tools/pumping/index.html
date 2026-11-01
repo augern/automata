@@ -185,10 +185,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=a45be011"></script>
-    <script src="../../shared/algo/pumping.js?v=71f6f32a"></script>
+    <script src="../../shared/algo/ctg.js?v=28d00618"></script>
+    <script src="../../shared/algo/pumping.js?v=c0007c86"></script>
     <script src="../../shared/shared.js?v=2ab85b1b"></script>
-    <script src="../../shared/ctg.js?v=096f418d"></script>
+    <script src="../../shared/ctg.js?v=0b500222"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -601,7 +601,9 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         const pair = tree && ppCF && ppCF.pairs && ppCF.pairs[ppCF.pairIdx];
         if (!pair) { clearFigure(!ppG ? "" : tree ? "No path of this tree repeats a nonterminal with something between the occurrences." : "Enter a string the grammar generates."); return; }
         const hops = { top: pair.up.length, mid: pair.low.length - pair.up.length };
-        const figure = (i) => pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), i, pair.up.length === 0, hops);
+        // the lowest node derives x in one rule step when its children are all leaves; otherwise steps are hidden under it
+        const lowJag = !pumpGet(ppCF.tree, pair.low).children.every((c) => c.leaf);
+        const figure = (i) => pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), i, pair.up.length === 0, hops, lowJag);
         drawFigure(figure(+$("pump-i").value), figure(+$("pump-i").max), figure(Math.min(FIT_COPIES, +$("pump-i").max)));
       }
 

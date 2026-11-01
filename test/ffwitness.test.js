@@ -264,18 +264,36 @@ test("jagged edges: a figure of the general case has them everywhere, a witness 
   }
 });
 
-test("a nullable witness is a path down the derivation, not one tiny triangle", () => {
+test("a nullable witness: the root bare over a node with a small triangle for each symbol of its rule, jagged where it derives ε through others", () => {
   const g = A.parseBNF("S -> A A\nA -> B B\nB -> C C\nC -> c | eps", false);
   const rec = A.ffRecord(g);
   const spec = A.ffwSpec(A.ffwNullable(g, rec, "S"));
-  assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["S", "A", "B", "C"]);
-  assert.deepEqual(js(spec.levels.map((l) => l.right.map((f) => f.text + ":" + f.label))), [["ε:A"], ["ε:B"], ["ε:C"]]);
+  assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["S"], "only the root is on the spine");
+  assert.deepEqual(js(spec.bottom.map((b) => [b.text, b.node.sym, b.node.jag])), [["ε", "A", true], ["ε", "A", true]], "each A derives ε through other symbols");
   assert.equal(spec.statement, "S is nullable: S can derive the empty string");
-  assert.deepEqual(js(spec.forms), ["S", "A A", "B B A", "C C B A", "C B A", "ε"], "the first C is replaced by ε; the rest vanish in the same way");
+  assert.deepEqual(js(spec.forms), ["S", "A A", "ε"]);
   const lay = A.ctgSpineLayout(spec);
-  assert.ok(lay.tokens.length >= 4 && lay.tokens.every((t) => t.eps));
-  const small = A.ctgSpineLayout(A.ffwSpec(A.ffwNullable(g, rec, "C")));
-  assert.ok(lay.height > small.height * 1.8, "much taller than the direct case");
+  assert.equal(lay.tris[0].hidden, true);
+  assert.equal(lay.subs.length, 2);
+  // direct and indirect side by side: B → ε is one step, A → B B is not
+  const g2 = A.parseBNF("S -> A B\nA -> B B\nB -> eps", false);
+  const spec2 = A.ffwSpec(A.ffwNullable(g2, A.ffRecord(g2), "S"));
+  assert.deepEqual(js(spec2.bottom.map((b) => [b.node.sym, b.node.jag])), [["A", true], ["B", false]]);
+  // a symbol with an empty rule of its own: the one triangle over its ε
+  const direct = A.ffwSpec(A.ffwNullable(g2, A.ffRecord(g2), "B"));
+  assert.deepEqual(js([direct.nodes.length, direct.bottom.text, direct.bottom.label]), [1, "ε", "B → ε"]);
+});
+
+test("the line down to the string: jagged where the lowest node derives it in more than one rule step", () => {
+  const g1 = A.parseBNF("S -> A b | c\nA -> a", false);
+  const rec = A.ffRecord(g1);
+  assert.equal(A.ffwSpec(A.ffwFollow(g1, rec, "A", "b")).terminus, false, "A → a: one step");
+  assert.equal(A.ffwSpec(A.ffwFollow(g1, rec, "S", "$")).terminus, false, "S → c: one step");
+  const g2 = A.parseBNF("S -> A b\nA -> B\nB -> a", false);
+  assert.equal(A.ffwSpec(A.ffwFollow(g2, A.ffRecord(g2), "A", "b")).terminus, true, "A → B → a: more than one");
+  assert.ok(A.ctgSpineLayout(A.ffwSpec(A.ffwFollow(g2, A.ffRecord(g2), "A", "b"))).ends.length === 1);
+  assert.equal(A.ctgSpineLayout(A.ffwSpec(A.ffwFollow(g1, rec, "A", "b"))).ends.length, 0);
+  assert.equal(A.ffwTheory("follow").terminus, true, "B derives x in any number of steps");
 });
 
 test("the general case: a string that is not spelled out is a faded … with its name as the label, never the name on the base line", () => {

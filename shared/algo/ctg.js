@@ -109,7 +109,9 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //           bottom: flank,                                            what the last node derives
 //           outer?: { left, right },                                  strings outside the top triangle
 //           arrows?: [{ fromNode, side: "left" | "right", toId }],   a scan arrow from the foot of a node to the token with that id
-//           caption?: string }                                        a line of text above the figure
+//           caption?: string,                                         a line of text above the figure
+//           terminus?: boolean }                                      a jagged line from the last node down to its string: what it derives
+//                                                                     is more than one rule step (see ends in the layout)
 //     a bottom cell may have node: { sym, jag?, kind?, cls? }: it is then a node of its own with a small triangle over its string, under
 //     the last node (the symbols of a rule, each deriving its string); the layout has these as subs, and the last node's own triangle is
 //     marked hidden, since the triangles of its children cover all of it (free layout only)
@@ -173,7 +175,8 @@ function ctgSpineTiled(spec, opts = {}) {
     const right = a.side === "right";
     arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
   }
-  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows, caption: spec.caption || "" };
+  const ends = spec.terminus ? [{ x: cx, y0: nodes[m].y + 11, y1: B - 4 }] : [];
+  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows, ends, caption: spec.caption || "" };
 }
 
 // The spine figure with a column for each cell of its own width. Nothing needs to be similar: the triangles all have their apex on the
@@ -229,6 +232,8 @@ function ctgSpineFree(spec, opts = {}) {
   // to the string is jagged where the node stands for derivations of any length
   // the last node's own triangle is not drawn then: all its extent is in the triangles of its children
   if (withNodes) tris[m].hidden = true;
+  // the line down from the last node to its string, jagged: it stands for a derivation of more than one step (spec.terminus)
+  const ends = spec.terminus && !withNodes ? [{ x: cx, y0: nodes[m].y + 11, y1: B - 4 }] : [];
   const subs = [];
   const subApex = apexAt(m) + 44, otherShade = m % 2 ? 10 : 21;
   for (const [f, x0] of put) {
@@ -243,7 +248,7 @@ function ctgSpineFree(spec, opts = {}) {
     const right = a.side === "right";
     arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
   }
-  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, subs, caption: spec.caption || "" };
+  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, subs, ends, caption: spec.caption || "" };
 }
 
 // The spine figure: with opts.tile the tiled one (one apex angle, equal columns: the pumping figures), else a column for each
@@ -260,9 +265,10 @@ const ctgSpineLayout = (spec, opts = {}) => (opts.tile ? ctgSpineTiled(spec, opt
 // With opts.minWidth the figure is centred in that width (so that figures of different sizes share one axis).
 // With opts.unify every triangle's legs are extended down to the lowest base line and the whole string stands on it: the same
 // figure, extended; the apexes do not move. That figure is a spine figure (ctgSpineLayout) and is made by it.
-//   fig: { root, up, rootIsUp, i, hops?, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
+//   fig: { root, up, rootIsUp, i, hops?, lowJag?, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
 //     hops: { top, mid }: the number of steps from the root to the first copy, and between two copies; a longer path than one
-//     step is drawn jagged (default: all of them)
+//     step is drawn jagged (default: all of them); lowJag: the lowest node derives x in more than one step, so its line down to x
+//     is jagged (default: yes)
 //   -> { width, height, cx, nodes: [{ sym, x, y, cls }], tris: [{ x0, x1, apex, ay, y, cls, tone?, blank? }],
 //        tokens: [{ text, part, cls, x, w, y, label, eps }], base: [{ x0, x1, y }], jags: [{ from, to, jag }] }
 //   tone: 0 for the first copy of the middle part, one more for each further copy; the shade follows it; the root has none
@@ -285,6 +291,7 @@ function ctgSplitLayout(fig, opts = {}) {
     nodes.forEach((n, k) => { if (k) n.jag = jag(k); });
     for (let k = 0; k + 1 < nodes.length; k++) levels.push(!fig.rootIsUp && k === 0 ? { left: flank("u"), right: flank("z") } : { left: flank("v"), right: flank("y") });
     const spec = { nodes, levels, bottom: flank("x"), outer: fig.rootIsUp ? { left: flank("u"), right: flank("z") } : null };
+    spec.terminus = fig.lowJag !== false; // the lowest node derives x in as many steps as it needs, unless the figure says it is one
     return ctgSpineTiled(spec, { ...o, colWidth: c, depth: first + Math.max(i, 1), minWidth: Math.max(o.minWidth || 0, 2 * o.marginX + 5 * c) });
   }
   // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
@@ -326,7 +333,8 @@ function ctgSplitLayout(fig, opts = {}) {
     const fromFrame = !fig.rootIsUp && k === 1;
     jags.push({ from: k - 1, to: k, jag: (fromFrame ? (i === 0 ? hops.top + hops.mid : hops.top) : hops.mid) > 1 });
   }
-  return { width, height: B + 56, cx, nodes, tris, tokens, base, jags };
+  const ends = fig.lowJag !== false ? [{ x: cx, y0: apexY(lowJ) + 6 + 11, y1: lowBase - 4 }] : [];
+  return { width, height: B + 56, cx, nodes, tris, tokens, base, jags, ends };
 }
 
 // A colour (a CSS colour or variable) as a tint on the page background, one step more saturated for each tone, with the steps

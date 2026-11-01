@@ -204,3 +204,14 @@ test("pumpLengthCF: b^(|V|+1) with b the longest right-hand side, at least 2", (
   assert.equal(P.pumpLengthCF(P.rdpParseGrammar("E -> T + E | T\nT -> F * T | F\nF -> ( E ) | a")), 81);
   assert.equal(P.pumpLengthCF(P.rdpParseGrammar("S -> a")), 4, "b is at least 2");
 });
+
+test("pumpSplitFigure and pumpGeneralCF: the line down to x is jagged unless the lowest node is one rule step", () => {
+  const parts = { u: [], v: ["a"], x: [], y: ["b"], z: [] };
+  assert.equal(P.pumpSplitFigure("S", "S", parts, "", 1, false, { top: 1, mid: 1 }).lowJag, true, "by default");
+  assert.equal(P.pumpSplitFigure("S", "S", parts, "", 1, false, { top: 1, mid: 1 }, false).lowJag, false);
+  assert.equal(P.pumpGeneralCF(1).lowJag, true, "A derives x in any number of steps");
+  // a leaf-only subtree is one rule step
+  const tree = P.pumpParseTree(P.rdpParseGrammar("S -> a S b | eps"), ["a", "b"]).tree;
+  const low = P.pumpGet(tree, P.pumpPairs(tree)[0].low);
+  assert.ok(low.children.every((c) => c.leaf), "S → ε is a single step");
+});

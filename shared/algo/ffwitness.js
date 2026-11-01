@@ -29,6 +29,13 @@ function ffwShortest(g) {
   return best;
 }
 
+// Does the shortest string of each nonterminal come from one rule of terminals only (one derivation step)? { A: true | false | undefined }
+function ffwShortestOneStep(g) {
+  const best = ffwShortest(g), out = {};
+  for (const nt of g.nonterminals) out[nt] = !!best[nt] && g.rules.some((r) => r.lhs === nt && r.rhs.every((x) => !g.nonterminals.has(x)) && r.rhs.length === best[nt].length);
+  return out;
+}
+
 function ffwBuilder(g, rec) {
   const shortest = ffwShortest(g);
   const st = ffStateAt(g, rec, rec.events.length - 1);
@@ -182,7 +189,7 @@ function ffwFollow(g, rec, B, t, alt = 0) {
   w.at.id = "target";
   w.at.abstract = true;
   w.at.kids = y ? y.slice() : ["…"];
-  return { kind: "follow", sym: B, token: t, alt: alt % ways.length, count: ways.length, tree: w.root, marks: [{ leafId: t === "$" ? "end" : "t", kind: "follow", label: `${t} ∈ FOLLOW(${B})` }], nodeKinds: { target: "focus" }, endMarker: t === "$", unreachable: !!w.unreachable };
+  return { kind: "follow", sym: B, token: t, alt: alt % ways.length, count: ways.length, oneStep: ffwShortestOneStep(g)[B], tree: w.root, marks: [{ leafId: t === "$" ? "end" : "t", kind: "follow", label: `${t} ∈ FOLLOW(${B})` }], nodeKinds: { target: "focus" }, endMarker: t === "$", unreachable: !!w.unreachable };
 }
 
 // ── The witness as a spine figure (ctgSpineLayout) ─────────────────────────────────────────────────────────────
@@ -192,14 +199,11 @@ function ffwFollow(g, rec, B, t, alt = 0) {
 //   FIRST(A) ∋ t    the path from A down to the rule that has t; t is the last node. An arrow runs from the left foot of A to t.
 //   FOLLOW(B) ∋ t   the path from the start symbol down to B, whose string is the bottom. The first string on its right that
 //                   is not ε starts with t (marked); an arrow runs from the right foot of B to it. $ stands after the whole string.
-//   nullable A      the path from A down through the first symbol of each rule, down to a symbol with an empty rule; every
-//                   string beside it is ε, with the symbols that derive it named under it.
+//   nullable A      A as a bare node over the symbols of its rule, each a node with a small triangle over its ε: a straight edge
+//                   down for a symbol with an empty rule, a jagged one for a symbol that derives ε through others.
 const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [x.text] : x.kids.flatMap(ffwTokens));
 const ffwLabel = (x) => (typeof x === "string" ? x : x.text !== undefined ? x.text : x.sym);
 const ffwHas = (x, id) => typeof x !== "string" && (x.id === id || (x.kids !== undefined && x.kids.some((k) => ffwHas(k, id))));
-
-// nullable: the path goes down through the first symbol of each rule, which is a nonterminal that derives ε in its turn
-const firstSymbol = (n) => n.kids.findIndex((k) => typeof k !== "string" && k.text === undefined);
 
 // the strings beside the path: one cell for each symbol, the tokens it derives (ε if none), the symbol as its label; null for none
 function ffwFlank(sibs) {
@@ -252,16 +256,17 @@ function ffwFigure(w) {
     const target = nodes[m];
     const toks = ffwTokens(target);
     const specNodes = nodes.map((n, k) => ({ sym: n.sym, jag: false, kind: k === m ? "focus" : "", cls: "" }));
-    return spec(specNodes, levels, { text: toks.length ? toks.join(" ") : "ε", label: "" }, { outer, arrows: [{ fromNode: m, side: "right", toId: "t" }] });
+    // the symbol derives its string in more than one rule step: a jagged line down to it
+    return spec(specNodes, levels, { text: toks.length ? toks.join(" ") : "ε", label: "" }, { outer, terminus: !w.oneStep, arrows: [{ fromNode: m, side: "right", toId: "t" }] });
   }
 
-  // nullable: the path goes on through the first symbol that has a rule of its own to apply
-  const nodes = path(firstSymbol);
-  const levels = nodes.slice(0, -1).map((n, k) => level(n, n.kids.findIndex((x) => x === nodes[k + 1])));
-  const last = nodes[nodes.length - 1];
-  // the last node's own symbols all vanish: they are the bottom
-  const bottom = { text: "ε", label: last.kids.map(ffwLabel).join(" "), kind: "focus", mark: { kind: "focus", label: `${w.sym} derives ε` } };
-  return spec(nodes.map((n, k) => nodeOf(n, k, "focus")), levels, bottom);
+  // nullable: the root's rule: each of its symbols is a node of its own with a small triangle over its ε, the root bare. A symbol with an
+  // empty rule of its own derives ε in one step; one with a rule of symbols derives it through others, in steps that are not drawn: a
+  // jagged line.
+  const root = w.tree;
+  const mark = { kind: "focus", label: `${w.sym} derives ε` };
+  if (!root.kids.length) return spec([nodeOf(root, 0, "focus")], [], { text: "ε", label: `${root.sym} → ε`, kind: "focus", mark });
+  return spec([nodeOf(root, 0, "focus")], [], root.kids.map((k, i) => ({ text: "ε", label: "", ...(i ? {} : { kind: "focus", mark }), node: { sym: k.sym, jag: k.kids.length > 0 } })));
 }
 
 // The derivation along the path, as the sentential forms from the symbol at the top down to the one that shows the member:
@@ -289,14 +294,13 @@ function ffwSpec(w) {
   const path = [];
   for (let cur = w.tree; ; ) {
     path.push(cur);
-    const j = w.kind === "first" ? cur.kids.findIndex((k) => ffwHas(k, "t")) : w.kind === "follow" ? cur.kids.findIndex((k) => ffwHas(k, "target")) : firstSymbol(cur);
+    const j = w.kind === "first" ? cur.kids.findIndex((k) => ffwHas(k, "t")) : w.kind === "follow" ? cur.kids.findIndex((k) => ffwHas(k, "target")) : -1;
     if (j < 0 || typeof cur.kids[j] === "string" || cur.kids[j].text !== undefined) break;
     cur = cur.kids[j];
   }
-  spec.forms = ffwForms(w, path);
+  spec.forms = w.kind === "nullable" ? [w.tree.sym, ...(w.tree.kids.length ? [w.tree.kids.map(ffwLabel).join(" "), "ε"] : ["ε"])] : ffwForms(w, path);
   spec.alt = w.alt;
   spec.count = w.count;
-  if (w.kind === "nullable" && spec.forms[spec.forms.length - 1] !== "ε") spec.forms.push("ε");
   const side = (l) => (w.kind === "first" ? l.left : l.right) || [];
   const vanishing = spec.levels.some((l) => side(l).some((f) => f.text === EPSILON));
   if (w.kind === "first") spec.statement = `${w.token} ∈ FIRST(${w.sym}): ${w.sym} can derive a string that starts with ${w.token}` + (vanishing ? ", after symbols that derive ε" : "");
@@ -330,6 +334,7 @@ function ffwTheory(kind) {
         { left: [cell("…", "γ", { cls: "is-dim" })], right: [cell("ε", "β")] },
       ],
       bottom: cell("…", "x", { cls: "is-dim" }),
+      terminus: true, // B derives x in as many steps as it needs
       arrows: [{ fromNode: 2, side: "right", toId: "t" }],
       forms: ["S", "α A δ", "α γ B β δ"],
       statement: "a ∈ FOLLOW(B) when S derives α A δ with δ starting with a, and A derives γ B β with β deriving ε: the end of B is the end of A, so a comes next",

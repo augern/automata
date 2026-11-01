@@ -237,16 +237,17 @@ function pumpTree(tree, pair, i) {
 
 // The split figure (ctgSplitLayout) of a decomposition: the parts of the original string, the nonterminals of the tree's root
 // and of the repeated pair, and the number of copies of the middle part. parts: { u, v, x, y, z } as arrays of symbols;
-// hops: { top, mid }, the steps from the root to the upper node of the pair and from it to the lower one.
-function pumpSplitFigure(root, a, parts, sep, i, rootIsUp, hops) {
+// hops: { top, mid }, the steps from the root to the upper node of the pair and from it to the lower one; lowJag: the lower node
+// derives x in more than one rule step (its subtree is not one rule over leaves), so the line down to x is jagged.
+function pumpSplitFigure(root, a, parts, sep, i, rootIsUp, hops, lowJag = true) {
   const part = (p) => ({ text: parts[p].length ? parts[p].join(sep) : "ε", label: p, cls: "pp-" + p });
-  return { root, up: a, rootIsUp, i, hops, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
+  return { root, up: a, rootIsUp, i, hops, lowJag, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
 }
 
 // The general case of the context-free pumping lemma, for ctgSplitLayout: S ⇒* uAz, A ⇒* vAy, A ⇒* x, the middle part taken i times.
 function pumpGeneralCF(i) {
   const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
-  return { root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
+  return { root: "S", up: "A", rootIsUp: false, i, lowJag: true, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
 }
 
 // The pumping length the lemma guarantees for a grammar: b^(|V|+1), b the length of the longest right-hand side (at least 2) and

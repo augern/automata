@@ -169,6 +169,13 @@ function drawCTGFigureInto(root, lay, opts = {}) {
     }
     make("path", { class: "ctg-jag", d: d + ` L${b.x},${y1}` }, svg);
   }
+  // the jagged line from a node down to its string: it stands for a derivation of more than one rule step
+  for (const e of lay.ends || []) {
+    const steps = Math.max(2, Math.round((e.y1 - e.y0) / 6));
+    let d = `M${e.x},${e.y0}`;
+    for (let i = 1; i < steps; i++) d += ` L${e.x + (i % 2 ? 4 : -4)},${e.y0 + ((e.y1 - e.y0) * i) / steps}`;
+    make("path", { class: "ctg-jag", d: d + ` L${e.x},${e.y1}` }, svg);
+  }
   // the nodes under the last one: an edge from it to each, and from each down to its string, jagged for derivations of any length
   const last = lay.nodes[lay.nodes.length - 1];
   for (const sub of lay.subs || []) {

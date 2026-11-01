@@ -324,3 +324,23 @@ test("spine layout: a column is at least as wide as the label under its token, s
   const plain = A.ctgSpineLayout({ ...spec, levels: [{ left: null, right: [flank("ε"), flank("ε"), flank("ε")] }] });
   assert.ok(A.ctgSpineLayout(spec).width > plain.width, "labels widen the columns");
 });
+
+test("the line down to the string (a jagged terminus): in the spine figures when the spec says so, in the pumping figures unless the lowest node is one rule step", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B" }], levels: [{ left: null, right: flank("b") }], bottom: flank("x") };
+  for (const opts of [{}, { tile: true }]) {
+    assert.equal(A.ctgSpineLayout(spec, opts).ends.length, 0);
+    const lay = A.ctgSpineLayout({ ...spec, terminus: true }, opts);
+    assert.equal(lay.ends.length, 1);
+    assert.ok(Math.abs(lay.ends[0].x - lay.cx) < 1e-9 && lay.ends[0].y0 > lay.nodes[1].y && lay.ends[0].y1 < lay.B, "from the last node down to the string");
+  }
+  // the nodes under a node: their own lines, so no extra one for the node above
+  const withNodes = { nodes: [{ sym: "A" }], levels: [], bottom: [flank("ε", { node: { sym: "X", jag: true } })], terminus: true };
+  assert.equal(A.ctgSpineLayout(withNodes).ends.length, 0);
+  // the pumping figures: jagged unless the figure says the lowest node is one step
+  for (const unify of [false, true]) for (const i of [0, 1, 2]) {
+    assert.equal(A.ctgSplitLayout(figure(i), { unify }).ends.length, 1, `default: yes (i = ${i}, unify ${unify})`);
+    assert.equal(A.ctgSplitLayout(figure(i, { lowJag: false }), { unify }).ends.length, 0, "one step: none");
+    const lay = A.ctgSplitLayout(figure(i), { unify }), low = lay.nodes[lay.nodes.length - 1];
+    assert.ok(lay.ends[0].y0 > low.y && Math.abs(lay.ends[0].x - lay.cx) < 1e-9);
+  }
+});
