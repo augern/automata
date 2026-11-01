@@ -144,10 +144,14 @@ function drawCTGSplit(host, fig, opts = {}) {
   const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
   for (const t of lay.tris) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
+    // no outline: the shape is its tint, the base lines are what stands under the tokens
     const g = make("g", { class: "ctg-node" + (t.cls ? " " + t.cls : "") }, svg);
-    make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
-    make("path", { class: "ctg-legs", d: `M${t.x0},${t.y} L${t.apex},${t.ay} L${t.x1},${t.y}` }, g);
-    for (const b of t.base) make("line", { class: "ctg-legs", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
+    const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
+    if (t.hue !== undefined) fill.style.fill = ctgHue(t.hue, 0.4);
+    for (const b of t.base) {
+      const line = make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
+      if (t.hue !== undefined) line.style.stroke = ctgHue(t.hue, 0.9);
+    }
   }
   for (const t of lay.tokens) {
     make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 16, "text-anchor": "middle" }, svg, t.text);
@@ -164,8 +168,12 @@ function drawCTGSplit(host, fig, opts = {}) {
   for (const n of lay.nodes) {
     const w = Math.max(26, String(n.sym).length * 8 + 14);
     const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
-    make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
+    const rect = make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
+    if (n.hue !== undefined) rect.style.stroke = ctgHue(n.hue, 1);
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }
   return { svg, layout: lay };
 }
+
+// A hue (degrees) as a colour that reads on a light and on a dark background.
+const ctgHue = (h, alpha) => `hsl(${h} 75% 55% / ${alpha})`;
