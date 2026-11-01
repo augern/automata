@@ -195,7 +195,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
   }
   for (const n of [...lay.nodes, ...(lay.subs || [])]) {
     const w = Math.max(26, String(n.sym).length * 8 + 14);
-    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") + kindCls(n.kind) }, svg);
+    const g = make("g", { class: "ctg-snode" + (n === lay.nodes[0] ? " ctg-top" : "") + (n.cls ? " " + n.cls : "") + kindCls(n.kind) }, svg);
     make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }

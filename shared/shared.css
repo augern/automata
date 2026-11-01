@@ -85,6 +85,10 @@
   --st-warn: var(--amber);
   --st-warn-bg: var(--amber-bg);
 
+  /* Easter egg (tools/pumping): the figure dressed as a tree; the same in both themes */
+  --xmas-needle: #1f6b3a; --xmas-needle-alt: #2f8a4c; --xmas-bauble: #c8281e; --xmas-bauble-edge: #7d1510;
+  --xmas-star: #f7c520; --xmas-star-edge: #b88a00; --xmas-star-text: #4a3600; --xmas-glitter: #fff;
+
   /* Typography */
   --font-serif: "Georgia", "Times New Roman", serif;
   --font-mono: ui-monospace, "Menlo", "Consolas", "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
