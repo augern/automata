@@ -179,3 +179,12 @@ function ctgSplitLayout(fig, opts = {}) {
   }
   return { width, height: B + 56, cx, nodes, tris, tokens, base, jags };
 }
+
+// A colour (a CSS colour or variable) as a tint on the page background, one step more saturated for each tone, with the steps
+// shrinking so that the share of the colour approaches a limit (a percentage above 100 would be invalid, and the colour of a copy
+// must not depend on how many copies there are). Built from the theme's tokens, so it follows the light and the dark theme.
+// line: the stronger version for a base line.
+function ctgTone(colour, tone, line) {
+  const k = Math.pow(0.82, tone);
+  return `color-mix(in srgb, ${colour} ${line ? 100 - 38 * k : 90 - 64 * k}%, var(--bg))`;
+}

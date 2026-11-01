@@ -140,3 +140,15 @@ test("split layout: with a minimum width the figure is centred in it, so figures
     assert.equal(lay.height >= 0, true);
   }
 });
+
+test("ctgTone: the share of the colour grows with the tone and stays a valid percentage", () => {
+  const share = (tone, line) => +A.ctgTone("var(--hot)", tone, line).match(/ ([\d.]+)%/)[1];
+  for (const line of [false, true]) {
+    let last = 0;
+    for (let tone = 0; tone <= 60; tone++) {
+      const s = share(tone, line);
+      assert.ok(s > last && s <= 100, `tone ${tone}: ${s}`);
+      last = s;
+    }
+  }
+});

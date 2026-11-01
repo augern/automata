@@ -140,9 +140,3 @@ function drawCTGSplitInto(root, fig, opts = {}) {
   }
   return lay;
 }
-
-// A colour (a CSS colour or variable) as a tint on the page background, one step more saturated for each tone. Built from the
-// theme's tokens, so it follows the light and the dark theme. line: the stronger version for a base line.
-function ctgTone(colour, tone, line) {
-  return `color-mix(in srgb, ${colour} ${(line ? 62 : 26) + 12 * tone}%, var(--bg))`;
-}
