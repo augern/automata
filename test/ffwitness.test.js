@@ -355,7 +355,7 @@ test("captions widen a figure only when they are wider than it", () => {
 test("unit-rule chains are one jagged edge", () => {
   const g = A.parseBNF("S -> A\nA -> B\nB -> C\nC -> a", false);
   const spec = A.ffwSpec(A.ffwFirst(g, A.ffRecord(g), "S", "a", 0));
-  assert.deepEqual(spec.nodes.map((n) => [n.sym, n.jag]), [["S", false], ["a", true]]);
+  assert.deepEqual(js(spec.nodes.map((n) => [n.sym, n.jag])), [["S", false], ["a", true]]);
   assert.equal(spec.levels.length, 1);
   assert.equal(spec.arrows[0].fromNode, 0);
 });
