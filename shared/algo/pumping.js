@@ -149,8 +149,9 @@ function pumpRunSpec(dfa, w, parts, i) {
   const loop = (p) => parts && p >= px && p <= px + i * py && (p - px) % py === 0;
   const roleAt = (p) => (!parts ? "" : p < px ? "x" : p < px + i * py ? "y" : "z");
   return {
-    nodes: cuts.map((p) => ({ label: dfa.states[run.path[p]], accept: dfa.accepts.has(run.path[p]), role: loop(p) ? "loop" : "", start: p === 0, stuck: run.stuckAt >= 0 && p === end, pos: p })),
-    segs: cuts.slice(1).map((b, k) => ({ symbols: chars.slice(cuts[k], b), role: roleAt(cuts[k]), jag: !!parts && b - cuts[k] >= 2, start: cuts[k], end: b })),
+    // state: the DFA state of a node; cells: the table cells ("state|symbol") of the transitions in a stretch
+    nodes: cuts.map((p) => ({ label: dfa.states[run.path[p]], state: run.path[p], accept: dfa.accepts.has(run.path[p]), role: loop(p) ? "loop" : "", start: p === 0, stuck: run.stuckAt >= 0 && p === end, pos: p })),
+    segs: cuts.slice(1).map((b, k) => ({ symbols: chars.slice(cuts[k], b), cells: chars.slice(cuts[k], b).map((a, j) => dfa.states[run.path[cuts[k] + j]] + "|" + a), role: roleAt(cuts[k]), jag: !!parts && b - cuts[k] >= 2, start: cuts[k], end: b })),
   };
 }
 

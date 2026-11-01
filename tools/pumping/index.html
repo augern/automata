@@ -9,7 +9,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=ad26a6fe" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -192,10 +192,10 @@
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
     <script src="../../shared/algo/ctg.js?v=a2369985"></script>
-    <script src="../../shared/algo/pumping.js?v=a07bb3ac"></script>
+    <script src="../../shared/algo/pumping.js?v=571855eb"></script>
     <script src="../../shared/shared.js?v=2ab85b1b"></script>
-    <script src="../../shared/algo/runfig.js?v=1275c63a"></script>
-    <script src="../../shared/ctg.js?v=92086183"></script>
+    <script src="../../shared/algo/runfig.js?v=1fe0d28f"></script>
+    <script src="../../shared/ctg.js?v=bc6ef524"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -213,7 +213,7 @@
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
-    <script src="../../shared/automaton-table.js?v=3d8c5285"></script>
+    <script src="../../shared/automaton-table.js?v=51f5c5c1"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
     <script>
       initResize("rh-1", "p-def", +1);
@@ -466,6 +466,28 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
       }
       const q = (s) => "“" + esc(s || "ε") + "”";
 
+      // Hovering links the table, the DFA graph and the run figure: a transition cell <-> its edge and the symbols that are read by it,
+      // a state <-> its nodes.
+      function pumpHoverCells(ids) {
+        regTable.mark({ cells: ids });
+        setGraphHot("dfa", ids);
+        const want = new Set(ids || []);
+        document.querySelectorAll("#ctg-root [data-cells]").forEach((e) => e.classList.toggle("is-hot", JSON.parse(e.dataset.cells).some((c) => want.has(c))));
+        document.querySelectorAll("#ctg-root [data-cell]").forEach((e) => e.classList.toggle("is-hot", want.has(e.dataset.cell)));
+      }
+      function pumpHoverState(i) {
+        regTable.mark({ state: i });
+        setGraphNodeHot("dfa", i);
+        document.querySelectorAll("#ctg-root .run-node").forEach((e) => e.classList.toggle("is-hot", i !== null && +e.dataset.state === i));
+      }
+      $("ctg-root").addEventListener("mouseover", (e) => {
+        const t = e.target.closest && e.target.closest(".run-node[data-state], [data-cells], [data-cell]");
+        const node = t && t.dataset.state !== undefined;
+        pumpHoverState(node ? +t.dataset.state : null);
+        pumpHoverCells(t && !node ? (t.dataset.cells ? JSON.parse(t.dataset.cells) : [t.dataset.cell]) : null);
+      });
+      $("ctg-root").addEventListener("mouseleave", () => { pumpHoverCells(null); pumpHoverState(null); });
+
       // The drawing of the DFA, then colouring of the path's edges.
       let dfaView = null;
       function drawDFA() {
@@ -485,9 +507,11 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         drawAutomatonGraph("dfa", dfaView, {
           nodes: d.states.map((n, i) => ({ label: n, accepting: d.accepts.has(i) })),
           start: d.start,
-          edges: [...edgeMap].map(([key, labels]) => { const [from, to] = key.split("-").map(Number); return { from, to, labels }; }),
-          loops: [...loops].map(([node, labels]) => ({ node, labels })),
+          edges: [...edgeMap].map(([key, labels]) => { const [from, to] = key.split("-").map(Number); return { from, to, labels, ids: labels.map((a) => d.states[from] + "|" + a) }; }),
+          loops: [...loops].map(([node, labels]) => ({ node, labels, ids: labels.map((a) => d.states[node] + "|" + a) })),
           joinLabels: true,
+          onHover: pumpHoverCells,
+          onNodeHover: pumpHoverState,
         });
       }
       function paintGraph() {
@@ -745,7 +769,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
 
       // ── Wiring ────────────────────────────────────────────────
       grammarEditor = GrammarEditor.attach($("grammar-input"));
-      regTable = createAutomatonTable("dfa-table", { model: regM, deterministic: true, onChange: () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 150); } });
+      regTable = createAutomatonTable("dfa-table", { model: regM, deterministic: true, onHoverCells: (ids) => pumpHoverCells(ids), onHoverState: (i) => pumpHoverState(i), onChange: () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 150); } });
       regTable.render();
       for (const id of ["grammar-input"]) $(id).addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
       let ppTimer = null;

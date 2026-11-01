@@ -852,6 +852,11 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .run-node.is-now rect:first-of-type { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2.4; }
 .run-edge.is-now .run-line, .run-edge.is-now .ctg-jag { stroke: var(--accent); }
 .run-edge.is-now .run-head { fill: var(--accent); }
+.run-node.is-hot rect:first-of-type { fill: var(--hot-bg); stroke: var(--hot); stroke-width: 2.4; }
+.run-edge.is-hot .run-line, .run-edge.is-hot .ctg-jag { stroke: var(--hot); }
+.run-edge.is-hot .run-head { fill: var(--hot); }
+.run-seg.is-hot { fill: var(--hot-bg); }
+.ctg-tok.is-hot { fill: var(--hot); }
 .ctg-tok.is-read { opacity: 0.5; }
 .ctg-tok.is-now { text-decoration: underline; }
 /* Easter egg (tools/pumping): needles, glitter, baubles and a star */

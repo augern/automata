@@ -225,16 +225,16 @@ function drawRunFigInto(root, lay) {
     return e;
   };
   const head = (x, y, dir) => `M${x},${y} L${x - dir * 7},${y - 4} L${x - dir * 7},${y + 4} Z`;
-  for (const s of lay.segs) make("rect", { class: "run-seg" + (s.role ? " pp-" + s.role : ""), x: s.x0, y: s.y + 14, width: s.x1 - s.x0, height: s.base - s.y - 14, "data-start": s.start, "data-end": s.end }, root);
+  for (const s of lay.segs) make("rect", { class: "run-seg" + (s.role ? " pp-" + s.role : ""), x: s.x0, y: s.y + 14, width: s.x1 - s.x0, height: s.base - s.y - 14, "data-start": s.start, "data-end": s.end, "data-cells": JSON.stringify(s.cells) }, root);
   make("line", { class: "ctg-base", x1: lay.base.x0, x2: lay.base.x1, y1: lay.base.y, y2: lay.base.y }, root);
-  for (const t of lay.tokens) make("text", { class: "ctg-tok" + (t.role ? " pp-" + t.role : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle", "data-pos": t.pos }, root, t.text);
+  for (const t of lay.tokens) make("text", { class: "ctg-tok" + (t.role ? " pp-" + t.role : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle", "data-pos": t.pos, "data-cell": t.cell }, root, t.text);
   for (const sp of lay.spans) {
     const g = make("g", { class: "ctg-span" }, root), y = sp.y + 25;
     make("path", { d: `M${sp.x0 + 3},${y - 4} V${y} H${sp.x1 - 3} V${y - 4}` }, g);
     make("text", { x: (sp.x0 + sp.x1) / 2, y: y + 12, "text-anchor": "middle" }, g, sp.label);
   }
   for (const s of lay.segs) { // a straight edge for one transition, a jagged one where states are left out
-    const g = make("g", { class: "run-edge", "data-start": s.start, "data-end": s.end }, root), x1 = s.ex1 - 2;
+    const g = make("g", { class: "run-edge", "data-start": s.start, "data-end": s.end, "data-cells": JSON.stringify(s.cells) }, root), x1 = s.ex1 - 2;
     let d = `M${s.ex0},${s.y}`;
     if (s.jag) {
       const steps = Math.max(2, Math.round((x1 - s.ex0) / 8));
@@ -244,7 +244,7 @@ function drawRunFigInto(root, lay) {
     make("path", { class: "run-head", d: head(x1, s.y, 1) }, g);
   }
   lay.nodes.forEach((n) => {
-    const g = make("g", { class: "ctg-snode run-node" + (n.role === "loop" ? " run-loop" : "") + (n.stuck ? " run-stuck" : ""), "data-pos": n.pos }, root);
+    const g = make("g", { class: "ctg-snode run-node" + (n.role === "loop" ? " run-loop" : "") + (n.stuck ? " run-stuck" : ""), "data-pos": n.pos, "data-state": n.state }, root);
     if (n.start) make("path", { class: "run-head", d: head(n.x - n.w / 2 - 1, n.y, 1) }, g);
     if (n.start) make("line", { class: "run-line", x1: n.x - n.w / 2 - 22, x2: n.x - n.w / 2 - 6, y1: n.y, y2: n.y }, g);
     make("rect", { x: n.x - n.w / 2, y: n.y - n.h / 2, width: n.w, height: n.h, rx: n.h / 2 }, g);

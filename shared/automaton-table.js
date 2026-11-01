@@ -7,9 +7,12 @@
 //     epsilon: true,          a column for ε-moves (never with deterministic)
 //     error: { on: () => bool, name: () => string, symbols: (state) => [symbol], wild: string },   optional: the error state as a view option
 //     onChange: () => {},     after every edit
+//     onHoverCells: (ids | null) => {},   the pointer or focus is on a transition cell: ids is ["state|symbol"], null when it leaves
+//     onHoverState: (index | null) => {}, the same for a state name
 //   })
 // The model is the caller's: the table edits it in place and reads it again on every render().
-//   -> { render, addState, removeState, addSymbol, removeSymbol }
+// Highlighting goes both ways: the table reports what is pointed at, and mark() lights what another view is pointing at.
+//   -> { render, addState, removeState, addSymbol, removeSymbol, mark }
 const AUTOMATON_TABLES = {};
 
 function createAutomatonTable(id, opts) {
@@ -117,6 +120,17 @@ function createAutomatonTable(id, opts) {
       input.classList.toggle("invalid", p.some((x) => !m().states.includes(x)) || (det && p.length > 1));
     },
   };
+  // light the cells, the state row or both; what is not given is left as it is
+  self.mark = (what) => {
+    const box = document.getElementById(id);
+    if ("cells" in what) {
+      const want = new Set(what.cells || []);
+      for (const inp of box.querySelectorAll("[data-sym]")) (inp.closest("td") || inp).classList.toggle("is-hot", want.has(inp.dataset.state + "|" + inp.dataset.sym));
+    }
+    if ("state" in what) for (const tr of box.querySelectorAll("tr[data-si]")) tr.querySelector(".ui-td--state").classList.toggle("is-hot", +tr.dataset.si === what.state);
+  };
+  if (opts.onHoverCells) UI.hoverItems(id, "[data-sym]", (inp) => [inp.dataset.state + "|" + inp.dataset.sym], opts.onHoverCells);
+  if (opts.onHoverState) UI.hoverItems(id, "td.ui-td--state", (td) => +td.parentElement.dataset.si, opts.onHoverState);
   AUTOMATON_TABLES[id] = self;
   return self;
 }
