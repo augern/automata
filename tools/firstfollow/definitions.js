@@ -59,22 +59,5 @@ window.TOOL_DEFINITIONS = {
         },
       ],
     },
-    {
-      title: "Computing the sets",
-      items: [
-        {
-          term: "Closure rules",
-          formal: [
-            "A \\to Y_1 \\ldots Y_k,\\; \\text{every } Y_i \\text{ nullable} \\;\\Longrightarrow\\; A \\text{ nullable}",
-            "A \\to Y_1 \\ldots Y_k,\\; Y_1 \\ldots Y_{i-1} \\text{ nullable} \\;\\Longrightarrow\\; \\mathrm{FIRST}(Y_i) \\setminus \\{\\varepsilon\\} \\subseteq \\mathrm{FIRST}(A)",
-            "\\$ \\in \\mathrm{FOLLOW}(S)",
-            "A \\to \\alpha B \\beta \\;\\Longrightarrow\\; \\mathrm{FIRST}(\\beta) \\setminus \\{\\varepsilon\\} \\subseteq \\mathrm{FOLLOW}(B)",
-            "A \\to \\alpha B \\beta,\\; \\beta \\text{ nullable} \\;\\Longrightarrow\\; \\mathrm{FOLLOW}(A) \\subseteq \\mathrm{FOLLOW}(B)",
-          ],
-          text: "The sets are the least sets that satisfy every rule. Applying the rules until a round changes nothing, the fixpoint, computes them.",
-          refs: ["alsu §4.4.2", "appel §3.2"],
-        },
-      ],
-    },
   ],
 };
