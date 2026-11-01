@@ -21,7 +21,7 @@ window.TOOL_DEFINITIONS = {
         },
         {
           term: "Derivation",
-          formal: ["\\alpha \\Rightarrow \\beta \\quad\\text{iff}\\quad \\alpha = \\gamma A \\delta,\; A \\to \\eta \\in P,\; \\beta = \\gamma \\eta \\delta", "\\Rightarrow^{*} \\text{ is the reflexive and transitive closure of } \\Rightarrow"],
+          formal: ["\\alpha \\Rightarrow \\beta \\quad\\text{iff}\\quad \\alpha = \\gamma A \\delta,\\; A \\to \\eta \\in P,\\; \\beta = \\gamma \\eta \\delta", "\\Rightarrow^{*} \\text{ is the reflexive and transitive closure of } \\Rightarrow"],
           refs: ["hmu §5.1.3"],
         },
         {
