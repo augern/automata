@@ -131,12 +131,13 @@ function ctgSpineTree(spec) {
 // with the place of the first copy blanked out of it (a blank triangle over it), so only the parts by u and z are left.
 // A triangle's base is drawn only where tokens stand on it.
 //   fig: { root, up, rootIsUp, i, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
-//   -> { width, height, cx, nodes: [{ sym, x, y, cls, hue? }], tris: [{ x0, x1, apex, ay, y, cls, hue?, base: [{ x0, x1 }] }],
-//   hue: the colour of a copy of the middle part, shifting with each copy; the lowest node has its own; the root has none
+//   -> { width, height, cx, nodes: [{ sym, x, y, cls }], tris: [{ x0, x1, apex, ay, y, cls, tone?, base: [{ x0, x1 }] }],
+//   tone: 0 for the first copy of the middle part, one more for each further copy; the shade follows it (more saturated, more
+//   contrast); the root has none
 //        tokens: [{ text, part, cls, x, w, y, label, eps }], jags: [{ from, to }] }
 //   with no copy there is a { blank: true } triangle over the place of the first copy, to be drawn in the background colour
 function ctgSplitLayout(fig, opts = {}) {
-  const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, hue0: 35, hueStep: 24, hueLow: 215, ...opts };
+  const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, ...opts };
   const i = fig.i;
   const order = ["u", "v", "x", "y", "z"];
   const w = {};
@@ -160,16 +161,16 @@ function ctgSplitLayout(fig, opts = {}) {
   tok("u", L0);
   tok("z", L0);
   for (let k = 1; k <= i; k++) {
-    const j = first + k - 1, base = L0 + (k - 1) * o.step, hue = (o.hue0 - o.hueStep * (k - 1) + 360) % 360; // each copy has its own hue
-    nodes.push({ sym: fig.up, x: cx, y: apexY(j) + 6, cls: "pp-up", hue });
-    tris.push({ x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(j), y: base, cls: "pp-up", hue });
+    const j = first + k - 1, base = L0 + (k - 1) * o.step;
+    nodes.push({ sym: fig.up, x: cx, y: apexY(j) + 6, cls: "pp-up" });
+    tris.push({ x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(j), y: base, cls: "pp-up", tone: k - 1 }); // each copy a step further
     tok("v", base);
     tok("y", base);
   }
   // no copy: the place of the first copy is blanked out of the root triangle, which is otherwise as in the frame
   if (i === 0 && !fig.rootIsUp) tris.push({ blank: true, x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(first), y: L0 });
-  nodes.push({ sym: fig.up, x: cx, y: apexY(lowJ) + 6, cls: "pp-low", hue: o.hueLow });
-  tris.push({ x0: x0.x - o.padLow, x1: x0.x + w.x + o.padLow, apex: cx, ay: apexY(lowJ), y: lowBase, cls: "pp-low", hue: o.hueLow });
+  nodes.push({ sym: fig.up, x: cx, y: apexY(lowJ) + 6, cls: "pp-low" });
+  tris.push({ x0: x0.x - o.padLow, x1: x0.x + w.x + o.padLow, apex: cx, ay: apexY(lowJ), y: lowBase, cls: "pp-low", tone: 1 });
   tok("x", lowBase);
   for (let k = 1; k < nodes.length; k++) jags.push({ from: k - 1, to: k });
   // the base of each triangle: the stretches of its base line that have tokens on them, the outer ones reaching to its corners

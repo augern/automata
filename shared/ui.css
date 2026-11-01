@@ -827,7 +827,7 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ctg-snode rect { fill: var(--bg); stroke: var(--border-hi); stroke-width: 1.4; }
 .ctg-snode text { fill: var(--text); font-family: var(--font-serif); font-size: var(--fs-sm); }
 .ctg-part { fill: var(--text-dim); font-size: var(--fs-xs); font-style: italic; }
-.ctg-tri-fill { fill: var(--text-lo); fill-opacity: 0.24; stroke: none; }
+.ctg-tri-fill { fill: color-mix(in srgb, var(--text) 10%, var(--bg)); stroke: none; }
 .ctg-base { stroke: var(--text-lo); stroke-width: 1.5; }
 .ctg-tok.is-eps { font-style: italic; opacity: 0.7; }
 .ctg-blank { fill: var(--bg); stroke: none; }

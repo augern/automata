@@ -102,12 +102,9 @@ test("split layout: the frame for i = 1, copies poke down one step each, no copy
   assert.equal(none.nodes.length, 2, "the root and the lowest node");
 });
 
-test("split layout: each copy of the middle part has its own hue, the lowest node and the root have theirs", () => {
+test("split layout: each copy of the middle part is one tone further, the root has no tone", () => {
   const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
   const lay = A.ctgSplitLayout({ root: "S", up: "A", rootIsUp: false, i: 3, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
-  const copies = lay.tris.filter((t) => t.cls === "pp-up").map((t) => t.hue);
-  assert.equal(new Set(copies).size, 3);
-  assert.equal(lay.tris[0].hue, undefined);
-  assert.ok(lay.tris.find((t) => t.cls === "pp-low").hue !== undefined);
-  assert.ok(!copies.includes(lay.tris.find((t) => t.cls === "pp-low").hue));
+  assert.deepEqual(js(lay.tris.filter((t) => t.cls === "pp-up").map((t) => t.tone)), [0, 1, 2]);
+  assert.equal(lay.tris[0].tone, undefined);
 });

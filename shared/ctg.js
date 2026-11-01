@@ -147,10 +147,11 @@ function drawCTGSplit(host, fig, opts = {}) {
     // no outline: the shape is its tint, the base lines are what stands under the tokens
     const g = make("g", { class: "ctg-node" + (t.cls ? " " + t.cls : "") }, svg);
     const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
-    if (t.hue !== undefined) fill.style.fill = ctgHue(t.hue, 0.4);
+    const colour = t.cls === "pp-up" ? "var(--hot)" : t.cls === "pp-low" ? "var(--accent)" : null;
+    if (colour) fill.style.fill = ctgTone(colour, t.tone, 0);
     for (const b of t.base) {
       const line = make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
-      if (t.hue !== undefined) line.style.stroke = ctgHue(t.hue, 0.9);
+      if (colour) line.style.stroke = ctgTone(colour, t.tone, 1);
     }
   }
   for (const t of lay.tokens) {
@@ -168,12 +169,16 @@ function drawCTGSplit(host, fig, opts = {}) {
   for (const n of lay.nodes) {
     const w = Math.max(26, String(n.sym).length * 8 + 14);
     const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
-    const rect = make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
-    if (n.hue !== undefined) rect.style.stroke = ctgHue(n.hue, 1);
+    make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }
   return { svg, layout: lay };
 }
 
-// A hue (degrees) as a colour that reads on a light and on a dark background.
-const ctgHue = (h, alpha) => `hsl(${h} 75% 55% / ${alpha})`;
+// A colour (a CSS colour or variable) as a tint on the page background, one step stronger for each tone: more saturated, and
+// toward the text colour for more contrast. Built from theme tokens, so it follows the light and the dark theme.
+// line: the stronger version for a base line.
+function ctgTone(colour, tone, line) {
+  const share = (line ? 62 : 26) + 12 * tone, contrast = (line ? 0 : 3) + 4 * tone;
+  return `color-mix(in srgb, color-mix(in srgb, ${colour} ${share}%, var(--bg)) ${100 - contrast}%, var(--text) ${contrast}%)`;
+}
