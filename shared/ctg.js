@@ -124,6 +124,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
   if (lay.caption) make("text", { class: "ctg-caption", x: lay.cx, y: 14, "text-anchor": "middle" }, svg, lay.caption);
   for (const t of lay.tris) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
+    if (t.hidden) continue; // all of it is in the triangles of its children
     // no outline: the shape is its tint
     const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, svg);
     if (t.share !== undefined) fill.style.fill = `color-mix(in srgb, ${t.colour} ${t.share}%, var(--bg))`;

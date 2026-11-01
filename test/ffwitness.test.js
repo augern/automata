@@ -304,6 +304,8 @@ test("the general case of nullable: two figures, directly and through other symb
   assert.ok(indirect.subs.every((s) => s.jag), "each derives ε in any number of steps: a jagged edge down to the ε");
   assert.equal(new Set(indirect.subs.map((s) => s.share)).size, 1, "all of them alike");
   assert.equal(indirect.nodes.length, 1, "A is the only node on the spine: no path through one of the symbols");
+  assert.equal(indirect.tris[0].hidden, true, "A has no triangle of its own: its children cover all of it");
+  assert.ok(!direct.tris[0].hidden, "directly, A's triangle is all there is");
   const parent = indirect.tris[0];
   indirect.subs.forEach((sub, k) => {
     assert.ok(sub.x0 >= parent.x0 - 1e-9 && sub.x1 <= parent.x1 + 1e-9, "the small triangle is under A's base");

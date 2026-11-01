@@ -111,7 +111,8 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //           arrows?: [{ fromNode, side: "left" | "right", toId }],   a scan arrow from the foot of a node to the token with that id
 //           caption?: string }                                        a line of text above the figure
 //     a bottom cell may have node: { sym, jag?, kind?, cls? }: it is then a node of its own with a small triangle over its string, under
-//     the last node (the symbols of a rule, each deriving its string); the layout has these as subs (free layout only)
+//     the last node (the symbols of a rule, each deriving its string); the layout has these as subs, and the last node's own triangle is
+//     marked hidden, since the triangles of its children cover all of it (free layout only)
 //     flank: { text, id?, head?, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
 //       head: the leading part of the text that is emphasised; id: what an arrow points at
 //       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
@@ -226,6 +227,8 @@ function ctgSpineFree(spec, opts = {}) {
   for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
   // the bottom cells that are nodes: a node and a triangle of their own under the last node, an edge to each from it; the edge down
   // to the string is jagged where the node stands for derivations of any length
+  // the last node's own triangle is not drawn then: all its extent is in the triangles of its children
+  if (withNodes) tris[m].hidden = true;
   const subs = [];
   const subApex = apexAt(m) + 44, otherShade = m % 2 ? 10 : 21;
   for (const [f, x0] of put) {
