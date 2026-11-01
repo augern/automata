@@ -140,10 +140,10 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       make("tspan", { class: "ctg-rest" }, label, t.text.slice(t.head.length)); // what follows the emphasised part is not spelled out
     } else label.textContent = t.text;
     if (t.tip) make("title", {}, label, t.tip);
-    // the label of a string under it; the bracket only where it says which characters the label names
+    // a label under a string comes with a bracket that marks its extent; without a label, no bracket
     if (t.label && t.label !== t.text && opts.staples !== false) {
       const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;
-      if (!t.eps && t.text !== "…" && t.text.length > 1) make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
+      make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
       make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);
     }
     if (t.mark) { // a pointer under the token
