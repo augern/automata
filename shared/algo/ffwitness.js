@@ -306,7 +306,8 @@ function ffwSpec(w) {
 // FOLLOW mean for any grammar, with symbols in place of a grammar: the null state of the witness figure.
 function ffwTheory(kind) {
   const cell = (text, label, extra = {}) => ({ text, label, ...extra });
-  const node = (sym, extra = {}) => ({ sym, jag: false, ...extra });
+  // every edge of a general figure stands for derivations of any length (⇒*), so it is jagged
+  const node = (sym, extra = {}) => ({ sym, jag: true, ...extra });
   if (kind === "first") {
     return {
       nodes: [node("A", { kind: "focus" }), node("a", { kind: "first", colour: "var(--accent)", tone: 1 })],

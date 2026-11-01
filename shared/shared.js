@@ -1021,54 +1021,13 @@ function pcBlock(name, io, body) {
   return '<div class="pc-block">' + '<div class="pc-name">' + name + "</div>" + '<div class="pc-io">' + rows + "</div>" + '<div class="pc-body">' + body + "</div>" + "</div>";
 }
 
-// Pseudocode block for the First-set algorithm — used by both LR and LL tools.
-const PC_FIRST = pcBlock(
-  "First",
-  [
-    { label: "Input", sym: it("X"), desc: "a grammar symbol or a sequence of symbols" },
-    {
-      label: "Output",
-      sym: "First(" + it("X") + ")",
-      desc: "the set of terminals t such that " + it("X") + " ⇒* tω for some ω, plus " + _eps + " if " + it("X") + " ⇒* " + _eps,
-    },
-  ],
-  `${kw("if")} X is a terminal
-  ${kw("return")} { X }
-R ${_la} ${_emp}
-${kw("repeat")}
-  ${kw("for each")} production X ${_ra} Y₁ Y₂ … Yₖ ${_in} G
-    ${kw("for")} i ${_la} 1 to k
-      add First(Yᵢ) \\ {${_eps}} to R
-      ${kw("if")} ${_eps} ${_nin} First(Yᵢ)  ${kw("break")}${cm("Yᵢ not nullable; remaining symbols cannot contribute")}
-    ${kw("if")} all Yᵢ are nullable  add ${_eps} to R
-${kw("until")} R is unchanged
-${kw("return")} R`,
-);
-
-const PC_FOLLOW = pcBlock(
-  "Follow",
-  [
-    { label: "Input", sym: it("G"), desc: "the grammar" },
-    { label: "", sym: "First", desc: "the First function" },
-    {
-      label: "Output",
-      sym: "Follow(A)",
-      desc: "for each nonterminal A: the set of terminals that can appear immediately to the right of A in a sentential form, plus $ if A can end the input",
-    },
-  ],
-  `Follow(S) ${_la} { $ }${cm("S is the start symbol; $ marks end of input")}
-${kw("for each")} other nonterminal A: Follow(A) ${_la} ${_emp}
-${kw("repeat")}
-  ${kw("for each")} production B ${_ra} Y₁ Y₂ … Yₙ ${_in} G
-    ${kw("for")} i ${_la} 1 to n
-      ${kw("if")} Yᵢ is a nonterminal
-        let β = Yᵢ₊₁ … Yₙ ${cm("the suffix after Yᵢ; empty if i = n")}
-        add First(β) \\ {${_eps}} to Follow(Yᵢ)
-        ${kw("if")} ${_eps} ${_in} First(β)${cm("suffix is nullable, or Yᵢ is last")}
-          add Follow(B) to Follow(Yᵢ)
-${kw("until")} all Follow sets are unchanged
-${kw("return")} Follow`,
-);
+// A note in an algorithm box for the tools that use FIRST and FOLLOW: where they are built, as a link that opens the FIRST & FOLLOW
+// tool on the grammar at hand. what: the start of the sentence, e.g. "The FIRST sets used below are built in the".
+function pcFirstFollowNote(grammarText, what) {
+  let href = "../firstfollow/";
+  try { href += "#s=" + shareEncode({ g: grammarText, s: "" }); } catch (e) { /* too long or no sharing here: the tool without the grammar */ }
+  return '<div class="pc-note">' + what + ' <a href="' + href + '">FIRST &amp; FOLLOW</a> tool, which shows them step by step with a derivation for each member.</div>';
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED:EXAMPLES-LOADER

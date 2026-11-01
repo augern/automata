@@ -272,7 +272,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/ll1.js?v=6147c105"></script>
-    <script src="../../shared/shared.js?v=42ed2a33"></script>
+    <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -863,9 +863,7 @@
 
       // kw, sym, it, cm, hi, _la/_dot/_ra/…, pcBlock — all from shared.js SHARED:PSEUDOCODE
 
-      // PC_FIRST — defined in shared.js
 
-      // PC_FOLLOW — defined in shared.js
 
       // ── Build predictive table ─────────────────────────────────────
       const PC_LL1_TABLE = pcBlock(
@@ -932,9 +930,9 @@ ${kw("loop")}
         const bodyEl = document.getElementById("algo-body");
 
         if (type === "table") {
-          titleEl.textContent = "First, Follow & Predictive Table";
+          titleEl.textContent = "Predictive Table";
           subtitleEl.textContent = "LL(1)";
-          bodyEl.innerHTML = PC_FIRST + PC_FOLLOW + PC_LL1_TABLE + '<div class="pc-note">A grammar is LL(1) if and only if Build-Table produces no conflicts. ' + "Common causes: left recursion (A " + _ra + " Aα) and non-left-factored alternatives that share a terminal in First. " + "First of a sequence Y₁…Yₖ: add First(Yᵢ) without ε for each Yᵢ up to and including the first that cannot derive ε; add ε if all of them can. " + "The condition for each nonterminal A with alternatives α and β: First(α) ∩ First(β) = ∅, and if β ⇒* ε then First(α) ∩ Follow(A) = ∅.</div>";
+          bodyEl.innerHTML = pcFirstFollowNote(document.getElementById("grammar-input").value, "First and Follow, which the algorithm below uses, are built in the") + PC_LL1_TABLE + '<div class="pc-note">A grammar is LL(1) if and only if Build-Table produces no conflicts. ' + "Common causes: left recursion (A " + _ra + " Aα) and non-left-factored alternatives that share a terminal in First. " + "The condition for each nonterminal A with alternatives α and β: First(α) ∩ First(β) = ∅, and if β ⇒* ε then First(α) ∩ Follow(A) = ∅.</div>";
         } else if (type === "parse") {
           titleEl.textContent = "LL(1) Parsing";
           subtitleEl.textContent = "predictive, top-down";

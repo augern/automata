@@ -103,7 +103,7 @@
   </head>
   <body>
     <div id="topbar">
-      <h1>FIRST &amp; FOLLOW Tool</h1>
+      <h1>FIRST &amp; FOLLOW</h1>
     </div>
 
     <div id="panels">
@@ -132,6 +132,7 @@
       <div class="panel" id="p-run" data-priority="1" data-collapse="left">
         <div class="panel-header">
           <span class="panel-title">Construction</span>
+          <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal();" title="The algorithms: nullable symbols, First and Follow">Algorithm</button>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run')">&#8249;</button>
         </div>
         <div class="panel-body ff-body">
@@ -203,18 +204,30 @@
     </div>
     <!-- #panels -->
 
+    <!-- Pseudocode modal -->
+    <div class="algo-overlay hidden" id="algo-overlay" tabindex="-1" onclick="if (event.target === this) closeAlgoModal();">
+      <div class="algo-modal" role="dialog" aria-modal="true" aria-labelledby="algo-title">
+        <div class="algo-modal-head">
+          <h2 id="algo-title"></h2>
+          <span class="algo-subtitle" id="algo-subtitle"></span>
+          <button class="algo-close" onclick="closeAlgoModal()" title="Close (Esc)">&#x2715;</button>
+        </div>
+        <div class="algo-modal-body" id="algo-body"></div>
+      </div>
+    </div>
+
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/ctg.js?v=63c00c5f"></script>
     <script src="../../shared/algo/firstfollow.js?v=36abb92e"></script>
-    <script src="../../shared/shared.js?v=42ed2a33"></script>
+    <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=6536b2b5"></script>
+    <script src="../../shared/algo/ffwitness.js?v=ece8ede0"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/ctg.js?v=e99e62f5"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
@@ -229,6 +242,82 @@
       initResize("rh-3", "p-wit", +1);
 
       const EXAMPLES = {};
+
+      // ── The algorithms (the algorithm box of the construction) ─────────────
+      const PC_NULLABLE = pcBlock(
+        "Nullable",
+        [
+          { label: "Input", sym: it("G"), desc: "the grammar" },
+          { label: "Output", sym: "N", desc: "the nonterminals that derive the empty string" },
+        ],
+        `N ${_la} ${_emp}
+${kw("repeat")}
+  ${kw("for each")} production A ${_ra} Y₁ Y₂ … Yₖ ${_in} G${cm("k = 0 for an empty production")}
+    ${kw("if")} every Yᵢ ${_in} N${cm("true for k = 0")}
+      add A to N
+${kw("until")} N is unchanged
+${kw("return")} N`,
+      );
+
+      // Pseudocode block for the First-set algorithm — now only here; the tools that use First and Follow link to this tool.
+      const PC_FIRST = pcBlock(
+        "First",
+        [
+          { label: "Input", sym: it("X"), desc: "a grammar symbol or a sequence of symbols" },
+          {
+            label: "Output",
+            sym: "First(" + it("X") + ")",
+            desc: "the set of terminals t such that " + it("X") + " ⇒* tω for some ω, plus " + _eps + " if " + it("X") + " ⇒* " + _eps,
+          },
+        ],
+        `${kw("if")} X is a terminal
+  ${kw("return")} { X }
+R ${_la} ${_emp}
+${kw("repeat")}
+  ${kw("for each")} production X ${_ra} Y₁ Y₂ … Yₖ ${_in} G
+    ${kw("for")} i ${_la} 1 to k
+      add First(Yᵢ) \\ {${_eps}} to R
+      ${kw("if")} ${_eps} ${_nin} First(Yᵢ)  ${kw("break")}${cm("Yᵢ not nullable; remaining symbols cannot contribute")}
+    ${kw("if")} all Yᵢ are nullable  add ${_eps} to R
+${kw("until")} R is unchanged
+${kw("return")} R`,
+      );
+
+      const PC_FOLLOW = pcBlock(
+        "Follow",
+        [
+          { label: "Input", sym: it("G"), desc: "the grammar" },
+          { label: "", sym: "First", desc: "the First function" },
+          {
+            label: "Output",
+            sym: "Follow(A)",
+            desc: "for each nonterminal A: the set of terminals that can appear immediately to the right of A in a sentential form, plus $ if A can end the input",
+          },
+        ],
+        `Follow(S) ${_la} { $ }${cm("S is the start symbol; $ marks end of input")}
+${kw("for each")} other nonterminal A: Follow(A) ${_la} ${_emp}
+${kw("repeat")}
+  ${kw("for each")} production B ${_ra} Y₁ Y₂ … Yₙ ${_in} G
+    ${kw("for")} i ${_la} 1 to n
+      ${kw("if")} Yᵢ is a nonterminal
+        let β = Yᵢ₊₁ … Yₙ ${cm("the suffix after Yᵢ; empty if i = n")}
+        add First(β) \\ {${_eps}} to Follow(Yᵢ)
+        ${kw("if")} ${_eps} ${_in} First(β)${cm("suffix is nullable, or Yᵢ is last")}
+          add Follow(B) to Follow(Yᵢ)
+${kw("until")} all Follow sets are unchanged
+${kw("return")} Follow`,
+      );
+
+      function openAlgoModal() {
+        el("algo-title").textContent = "Nullable, First & Follow";
+        el("algo-subtitle").textContent = "fixpoint iteration";
+        el("algo-body").innerHTML = PC_NULLABLE + PC_FIRST + PC_FOLLOW +
+          '<div class="pc-note">Each pass of a repeat loop is a round in the log; a round that adds nothing ends the loop (the fixpoint). The tool keeps nullability apart from First: ε belongs to First(X) exactly when X is nullable, so First is built after Nullable and from it. First of a sequence Y₁…Yₖ: add First(Yᵢ) without ε for each Yᵢ up to and including the first that cannot derive ε; add ε if all of them can. The same scan reads the right-hand side in the construction panel and, after the occurrence, in Follow.</div>';
+        el("algo-overlay").classList.remove("hidden");
+        const b = el("algo-overlay").querySelector(".algo-close");
+        if (b) b.focus(); else el("algo-overlay").focus();
+      }
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAlgoModal(); });
       const PHASE_NAME = { nullable: "Nullable", first: "FIRST", follow: "FOLLOW" };
       const SET_NAME = { first: "FIRST", follow: "FOLLOW" };
 
@@ -550,6 +639,7 @@
         GrammarEditor.attach(el("grammar-input"));
         initPanelStorage("firstfollow-tool-v1", ["p-grammar", "p-run", "p-wit", "p-sets"]);
         loadPanelState();
+        initAlgoModal();
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);
         el("grammar-input").value = "E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id";
         applyShareState();

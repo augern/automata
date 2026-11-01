@@ -528,7 +528,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=42ed2a33"></script>
+    <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -2196,7 +2196,6 @@ ${kw("return")} C`,
 ${kw("return")} merged collection`,
       );
 
-      // PC_FIRST — defined in shared.js
 
       // ── Table construction ────────────────────────────────────────
       const PC_TABLES = pcBlock(
@@ -2285,11 +2284,11 @@ ${kw("loop")}
         if (type === "construction") {
           titleEl.textContent = "Automaton Construction";
           subtitleEl.textContent = modeLabel;
-          bodyEl.innerHTML = (isLR1based ? PC_CLOSURE1 : PC_CLOSURE0) + PC_GOTO + PC_ITEMS + (currentMode === "LALR1" ? PC_LALR : "") + (isLR1based ? PC_FIRST : "");
+          bodyEl.innerHTML = (isLR1based ? PC_CLOSURE1 : PC_CLOSURE0) + PC_GOTO + PC_ITEMS + (currentMode === "LALR1" ? PC_LALR : "") + (isLR1based ? pcFirstFollowNote(document.getElementById("grammar-input").value, "The First sets used for the lookaheads are built in the") : "");
         } else if (type === "tables") {
           titleEl.textContent = "Parsing Table Construction";
           subtitleEl.textContent = modeLabel;
-          bodyEl.innerHTML = PC_TABLES + (currentMode === "SLR1" ? '<div class="pc-note">SLR(1): lookahead set L = FOLLOW(A) — computed once from the grammar, not per-state.</div>' : "") + (isLR1based ? '<div class="pc-note">LALR(1) / LR(1): lookahead set L is read directly from the LR(1) item\'s lookahead component — more precise than FOLLOW.</div>' : "");
+          bodyEl.innerHTML = PC_TABLES + (currentMode === "SLR1" ? '<div class="pc-note">SLR(1): lookahead set L = FOLLOW(A) — computed once from the grammar, not per-state.</div>' + pcFirstFollowNote(document.getElementById("grammar-input").value, "Follow is built in the") : "") + (isLR1based ? '<div class="pc-note">LALR(1) / LR(1): lookahead set L is read directly from the LR(1) item\'s lookahead component — more precise than FOLLOW.</div>' : "");
         } else if (type === "parsing") {
           titleEl.textContent = "LR Parsing";
           subtitleEl.textContent = "all modes";

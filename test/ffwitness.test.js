@@ -251,3 +251,16 @@ test("the general case: a figure for nullable, FIRST and FOLLOW that reads as th
     }
   }
 });
+
+test("jagged edges: a figure of the general case has them everywhere, a witness has none (every step is a rule)", () => {
+  for (const kind of ["first", "follow"]) {
+    const spec = A.ffwTheory(kind);
+    assert.ok(spec.nodes.slice(1).every((n) => n.jag === true), `${kind}: every edge of the general case is jagged`);
+    assert.ok(A.ctgSpineLayout(spec).jags.every((j) => j.jag));
+  }
+  const g = A.parseBNF("E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id", false);
+  const rec = A.ffRecord(g);
+  for (const spec of [A.ffwSpec(A.ffwFirst(g, rec, "E", "id")), A.ffwSpec(A.ffwFollow(g, rec, "T", ")")), A.ffwSpec(A.ffwNullable(g, rec, "E'"))]) {
+    assert.ok(spec.nodes.slice(1).every((n) => n.jag === false));
+  }
+});

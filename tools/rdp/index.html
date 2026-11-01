@@ -248,7 +248,7 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/ll1.js?v=6147c105"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/shared.js?v=42ed2a33"></script>
+    <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -777,7 +777,8 @@
         $("algo-title").textContent = "Generating the procedures";
         $("algo-subtitle").textContent = "recursive descent";
         $("algo-body").innerHTML = PC_RDP_GEN +
-          '<div class="pc-note">Calling the start symbol at position 0 starts the parse; it succeeds when the start symbol ends exactly at the end of the input. A procedure that calls itself at the same position without reading anything (left recursion) never returns.</div>';
+          '<div class="pc-note">Calling the start symbol at position 0 starts the parse; it succeeds when the start symbol ends exactly at the end of the input. A procedure that calls itself at the same position without reading anything (left recursion) never returns.</div>' +
+          pcFirstFollowNote($("grammar-input").value, "The predictive mode chooses by FIRST and FOLLOW, which are built in the");
         $("algo-overlay").classList.remove("hidden");
         const b = $("algo-overlay").querySelector(".algo-close");
         if (b) b.focus();
