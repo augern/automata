@@ -148,13 +148,13 @@
               </div>
               <span class="ui-label" id="view-label" hidden>view</span>
               <div class="step-group" id="view-group" hidden>
-                <button class="btn is-on" id="btn-view-tree" onclick="setView('tree')" title="The parse tree">Tree</button>
+                <button class="btn" id="btn-view-tree" onclick="setView('tree')" title="The parse tree">Tree</button>
                 <button class="btn" id="btn-view-ctg" onclick="setView('ctg')" title="The nonterminals on the paths as triangles over the string they derive">Triangles</button>
-                <button class="btn" id="btn-view-path" onclick="setView('path')" title="The path between the repeated nonterminals as a jagged line, with the string beside it">Path</button>
+                <button class="btn is-on" id="btn-view-path" onclick="setView('path')" title="The path between the repeated nonterminals as a jagged line, with the string beside it">Path</button>
               </div>
               <div class="step-group" id="base-group" hidden>
-                <button class="btn is-on" id="btn-base-split" onclick="setBase('split')" title="Every piece has its own base line">Split</button>
-                <button class="btn" id="btn-base-joined" onclick="setBase('joined')" title="One base line: the string reads from left to right">Joined</button>
+                <button class="btn" id="btn-base-split" onclick="setBase('split')" title="Every piece has its own base line">Split</button>
+                <button class="btn is-on" id="btn-base-joined" onclick="setBase('joined')" title="One base line: the string reads from left to right">Joined</button>
               </div>
               <button class="btn" id="btn-other" onclick="otherRepeat()" title="Use another repeated nonterminal on the path" hidden>Another repeat</button>
             </div>
@@ -212,8 +212,8 @@
       const $ = (id) => document.getElementById(id);
 
       let ppMode = "regular"; // regular | cf
-      let ppView = "tree"; // context-free drawing: tree | ctg | path
-      let ppBase = "split"; // base lines of the path drawing: split | joined
+      let ppView = "path"; // context-free drawing: tree | ctg | path
+      let ppBase = "joined"; // base lines of the path drawing: split | joined
       let ppDFA = null; // the parsed DFA (regular mode)
       let ppG = null; // the parsed grammar (context-free mode)
       let ppStrings = []; // sample strings of the loaded example
@@ -303,6 +303,7 @@
 
       // ── Exploring ─────────────────────────────────────────────
       function explore() {
+        $("btn-view-tree").disabled = isGeneral(); // the parse tree needs a string
         if (isGeneral()) { ppReg = null; ppCF = null; renderGeneral(); return; }
         if (ppMode === "regular") exploreRegular(); else exploreCF();
       }
@@ -337,14 +338,11 @@
           '<div class="pp-row"><span class="ui-label">string</span><div class="pp-body">' + body + "</div></div>";
         $("explain").innerHTML = text + hint;
         if (ppMode === "regular") { drawDFA(); paintGraph(); walk.pos = 0; walk.refresh(); return; }
+        if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
         if (ppView === "path") drawCTGSpine("ctg-host", gen.spine, { mode: ppBase, scale: 1.4 });
-        else if (ppView === "ctg") drawCTG("ctg-host", gen.tree, { scale: 1.5 });
-        else {
-          drawTree(null);
-          $("tree-empty").textContent = "The parse tree appears once a string is entered.";
-        }
+        else drawCTG("ctg-host", gen.tree, { scale: 1.5 });
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
