@@ -1,7 +1,7 @@
 // Pure: a picture-ready proof for each member of a nullable, FIRST or FOLLOW set (needs algo/grammar.js, firstfollow.js).
 // A witness is a Christmas-tree graph (see algo/ctg.js) of a derivation that shows the member:
 //   FIRST(A) ∋ t     A derives a string that starts with t; the symbols before t's are points (they derive ε)
-//   FOLLOW(B) ∋ t    the start symbol derives a string with B's stretch immediately followed by t ($ = the end)
+//   FOLLOW(A) ∋ t    the start symbol derives a string with A's stretch immediately followed by t ($ = the end)
 //   nullable A       A derives the empty string
 // ffwFirst / ffwFollow / ffwNullable(g, rec, ...) -> { kind, sym, token, tree, marks, nodeKinds } or null if the member is not in the set.
 //   kind      first | follow | nullable; sym the symbol asked about, token the member
@@ -197,8 +197,8 @@ function ffwFollow(g, rec, B, t, alt = 0) {
 // The spine is the path of the derivation to the member; what stands beside the path at each step is a string on each side, the
 // shortest strings that the other symbols of the rule derive (ε for the ones that vanish), the symbols named under them.
 //   FIRST(A) ∋ t    the path from A down to the rule that has t; t is the last node.
-//   FOLLOW(B) ∋ t   the path from the start symbol down to B, whose string is the bottom. The first string on its right that
-//                   is not ε starts with t (marked) $ stands after the whole string.
+//   FOLLOW(A) ∋ t   the path from the start symbol down to A, whose string is the bottom. The first string on its right that
+//                   is not ε starts with t (marked). $ stands after the whole string.
 //   nullable A      A as a bare node over the symbols of its rule, each a node with a small triangle over its ε: a straight edge
 //                   down for a symbol with an empty rule, a jagged one for a symbol that derives ε through others.
 const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [x.text] : x.kids.flatMap(ffwTokens));
@@ -312,13 +312,13 @@ function ffwTheory(kind) {
   }
   if (kind === "follow") {
     return {
-      nodes: [node("S"), node("A"), node("B", { kind: "focus" })],
+      nodes: [node("S"), node("B"), node("A", { kind: "focus" })],
       levels: [
-        { left: [cell("…", "α", { cls: "is-dim" })], right: [cell("a …", "δ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(B)" } })] },
+        { left: [cell("…", "α", { cls: "is-dim" })], right: [cell("a …", "δ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] },
         { left: [cell("…", "γ", { cls: "is-dim" })], right: [cell("ε", "β")] },
       ],
       bottom: cell("…", "x", { cls: "is-dim" }),
-      terminus: true, // B derives x in as many steps as it needs
+      terminus: true, // A derives x in as many steps as it needs
     };
   }
   // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in

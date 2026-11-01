@@ -115,7 +115,7 @@ window.DEF_LIBRARY = {
     },
     first: {
       term: "FIRST",
-      formal: [T`\mathrm{FIRST}(\alpha) = \{\, a \in \Sigma \mid \alpha \Rightarrow^{*} a\beta \text{ for some } \beta \in (N \cup \Sigma)^{*} \,\}`, T`\varepsilon \in \mathrm{FIRST}(\alpha) \quad\text{iff}\quad \alpha \Rightarrow^{*} \varepsilon`],
+      formal: [T`\mathrm{FIRST}(A) = \{\, a \in \Sigma \mid A \Rightarrow^{*} a\beta \text{ for some } \beta \in (N \cup \Sigma)^{*} \,\}`, T`\varepsilon \in \mathrm{FIRST}(A) \quad\text{iff}\quad A \Rightarrow^{*} \varepsilon`],
       refs: ["alsu §4.4.2", "appel §3.2", "rs"],
     },
     firstString: {
