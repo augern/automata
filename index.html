@@ -55,6 +55,12 @@ body[data-view="list"] #view-map { display: none; }
 .pill { cursor: pointer; }
 .ring-name { pointer-events: none; }
 
+/* Progression arrows: the suggested order through the tools; those at a hovered or focused tool are lit */
+.flow path { fill: none; stroke: var(--text-lo); stroke-width: 1.3; marker-end: url(#flow-head); transition: stroke var(--dur) var(--ease); pointer-events: none; }
+.flow path.is-on { stroke: var(--accent); marker-end: url(#flow-head-on); }
+#flow-head path { fill: var(--text-lo); }
+#flow-head-on path { fill: var(--accent); }
+
 /* Tooltip for rings and tools: fixed, so showing it never moves anything */
 #tip {
   position: fixed; z-index: 10; max-width: 340px; box-sizing: border-box;
@@ -131,6 +137,23 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   <text x="124" y="212" class="ring-name">Deterministic context-free</text>
   <text x="152" y="268" class="ring-name">LL(1)</text>
   <text x="180" y="322" class="ring-name">Regular</text>
+
+  <!-- Progression arrows, below the tools; a path may run between pills, never over a ring name -->
+  <defs>
+    <marker id="flow-head" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 Z"/></marker>
+    <marker id="flow-head-on" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 Z"/></marker>
+  </defs>
+  <g class="flow">
+    <path data-from="nfa" data-to="regex" d="M291,361 L303,361"/>
+    <path data-from="regex" data-to="derivation" d="M465,353 C484,345 496,333 513,326"/>
+    <path data-from="pda" data-to="pumping" d="M330,149 L340,149"/>
+    <path data-from="pumping" data-to="rdp" d="M440,149 L450,149"/>
+    <path data-from="pda" data-to="tm" d="M286,130 C300,60 420,36 525,36"/>
+    <path data-from="derivation" data-to="rdp" d="M618,304 C626,255 606,205 588,170"/>
+    <path data-from="rdp" data-to="ll1" d="M470,168 C448,195 448,222 466,242"/>
+    <path data-from="firstfollow" data-to="ll1" d="M382,261 L392,261"/>
+    <path data-from="ll1" data-to="lr" d="M520,242 L520,225"/>
+  </g>
 
   <!-- Tools: placed by the languages they work with; their text comes from TOOLS below -->
   <a class="pill" id="t-tm" href="tools/tm/" tabindex="0"><rect x="527" y="19" width="129" height="34" rx="17"/><text x="591.5" y="36">Turing Machine</text></a>
@@ -268,6 +291,13 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   map.addEventListener("mouseleave", () => { tip.hidden = true; });
   map.addEventListener("focusin", (e) => { if (tipFor(e.target)) { const r = e.target.getBoundingClientRect(); place(r.left, r.bottom + 8); } });
   map.addEventListener("focusout", () => { tip.hidden = true; });
+
+  // the arrows at a hovered or focused tool are lit
+  const lit = (a) => document.querySelectorAll(".flow path").forEach((p) => p.classList.toggle("is-on", !!a && (a === "t-" + p.dataset.from || a === "t-" + p.dataset.to)));
+  map.addEventListener("mouseover", (e) => { const a = e.target.closest && e.target.closest(".pill"); lit(a && a.id); });
+  map.addEventListener("mouseleave", () => lit(null));
+  map.addEventListener("focusin", (e) => { const a = e.target.closest && e.target.closest(".pill"); lit(a && a.id); });
+  map.addEventListener("focusout", () => lit(null));
 
   // ── Switching views; the choice is remembered, and a narrow window always gets the list ──
   const toList = document.getElementById("to-list"), toMap = document.getElementById("to-map");
