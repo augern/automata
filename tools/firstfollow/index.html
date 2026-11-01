@@ -219,7 +219,7 @@
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
-    <script src="../../shared/algo/ctg.js?v=2b2a07f8"></script>
+    <script src="../../shared/algo/ctg.js?v=3381439e"></script>
     <script src="../../shared/algo/firstfollow.js?v=36abb92e"></script>
     <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -491,8 +491,9 @@ ${kw("return")} Follow`,
         const syms = r.rhs.map((s, i) => (ev.phase === "follow" && i === ev.pos ? '<span class="ff-occ">' + esc(s) + "</span>" : esc(s)));
         return esc(r.lhs) + " → " + (syms.join(" ") || EPSILON);
       }
-      function renderLog(pos) {
+      function renderLog(pos, follow = false) {
         const log = el("ff-log");
+        const top = log.scrollTop;
         if (!rec.events.length) { log.innerHTML = ""; return; }
         let html = "";
         for (const rd of rec.rounds) {
@@ -510,8 +511,10 @@ ${kw("return")} Follow`,
           }
         }
         log.innerHTML = html;
+        // stepping brings the current row into view; anything else (a click on a row) leaves the list where it is
         const cur = log.querySelector(".is-current");
-        if (cur) cur.scrollIntoView({ block: "nearest" });
+        if (follow && cur) cur.scrollIntoView({ block: "nearest" });
+        else log.scrollTop = top;
       }
 
       // ── The sets ─────────────────────────────────────────────────────────
@@ -565,7 +568,7 @@ ${kw("return")} Follow`,
         const pos = sim.pos;
         const ev = pos >= 0 ? rec.events[pos] : null;
         renderNow(ev);
-        renderLog(pos);
+        renderLog(pos, true);
         renderSets(pos);
         document.querySelectorAll("#ff-phases .btn").forEach((b) => b.classList.toggle("is-on", !!ev && ev.phase === b.dataset.phase));
         document.querySelectorAll("#ff-phases .btn").forEach((b) => (b.disabled = !rec.events.length));

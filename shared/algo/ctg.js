@@ -15,6 +15,8 @@
 // kept inside the parent triangle, so a child never crosses an edge of its parent.
 
 const CTG_EPS = "ε";
+// the width a column needs for the staple label under its token (set in the small italic type): neighbouring labels must not overlap
+const ctgLabelWidth = (f) => (f.label && f.label !== f.text ? f.label.length * 6.8 + 8 : 0);
 
 function ctgLayout(tree, opts = {}) {
   const o = { charW: 9, tokPad: 8, minGap: 14, padStep: 8, padMax: 40, baseH: 36, stepH: 28, marginX: 16, labelH: 20, endMarker: false, ...opts };
@@ -122,7 +124,7 @@ function ctgSpineTiled(spec, opts = {}) {
   const m = spec.nodes.length - 1;
   const cells = (f) => (f ? (Array.isArray(f) ? f : [f]) : []); // a strip is one flank or several, one column each
   const flanks = [...cells(spec.bottom), ...(spec.outer ? [...cells(spec.outer.left), ...cells(spec.outer.right)] : []), ...spec.levels.flatMap((l) => [...cells(l.left), ...cells(l.right)])];
-  const c = Math.max(o.minCol, o.colWidth || 0, ...flanks.map((f) => Math.max(1, f.text.length) * o.charW + 2 * o.tokPad));
+  const c = Math.max(o.minCol, o.colWidth || 0, ...flanks.map((f) => Math.max(1, f.text.length) * o.charW + 2 * o.tokPad), ...flanks.map(ctgLabelWidth));
   // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
   const step = Math.min(c / o.tan, o.maxStep), tan = c / step, baseH = step / 2;
   // a level with several columns on a side is that many steps tall, the strips on both sides as wide as the wider one
@@ -178,7 +180,7 @@ function ctgSpineFree(spec, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 26, gapMin: 14, step: 58, baseH: 42, topPad: 26, marginX: 22, ...opts };
   const m = spec.nodes.length - 1;
   const cells = (f) => (f ? (Array.isArray(f) ? f : [f]) : []);
-  const wOf = (f) => Math.max(o.minCol, Math.max(1, f.text.length) * o.charW + 2 * o.tokPad);
+  const wOf = (f) => Math.max(o.minCol, Math.max(1, f.text.length) * o.charW + 2 * o.tokPad, ctgLabelWidth(f));
   const apexAt = (k) => o.topPad + 11 + k * o.step;
   const B = apexAt(Math.max(m, o.depth || 0)) + o.baseH;
   // x relative to the spine; the bottom is centred on it

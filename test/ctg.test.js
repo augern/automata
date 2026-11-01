@@ -314,3 +314,13 @@ test("free spine layout: outer strings, arrows, pointers, minimum width and dept
   const deep = A.ctgSpineLayout(spec, { depth: 4 });
   assert.ok(deep.B > lay.B && deep.nodes[0].y === lay.nodes[0].y);
 });
+
+test("spine layout: a column is at least as wide as the label under its token, so neighbouring labels do not overlap", () => {
+  const spec = { nodes: [{ sym: "S" }, { sym: "A" }], levels: [{ left: null, right: [flank("ε", { label: "<labels>" }), flank("ε", { label: "<consts>" }), flank("ε", { label: "<types>" })] }], bottom: flank("ε", { label: "" }) };
+  for (const lay of [A.ctgSpineLayout(spec), A.ctgSpineLayout(spec, TILE)]) {
+    for (const t of lay.tokens.filter((k) => k.label)) assert.ok(t.w >= t.label.length * 6.8 + 8 - 1e-9, `${t.label}: ${t.w}`);
+    for (let k = 1; k < lay.tokens.length; k++) assert.ok(lay.tokens[k].x >= lay.tokens[k - 1].x + lay.tokens[k - 1].w - 1e-9, "no overlap");
+  }
+  const plain = A.ctgSpineLayout({ ...spec, levels: [{ left: null, right: [flank("ε"), flank("ε"), flank("ε")] }] });
+  assert.ok(A.ctgSpineLayout(spec).width > plain.width, "labels widen the columns");
+});
