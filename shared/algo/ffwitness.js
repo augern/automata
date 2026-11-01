@@ -248,10 +248,10 @@ function ffwFigure(w, opts = {}) {
     const last = nodes[nodes.length - 1];
     const at = last.kids.findIndex((k) => ffwHas(k, "t"));
     const levels = nodes.slice(0, -1).map((n, k) => level(n, n.kids.findIndex((x) => x === nodes[k + 1])));
-    levels.push(level(last, at));
-    const specNodes = nodes.map((n, k) => nodeOf(n, k, "focus"));
-    specNodes.push({ sym: w.token, jag: false, kind: "first", colour: "var(--accent)", tone: 1, cls: "" });
-    return ffwCompact(spec(specNodes, levels, { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } }));
+    // the last node derives its rule's symbols: the token is one of them, a leaf like the others
+    const { left, right } = level(last, at);
+    const token = { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } };
+    return ffwCompact(spec(nodes.map((n, k) => nodeOf(n, k, "focus")), levels, [...(left || []), token, ...(right || [])]));
   }
 
   if (w.kind === "follow") {
@@ -304,9 +304,10 @@ function ffwTheory(kind) {
   const node = (sym, extra = {}) => ({ sym, jag: true, ...extra });
   if (kind === "first") {
     return {
-      nodes: [node("A", { kind: "focus" }), node("a", { kind: "first", colour: "var(--accent)", tone: 1 })],
-      levels: [{ left: [cell("ε", "X₁ … Xᵢ")], right: [cell("…", "β", { cls: "is-dim" })] }],
-      bottom: cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }),
+      nodes: [node("A", { kind: "focus", jag: false })],
+      levels: [],
+      bottom: [cell("ε", "X₁ … Xᵢ"), cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }), cell("…", "β", { cls: "is-dim" })],
+      terminus: true, // A derives the string in as many steps as it needs
     };
   }
   if (kind === "follow") {

@@ -181,8 +181,9 @@ test("witness specs: FIRST(E) of the expression grammar: the path E, T, F, id wi
   const g = A.parseBNF("E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id", false);
   const rec = A.ffRecord(g);
   const spec = A.ffwSpec(A.ffwFirst(g, rec, "E", "id"));
-  assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["E", "T", "F", "id"]);
-  assert.deepEqual(js(spec.levels.map((l) => [l.left, l.right && l.right.map((f) => f.text + ":" + f.label)])), [[null, ["ε:E'"]], [null, ["ε:T'"]], [null, null]]);
+  assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["E", "T", "F"], "terminals are leaves, not nodes");
+  assert.deepEqual(js(spec.levels.map((l) => [l.left, l.right && l.right.map((f) => f.text + ":" + f.label)])), [[null, ["ε:E'"]], [null, ["ε:T'"]]]);
+  assert.deepEqual(js(spec.bottom.map((c) => c.text)), ["id"]);
 });
 
 test("ways of showing a member: the fewest nodes first, a left recursion does not loop", () => {
@@ -315,6 +316,6 @@ test("captions widen a figure only when they are wider than it", () => {
 test("unit-rule chains are one jagged edge", () => {
   const g = A.parseBNF("S -> A\nA -> B\nB -> C\nC -> a", false);
   const spec = A.ffwSpec(A.ffwFirst(g, A.ffRecord(g), "S", "a", 0));
-  assert.deepEqual(js(spec.nodes.map((n) => [n.sym, n.jag])), [["S", false], ["a", true]]);
+  assert.deepEqual(js(spec.nodes.map((n) => [n.sym, n.jag])), [["S", false], ["C", true]]);
   assert.equal(spec.levels.length, 1);
 });
