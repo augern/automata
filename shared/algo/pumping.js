@@ -243,7 +243,20 @@ function pumpCTG(tree, sep = "") {
   const marked = (n) => !n.leaf && (!!n.mark || n.children.some(marked));
   const parts = [];
   let k = 0;
-  function conv(node, inside) {
+  // the strings to the left and right of the path from a node down to the next marked node, over all the nodes between
+  function stretch(node) {
+    let left = 0, right = 0;
+    for (let cur = node; ; ) {
+      const next = cur.children.findIndex(marked);
+      if (next < 0) break;
+      cur.children.forEach((c, j) => { if (j !== next) (j < next ? (left += pumpLeaves(c).length) : (right += pumpLeaves(c).length)); });
+      cur = cur.children[next];
+      if (cur.mark) break;
+    }
+    return { left, right };
+  }
+  // top: the node starts a stretch (the root or a marked node): an empty string beside the stretch is one ε, on that node
+  function conv(node, inside, top) {
     inside = inside || node.mark === "up" || node.mark === "both";
     const kids = [];
     const push = (sym, part) => {
@@ -253,18 +266,19 @@ function pumpCTG(tree, sep = "") {
     };
     const eps = (part) => kids.push({ text: "ε", part, cls: "pp-" + part });
     const next = node.children.findIndex(marked);
+    const st = top && next >= 0 ? stretch(node) : { left: 1, right: 1 };
     node.children.forEach((c, j) => {
       if (j === next && next >= 0) {
-        if (!kids.length) eps(inside ? "v" : "u"); // nothing to the left of the next node on the path
-        kids.push(conv(c, inside));
+        if (!st.left && top) eps(inside ? "v" : "u");
+        kids.push(conv(c, inside, !!c.mark));
       } else if (c.leaf) { if (!c.eps) push(c.sym, c.part); }
       else for (const l of pumpLeaves(c)) push(l.sym, l.part);
     });
-    if (next >= 0 && !(kids[kids.length - 1].kids === undefined)) eps(inside ? "y" : "z");
+    if (next >= 0 && top && !st.right) eps(inside ? "y" : "z");
     else if (next < 0 && !kids.length) eps("x"); // an empty lowest node
     return { sym: node.sym, id: "p" + k++, cls: node.mark ? CLS[node.mark] : "", kids };
   }
-  const out = conv(tree, false);
+  const out = conv(tree, false, true);
   (function collect(n) { for (const kid of n.kids) { if (kid.text !== undefined) parts.push(kid.part || ""); else collect(kid); } })(out);
   return { tree: out, parts };
 }

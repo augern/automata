@@ -120,7 +120,7 @@ function drawCTGSpineNodes(svg, lay, base, make) {
 function drawCTGPath(host, spec, opts = {}) {
   const { tree, parts, anchor } = ctgSpineTree(spec);
   const spans = parts.map((p, k) => ({ from: k, to: k, label: p.label })).filter((s, k) => s.label && s.label !== ctgLeafText(tree, k));
-  return drawCTG(host, tree, { padStep: 0, minGap: 6, baseH: 46, stepH: 60, anchor, spine: true, spans, scale: opts.scale, title: opts.title });
+  return drawCTG(host, tree, { padStep: 0, minGap: 6, baseH: 46, stepH: 56, slope: 0.9, anchor, spine: true, spans, scale: opts.scale, title: opts.title });
 }
 function ctgLeafText(tree, k) {
   const out = [];

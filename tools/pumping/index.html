@@ -190,10 +190,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=66d42ea0"></script>
-    <script src="../../shared/algo/pumping.js?v=9443238a"></script>
+    <script src="../../shared/algo/ctg.js?v=3c51083e"></script>
+    <script src="../../shared/algo/pumping.js?v=50fb0927"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=59148e3a"></script>
+    <script src="../../shared/ctg.js?v=de1f4ac5"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -343,7 +343,7 @@
         $("ctg-empty").hidden = true;
         if (ppView === "path" && ppBase === "split") drawCTGSplit("ctg-host", gen.split, { scale: 1.25, tile: true });
         else if (ppView === "path") drawCTGPath("ctg-host", gen.spine, { scale: 1.4 });
-        else drawCTG("ctg-host", gen.tree, { scale: 1.5, padStep: 0, minGap: 6 });
+        else drawCTG("ctg-host", gen.tree, { scale: 1.5, padStep: 0, minGap: 6, slope: 0.9, stepH: 36 });
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
@@ -574,7 +574,7 @@
         const sep = ppSep();
         const { tree: ctg, parts } = pumpCTG(tree, sep);
         const { svg, layout } = drawCTG("ctg-host", ctg, {
-          scale: 1.5, padStep: 0, minGap: 6, // every part has a token (ε when empty): the triangles hug the string
+          scale: 1.5, padStep: 0, minGap: 6, slope: 0.9, stepH: 36, // every part has a token (ε when empty): the triangles hug the string
           spans: parts.map((p, k) => ({ from: k, to: k, label: p })),
           title: (n, lay) => n.sym + (n.empty ? " derives ε" : " derives “" + lay.leaves.slice(n.first, n.last + 1).map((l) => l.text).join(sep) + "”"),
         });

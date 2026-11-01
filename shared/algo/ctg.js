@@ -11,6 +11,7 @@
 //             x0..x1 is the base, ax the apex x, h the apex height above the base line. point: an empty node with nothing under it
 //             (not even empty children): drawn as a point at px; an empty node with empty children is a triangle over their points.
 //     top     height above the base line that the drawing needs (the tallest apex and its label)
+//   opts.slope: tan of the half apex angle; the heights then follow the widths of the bases, so the triangles are alike
 //   opts.anchor: id of a node; the apexes of it and of its ancestors are put over its centre where the parent allows
 // Triangles nest: a triangle's base is wider than its children's by a margin that grows with its level, and its apex is
 // kept inside the parent triangle, so a child never crosses an edge of its parent.
@@ -71,20 +72,26 @@ function ctgLayout(tree, opts = {}) {
   const above = new Set();
   for (let a = anchor; a; a = a.parent) above.add(a.id);
 
-  // triangles, parents before children
-  let top = 0;
+  // the bases
   for (const n of nodes) {
-    if (n.point) {
-      const it = items[n.firstItem];
-      n.px = it.x + it.w / 2;
-      n.h = 12;
-      top = Math.max(top, n.h + o.labelH - 6);
-      continue;
-    }
+    if (n.point) { const it = items[n.firstItem]; n.px = it.x + it.w / 2; n.h = 12; continue; }
     const pad = padOf(n.level);
     n.x0 = items[n.firstItem].x - pad;
     n.x1 = items[n.lastItem].x + items[n.lastItem].w + pad;
-    n.h = o.baseH + o.stepH * (n.level - 1);
+  }
+  // the heights: by level, or with opts.slope by the width of the base (one apex angle, the stretch of tan = half base / height),
+  // never less than one step above the highest child, so that the apexes stay apart
+  for (let k = nodes.length - 1; k >= 0; k--) {
+    const n = nodes[k];
+    if (n.point) continue;
+    if (!o.slope) { n.h = o.baseH + o.stepH * (n.level - 1); continue; }
+    const kids = n.kids.map((id) => byId[id]).filter((c) => !c.point);
+    n.h = Math.max(o.baseH, (n.x1 - n.x0) / 2 / o.slope, ...kids.map((c) => c.h + o.stepH));
+  }
+  // the apexes, parents before children
+  let top = 0;
+  for (const n of nodes) {
+    if (n.point) { top = Math.max(top, n.h + o.labelH - 6); continue; }
     let ax = above.has(n.id) ? anchorX : (n.x0 + n.x1) / 2;
     const p = n.parent;
     if (p) {
