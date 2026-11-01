@@ -1164,7 +1164,7 @@ body {
   cursor: pointer;
   transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
-.guide-btn + .view-btn { margin-left: var(--sp-3); }
+.guide-btn + .view-btn, .guide-btn + .guide-btn { margin-left: var(--sp-3); }
 .qr-btn {
   margin-left: auto;
   background: transparent;

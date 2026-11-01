@@ -94,6 +94,7 @@ parser-tools/
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
 │   ├── view-menu.js                    ← the top bar's Index button and View menu (share, theme, layout presets)
 │   ├── quick-link.js, qr-modal.js      ← the QR button: tool, example and panel set as a full-screen QR code (#q=…)
+│   ├── definitions.js                  ← the top bar's Definitions button and pop-up: formal definitions with their sources (mechanism; text in tools/<tool>/definitions.js, so far FIRST & FOLLOW; general theory only, what is specific to the tool is in the Guide)
 │   ├── guide.js                        ← the top bar's Guide button and pop-up (the mechanism; each tool supplies its text in tools/<tool>/guide.js)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
