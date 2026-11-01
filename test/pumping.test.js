@@ -215,3 +215,24 @@ test("pumpSplitFigure and pumpGeneralCF: the line down to x is jagged unless the
   const low = P.pumpGet(tree, P.pumpPairs(tree)[0].low);
   assert.ok(low.children.every((c) => c.leaf), "S → ε is a single step");
 });
+
+test("run figure of a DFA run: the states at the ends of x, at each round of y and at the end, jagged where states are hidden", () => {
+  const A = load("grammar.js", "strings.js", "rdp.js", "regex.js", "pumping.js", "runfig.js");
+  const dfa = A.pumpParseDFA("start: q0\naccept: q3\nq0 a q1\nq0 b q0\nq1 a q1\nq1 b q2\nq2 a q1\nq2 b q3\nq3 a q1\nq3 b q0");
+  const w = "babb";
+  const run = A.pumpDFARun(dfa, w), loop = A.pumpFindLoop(run.path), parts = A.pumpSplit(w, loop);
+  const spec = A.pumpRunSpec(dfa, w, parts, 3);
+  const js = (x) => JSON.parse(JSON.stringify(x));
+  assert.equal(spec.segs.map((s) => s.symbols.join("")).join(""), A.pumpJoin(parts, 3), "the segments are the pumped string");
+  assert.deepEqual(js(spec.segs.map((s) => s.role)), js(spec.segs.map((s) => s.role).slice().sort((a, b) => "xyz".indexOf(a) - "xyz".indexOf(b))), "x, then the rounds of y, then z");
+  assert.equal(spec.segs.filter((s) => s.role === "y").length, 3, "one edge for each round of y");
+  assert.ok(spec.segs.every((s) => s.jag === (s.symbols.length >= 2)), "jagged exactly where a stretch has more than one transition");
+  assert.equal(spec.nodes.length, spec.segs.length + 1);
+  assert.ok(spec.nodes.filter((n) => n.role === "loop").every((n) => n.label === dfa.states[run.path[loop.s]]), "every round starts in the loop state");
+  const lay = A.runFigLayout(spec);
+  assert.ok(Number.isFinite(lay.width) && lay.nodes.every((n, k) => k === 0 || n.x > lay.nodes[k - 1].x), "the states run left to right");
+  assert.equal(lay.tokens.length, A.pumpJoin(parts, 3).length);
+  const gen = A.runFigLayout(A.pumpRunGeneral(2));
+  assert.equal(gen.spans.length, 0, "no staples for the letters of the general case");
+  assert.equal(gen.nodes.length, 5);
+});

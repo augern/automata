@@ -843,6 +843,17 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ctg-base { stroke: var(--text-lo); stroke-width: 1.5; }
 .ctg-tok.is-eps { font-style: italic; opacity: 0.7; }
 .ctg-blank { fill: var(--bg); stroke: none; }
+/* Run figure (shared/ctg.js drawRunFigInto): the states of a DFA run over the string */
+.run-seg { fill: transparent; }
+.run-line { fill: none; stroke: var(--text-dim); stroke-width: 1.4; }
+.run-head { fill: var(--text-dim); }
+.run-node.run-loop rect:first-of-type { stroke: var(--accent); stroke-width: 2; }
+.run-node.run-stuck rect:first-of-type { stroke: var(--red); stroke-width: 2; }
+.run-node.is-now rect:first-of-type { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2.4; }
+.run-edge.is-now .run-line, .run-edge.is-now .ctg-jag { stroke: var(--accent); }
+.run-edge.is-now .run-head { fill: var(--accent); }
+.ctg-tok.is-read { opacity: 0.5; }
+.ctg-tok.is-now { text-decoration: underline; }
 /* Easter egg (tools/pumping): needles, glitter, baubles and a star */
 .ctg.xmas .ctg-tri-fill { fill: var(--xmas-needle) !important; }
 .ctg.xmas .ctg-tri-fill:nth-of-type(even) { fill: var(--xmas-needle-alt) !important; }

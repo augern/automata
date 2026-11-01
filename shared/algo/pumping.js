@@ -109,6 +109,37 @@ function pumpJoin(parts, i) {
 // A parse tree of the tokens in the grammar, or null: { tree, aborted }. A node is
 // { sym, leaf?, eps?, children? }; the children of a nonterminal are in order, an ε alternative has one
 // ε leaf. Built from the (complete-search) parser's run.
+// The run figure (algo/runfig.js) of a string through a DFA, pumped i times: the states at the ends of x, at the start of each round of y
+// and at the end, with the stretches between them as edges (jagged when they hide states). Without a split, every state of the path.
+function pumpRunSpec(dfa, w, parts, i) {
+  const pumped = parts ? pumpJoin(parts, i) : w;
+  const run = pumpDFARun(dfa, pumped), chars = [...pumped], end = run.path.length - 1;
+  const px = parts ? [...parts.x].length : 0, py = parts ? [...parts.y].length : 0;
+  const cuts = [0];
+  if (parts) {
+    const add = (p) => { if (p > cuts[cuts.length - 1] && p <= end) cuts.push(p); };
+    add(px);
+    for (let m = 1; m <= i; m++) add(px + m * py);
+    add(end);
+  } else for (let p = 1; p <= end; p++) cuts.push(p);
+  const loop = (p) => parts && p >= px && p <= px + i * py && (p - px) % py === 0;
+  const roleAt = (p) => (!parts ? "" : p < px ? "x" : p < px + i * py ? "y" : "z");
+  return {
+    nodes: cuts.map((p) => ({ label: dfa.states[run.path[p]], accept: dfa.accepts.has(run.path[p]), role: loop(p) ? "loop" : "", start: p === 0, stuck: run.stuckAt >= 0 && p === end, pos: p })),
+    segs: cuts.slice(1).map((b, k) => ({ symbols: chars.slice(cuts[k], b), role: roleAt(cuts[k]), jag: !!parts && b - cuts[k] >= 2, start: cuts[k], end: b })),
+  };
+}
+
+// The same for no string: q₀, a state p that every round of y returns to, and an accepting state f.
+function pumpRunGeneral(i) {
+  const seg = (symbol, role) => ({ symbols: [symbol], role, jag: true });
+  return {
+    abstract: true,
+    nodes: [{ label: "q₀", start: true }, { label: "p", role: "loop" }, ...Array.from({ length: i }, () => ({ label: "p", role: "loop" })), { label: "f", accept: true }],
+    segs: [seg("x", "x"), ...Array.from({ length: i }, () => seg("y", "y")), seg("z", "z")],
+  };
+}
+
 function pumpParseTree(g, tokens) {
   const trace = rdpRun(g, tokens, { mode: "full" });
   if (!trace.accepted) return { tree: null, aborted: trace.aborted };
