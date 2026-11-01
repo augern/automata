@@ -108,7 +108,8 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //                                                                     on a side is that many steps tall, the other side padded)
 //           bottom: flank,                                            what the last node derives
 //           outer?: { left, right },                                  strings outside the top triangle
-//           arrows?: [{ fromNode, side: "left" | "right", toId }] }    a scan arrow from the foot of a node to the token with that id
+//           arrows?: [{ fromNode, side: "left" | "right", toId }],   a scan arrow from the foot of a node to the token with that id
+//           caption?: string }                                        a line of text above the figure
 //     flank: { text, id?, head?, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
 //       head: the leading part of the text that is emphasised; id: what an arrow points at
 //       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
@@ -169,7 +170,7 @@ function ctgSpineTiled(spec, opts = {}) {
     const right = a.side === "right";
     arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
   }
-  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows };
+  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows, caption: spec.caption || "" };
 }
 
 // The spine figure with a column for each cell of its own width. Nothing needs to be similar: the triangles all have their apex on the
@@ -205,8 +206,9 @@ function ctgSpineFree(spec, opts = {}) {
     for (let i = cells(spec.outer.left).length - 1; i >= 0; i--) { const f = cells(spec.outer.left)[i]; xl -= wOf(f); put.push([f, xl]); }
     for (const f of cells(spec.outer.right)) { put.push([f, xr]); xr += wOf(f); }
   }
-  let minX = Math.min(footL[0], ...put.map(([, x0]) => x0));
-  let maxX = Math.max(footR[0], ...put.map(([f, x0]) => x0 + wOf(f)));
+  const capW = (spec.caption || "").length * 6.4; // a caption above the figure, centred on the spine
+  let minX = Math.min(footL[0], -capW / 2, ...put.map(([, x0]) => x0));
+  let maxX = Math.max(footR[0], capW / 2, ...put.map(([f, x0]) => x0 + wOf(f)));
   // a pointer's label runs to the right of its token
   for (const [f, x0] of put) if (f.mark && f.mark.label) maxX = Math.max(maxX, x0 + wOf(f) / 2 + 8 + f.mark.label.length * 6.4);
   let width = maxX - minX + 2 * o.marginX, cx = o.marginX - minX;
@@ -224,7 +226,7 @@ function ctgSpineFree(spec, opts = {}) {
     const right = a.side === "right";
     arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
   }
-  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows };
+  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, caption: spec.caption || "" };
 }
 
 // The spine figure: with opts.tile the tiled one (one apex angle, equal columns: the pumping figures), else a column for each

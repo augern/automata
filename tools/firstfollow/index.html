@@ -7,7 +7,7 @@
     <title>FIRST &amp; FOLLOW | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=3e2c71b3" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=2390ea9b" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=bddadf9a" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -222,7 +222,7 @@
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
-    <script src="../../shared/algo/ctg.js?v=3381439e"></script>
+    <script src="../../shared/algo/ctg.js?v=4608fbab"></script>
     <script src="../../shared/algo/firstfollow.js?v=36abb92e"></script>
     <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -230,9 +230,9 @@
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=4cd44d40"></script>
+    <script src="../../shared/algo/ffwitness.js?v=d96070a3"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
-    <script src="../../shared/ctg.js?v=09665aad"></script>
+    <script src="../../shared/ctg.js?v=50660fee"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -427,9 +427,9 @@ ${kw("return")} Follow`,
         el("wit-all-wrap").classList.toggle("is-off", !!noSet);
         if (theory) {
           const spec = ffwTheory(theory);
-          showFigures([spec], 0);
+          showFigures(spec.figures || [spec], 60);
           el("wit-bar").textContent = spec.statement;
-          el("wit-forms").innerHTML = spec.forms.map(esc).join(' <span class="wit-arrow">⇒*</span> ');
+          el("wit-forms").innerHTML = spec.formsText ? esc(spec.formsText) : spec.forms.map(esc).join(' <span class="wit-arrow">⇒*</span> ');
           return;
         }
         if (!sel) return;

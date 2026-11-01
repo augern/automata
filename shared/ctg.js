@@ -121,6 +121,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
   };
   const kindCls = (k) => (CTG_KIND[k] ? " " + CTG_KIND[k] : "");
   const svg = root;
+  if (lay.caption) make("text", { class: "ctg-caption", x: lay.cx, y: 14, "text-anchor": "middle" }, svg, lay.caption);
   for (const t of lay.tris) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
     // no outline: the shape is its tint

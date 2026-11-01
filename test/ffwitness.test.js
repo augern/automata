@@ -231,13 +231,12 @@ test("ways of showing a member: the different ways are different derivations", (
 });
 
 test("the general case: a figure for nullable, FIRST and FOLLOW that reads as the definition says", () => {
-  for (const kind of ["nullable", "first", "follow"]) {
+  for (const kind of ["first", "follow"]) {
     const spec = A.ffwTheory(kind);
     assert.equal(spec.nodes.length, spec.levels.length + 1, kind);
     const lay = A.ctgSpineLayout(spec);
     assert.ok(Number.isFinite(lay.width) && Number.isFinite(lay.height), kind);
     assert.ok(spec.statement.length > 20 && spec.forms.length >= 2, kind);
-    if (kind === "nullable") assert.ok(lay.tokens.every((t) => t.eps));
     if (kind === "first") {
       assert.equal(lay.tokens.find((t) => !t.eps).text, "a", "the first token seen from the left");
       assert.ok(lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9);
@@ -288,4 +287,28 @@ test("the general case: a string that is not spelled out is a faded … with its
   }
   const follow = A.ctgSpineLayout(A.ffwTheory("follow"));
   assert.equal(follow.tokens.find((t) => t.id === "t").head, "a", "the token that follows is spelled, the rest of its string is not");
+});
+
+test("the general case of nullable: two figures, directly and through other symbols, no symbol singled out", () => {
+  const theory = A.ffwTheory("nullable");
+  assert.equal(theory.figures.length, 2);
+  assert.ok(theory.statement.includes("directly") && theory.statement.includes("through other symbols"));
+  assert.ok(theory.formsText.includes("A ⇒ ε") && theory.formsText.includes("⇒*"));
+  const [direct, indirect] = theory.figures.map((f) => A.ctgSpineLayout(f));
+  assert.deepEqual(js([direct.caption, indirect.caption]), ["directly", "through other symbols"]);
+  assert.deepEqual(js(direct.tokens.map((t) => [t.text, t.label])), [["ε", "A → ε"]]);
+  // the other: one ε column for each symbol, every one named the same way, and a faded … for the ones in between
+  assert.deepEqual(js(indirect.tokens.map((t) => t.text)), ["ε", "ε", "…", "ε"]);
+  assert.deepEqual(js(indirect.tokens.filter((t) => t.eps).map((t) => t.label)), ["X₁ ⇒* ε", "X₂ ⇒* ε", "Xₙ ⇒* ε"]);
+  assert.ok(indirect.tokens.every((t) => t.eps || t.text === "…"), "only ε and the faded …");
+  assert.equal(new Set(indirect.nodes.map((n) => n.sym)).size, 1, "a single node: no path through one of the symbols");
+  assert.ok(Math.abs(indirect.nodes[0].footR - indirect.nodes[0].footL - indirect.tokens.reduce((n, t) => n + t.w, 0)) < 1e-9, "the triangle covers all the columns");
+  for (const lay of [direct, indirect]) for (let k = 1; k < lay.tokens.length; k++) assert.ok(lay.tokens[k].x >= lay.tokens[k - 1].x + lay.tokens[k - 1].w - 1e-9, "no overlap");
+});
+
+test("captions widen a figure only when they are wider than it", () => {
+  const spec = { nodes: [{ sym: "A" }], levels: [], bottom: { text: "ε" } };
+  const plain = A.ctgSpineLayout(spec), captioned = A.ctgSpineLayout({ ...spec, caption: "a rather long caption above the figure" });
+  assert.ok(captioned.width > plain.width && captioned.caption.length > 0);
+  assert.equal(A.ctgSpineLayout({ ...spec, caption: "x" }).width, plain.width);
 });

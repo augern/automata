@@ -335,11 +335,24 @@ function ffwTheory(kind) {
       statement: "a ∈ FOLLOW(B) when S derives α A δ with δ starting with a, and A derives γ B β with β deriving ε: the end of B is the end of A, so a comes next",
     };
   }
+  // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in
+  // its turn, directly or not. Two figures; no Xᵢ is singled out, each has a column of its own.
+  const direct = {
+    caption: "directly",
+    nodes: [node("A", { kind: "focus", jag: false })],
+    levels: [],
+    bottom: cell("ε", "A → ε", { kind: "focus", mark: { kind: "focus", label: "A derives ε" } }),
+  };
+  const indirect = {
+    caption: "through other symbols",
+    nodes: [node("A", { kind: "focus", jag: false })],
+    levels: [],
+    bottom: [cell("ε", "X₁ ⇒* ε"), cell("ε", "X₂ ⇒* ε"), cell("…", "", { cls: "is-dim" }), cell("ε", "Xₙ ⇒* ε")],
+  };
   return {
-    nodes: [node("A", { kind: "focus" }), node("X₁")],
-    levels: [{ left: null, right: [cell("ε", "X₂ … Xₙ")] }],
-    bottom: cell("ε", "", { kind: "focus", mark: { kind: "focus", label: "A derives ε" } }),
-    forms: ["A", "X₁ X₂ … Xₙ", "ε"],
-    statement: "A is nullable when some rule A → X₁ … Xₙ has every Xᵢ nullable: each of them derives ε, so the whole string vanishes",
+    figures: [direct, indirect],
+    forms: ["A", "ε"],
+    formsText: "A ⇒ ε   |   A ⇒ X₁ … Xₙ ⇒* ε",
+    statement: "A is nullable when a rule gives ε at once (A → ε), or when every symbol of some rule A → X₁ … Xₙ is nullable in its turn, directly or through other symbols",
   };
 }
