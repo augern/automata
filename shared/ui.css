@@ -848,7 +848,7 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ctg.xmas .ctg-tri-fill:nth-of-type(even) { fill: var(--xmas-needle-alt) !important; }
 .ctg.xmas .ctg-jag { stroke: var(--xmas-glitter); filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.7)); animation: ctg-glitter 1.4s ease-in-out infinite alternate; }
 .ctg.xmas .ctg-snode rect { fill: var(--xmas-bauble) !important; stroke: var(--xmas-bauble-edge) !important; stroke-width: 1.4 !important; }
-.ctg.xmas .ctg-snode text { fill: var(--xmas-glitter); }
+.ctg.xmas .ctg-snode text { fill: var(--xmas-glitter); font-size: var(--fs-md); }
 .ctg.xmas .ctg-snode.ctg-top rect { fill: var(--xmas-star) !important; stroke: var(--xmas-star-edge) !important; }
 .ctg.xmas .ctg-snode.ctg-top text { fill: var(--xmas-star-text); }
 @keyframes ctg-glitter { from { opacity: 0.55; } to { opacity: 1; } }

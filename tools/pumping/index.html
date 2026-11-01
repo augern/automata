@@ -9,7 +9,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=0184d68f" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=db5c6287" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -188,7 +188,7 @@
     <script src="../../shared/algo/ctg.js?v=54add923"></script>
     <script src="../../shared/algo/pumping.js?v=c0007c86"></script>
     <script src="../../shared/shared.js?v=2ab85b1b"></script>
-    <script src="../../shared/ctg.js?v=7551c418"></script>
+    <script src="../../shared/ctg.js?v=0ec04eae"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -583,7 +583,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         root.innerHTML = "";
         $("ctg-empty").hidden = true;
         const lay = ctgSplitLayout(widest, { unify: true }), fit = ctgSplitLayout(fitted, { unify: true });
-        drawCTGSplitInto(root, fig, { unify: ppBase === "joined", minWidth: lay.width, ...opts });
+        drawCTGSplitInto(root, fig, { unify: ppBase === "joined", minWidth: lay.width, glyphs: root.classList.contains("xmas") ? { top: "★", inner: "✦" } : null, ...opts });
         ctgBox = { x: lay.cx - fit.width / 2, y: 0, width: fit.width, height: fit.height };
         const own = ctgSplitLayout(fig, { unify: ppBase === "joined", ...opts });
         ctgNow = { x: lay.cx - own.width / 2, y: 0, width: own.width, height: own.height };
@@ -596,8 +596,8 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         if (undress) { root.classList.remove("xmas"); undress(); undress = null; return; }
         const was = { mode: ppMode, g: $("grammar-input").value, w: $("w-input").value, i: $("pump-i").value, ex: $("examples-select").value };
         root.classList.add("xmas");
-        $("grammar-input").value = "S -> Happy H lidays!\nH -> Ho H | eps";
-        $("w-input").value = "Happy Ho lidays!";
+        $("grammar-input").value = "S -> Happy H lidays!\nH -> ho H | eps";
+        $("w-input").value = "Happy ho lidays!";
         $("pump-i").value = 5;
         ppMode === "cf" ? buildDef() : setMode("cf");
         setTimeout(() => $("ctg-svg").dispatchEvent(new MouseEvent("dblclick", { bubbles: true })), 60); // fit the figure

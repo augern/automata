@@ -110,7 +110,7 @@ function drawCTG(host, tree, opts = {}) {
 
 // A figure of algo/ctg.js (a layout of ctgSplitLayout or ctgSpineLayout) drawn into a <g> that the caller owns, so that it can be
 // panned and zoomed (createFitView). The drawing is in the layout's own coordinates, x from 0 to its width, y from 0 to its
-// height. Option staples: false leaves out the staples under the tokens.
+// height. Option staples: false leaves out the staples under the tokens; glyphs: { top, inner } draws these instead of the symbols.
 function drawCTGFigureInto(root, lay, opts = {}) {
   const make = (tag, attrs, parent, text) => {
     const e = document.createElementNS(CTG_NS, tag);
@@ -194,10 +194,11 @@ function drawCTGFigureInto(root, lay, opts = {}) {
     make("path", { class: "ctg-jag", d: d + ` L${sub.x},${y1}` }, svg);
   }
   for (const n of [...lay.nodes, ...(lay.subs || [])]) {
-    const w = Math.max(26, String(n.sym).length * 8 + 14);
+    const sym = opts.glyphs ? (n === lay.nodes[0] ? opts.glyphs.top : opts.glyphs.inner) : n.sym; // glyphs: the Easter egg of the pumping tool
+    const w = Math.max(26, String(sym).length * 8 + 14);
     const g = make("g", { class: "ctg-snode" + (n === lay.nodes[0] ? " ctg-top" : "") + (n.cls ? " " + n.cls : "") + kindCls(n.kind) }, svg);
     make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
-    make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
+    make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, sym);
   }
   return lay;
 }
