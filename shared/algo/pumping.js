@@ -290,3 +290,16 @@ function pumpSpine(tree, sep = "") {
   const x = pumpLeaves(cur);
   return { nodes, segments, bottom: x.length ? flank(x) : { text: "", part: "x", label: "x" } };
 }
+
+// The general case of the context-free pumping lemma for the spine and triangle figures: S ⇒* uAz, A ⇒* vAy, A ⇒* x,
+// with the middle part taken i times. -> { spine, tree }: input of ctgSpineLayout and of ctgLayout.
+function pumpGeneralCF(i) {
+  const part = (p) => ({ text: p, part: p, cls: "pp-" + p });
+  const nodes = [{ sym: "S" }], segments = [{ left: part("u"), right: part("z"), jag: true }];
+  for (let k = 0; k < i; k++) { nodes.push({ sym: "A", cls: "pp-up" }); segments.push({ left: part("v"), right: part("y"), jag: true }); }
+  nodes.push({ sym: "A", cls: "pp-low" });
+  const spine = { nodes, segments, bottom: part("x") };
+  let cur = { sym: "A", cls: "pp-low", kids: [part("x")] };
+  for (let k = 0; k < i; k++) cur = { sym: "A", cls: "pp-up", kids: [part("v"), cur, part("y")] };
+  return { spine, tree: { sym: "S", kids: [part("u"), cur, part("z")] } };
+}

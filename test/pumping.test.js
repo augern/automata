@@ -157,3 +157,12 @@ test("pumpSpine: the right-hand string of a stretch with several nodes is in the
   assert.equal(sp.segments[1].right.text, "cd");
   assert.equal(sp.segments[1].left.text, "ab");
 });
+
+test("pumpGeneralCF: i copies of the middle part between the first A and the lowest one", () => {
+  const sizes = (i) => { const g = P.pumpGeneralCF(i); let n = 0; (function w(x) { n++; for (const k of x.kids) if (k.sym !== undefined) w(k); })(g.tree); return [g.spine.nodes.length, g.spine.segments.length, n]; };
+  assert.deepEqual(sizes(0), [2, 1, 2]);
+  assert.deepEqual(sizes(1), [3, 2, 3]);
+  assert.deepEqual(sizes(3), [5, 4, 5]);
+  const parts = P.pumpGeneralCF(2).spine.segments.map((s) => s.left.part + s.right.part);
+  assert.deepEqual(JSON.parse(JSON.stringify(parts)), ["uz", "vy", "vy"]);
+});

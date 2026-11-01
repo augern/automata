@@ -92,8 +92,8 @@
     <div id="topbar">
       <h1>Pumping</h1>
       <div style="width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex-shrink: 0"></div>
-      <button class="mode-btn active" id="btn-mode-regular" onclick="setMode('regular')">Regular: DFA</button>
-      <button class="mode-btn" id="btn-mode-cf" onclick="setMode('cf')">Context-free: parse tree</button>
+      <button class="mode-btn active" id="btn-mode-regular" onclick="swapMode('regular')">Regular: DFA</button>
+      <button class="mode-btn" id="btn-mode-cf" onclick="swapMode('cf')">Context-free: parse tree</button>
     </div>
 
     <div id="panels">
@@ -191,7 +191,7 @@
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
     <script src="../../shared/algo/ctg.js?v=dc7b905c"></script>
-    <script src="../../shared/algo/pumping.js?v=38e2dd62"></script>
+    <script src="../../shared/algo/pumping.js?v=447a436f"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
     <script src="../../shared/ctg.js?v=1e55afe7"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
@@ -243,6 +243,17 @@
         buildDef();
       }
 
+      // A top-level mode of its own starts from the general case: no string.
+      function swapMode(m) {
+        const key = Object.keys(EXAMPLES).find((k) => (EXAMPLES[k].mode || "regular") === m);
+        if (key) { loadExample(key); return; } // its definition, no string
+        $("w-input").value = "";
+        ppStrings = [];
+        setMode(m);
+      }
+      const isGeneral = () => !$("w-input").value.trim();
+      const redraw = () => (isGeneral() ? renderGeneral() : ppMode === "regular" ? renderRegular() : renderCF());
+
       function setView(v) {
         ppView = v;
         $("btn-view-tree").classList.toggle("is-on", v === "tree");
@@ -251,13 +262,13 @@
         $("canvas-tree").hidden = ppMode !== "cf" || v !== "tree";
         $("canvas-ctg").hidden = ppMode !== "cf" || v === "tree";
         $("base-group").hidden = ppMode !== "cf" || v !== "path";
-        if (ppMode === "cf") renderCF();
+        if (ppMode === "cf") redraw();
       }
       function setBase(b) {
         ppBase = b;
         $("btn-base-split").classList.toggle("is-on", b === "split");
         $("btn-base-joined").classList.toggle("is-on", b === "joined");
-        if (ppMode === "cf") renderCF();
+        if (ppMode === "cf") redraw();
       }
 
       function setError(msg) { $("error-msg").textContent = msg || ""; }
@@ -292,7 +303,48 @@
 
       // ── Exploring ─────────────────────────────────────────────
       function explore() {
+        if (isGeneral()) { ppReg = null; ppCF = null; renderGeneral(); return; }
         if (ppMode === "regular") exploreRegular(); else exploreCF();
+      }
+
+      // ── The general case: no grammar, no string ───────────────
+      const PART = (p, n) => Array.from({ length: n }, () => '<span class="pp-ch pp-' + p + '">' + p + "</span>").join("");
+      const GENERAL_DFA = {
+        nodes: [{ label: "q₀" }, { label: "q" }, { label: "q_f", accepting: true }],
+        start: 0,
+        edges: [{ from: 0, to: 1, labels: ["x"] }, { from: 1, to: 2, labels: ["z"] }],
+        loops: [{ node: 1, labels: ["y"] }],
+        joinLabels: true,
+      };
+      function renderGeneral() {
+        const i = +$("pump-i").value;
+        $("pump-i-val").textContent = "i = " + i;
+        $("btn-other").disabled = true;
+        const hint = '<p class="ui-label">Pick a grammar and enter or generate a string to see a specific case.</p>';
+        let split, body, text;
+        if (ppMode === "regular") {
+          split = 'w = <b class="pp-x">x</b> <b class="pp-y">y</b> <b class="pp-z">z</b> with |xy| ≤ p and |y| ≥ 1';
+          body = PART("x", 1) + PART("y", i) + PART("z", 1);
+          text = "<p>A DFA with p states that reads p symbols visits some state twice. The symbols read between the two visits, <b class=\"pp-y\">y</b>, form a loop on that state: <b class=\"pp-x\">x</b> leads to it and <b class=\"pp-z\">z</b> leads from it to an accepting state.</p>" +
+            "<p>The loop can be taken any number of times, so <b class=\"pp-x\">x</b> <b class=\"pp-y\">y</b><sup>" + i + "</sup> <b class=\"pp-z\">z</b> is accepted for every i ≥ 0.</p>";
+        } else {
+          split = 'w = <b class="pp-u">u</b> <b class="pp-v">v</b> <b class="pp-x">x</b> <b class="pp-y">y</b> <b class="pp-z">z</b> with |vy| ≥ 1 and |vxy| ≤ p';
+          body = PART("u", 1) + PART("v", i) + PART("x", 1) + PART("y", i) + PART("z", 1);
+          text = "<p>On a long path of a parse tree some nonterminal <b>A</b> occurs twice. The upper <b>A</b> derives <b class=\"pp-v\">v</b> <b class=\"pp-x\">x</b> <b class=\"pp-y\">y</b>, the lower one <b class=\"pp-x\">x</b>; the jagged line is the derivation between them.</p>" +
+            "<p>Both are <b>A</b>, so the part between them can be repeated or cut out: <b class=\"pp-u\">u</b> <b class=\"pp-v\">v</b><sup>" + i + "</sup> <b class=\"pp-x\">x</b> <b class=\"pp-y\">y</b><sup>" + i + "</sup> <b class=\"pp-z\">z</b> is in the language for every i ≥ 0.</p>";
+        }
+        $("strip").innerHTML = '<div class="pp-row"><span class="ui-label">split</span><span class="pp-formula">' + split + "</span></div>" +
+          '<div class="pp-row"><span class="ui-label">string</span><div class="pp-body">' + body + "</div></div>";
+        $("explain").innerHTML = text + hint;
+        if (ppMode === "regular") { drawDFA(); paintGraph(); walk.pos = 0; walk.refresh(); return; }
+        const gen = pumpGeneralCF(i);
+        $("ctg-empty").hidden = true;
+        if (ppView === "path") drawCTGSpine("ctg-host", gen.spine, { mode: ppBase, scale: 1.4 });
+        else if (ppView === "ctg") drawCTG("ctg-host", gen.tree, { scale: 1.5 });
+        else {
+          drawTree(null);
+          $("tree-empty").textContent = "The parse tree appears once a string is entered.";
+        }
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
@@ -366,7 +418,8 @@
       // The drawing of the DFA, then colouring of the path's edges.
       let dfaView = null;
       function drawDFA() {
-        if (!dfaView) dfaView = createGraphView("dfa", { hasNodes: () => !!ppDFA, onRelayout: () => { drawDFA(); paintGraph(); paintWalk(); } });
+        if (!dfaView) dfaView = createGraphView("dfa", { hasNodes: () => isGeneral() || !!ppDFA, onRelayout: () => { drawDFA(); paintGraph(); paintWalk(); } });
+        if (isGeneral()) { drawAutomatonGraph("dfa", dfaView, GENERAL_DFA); return; }
         if (!ppDFA) { drawAutomatonGraph("dfa", dfaView, { nodes: [], start: 0, edges: [] }); return; }
         const d = ppDFA;
         const edgeMap = new Map(), loops = new Map();
@@ -389,6 +442,10 @@
       function paintGraph() {
         d3.selectAll("#dfa-graph-root .ag-edge").classed("pump-x", false).classed("pump-y", false).classed("pump-z", false);
         d3.selectAll("#dfa-graph-root .ag-node").classed("pump-loop", false);
+        if (isGeneral()) {
+          for (const [sel, role] of [['[data-edge="0-1"]', "x"], ['[data-self="1"]', "y"], ['[data-edge="1-2"]', "z"]]) d3.selectAll("#dfa-graph-root .ag-edge" + sel).classed("pump-" + role, true);
+          return;
+        }
         if (!ppDFA || !ppReg) return;
         const i = +$("pump-i").value;
         const parts = ppReg.parts;
@@ -558,7 +615,7 @@
       $("grammar-input").addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
       let ppTimer = null;
       $("w-input").addEventListener("input", () => { explore(); saveShare(); });
-      $("pump-i").addEventListener("input", () => { if (ppMode === "regular") renderRegular(); else renderCF(); });
+      $("pump-i").addEventListener("input", () => redraw());
       registerStepper("p-main", { step: () => walk.next(), back: () => walk.prev(), reset: () => walk.reset(), end: () => walk.end() }, { primary: true });
 
       UI.stringInput("w-input", {
@@ -591,7 +648,7 @@
         $("examples-select").value = k;
         ppStrings = ex.strings || [];
         $("grammar-input").value = ex.text;
-        $("w-input").value = ppStrings[0] || "";
+        $("w-input").value = "";
         $("pump-i").value = ex.i === undefined ? 2 : ex.i;
         if ((ex.mode || "regular") !== ppMode) setMode(ex.mode || "regular");
         else buildDef();
