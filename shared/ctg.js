@@ -11,6 +11,22 @@
 //   });
 // The host is an element or an element id; its content is replaced. Triangles carry data-ctg="id", tokens data-leaf="i".
 
+// The options of the figures (the baselines, the view, ...) remembered for each tool in this browser.
+//   const prefs = ctgPrefs({ unify: false });   prefs.get().unify;   prefs.set({ unify: true });
+function ctgPrefs(defaults) {
+  const key = "parser-tools-ctg:" + location.pathname;
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { /* storage blocked or unreadable */ }
+  const prefs = { ...defaults, ...saved };
+  return {
+    get: () => prefs,
+    set(patch) {
+      Object.assign(prefs, patch);
+      try { localStorage.setItem(key, JSON.stringify(prefs)); } catch (e) { /* storage blocked */ }
+    },
+  };
+}
+
 const CTG_KIND = { first: "ctg-k-first", follow: "ctg-k-follow", focus: "ctg-k-focus" };
 const CTG_NS = "http://www.w3.org/2000/svg";
 

@@ -150,7 +150,7 @@
                 <button class="btn is-on" id="btn-view-path" onclick="setView('path')" title="The path between the repeated nonterminals as a jagged line over nested triangles">Path</button>
                 <button class="btn" id="btn-view-tree" onclick="setView('tree')" title="The parse tree">Tree</button>
               </div>
-              <label id="base-group" hidden title="One base line for the whole string, instead of a base line for each copy of the repeated part"><input type="checkbox" id="unify" checked onchange="setBase(this.checked ? 'joined' : 'split')" /> Unify baselines</label>
+              <label id="base-group" hidden title="One base line for the whole string, instead of a base line for each copy of the repeated part"><input type="checkbox" id="unify" onchange="setBase(this.checked ? 'joined' : 'split')" /> Unify baselines</label>
               <button class="btn" id="btn-other" onclick="otherRepeat()" title="Use another repeated nonterminal on the path" hidden>Another repeat</button>
             </div>
           </div>
@@ -188,7 +188,7 @@
     <script src="../../shared/algo/ctg.js?v=d5cce266"></script>
     <script src="../../shared/algo/pumping.js?v=71f6f32a"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=e0f86ff8"></script>
+    <script src="../../shared/ctg.js?v=944325b7"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -210,8 +210,9 @@
 
       let ppMode = "regular"; // regular | cf
       let grammarEditor = null; // the editor of the grammar's productions
-      let ppView = "path"; // context-free drawing: path | tree
-      let ppBase = "joined"; // base lines of the path drawing: split | joined
+      const ctgPref = ctgPrefs({ view: "path", unify: false }); // remembered for this tool
+      let ppView = ctgPref.get().view; // context-free drawing: path | tree
+      let ppBase = ctgPref.get().unify ? "joined" : "split"; // base lines of the path drawing: split | joined
       let ppDFA = null; // the parsed DFA (regular mode)
       let ppG = null; // the parsed grammar (context-free mode)
       let ppStrings = []; // sample strings of the loaded example
@@ -260,8 +261,9 @@
       const isGeneral = () => !$("w-input").value.trim();
       const redraw = () => (isGeneral() ? renderGeneral() : ppMode === "regular" ? renderRegular() : renderCF());
 
-      function setView(v) {
+      function setView(v, remember = true) {
         ppView = v;
+        if (remember) ctgPref.set({ view: v });
         $("btn-view-tree").classList.toggle("is-on", v === "tree");
         $("btn-view-path").classList.toggle("is-on", v === "path");
         $("canvas-tree").hidden = ppMode !== "cf" || v !== "tree";
@@ -269,8 +271,9 @@
         $("base-group").hidden = ppMode !== "cf" || v !== "path";
         if (ppMode === "cf") redraw();
       }
-      function setBase(b) {
+      function setBase(b, remember = true) {
         ppBase = b;
+        if (remember) ctgPref.set({ unify: b === "joined" });
         $("unify").checked = b === "joined";
         if (ppMode === "cf") redraw();
       }
@@ -310,6 +313,7 @@
       function explore() {
         $("btn-view-tree").disabled = isGeneral(); // the parse tree needs a string
         if (isGeneral()) { ppReg = null; ppCF = null; renderGeneral(); return; }
+        if (ppView !== ctgPref.get().view) setView(ctgPref.get().view, false); // back to the chosen view once there is a string
         if (ppMode === "regular") exploreRegular(); else exploreCF();
       }
 
@@ -343,7 +347,7 @@
           '<div class="pp-row"><span class="ui-label">string</span><div class="pp-body">' + body + "</div></div>";
         $("explain").innerHTML = text + hint;
         if (ppMode === "regular") { drawDFA(); paintGraph(); walk.pos = 0; walk.refresh(); return; }
-        if (ppView === "tree") { setView("path"); return; }
+        if (ppView === "tree") { setView("path", false); return; } // the tree needs a string; the choice is kept
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
 drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPIES, +$("pump-i").max)), { staples: false }); // the letters are the tokens
@@ -693,6 +697,8 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         const first = Object.keys(EXAMPLES)[0];
         if (first && !sharedStateApplied) loadExample(first);
       });
+      setView(ppView, false);
+      setBase(ppBase, false);
       setMode(ppMode);
     </script>
   </body>
