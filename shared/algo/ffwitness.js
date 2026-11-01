@@ -192,10 +192,14 @@ function ffwFollow(g, rec, B, t, alt = 0) {
 //   FIRST(A) ∋ t    the path from A down to the rule that has t; t is the last node. An arrow runs from the left foot of A to t.
 //   FOLLOW(B) ∋ t   the path from the start symbol down to B, whose string is the bottom. The first string on its right that
 //                   is not ε starts with t (marked); an arrow runs from the right foot of B to it. $ stands after the whole string.
-//   nullable A      the path from A down the first symbol that does not derive ε at once; every string beside it is ε.
+//   nullable A      the path from A down through the first symbol of each rule, down to a symbol with an empty rule; every
+//                   string beside it is ε, with the symbols that derive it named under it.
 const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [x.text] : x.kids.flatMap(ffwTokens));
 const ffwLabel = (x) => (typeof x === "string" ? x : x.text !== undefined ? x.text : x.sym);
 const ffwHas = (x, id) => typeof x !== "string" && (x.id === id || (x.kids !== undefined && x.kids.some((k) => ffwHas(k, id))));
+
+// nullable: the path goes down through the first symbol of each rule, which is a nonterminal that derives ε in its turn
+const firstSymbol = (n) => n.kids.findIndex((k) => typeof k !== "string" && k.text === undefined);
 
 // the strings beside the path: one cell for each symbol, the tokens it derives (ε if none), the symbol as its label; null for none
 function ffwFlank(sibs) {
@@ -252,7 +256,7 @@ function ffwFigure(w) {
   }
 
   // nullable: the path goes on through the first symbol that has a rule of its own to apply
-  const nodes = path((n) => n.kids.findIndex((k) => typeof k !== "string" && k.text === undefined && k.kids.length));
+  const nodes = path(firstSymbol);
   const levels = nodes.slice(0, -1).map((n, k) => level(n, n.kids.findIndex((x) => x === nodes[k + 1])));
   const last = nodes[nodes.length - 1];
   // the last node's own symbols all vanish: they are the bottom
@@ -285,7 +289,7 @@ function ffwSpec(w) {
   const path = [];
   for (let cur = w.tree; ; ) {
     path.push(cur);
-    const j = w.kind === "first" ? cur.kids.findIndex((k) => ffwHas(k, "t")) : w.kind === "follow" ? cur.kids.findIndex((k) => ffwHas(k, "target")) : cur.kids.findIndex((k) => typeof k !== "string" && k.text === undefined && k.kids.length);
+    const j = w.kind === "first" ? cur.kids.findIndex((k) => ffwHas(k, "t")) : w.kind === "follow" ? cur.kids.findIndex((k) => ffwHas(k, "target")) : firstSymbol(cur);
     if (j < 0 || typeof cur.kids[j] === "string" || cur.kids[j].text !== undefined) break;
     cur = cur.kids[j];
   }
@@ -332,10 +336,10 @@ function ffwTheory(kind) {
     };
   }
   return {
-    nodes: [node("A", { kind: "focus" })],
-    levels: [],
-    bottom: cell("ε", "X₁ … Xₙ", { kind: "focus", mark: { kind: "focus", label: "A derives ε" } }),
-    forms: ["A", "X₁ … Xₙ", "ε"],
-    statement: "A is nullable when some rule A → X₁ … Xₙ has every Xᵢ nullable: the whole string vanishes",
+    nodes: [node("A", { kind: "focus" }), node("X₁")],
+    levels: [{ left: null, right: [cell("ε", "X₂ … Xₙ")] }],
+    bottom: cell("ε", "", { kind: "focus", mark: { kind: "focus", label: "A derives ε" } }),
+    forms: ["A", "X₁ X₂ … Xₙ", "ε"],
+    statement: "A is nullable when some rule A → X₁ … Xₙ has every Xᵢ nullable: each of them derives ε, so the whole string vanishes",
   };
 }

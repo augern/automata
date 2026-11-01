@@ -264,3 +264,17 @@ test("jagged edges: a figure of the general case has them everywhere, a witness 
     assert.ok(spec.nodes.slice(1).every((n) => n.jag === false));
   }
 });
+
+test("a nullable witness is a path down the derivation, not one tiny triangle", () => {
+  const g = A.parseBNF("S -> A A\nA -> B B\nB -> C C\nC -> c | eps", false);
+  const rec = A.ffRecord(g);
+  const spec = A.ffwSpec(A.ffwNullable(g, rec, "S"));
+  assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["S", "A", "B", "C"]);
+  assert.deepEqual(js(spec.levels.map((l) => l.right.map((f) => f.text + ":" + f.label))), [["ε:A"], ["ε:B"], ["ε:C"]]);
+  assert.equal(spec.statement, "S is nullable: S can derive the empty string");
+  assert.deepEqual(js(spec.forms), ["S", "A A", "B B A", "C C B A", "C B A", "ε"], "the first C is replaced by ε; the rest vanish in the same way");
+  const lay = A.ctgSpineLayout(spec);
+  assert.ok(lay.tokens.length >= 4 && lay.tokens.every((t) => t.eps));
+  const small = A.ctgSpineLayout(A.ffwSpec(A.ffwNullable(g, rec, "C")));
+  assert.ok(lay.height > small.height * 1.8, "much taller than the direct case");
+});
