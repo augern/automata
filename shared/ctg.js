@@ -139,6 +139,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       make("tspan", { class: "ctg-head" + kindCls(t.kind) }, label, t.head);
       make("tspan", { class: "ctg-rest" }, label, t.text.slice(t.head.length)); // what follows the emphasised part is not spelled out
     } else label.textContent = t.text;
+    if (t.tip) make("title", {}, label, t.tip);
     const staple = t.label && opts.staples !== false;
     if (staple) { // a staple under the token, with the name of the part
       const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;

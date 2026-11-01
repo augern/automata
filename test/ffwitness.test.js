@@ -95,13 +95,20 @@ test("a witness of FOLLOW through a nullable symbol shows the symbol as a point 
 function checkSpecs(g, label) {
   const rec = A.ffRecord(g);
   const figure = (w, where) => {
-    const spec = A.ffwSpec(w);
+    const spec = A.ffwSpec(w, { samples: true });
     assert.equal(spec.nodes.length, spec.levels.length + 1, `${where}: a level between neighbouring nodes`);
     const lay = A.ctgSpineLayout(spec);
     assert.ok(Number.isFinite(lay.width) && Number.isFinite(lay.height), where);
     const real = lay.tokens.filter((t) => !t.eps && t.text !== "$");
     // the base line reads as the witness's sentence
     assert.equal(real.map((t) => t.text).join(" "), A.ffwTokens(w.tree).join(" "), `${where}: the sentence`);
+    // without samples, only the incidental strings change, and they become a faded …
+    const bare = A.ctgSpineLayout(A.ffwSpec(w));
+    assert.equal(bare.tokens.length, lay.tokens.length, `${where}: same cells`);
+    bare.tokens.forEach((t, i) => {
+      if (t.text !== lay.tokens[i].text) assert.ok(t.cls === "is-dim" ? t.text === "…" : t.head === lay.tokens[i].head || t.text.endsWith("…"), `${where}: incidental strings only`);
+      if (t.text !== lay.tokens[i].text) assert.ok(t.tip || t.text.endsWith("…"), `${where}: sample as tooltip`);
+    });
     return { spec, lay };
   };
   // every way of showing a member, not only the first

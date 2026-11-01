@@ -205,13 +205,19 @@ const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [
 const ffwLabel = (x) => (typeof x === "string" ? x : x.text !== undefined ? x.text : x.sym);
 const ffwHas = (x, id) => typeof x !== "string" && (x.id === id || (x.kids !== undefined && x.kids.some((k) => ffwHas(k, id))));
 
-// the strings beside the path: one cell for each symbol, the tokens it derives (ε if none), the symbol as its label; null for none
-function ffwFlank(sibs) {
-  if (!sibs.length) return null;
-  return sibs.map((x) => { const toks = ffwTokens(x); return { text: toks.length ? toks.join(" ") : "ε", label: ffwLabel(x) }; });
+// The cell of a symbol beside the path. What the figure's point depends on is spelled out: a terminal written in the rule, ε where the
+// symbol vanishes, the token of the member (in bold, with a faded … for the rest of its string). What is only "some string this symbol
+// derives" is a faded …, with the shortest such string as a tooltip, or, with samples, that string itself, faded.
+function ffwCell(x, samples) {
+  const toks = ffwTokens(x), label = ffwLabel(x), sample = toks.join(" ");
+  if (!toks.length) return { text: "ε", label };
+  if (typeof x === "string" || x.text !== undefined) return { text: sample, label }; // a terminal of the rule
+  if (ffwHas(x, "t")) return { text: toks.length === 1 ? toks[0] : (samples ? sample : toks[0] + " …"), label, tip: toks.length > 1 ? "e.g. " + sample : "" }; // the member's token starts it
+  return { text: samples ? sample : "…", label, cls: "is-dim", tip: "e.g. " + sample };
 }
+const ffwFlank = (sibs, samples) => (sibs.length ? sibs.map((x) => ffwCell(x, samples)) : null);
 
-function ffwFigure(w) {
+function ffwFigure(w, opts = {}) {
   // the nodes of the path, from the root: next(node) is the index of the kid that the path goes on through, or -1
   const path = (next) => {
     const nodes = [w.tree];
@@ -223,7 +229,7 @@ function ffwFigure(w) {
     }
     return nodes;
   };
-  const level = (node, j) => ({ left: ffwFlank(node.kids.slice(0, j)), right: ffwFlank(node.kids.slice(j + 1)) });
+  const level = (node, j) => ({ left: ffwFlank(node.kids.slice(0, j), opts.samples), right: ffwFlank(node.kids.slice(j + 1), opts.samples) });
   const spec = (nodes, levels, bottom, extra = {}) => ({ nodes, levels, bottom, ...extra });
   const nodeOf = (n, k, kind) => ({ sym: n.sym, jag: false, kind: k === 0 && kind ? kind : "", cls: "" });
 
@@ -250,14 +256,15 @@ function ffwFigure(w) {
       for (let k = m - 1; k >= 0; k--) {
         const n = nodes[k], j = n.kids.findIndex((x) => x === nodes[k + 1]);
         const i = n.kids.slice(j + 1).findIndex((x) => ffwHas(x, "t")); // the symbol whose string starts with the token
-        if (i >= 0) { Object.assign(levels[k].right[i], { id: "t", kind: "follow", head: w.token, mark }); break; }
+        if (i >= 0) { Object.assign(levels[k].right[i], { id: "t", kind: "follow", head: levels[k].right[i].text === w.token ? "" : w.token, mark }); break; }
       }
     }
     const target = nodes[m];
     const toks = ffwTokens(target);
     const specNodes = nodes.map((n, k) => ({ sym: n.sym, jag: false, kind: k === m ? "focus" : "", cls: "" }));
     // the symbol derives its string in more than one rule step: a jagged line down to it
-    return spec(specNodes, levels, { text: toks.length ? toks.join(" ") : "ε", label: "" }, { outer, terminus: !w.oneStep, arrows: [{ fromNode: m, side: "right", toId: "t" }] });
+    const bottom = !toks.length ? { text: "ε", label: "" } : { text: opts.samples ? toks.join(" ") : "…", label: "", cls: "is-dim", tip: "e.g. " + toks.join(" ") };
+    return spec(specNodes, levels, bottom, { outer, terminus: !w.oneStep, arrows: [{ fromNode: m, side: "right", toId: "t" }] });
   }
 
   // nullable: the root's rule: each of its symbols is a node of its own with a small triangle over its ε, the root bare. A symbol with an
@@ -287,10 +294,10 @@ function ffwForms(w, nodes) {
   return forms;
 }
 
-// ffwSpec(w) -> the spec of ctgSpineLayout (see ffwFigure) with the derivation ("forms") and a sentence on what the figure
-// shows ("statement") added.
-function ffwSpec(w) {
-  const spec = ffwFigure(w);
+// ffwSpec(w, { samples }) -> the spec of ctgSpineLayout (see ffwFigure) with the derivation ("forms") and a sentence on what the
+// figure shows ("statement") added. A string that is only some string a symbol derives is a faded …; with samples, the shortest one.
+function ffwSpec(w, opts = {}) {
+  const spec = ffwFigure(w, opts);
   const path = [];
   for (let cur = w.tree; ; ) {
     path.push(cur);
