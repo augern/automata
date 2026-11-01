@@ -129,6 +129,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
     if (t.share !== undefined) fill.style.fill = `color-mix(in srgb, ${t.colour} ${t.share}%, var(--bg))`;
     else if (t.colour) fill.style.fill = ctgTone(t.colour, t.tone, 0);
   }
+  for (const sub of lay.subs || []) make("polygon", { class: "ctg-tri-fill", style: `fill: color-mix(in srgb, var(--text-lo) ${sub.share}%, var(--bg))`, points: `${sub.x0},${sub.base} ${sub.apex},${sub.ay} ${sub.x1},${sub.base}` }, svg);
   for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
   for (const t of lay.tokens) {
     if (t.kind) make("rect", { class: "ctg-tok-bg" + kindCls(t.kind), x: t.x + 2, y: t.y + 3, width: t.w - 4, height: 20, rx: 3 }, svg);
@@ -167,7 +168,19 @@ function drawCTGFigureInto(root, lay, opts = {}) {
     }
     make("path", { class: "ctg-jag", d: d + ` L${b.x},${y1}` }, svg);
   }
-  for (const n of lay.nodes) {
+  // the nodes under the last one: an edge from it to each, and from each down to its string, jagged for derivations of any length
+  const last = lay.nodes[lay.nodes.length - 1];
+  for (const sub of lay.subs || []) {
+    make("path", { class: "ctg-jag", d: `M${last.x},${last.y + nodeH / 2} L${sub.x},${sub.y - nodeH / 2}` }, svg);
+    const y0 = sub.y + nodeH / 2, y1 = sub.base - 4;
+    let d = `M${sub.x},${y0}`;
+    if (sub.jag) {
+      const steps = Math.max(2, Math.round((y1 - y0) / 6));
+      for (let i = 1; i < steps; i++) d += ` L${sub.x + (i % 2 ? 4 : -4)},${y0 + ((y1 - y0) * i) / steps}`;
+    }
+    make("path", { class: "ctg-jag", d: d + ` L${sub.x},${y1}` }, svg);
+  }
+  for (const n of [...lay.nodes, ...(lay.subs || [])]) {
     const w = Math.max(26, String(n.sym).length * 8 + 14);
     const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") + kindCls(n.kind) }, svg);
     make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);

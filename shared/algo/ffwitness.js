@@ -336,7 +336,8 @@ function ffwTheory(kind) {
     };
   }
   // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in
-  // its turn, directly or not. Two figures; no Xᵢ is singled out, each has a column of its own.
+  // its turn, directly or not. Two figures; no Xᵢ is singled out: each is a node of its own with a small triangle under A, and a jagged
+  // edge down to its ε, since it derives ε in any number of steps.
   const direct = {
     caption: "directly",
     nodes: [node("A", { kind: "focus", jag: false })],
@@ -347,7 +348,7 @@ function ffwTheory(kind) {
     caption: "through other symbols",
     nodes: [node("A", { kind: "focus", jag: false })],
     levels: [],
-    bottom: [cell("ε", "X₁ ⇒* ε"), cell("ε", "X₂ ⇒* ε"), cell("…", "", { cls: "is-dim" }), cell("ε", "Xₙ ⇒* ε")],
+    bottom: [cell("ε", "", { node: { sym: "X₁", jag: true } }), cell("ε", "", { node: { sym: "X₂", jag: true } }), cell("…", "", { cls: "is-dim" }), cell("ε", "", { node: { sym: "Xₙ", jag: true } })],
   };
   return {
     figures: [direct, indirect],

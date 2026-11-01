@@ -110,6 +110,8 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //           outer?: { left, right },                                  strings outside the top triangle
 //           arrows?: [{ fromNode, side: "left" | "right", toId }],   a scan arrow from the foot of a node to the token with that id
 //           caption?: string }                                        a line of text above the figure
+//     a bottom cell may have node: { sym, jag?, kind?, cls? }: it is then a node of its own with a small triangle over its string, under
+//     the last node (the symbols of a rule, each deriving its string); the layout has these as subs (free layout only)
 //     flank: { text, id?, head?, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
 //       head: the leading part of the text that is emphasised; id: what an arrow points at
 //       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
@@ -181,11 +183,14 @@ function ctgSpineFree(spec, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 26, gapMin: 14, step: 58, baseH: 42, topPad: 26, marginX: 22, ...opts };
   const m = spec.nodes.length - 1;
   const cells = (f) => (f ? (Array.isArray(f) ? f : [f]) : []);
-  const wOf = (f) => Math.max(o.minCol, Math.max(1, f.text.length) * o.charW + 2 * o.tokPad, ctgLabelWidth(f));
+  const wOf = (f) => Math.max(o.minCol, Math.max(1, f.text.length) * o.charW + 2 * o.tokPad, ctgLabelWidth(f), f.node ? String(f.node.sym).length * 8 + 30 : 0);
   const apexAt = (k) => o.topPad + 11 + k * o.step;
-  const B = apexAt(Math.max(m, o.depth || 0)) + o.baseH;
+  const bottom = cells(spec.bottom);
+  // cells that are nodes of their own (the symbols of a rule, each deriving its string) need room for a node and a triangle under the last one
+  const withNodes = bottom.some((f) => f.node);
+  const B = apexAt(Math.max(m, o.depth || 0)) + (withNodes ? o.step + 42 : o.baseH);
   // x relative to the spine; the bottom is centred on it
-  const bottom = cells(spec.bottom), wb = Math.max(o.minCol, bottom.reduce((n, f) => n + wOf(f), 0));
+  const wb = Math.max(o.minCol, bottom.reduce((n, f) => n + wOf(f), 0));
   const footL = new Array(m + 1), footR = new Array(m + 1);
   footL[m] = -wb / 2;
   footR[m] = wb / 2;
@@ -219,6 +224,15 @@ function ctgSpineFree(spec, opts = {}) {
   const base = tokens.length ? [{ x0: tokens[0].x, x1: tokens[tokens.length - 1].x + tokens[tokens.length - 1].w, y: B }] : [];
   const jags = [];
   for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
+  // the bottom cells that are nodes: a node and a triangle of their own under the last node, an edge to each from it; the edge down
+  // to the string is jagged where the node stands for derivations of any length
+  const subs = [];
+  const subApex = apexAt(m) + 44, otherShade = m % 2 ? 10 : 21;
+  for (const [f, x0] of put) {
+    if (!f.node) continue;
+    const w = wOf(f), centre = cx + x0 + w / 2;
+    subs.push({ sym: f.node.sym, x: centre, y: subApex + 6, x0: cx + x0, x1: cx + x0 + w, apex: centre, ay: subApex, base: B, jag: !!f.node.jag, kind: f.node.kind || "", cls: f.node.cls || "", share: otherShade });
+  }
   const arrows = [];
   for (const a of spec.arrows || []) {
     const to = tokens.find((t) => t.id === a.toId);
@@ -226,7 +240,7 @@ function ctgSpineFree(spec, opts = {}) {
     const right = a.side === "right";
     arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
   }
-  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, caption: spec.caption || "" };
+  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, subs, caption: spec.caption || "" };
 }
 
 // The spine figure: with opts.tile the tiled one (one apex angle, equal columns: the pumping figures), else a column for each

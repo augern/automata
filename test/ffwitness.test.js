@@ -289,7 +289,7 @@ test("the general case: a string that is not spelled out is a faded … with its
   assert.equal(follow.tokens.find((t) => t.id === "t").head, "a", "the token that follows is spelled, the rest of its string is not");
 });
 
-test("the general case of nullable: two figures, directly and through other symbols, no symbol singled out", () => {
+test("the general case of nullable: two figures, directly and through other symbols, the symbols drawn as nodes of their own", () => {
   const theory = A.ffwTheory("nullable");
   assert.equal(theory.figures.length, 2);
   assert.ok(theory.statement.includes("directly") && theory.statement.includes("through other symbols"));
@@ -297,12 +297,21 @@ test("the general case of nullable: two figures, directly and through other symb
   const [direct, indirect] = theory.figures.map((f) => A.ctgSpineLayout(f));
   assert.deepEqual(js([direct.caption, indirect.caption]), ["directly", "through other symbols"]);
   assert.deepEqual(js(direct.tokens.map((t) => [t.text, t.label])), [["ε", "A → ε"]]);
-  // the other: one ε column for each symbol, every one named the same way, and a faded … for the ones in between
+  assert.equal(direct.subs.length, 0, "directly: nothing between A and ε");
+  // through other symbols: a node and a small triangle for each symbol, none singled out; the faded … stands for the ones between
   assert.deepEqual(js(indirect.tokens.map((t) => t.text)), ["ε", "ε", "…", "ε"]);
-  assert.deepEqual(js(indirect.tokens.filter((t) => t.eps).map((t) => t.label)), ["X₁ ⇒* ε", "X₂ ⇒* ε", "Xₙ ⇒* ε"]);
-  assert.ok(indirect.tokens.every((t) => t.eps || t.text === "…"), "only ε and the faded …");
-  assert.equal(new Set(indirect.nodes.map((n) => n.sym)).size, 1, "a single node: no path through one of the symbols");
-  assert.ok(Math.abs(indirect.nodes[0].footR - indirect.nodes[0].footL - indirect.tokens.reduce((n, t) => n + t.w, 0)) < 1e-9, "the triangle covers all the columns");
+  assert.deepEqual(js(indirect.subs.map((s) => s.sym)), ["X₁", "X₂", "Xₙ"]);
+  assert.ok(indirect.subs.every((s) => s.jag), "each derives ε in any number of steps: a jagged edge down to the ε");
+  assert.equal(new Set(indirect.subs.map((s) => s.share)).size, 1, "all of them alike");
+  assert.equal(indirect.nodes.length, 1, "A is the only node on the spine: no path through one of the symbols");
+  const parent = indirect.tris[0];
+  indirect.subs.forEach((sub, k) => {
+    assert.ok(sub.x0 >= parent.x0 - 1e-9 && sub.x1 <= parent.x1 + 1e-9, "the small triangle is under A's base");
+    assert.ok(sub.ay > parent.ay, "and below its apex");
+    if (k) assert.ok(sub.x0 >= indirect.subs[k - 1].x1 - 1e-9, "the small triangles do not overlap");
+    const e = indirect.tokens.find((t) => t.x <= sub.x && sub.x <= t.x + t.w);
+    assert.equal(e.text, "ε", "each stands over an ε");
+  });
   for (const lay of [direct, indirect]) for (let k = 1; k < lay.tokens.length; k++) assert.ok(lay.tokens[k].x >= lay.tokens[k - 1].x + lay.tokens[k - 1].w - 1e-9, "no overlap");
 });
 
