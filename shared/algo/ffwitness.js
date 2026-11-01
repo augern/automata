@@ -167,7 +167,7 @@ function ffwFlank(sibs, extra = {}) {
   return { text: toks.length ? toks.join(" ") : "ε", label: sibs.map(ffwLabel).join(" "), ...extra };
 }
 
-function ffwSpec(w) {
+function ffwFigure(w) {
   // the nodes of the path, from the root: next(node) is the index of the kid that the path goes on through, or -1
   const path = (next) => {
     const nodes = [w.tree];
@@ -221,4 +221,42 @@ function ffwSpec(w) {
   // the last node's own symbols all vanish: they are the bottom
   const bottom = { text: "ε", label: last.kids.map(ffwLabel).join(" "), kind: "focus", mark: { kind: "focus", label: `${w.sym} derives ε` } };
   return spec(nodes.map((n, k) => nodeOf(n, k, "focus")), levels, bottom);
+}
+
+// The derivation along the path, as the sentential forms from the symbol at the top down to the one that shows the member:
+// ["E", "T E'", "F T' E'", "id T' E'"]. (FOLLOW stops at the form that has the symbol asked about.)
+function ffwForms(w, nodes) {
+  const forms = [nodes[0].sym];
+  let left = [], right = [];
+  const last = w.kind === "follow" ? nodes.length - 1 : nodes.length;
+  for (let k = 0; k < last; k++) {
+    const n = nodes[k];
+    forms.push([...left, ...n.kids.map(ffwLabel), ...right].join(" ") || "ε");
+    const j = k + 1 < nodes.length ? n.kids.findIndex((x) => x === nodes[k + 1]) : -1;
+    if (j >= 0) {
+      left = [...left, ...n.kids.slice(0, j).map(ffwLabel)];
+      right = [...n.kids.slice(j + 1).map(ffwLabel), ...right];
+    }
+  }
+  return forms;
+}
+
+// ffwSpec(w) -> the spec of ctgSpineLayout (see ffwFigure) with the derivation ("forms") and a sentence on what the figure
+// shows ("statement") added.
+function ffwSpec(w) {
+  const spec = ffwFigure(w);
+  const path = [];
+  for (let cur = w.tree; ; ) {
+    path.push(cur);
+    const j = w.kind === "first" ? cur.kids.findIndex((k) => ffwHas(k, "t")) : w.kind === "follow" ? cur.kids.findIndex((k) => ffwHas(k, "target")) : cur.kids.findIndex((k) => typeof k !== "string" && k.text === undefined && k.kids.length);
+    if (j < 0 || typeof cur.kids[j] === "string" || cur.kids[j].text !== undefined) break;
+    cur = cur.kids[j];
+  }
+  spec.forms = ffwForms(w, path);
+  if (w.kind === "nullable" && spec.forms[spec.forms.length - 1] !== "ε") spec.forms.push("ε");
+  const vanishing = spec.levels.some((l) => (w.kind === "first" ? l.left : l.right) && (w.kind === "first" ? l.left : l.right).text === EPSILON);
+  if (w.kind === "first") spec.statement = `${w.token} ∈ FIRST(${w.sym}): ${w.sym} can derive a string that starts with ${w.token}` + (vanishing ? ", after symbols that derive ε" : "");
+  else if (w.kind === "follow") spec.statement = `${w.token} ∈ FOLLOW(${w.sym}): in a sentence derived from the start symbol, ${w.sym} ` + (w.token === "$" ? "can be the last thing" : `can be followed by ${w.token}`) + (vanishing ? ", over symbols that derive ε" : "");
+  else spec.statement = `${w.sym} is nullable: ${w.sym} can derive the empty string`;
+  return spec;
 }

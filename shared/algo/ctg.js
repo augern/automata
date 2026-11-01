@@ -141,7 +141,7 @@ function ctgSpineLayout(spec, opts = {}) {
   const base = tokens.length ? [{ x0: tokens[0].x, x1: tokens[tokens.length - 1].x + c, y: B }] : [];
   const jags = [];
   for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
-  const pointers = tokens.some((t) => t.mark) ? 22 : 0;
+  const pointers = tokens.some((t) => t.mark) ? 30 : 0;
   // a scan arrow runs along the base line from the foot of a node to a token, over the columns between
   const arrows = [];
   for (const a of spec.arrows || []) {

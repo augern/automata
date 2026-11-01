@@ -2,26 +2,27 @@
 // Legend colour names: blue, green, red, grey.
 window.TOOL_GUIDE = {
   title: "FIRST & FOLLOW",
-  intro: "Builds the nullable symbols and the FIRST and FOLLOW sets of a context-free grammar by fixpoint iteration: every rule is applied again and again until a whole round adds nothing.",
+  intro: "Shows the nullable symbols and the FIRST and FOLLOW sets of a context-free grammar, and why each member is in its set: a derivation drawn as nested triangles over a sentence of the language.",
   use: [
     "The grammar is edited as in the other grammar tools. The first left side is the start symbol.",
-    "Step › applies one rule; Round ›› finishes the current round; the arrow button runs to the end. The phase buttons jump to the end of a phase. Clicking a row in the log jumps to that step.",
-    "The three phases run in order: nullable symbols, FIRST, FOLLOW. Each needs the previous one.",
-    "The right-hand side is read from the left. A dashed cell can derive ε, so the scan goes on; a solid blue cell cannot, so the scan stops and the cells after it stay faded. A scan that passes every cell reaches the end.",
-    "Pointing at a member of a set, or at a log row, marks the production in the grammar.",
+    "Sets: one row per nonterminal. Click a member (a token, a ✓ or the ε of FIRST) to see its witness.",
+    "Witness: the path of a derivation as nested triangles, one nonterminal per triangle, joined by the spine. Beside each step stand the strings that the other symbols of the rule derive, on the left and on the right; ε where a symbol vanishes, with the symbols named under the string. The base line reads as a sentence of the language, and the derivation is written under the figure.",
+    "FIRST(A) ∋ t: the arrow runs along the base line from the left foot of A to the first token that is not ε, which is t. FOLLOW(B) ∋ t: the arrow runs from the right foot of B to the next token that is not ε; its first token, t, is in bold. $ stands after the whole string.",
+    "Construction, the collapsed panel on the right, finds the sets one rule at a time: nullable symbols, then FIRST, then FOLLOW, round by round until a round adds nothing. Restart empties the sets; the witness stays.",
     "The box under the sets gives FIRST and nullability of any string of symbols, from the finished sets.",
+    "Pointing at a member of a set, or at a row of the construction, marks the production in the grammar.",
   ],
   notation: [
-    ["nullable", "a symbol that can derive the empty string"],
+    ["nullable", "a symbol that can derive the empty string; its triangle has only ε under it"],
     ["FIRST(A)", "the terminals a string derived from A can start with; ε would belong to it when A is nullable"],
     ["FOLLOW(A)", "the terminals that can come right after A in a sentential form; $ follows the start symbol"],
     ["FIRST of a sequence", "FIRST of each symbol up to and including the first one that is not nullable"],
     ["fixpoint", "the state in which applying every rule once more changes nothing"],
   ],
   legend: [
-    ["blue", "a cell the scan stops at; a new set member"],
-    ["green", "a cell that can derive ε; the end of a scan; FOLLOW sets"],
-    ["orange", "the occurrence that receives tokens in the FOLLOW phase; the same production in another panel"],
-    ["grey", "a cell not read"],
+    ["orange", "the symbol the witness is about; the member selected in the sets"],
+    ["blue", "FIRST: the token seen first, and the arrow to it"],
+    ["green", "FOLLOW: the token that comes next, and the arrow to it"],
+    ["grey", "the triangles of the path, deeper with each step down"],
   ],
 };

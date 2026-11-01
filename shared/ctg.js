@@ -142,7 +142,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       if (t.label !== t.text) make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);
     }
     if (t.mark) { // a pointer under the token
-      const cx = t.x + t.w / 2, y = t.y + (staple ? 44 : 26);
+      const cx = t.x + t.w / 2, y = t.y + (staple ? 52 : 28);
       const g = make("g", { class: "ctg-mark" + kindCls(t.mark.kind) }, svg);
       make("path", { d: `M${cx - 4},${y + 6} L${cx},${y} L${cx + 4},${y + 6} Z` }, g);
       if (t.mark.label) make("text", { x: cx + 8, y: y + 8 }, g, t.mark.label);

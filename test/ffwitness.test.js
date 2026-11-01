@@ -168,3 +168,33 @@ test("witness specs: FIRST(E) of the expression grammar: the path E, T, F, id wi
   assert.deepEqual(js(spec.nodes.map((n) => n.sym)), ["E", "T", "F", "id"]);
   assert.deepEqual(js(spec.levels.map((l) => [l.left && l.left.text, l.right && l.right.text, l.right && l.right.label])), [[null, "ε", "E'"], [null, "ε", "T'"], [null, null, null]]);
 });
+
+test("witness specs: the derivation along the path and the sentence", () => {
+  const g = A.parseBNF("E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id", false);
+  const rec = A.ffRecord(g);
+  const first = A.ffwSpec(A.ffwFirst(g, rec, "E", "id"));
+  assert.deepEqual(js(first.forms), ["E", "T E'", "F T' E'", "id T' E'"]);
+  assert.equal(first.statement, "id ∈ FIRST(E): E can derive a string that starts with id");
+  const follow = A.ffwSpec(A.ffwFollow(g, rec, "T", ")"));
+  assert.equal(follow.forms[0], "E");
+  assert.ok(follow.forms[follow.forms.length - 1].split(" ").includes("T"), "the last form has the symbol");
+  assert.match(follow.statement, /^\) ∈ FOLLOW\(T\): .*can be followed by \)/);
+  const end = A.ffwSpec(A.ffwFollow(g, rec, "E", "$"));
+  assert.match(end.statement, /can be the last thing/);
+  const nul = A.ffwSpec(A.ffwNullable(g, rec, "E'"));
+  assert.deepEqual(js(nul.forms), ["E'", "ε"]);
+  assert.equal(nul.statement, "E' is nullable: E' can derive the empty string");
+});
+
+test("witness specs: every form follows from the one before by one rule", () => {
+  const g = A.parseBNF("S -> A B C d\nA -> a | eps\nB -> b | eps\nC -> c | eps", false);
+  const rec = A.ffRecord(g);
+  const split = (f) => (f === "ε" ? [] : f.split(" "));
+  // one symbol of the earlier form is replaced by the right-hand side of one of its rules
+  const steps = (before, after) => before.some((sym, i) => g.rules.some((r) => r.lhs === sym &&
+    JSON.stringify([...before.slice(0, i), ...r.rhs, ...before.slice(i + 1)]) === JSON.stringify(after)));
+  for (const nt of g.nonterminals) for (const kind of ["first", "follow"]) for (const t of rec[kind][nt]) {
+    const spec = A.ffwSpec(kind === "first" ? A.ffwFirst(g, rec, nt, t) : A.ffwFollow(g, rec, nt, t));
+    for (let k = 1; k < spec.forms.length; k++) assert.ok(steps(split(spec.forms[k - 1]), split(spec.forms[k])), `${kind}(${nt}) ∋ ${t}: ${spec.forms[k - 1]} ⇒ ${spec.forms[k]}`);
+  }
+});
