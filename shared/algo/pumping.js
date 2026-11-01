@@ -261,3 +261,32 @@ function pumpCTG(tree, sep = "") {
   (function collect(n) { for (const kid of n.kids) { if (kid.text !== undefined) parts.push(kid.part || ""); else collect(kid); } })(out);
   return { tree: out, parts };
 }
+
+// The same pumped (tagged) tree as the spine figure of algo/ctg.js (ctgSpineLayout): the path from the root through every
+// marked node, the strings left and right of each stretch of the path, and what the lowest marked node derives.
+function pumpSpine(tree, sep = "") {
+  const CLS = { up: "pp-up", low: "pp-low", both: "pp-both" };
+  const marked = (n) => !n.leaf && (!!n.mark || n.children.some(marked));
+  const text = (leaves) => leaves.map((l) => l.sym).join(sep);
+  const flank = (leaves) => (leaves.length ? { text: text(leaves), part: leaves[0].part || "", cls: leaves[0].part ? "pp-" + leaves[0].part : "", label: leaves[0].part || "" } : null);
+  const nodes = [{ sym: tree.sym, cls: tree.mark ? CLS[tree.mark] : "" }], segments = [];
+  let cur = tree, left = [], right = [], hops = 0;
+  for (;;) {
+    const next = cur.children.findIndex(marked);
+    if (next < 0) break;
+    cur.children.forEach((c, k) => {
+      if (k === next) return;
+      const ls = pumpLeaves(c);
+      if (k < next) left.push(...ls); else right = ls.concat(right); // deeper nodes lie closer to the spine
+    });
+    cur = cur.children[next];
+    hops++;
+    if (cur.mark) {
+      segments.push({ left: flank(left), right: flank(right), jag: hops > 1 });
+      nodes.push({ sym: cur.sym, cls: CLS[cur.mark] });
+      left = []; right = []; hops = 0;
+    }
+  }
+  const x = pumpLeaves(cur);
+  return { nodes, segments, bottom: x.length ? flank(x) : { text: "", part: "x", label: "x" } };
+}

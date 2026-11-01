@@ -61,3 +61,17 @@ test("an empty node over empty children is a triangle over their points", () => 
   assert.ok(b.x1 > b.x0);
   assert.equal(A.ctgFirstLeaf(lay, "B"), 1);
 });
+
+test("spine layout: split mode keeps the width whatever the number of segments, joined mode grows with it", () => {
+  const seg = { left: { text: "aa", part: "v" }, right: { text: "bb", part: "y" }, jag: true };
+  const spec = (n) => ({ nodes: Array.from({ length: n + 1 }, () => ({ sym: "A" })), segments: Array.from({ length: n }, () => seg), bottom: { text: "x" } });
+  const w = (n, mode) => A.ctgSpineLayout(spec(n), { mode }).width;
+  assert.equal(w(2, "split"), w(5, "split"));
+  assert.ok(w(5, "joined") > w(2, "joined"));
+  const split = A.ctgSpineLayout(spec(3), { mode: "split" }), joined = A.ctgSpineLayout(spec(3), { mode: "joined" });
+  assert.ok(new Set(split.flanks.map((f) => f.y1)).size > 1, "split: the bases step down");
+  assert.equal(new Set(joined.flanks.map((f) => f.y1)).size, 1, "joined: one base line");
+  assert.equal(joined.flanks[0].y1, joined.base);
+  const left = joined.flanks.filter((f) => f.side === "left");
+  assert.ok(left.every((f, i) => i === 0 || f.x0 >= left[i - 1].x1), "joined: the left pieces read in order and do not overlap");
+});

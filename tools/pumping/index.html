@@ -8,7 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=3e2c71b3" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=1070fde9" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=9eb0f408" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -79,6 +79,9 @@
       .ctg-node.pp-both .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
       .ctg-tok.pp-u { fill: var(--pp-u); } .ctg-tok.pp-v, .ctg-tok.pp-y { fill: var(--pp-y); } .ctg-tok.pp-x { fill: var(--pp-x); } .ctg-tok.pp-z { fill: var(--pp-z); }
       .ctg-tok { font-weight: 600; }
+      .ctg-snode.pp-up rect { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--hot-bg); }
+      .ctg-snode.pp-low rect { stroke: var(--pp-x); stroke-width: 2.4; fill: var(--st-active-bg); }
+      .ctg-snode.pp-both rect { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
       .ctg-tok.is-in { text-decoration: underline; text-underline-offset: 4px; }
 
       #explain { padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
@@ -147,6 +150,11 @@
               <div class="step-group" id="view-group" hidden>
                 <button class="btn is-on" id="btn-view-tree" onclick="setView('tree')" title="The parse tree">Tree</button>
                 <button class="btn" id="btn-view-ctg" onclick="setView('ctg')" title="The nonterminals on the paths as triangles over the string they derive">Triangles</button>
+                <button class="btn" id="btn-view-path" onclick="setView('path')" title="The path between the repeated nonterminals as a jagged line, with the string beside it">Path</button>
+              </div>
+              <div class="step-group" id="base-group" hidden>
+                <button class="btn is-on" id="btn-base-split" onclick="setBase('split')" title="Every piece has its own base line">Split</button>
+                <button class="btn" id="btn-base-joined" onclick="setBase('joined')" title="One base line: the string reads from left to right">Joined</button>
               </div>
               <button class="btn" id="btn-other" onclick="otherRepeat()" title="Use another repeated nonterminal on the path" hidden>Another repeat</button>
             </div>
@@ -182,10 +190,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=2506f1c9"></script>
-    <script src="../../shared/algo/pumping.js?v=43e6c442"></script>
+    <script src="../../shared/algo/ctg.js?v=dc7b905c"></script>
+    <script src="../../shared/algo/pumping.js?v=38e2dd62"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=3573e7a8"></script>
+    <script src="../../shared/ctg.js?v=1e55afe7"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -204,7 +212,8 @@
       const $ = (id) => document.getElementById(id);
 
       let ppMode = "regular"; // regular | cf
-      let ppView = "tree"; // context-free drawing: tree | ctg
+      let ppView = "tree"; // context-free drawing: tree | ctg | path
+      let ppBase = "split"; // base lines of the path drawing: split | joined
       let ppDFA = null; // the parsed DFA (regular mode)
       let ppG = null; // the parsed grammar (context-free mode)
       let ppStrings = []; // sample strings of the loaded example
@@ -221,7 +230,8 @@
         $("regex-row").hidden = m !== "regular";
         $("canvas-dfa").hidden = m !== "regular";
         $("canvas-tree").hidden = m !== "cf" || ppView !== "tree";
-        $("canvas-ctg").hidden = m !== "cf" || ppView !== "ctg";
+        $("canvas-ctg").hidden = m !== "cf" || ppView === "tree";
+        $("base-group").hidden = m !== "cf" || ppView !== "path";
         $("view-label").hidden = $("view-group").hidden = m !== "cf";
         $("walk-bar").querySelector(".step-group").hidden = m !== "regular";
         $("walk-label").hidden = m !== "regular";
@@ -237,8 +247,16 @@
         ppView = v;
         $("btn-view-tree").classList.toggle("is-on", v === "tree");
         $("btn-view-ctg").classList.toggle("is-on", v === "ctg");
+        $("btn-view-path").classList.toggle("is-on", v === "path");
         $("canvas-tree").hidden = ppMode !== "cf" || v !== "tree";
-        $("canvas-ctg").hidden = ppMode !== "cf" || v !== "ctg";
+        $("canvas-ctg").hidden = ppMode !== "cf" || v === "tree";
+        $("base-group").hidden = ppMode !== "cf" || v !== "path";
+        if (ppMode === "cf") renderCF();
+      }
+      function setBase(b) {
+        ppBase = b;
+        $("btn-base-split").classList.toggle("is-on", b === "split");
+        $("btn-base-joined").classList.toggle("is-on", b === "joined");
         if (ppMode === "cf") renderCF();
       }
 
@@ -476,7 +494,16 @@
 
       function drawCF(tree) {
         if (ppView === "tree") { drawTree(tree); return; }
+        if (ppView === "path") { drawPath(tree); return; }
         drawTriangles(tree);
+      }
+
+      // The path between the repeated nonterminals: a jagged spine with the strings hanging off it.
+      function drawPath(tree) {
+        $("ctg-host").innerHTML = "";
+        $("ctg-empty").hidden = !!tree;
+        if (!tree) { $("ctg-empty").textContent = ppG ? "Enter a string the grammar generates." : ""; return; }
+        drawCTGSpine("ctg-host", pumpSpine(tree, ppSep()), { mode: ppBase, scale: 1.4 });
       }
 
       // The triangles: the paths to the two repeated nonterminals, the rest as the five parts of the string.

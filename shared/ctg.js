@@ -91,3 +91,47 @@ function drawCTG(host, tree, opts = {}) {
   }
   return { svg, layout: lay };
 }
+
+// The spine figure of algo/ctg.js (ctgSpineLayout), drawn into an <svg> in the host. Options: mode, scale, title(flank).
+function drawCTGSpine(host, spec, opts = {}) {
+  const lay = ctgSpineLayout(spec, opts);
+  const hostEl = typeof host === "string" ? document.getElementById(host) : host;
+  const make = (tag, attrs, parent, text) => {
+    const e = document.createElementNS(CTG_NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const sc = opts.scale || 1;
+  hostEl.innerHTML = "";
+  const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
+  if (lay.mode === "joined") make("line", { class: "ctg-line", x1: 0, x2: lay.width, y1: lay.base, y2: lay.base }, svg);
+  // the spine: straight, or a zigzag where the path is abstract
+  lay.segs.forEach((s) => {
+    let d = `M${lay.cx},${s.y0}`;
+    if (s.jag) {
+      const n = Math.max(2, Math.round((s.y1 - s.y0) / 9));
+      for (let i = 1; i < n; i++) d += ` L${lay.cx + (i % 2 ? 5 : -5)},${s.y0 + ((s.y1 - s.y0) * i) / n}`;
+    }
+    make("path", { class: "ctg-jag", d: d + ` L${lay.cx},${s.y1}` }, svg);
+  });
+  const flank = (f, y1) => {
+    const g = make("g", { class: "ctg-node" + (f.cls ? " " + f.cls : "") }, svg);
+    if (opts.title) make("title", {}, g, opts.title(f));
+    make("polygon", { class: "ctg-tri", points: `${f.apex},${f.y0} ${f.x0},${y1} ${f.x1},${y1}` }, g);
+    make("text", { class: "ctg-tok" + (f.cls ? " " + f.cls : ""), x: (f.x0 + f.x1) / 2, y: y1 + 16, "text-anchor": "middle" }, g, f.text);
+    if (f.label) make("text", { class: "ctg-part", x: (f.x0 + f.x1) / 2, y: y1 + 31, "text-anchor": "middle" }, g, f.label);
+  };
+  for (const f of lay.flanks) flank(f, f.y1);
+  const b = lay.bottom;
+  if (b.empty) make("circle", { class: "ctg-point", cx: lay.cx, cy: b.y0 + lay.nodeH / 2 + 8, r: 3.5 }, svg);
+  else flank({ ...b, text: b.text }, b.y1);
+  if (b.empty && b.label) make("text", { class: "ctg-part", x: lay.cx, y: b.y0 + lay.nodeH / 2 + 28, "text-anchor": "middle" }, svg, b.label);
+  for (const n of lay.nodes) {
+    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
+    make("rect", { x: n.x - n.w / 2, y: n.y - lay.nodeH / 2, width: n.w, height: lay.nodeH, rx: lay.nodeH / 2 }, g);
+    make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
+  }
+  return { svg, layout: lay };
+}

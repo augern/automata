@@ -134,3 +134,26 @@ test("pumpCTG: triangles for the marked paths, the five parts as tokens, repeate
   assert.equal(count(0).n, 2);
   assert.equal(count(2).parts.split("v").length - 1, 2); // v once per copy
 });
+
+test("pumpSpine: the spine of marked nodes, the strings beside each stretch, repeated per copy of the middle part", () => {
+  const g = P.rdpParseGrammar("S -> a S b | eps");
+  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "aabb")).tree;
+  const pair = P.pumpPairs(tree)[0];
+  const tagged = P.pumpTag(tree, pair);
+  const sp = (i) => P.pumpSpine(P.pumpTree(tagged, pair, i));
+  const one = sp(1);
+  assert.equal(one.nodes.length, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(one.segments.map((s) => [s.left && s.left.text, s.left && s.left.part, s.right && s.right.text, s.right && s.right.part]))), [["a", "u", "b", "z"], ["a", "v", "b", "y"]]);
+  assert.equal(one.bottom.text, "");
+  assert.equal(sp(3).nodes.length, 5);
+  assert.equal(sp(0).nodes.length, 2);
+});
+
+test("pumpSpine: the right-hand string of a stretch with several nodes is in the order of the yield", () => {
+  const g = P.rdpParseGrammar("S -> a A d | eps\nA -> b S c");
+  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "abcd")).tree;
+  const pair = P.pumpPairs(tree)[0];
+  const sp = P.pumpSpine(P.pumpTree(P.pumpTag(tree, pair), pair, 2));
+  assert.equal(sp.segments[1].right.text, "cd");
+  assert.equal(sp.segments[1].left.text, "ab");
+});

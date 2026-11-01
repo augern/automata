@@ -93,3 +93,49 @@ function ctgLayout(tree, opts = {}) {
 const ctgFirstLeaf = (lay, id) => lay.byId[id].first;
 // The leaf right after a node's stretch of the string.
 const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
+
+// ── The spine figure (Kozen's pumping pictures) ─────────────────────────────────────────────────────────────
+// A path of nonterminals from the root down, drawn as a vertical spine; the stretches of the path that are not
+// drawn node by node are jagged lines (an abstract derivation: A ⇒* vAy). The string derived to the left and to the
+// right of each stretch hangs off the spine as a triangle (a flank), and the lowest node has a triangle of its own.
+//   spec: { nodes: [{ sym, cls? }],                           the nodes on the spine, top to bottom
+//           segments: [{ left, right, jag }],                 one between each two nodes; left/right: { text, part?, cls?, label? } or null
+//           bottom: { text, part?, cls?, label? } }           what the last node derives
+//   opts.mode "split": every flank has its own base line (the bases step down the spine) and the flanks of all segments
+//                       share one column per side, so the width does not depend on the number of segments;
+//             "joined": every flank reaches down to one lowest base line, the string reads left to right along it.
+// -> { width, height, cx, base, nodes: [{ x, y, w, sym, cls }], flanks: [{ side, x0, x1, apex, y0, y1, text, ... }], segs: [{ y0, y1, jag }], bottom }
+function ctgSpineLayout(spec, opts = {}) {
+  const o = { charW: 9, tokPad: 8, gap: 12, colGap: 10, segH: 70, bottomH: 52, topPad: 24, marginX: 18, nodeH: 22, mode: "split", ...opts };
+  const m = spec.segments.length;
+  const wOf = (f) => (f && f.text ? Math.max(1, f.text.length) * o.charW + 2 * o.tokPad : 0);
+  const wl = spec.segments.map((s) => wOf(s.left)), wr = spec.segments.map((s) => wOf(s.right));
+  const nodeW = (n) => Math.max(26, String(n.sym).length * 8 + 14);
+  const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, cls: n.cls || "", y: o.topPad + o.nodeH / 2 + k * o.segH, w: nodeW(n), x: 0 }));
+  const lastY = nodes[nodes.length - 1].y;
+  const bw = Math.max(wOf(spec.bottom), 34);
+  const base = lastY + o.nodeH / 2 + o.bottomH;
+  const sum = (ws, from, to) => ws.slice(from, to).reduce((a, w) => a + w + o.colGap, 0);
+  let cx, width;
+  if (o.mode === "joined") cx = o.marginX + sum(wl, 0, m) + o.gap;
+  else cx = o.marginX + Math.max(0, ...wl) + o.gap;
+  const rightWidth = o.mode === "joined" ? sum(wr, 0, m) : Math.max(0, ...wr);
+  width = Math.max(cx + o.gap + rightWidth + o.marginX, cx + bw / 2 + o.marginX);
+  const flanks = [], segs = [];
+  spec.segments.forEach((s, k) => {
+    const y0 = nodes[k].y + o.nodeH / 2, y1 = nodes[k + 1].y - o.nodeH / 2;
+    segs.push({ y0, y1, jag: !!s.jag });
+    const baseY = o.mode === "joined" ? base : y1 + o.nodeH / 2;
+    const add = (f, side, x0, w) => { if (f && f.text) flanks.push({ side, k, text: f.text, part: f.part || "", cls: f.cls || "", label: f.label || "", x0, x1: x0 + w, apex: cx, y0: nodes[k].y, y1: baseY }); };
+    if (o.mode === "joined") {
+      add(s.left, "left", o.marginX + sum(wl, 0, k), wl[k]);
+      add(s.right, "right", cx + o.gap + sum(wr, k + 1, m), wr[k]);
+    } else {
+      add(s.left, "left", cx - o.gap - wl[k], wl[k]);
+      add(s.right, "right", cx + o.gap, wr[k]);
+    }
+  });
+  nodes.forEach((n) => { n.x = cx; });
+  const bottom = { text: spec.bottom.text || "", part: spec.bottom.part || "", cls: spec.bottom.cls || "", label: spec.bottom.label || "", x0: cx - bw / 2, x1: cx + bw / 2, apex: cx, y0: lastY, y1: base, empty: !spec.bottom.text };
+  return { width, height: base + 44, cx, base, nodes, flanks, segs, bottom, nodeH: o.nodeH, mode: o.mode };
+}
