@@ -1,7 +1,7 @@
 // The "Definitions" button in the top bar and its pop-up: the formal definitions the tool rests on, each with its source.
 // Like the Guide it is on demand and belongs to the tool, not to a panel. A tool supplies its text in
 // tools/<tool>/definitions.js (window.TOOL_DEFINITIONS); this file is only the mechanism.
-// Needs shared.css (the .algo-* modal styles) and ui.css (.guide-body, .def-*).
+// Needs algo/tex.js, shared.css (the .algo-* modal styles) and ui.css (.guide-body, .def-*).
 (function () {
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const fmt = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>");
@@ -16,7 +16,7 @@
     };
     const item = (it) =>
       "<div class=\"def-item\"><div class=\"def-term\">" + esc(it.term) + "</div>" +
-      "<div class=\"def-formal\">" + it.formal.map((l) => "<div>" + esc(l) + "</div>").join("") + "</div>" +
+      "<div class=\"def-formal\">" + it.formal.map((l) => "<div class=\"def-line\">" + texToMathML(l) + "</div>").join("") + "</div>" +
       (it.text ? "<p class=\"def-text\">" + fmt(it.text) + "</p>" : "") +
       "<div class=\"def-from\">" + (it.refs.length ? it.refs.map(cite).join(" ") : "this tool") + "</div></div>";
     const body = d.sections.map((s) => "<h3 class=\"guide-h\">" + esc(s.title) + "</h3>" + s.items.map(item).join("")).join("");

@@ -1,5 +1,5 @@
 // The Definitions pop-up for this tool (see shared/definitions.js): the formal definitions it rests on, with their sources.
-// A source is a key of refs, optionally followed by a section.
+// Formulas are LaTeX (the subset of shared/algo/tex.js). A source is a key of refs, optionally followed by a section.
 window.TOOL_DEFINITIONS = {
   title: "FIRST & FOLLOW",
   refs: {
@@ -15,18 +15,18 @@ window.TOOL_DEFINITIONS = {
       items: [
         {
           term: "Context-free grammar",
-          formal: ["G = (N, Σ, P, S)", "N, Σ finite and disjoint;  P ⊆ N × (N ∪ Σ)*, written A → α;  S ∈ N"],
+          formal: ["G = (N, \\Sigma, P, S)", "N, \\Sigma \\text{ finite and disjoint};\\quad P \\subseteq N \\times (N \\cup \\Sigma)^{*}, \\text{ written } A \\to \\alpha;\\quad S \\in N"],
           text: "N holds the nonterminals, Σ the terminals, S is the start symbol.",
           refs: ["hmu §5.1.2", "sipser Def. 2.2"],
         },
         {
           term: "Derivation",
-          formal: ["α ⇒ β  iff  α = γAδ,  A → η ∈ P,  β = γηδ", "⇒*  is the reflexive and transitive closure of ⇒"],
+          formal: ["\\alpha \\Rightarrow \\beta \\quad\\text{iff}\\quad \\alpha = \\gamma A \\delta,\; A \\to \\eta \\in P,\; \\beta = \\gamma \\eta \\delta", "\\Rightarrow^{*} \\text{ is the reflexive and transitive closure of } \\Rightarrow"],
           refs: ["hmu §5.1.3"],
         },
         {
           term: "Sentential form, sentence, language",
-          formal: ["α ∈ (N ∪ Σ)* is a sentential form iff S ⇒* α", "a sentential form in Σ* is a sentence;  L(G) = { w ∈ Σ* | S ⇒* w }"],
+          formal: ["\\alpha \\in (N \\cup \\Sigma)^{*} \\text{ is a sentential form iff } S \\Rightarrow^{*} \\alpha", "\\text{a sentential form in } \\Sigma^{*} \\text{ is a sentence};\\quad L(G) = \\{\\, w \\in \\Sigma^{*} \\mid S \\Rightarrow^{*} w \\,\\}"],
           refs: ["hmu §5.1.5–5.1.6"],
         },
       ],
@@ -36,24 +36,24 @@ window.TOOL_DEFINITIONS = {
       items: [
         {
           term: "Nullable",
-          formal: ["A ∈ N is nullable  iff  A ⇒* ε", "X₁ … Xₙ is nullable  iff  every Xᵢ is  (ε is nullable)"],
+          formal: ["A \\in N \\text{ is nullable} \\quad\\text{iff}\\quad A \\Rightarrow^{*} \\varepsilon", "X_1 \\ldots X_n \\text{ is nullable} \\quad\\text{iff}\\quad \\text{every } X_i \\text{ is}\\quad (\\varepsilon \\text{ is nullable})"],
           refs: ["hmu §7.1.3", "appel §3.2"],
         },
         {
           term: "FIRST",
-          formal: ["FIRST(α) = { a ∈ Σ | α ⇒* aβ for some β ∈ (N ∪ Σ)* }", "ε ∈ FIRST(α)  iff  α ⇒* ε"],
+          formal: ["\\mathrm{FIRST}(\\alpha) = \\{\\, a \\in \\Sigma \\mid \\alpha \\Rightarrow^{*} a\\beta \\text{ for some } \\beta \\in (N \\cup \\Sigma)^{*} \\,\\}", "\\varepsilon \\in \\mathrm{FIRST}(\\alpha) \\quad\\text{iff}\\quad \\alpha \\Rightarrow^{*} \\varepsilon"],
           text: "The terminals a string derived from α can start with. ε is included when α is nullable.",
           refs: ["alsu §4.4.2", "appel §3.2", "rs"],
         },
         {
           term: "FIRST of a string",
-          formal: ["FIRST(X₁ … Xₙ) = ⋃ { FIRST(Xᵢ) ∖ {ε} | X₁ … Xᵢ₋₁ nullable }", "ε ∈ FIRST(X₁ … Xₙ)  iff  X₁ … Xₙ nullable"],
+          formal: ["\\mathrm{FIRST}(X_1 \\ldots X_n) = \\bigcup_{X_1 \\ldots X_{i-1} \\text{ nullable}} \\mathrm{FIRST}(X_i) \\setminus \\{\\varepsilon\\}", "\\varepsilon \\in \\mathrm{FIRST}(X_1 \\ldots X_n) \\quad\\text{iff}\\quad X_1 \\ldots X_n \\text{ nullable}"],
           text: "FIRST of each symbol up to and including the first that is not nullable.",
           refs: ["alsu §4.4.2"],
         },
         {
           term: "FOLLOW",
-          formal: ["FOLLOW(A) = { a ∈ Σ | S ⇒* αAaβ for some α, β ∈ (N ∪ Σ)* }", "$ ∈ FOLLOW(A)  iff  S ⇒* αA;  in particular $ ∈ FOLLOW(S)"],
+          formal: ["\\mathrm{FOLLOW}(A) = \\{\\, a \\in \\Sigma \\mid S \\Rightarrow^{*} \\alpha A a \\beta \\text{ for some } \\alpha, \\beta \\in (N \\cup \\Sigma)^{*} \\,\\}", "\\$ \\in \\mathrm{FOLLOW}(A) \\quad\\text{iff}\\quad S \\Rightarrow^{*} \\alpha A;\\quad \\text{in particular } \\$ \\in \\mathrm{FOLLOW}(S)"],
           text: "The terminals that can come right after A in a sentential form. $ is an end marker, not a terminal of the grammar.",
           refs: ["alsu §4.4.2", "appel §3.2", "rs"],
         },
@@ -65,11 +65,11 @@ window.TOOL_DEFINITIONS = {
         {
           term: "Closure rules",
           formal: [
-            "A → Y₁ … Yₖ, every Yᵢ nullable  ⟹  A nullable",
-            "A → Y₁ … Yₖ, Y₁ … Yᵢ₋₁ nullable  ⟹  FIRST(Yᵢ) ∖ {ε} ⊆ FIRST(A)",
-            "$ ∈ FOLLOW(S)",
-            "A → αBβ  ⟹  FIRST(β) ∖ {ε} ⊆ FOLLOW(B)",
-            "A → αBβ, β nullable  ⟹  FOLLOW(A) ⊆ FOLLOW(B)",
+            "A \\to Y_1 \\ldots Y_k,\\; \\text{every } Y_i \\text{ nullable} \\;\\Longrightarrow\\; A \\text{ nullable}",
+            "A \\to Y_1 \\ldots Y_k,\\; Y_1 \\ldots Y_{i-1} \\text{ nullable} \\;\\Longrightarrow\\; \\mathrm{FIRST}(Y_i) \\setminus \\{\\varepsilon\\} \\subseteq \\mathrm{FIRST}(A)",
+            "\\$ \\in \\mathrm{FOLLOW}(S)",
+            "A \\to \\alpha B \\beta \\;\\Longrightarrow\\; \\mathrm{FIRST}(\\beta) \\setminus \\{\\varepsilon\\} \\subseteq \\mathrm{FOLLOW}(B)",
+            "A \\to \\alpha B \\beta,\\; \\beta \\text{ nullable} \\;\\Longrightarrow\\; \\mathrm{FOLLOW}(A) \\subseteq \\mathrm{FOLLOW}(B)",
           ],
           text: "The sets are the least sets that satisfy every rule. Applying the rules until a round changes nothing, the fixpoint, computes them.",
           refs: ["alsu §4.4.2", "appel §3.2"],
