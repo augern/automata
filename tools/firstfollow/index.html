@@ -12,9 +12,9 @@
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
-      #p-sets { --pw: 380; --pmin: 240px; }
-      #p-wit { --pw: 620; --pmin: 300px; }
-      #p-run { --pw: 460; --pmin: 280px; }
+      #p-run { --pw: 440; --pmin: 280px; }
+      #p-wit { --pw: 600; --pmin: 300px; }
+      #p-sets { --pw: 360; --pmin: 240px; }
 
       [hidden] { display: none !important; }
       .ff-body { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
@@ -67,6 +67,7 @@
       .ff-row .ff-new { color: var(--accent); }
       .ff-row .ff-nothing { color: var(--text-lo); }
       .ff-row.is-current { color: var(--text); background: var(--accent-bg); }
+      .ff-row.is-shown { outline: 1.5px solid var(--amber); outline-offset: -1.5px; }
       .ff-row .ff-occ { color: var(--amber); font-weight: 600; }
 
       /* Witness: the statement, the figure, the derivation */
@@ -127,14 +128,29 @@
 
       <div class="resize-handle" id="rh-1"></div>
 
-      <!-- 2. Sets -->
-      <div class="panel" id="p-sets" data-priority="3" data-collapse="left">
+      <!-- 2. Construction: how the sets are found -->
+      <div class="panel" id="p-run" data-priority="1" data-collapse="left">
         <div class="panel-header">
-          <span class="panel-title">Sets</span>
-          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sets')">&#8249;</button>
+          <span class="panel-title">Construction</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run')">&#8249;</button>
         </div>
-        <div class="panel-body" style="padding: 0">
-          <div id="ff-sets"></div>
+        <div class="panel-body ff-body">
+          <div id="ff-controls">
+            <div class="step-group">
+              <button class="btn icon-restart" id="btn-reset" title="Restart"></button>
+              <button class="btn" id="btn-back">&#8249; Back</button>
+              <button class="btn primary" id="btn-step" title="Apply the next rule">Step &#8250;</button>
+              <button class="btn" id="btn-round" title="Apply the rest of this round">Round &#8250;&#8250;</button>
+              <button class="btn icon-run-all" id="btn-all" title="Run to the fixpoint"></button>
+            </div>
+            <div id="ff-phases">
+              <button class="btn" data-phase="nullable" title="Jump to the end of the nullable phase">Nullable</button>
+              <button class="btn" data-phase="first" title="Jump to the end of the FIRST phase">FIRST</button>
+              <button class="btn" data-phase="follow" title="Jump to the end of the FOLLOW phase">FOLLOW</button>
+            </div>
+          </div>
+          <div id="ff-now"></div>
+          <div id="ff-log"></div>
         </div>
       </div>
 
@@ -172,31 +188,18 @@
 
       <div class="resize-handle" id="rh-3"></div>
 
-      <!-- 4. Construction: how the sets are found -->
-      <div class="panel collapsed" id="p-run" data-priority="1">
+      <!-- 4. Results -->
+      <div class="panel" id="p-sets" data-priority="3">
         <div class="panel-header">
-          <span class="panel-title">Construction</span>
-          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run')">&#8250;</button>
+          <span class="panel-title">Results</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sets')">&#8250;</button>
         </div>
-        <div class="panel-body ff-body">
-          <div id="ff-controls">
-            <div class="step-group">
-              <button class="btn icon-restart" id="btn-reset" title="Restart"></button>
-              <button class="btn" id="btn-back">&#8249; Back</button>
-              <button class="btn primary" id="btn-step" title="Apply the next rule">Step &#8250;</button>
-              <button class="btn" id="btn-round" title="Apply the rest of this round">Round &#8250;&#8250;</button>
-              <button class="btn icon-run-all" id="btn-all" title="Run to the fixpoint"></button>
-            </div>
-            <div id="ff-phases">
-              <button class="btn" data-phase="nullable" title="Jump to the end of the nullable phase">Nullable</button>
-              <button class="btn" data-phase="first" title="Jump to the end of the FIRST phase">FIRST</button>
-              <button class="btn" data-phase="follow" title="Jump to the end of the FOLLOW phase">FOLLOW</button>
-            </div>
-          </div>
-          <div id="ff-now"></div>
-          <div id="ff-log"></div>
+        <div class="panel-body" style="padding: 0">
+          <div id="ff-sets"></div>
         </div>
       </div>
+
+      
     </div>
     <!-- #panels -->
 
@@ -218,11 +221,11 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=21deed70"></script>
+    <script src="guide.js?v=3be9239f"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar", +1);
-      initResize("rh-2", "p-sets", +1);
+      initResize("rh-2", "p-run", +1);
       initResize("rh-3", "p-wit", +1);
 
       const EXAMPLES = {};
@@ -234,6 +237,7 @@
       let sel = null; // the member shown in the witness panel: { kind: "first" | "follow" | "nullable", nt, tok }
       let alt = 0; // which way of showing it (the shortest is 0)
       let theory = null; // nullable | first | follow: the general case is shown instead of a member
+      let shownStep = null; // the step of the construction whose member (or phase) the witness shows
       const ctgPref = ctgPrefs({ all: false }); // remembered for this tool: a witness for the whole set
       const el = (id) => document.getElementById(id);
       const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
@@ -275,25 +279,21 @@
       function selectMember(m) {
         sel = m;
         theory = null;
+        shownStep = null;
         alt = 0;
         saveShare();
         renderSets(sim.pos);
         drawWitness();
       }
-      // The construction names the member it has just added: show why it is there. A step that adds nothing shows the general case
-      // of its phase.
-      function followStep() {
-        const ev = sim.pos >= 0 ? rec.events[sim.pos] : null;
-        if (!ev || !ev.added.length) {
-          theory = ev ? ev.phase : "nullable";
-          drawWitness();
-          return;
-        }
-        const m = ev.phase === "nullable" ? { kind: "nullable", nt: ev.added[0] } : { kind: ev.phase, nt: ev.target, tok: ev.added[0] };
-        if (!memberExists(m)) return;
-        sel = m;
-        theory = null;
-        alt = 0;
+      // Show a step of the construction in the witness pane: the member it adds and why it is there, or, when it adds nothing, the
+      // general case of its phase. Stepping shows the step that was just made; clicking a row of the log shows that one.
+      function showStep(i) {
+        const ev = i >= 0 ? rec.events[i] : null;
+        shownStep = i >= 0 ? i : null;
+        const m = ev && ev.added.length ? (ev.phase === "nullable" ? { kind: "nullable", nt: ev.added[0] } : { kind: ev.phase, nt: ev.target, tok: ev.added[0] }) : null;
+        if (m && memberExists(m)) { sel = m; theory = null; alt = 0; }
+        else theory = ev ? ev.phase : "nullable";
+        renderLog(sim.pos);
         renderSets(sim.pos);
         drawWitness();
       }
@@ -416,8 +416,8 @@
             const add = ev.added.length
               ? '<span class="ff-new">+ ' + setOf(ev.added) + " → " + (ev.phase === "nullable" ? "nullable" : SET_NAME[ev.phase] + "(" + esc(ev.target) + ")") + "</span>"
               : '<span class="ff-nothing">nothing new</span>';
-            html += '<div class="ff-row' + (i === pos ? " is-current" : "") + '" data-i="' + i + '"' + (ev.rule >= 0 ? ' data-prod="' + (ev.rule + 1) + '"' : "") +
-              ' title="' + esc(ffExplain(grammar, ev)) + '"><span class="ff-rule">' + ruleText(ev) + "</span>" + add + "</div>";
+            html += '<div class="ff-row' + (i === pos ? " is-current" : "") + (i === shownStep ? " is-shown" : "") + '" data-i="' + i + '"' + (ev.rule >= 0 ? ' data-prod="' + (ev.rule + 1) + '"' : "") +
+              ' title="' + esc(ffExplain(grammar, ev) + " (click: show in the witness)") + '"><span class="ff-rule">' + ruleText(ev) + "</span>" + add + "</div>";
           }
         }
         log.innerHTML = html;
@@ -488,7 +488,7 @@
         buttons: { reset: "btn-reset", back: "btn-back", step: "btn-step", all: "btn-all" },
         min: -1,
         last: () => (rec && rec.events.length ? rec.events.length - 1 : null),
-        onChange: () => { render(); followStep(); },
+        onChange: () => { render(); showStep(sim.pos); },
       });
       el("btn-reset").addEventListener("click", () => sim.reset());
       el("btn-back").addEventListener("click", () => sim.prev());
@@ -516,7 +516,7 @@
       });
       el("ff-log").addEventListener("click", (e) => {
         const row = e.target.closest(".ff-row");
-        if (row) sim.go(+row.dataset.i);
+        if (row) showStep(+row.dataset.i); // not a step back in time: the construction stays where it is
       });
       // ←/→ (or ,/.) step, Home restarts, End runs.
       registerStepper("p-run", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
@@ -548,6 +548,7 @@
 
       window.addEventListener("load", () => {
         GrammarEditor.attach(el("grammar-input"));
+        initPanelStorage("firstfollow-tool-v1", ["p-grammar", "p-run", "p-wit", "p-sets"]);
         loadPanelState();
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);
         el("grammar-input").value = "E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id";
