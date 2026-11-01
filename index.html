@@ -275,9 +275,10 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
     if (ring) { fill(RINGS[ring][0], RINGS[ring][1]); return true; }
     return false;
   }
-  map.addEventListener("mousemove", (e) => { if (tipFor(e.target)) place(e.clientX + 14, e.clientY + 18); else tip.hidden = true; });
+  const TIPS = false; // the tooltips are off for now: the arrows say how the tools relate
+  map.addEventListener("mousemove", (e) => { if (TIPS && tipFor(e.target)) place(e.clientX + 14, e.clientY + 18); else tip.hidden = true; });
   map.addEventListener("mouseleave", () => { tip.hidden = true; });
-  map.addEventListener("focusin", (e) => { if (tipFor(e.target)) { const r = e.target.getBoundingClientRect(); place(r.left, r.bottom + 8); } });
+  map.addEventListener("focusin", (e) => { if (TIPS && tipFor(e.target)) { const r = e.target.getBoundingClientRect(); place(r.left, r.bottom + 8); } });
   map.addEventListener("focusout", () => { tip.hidden = true; });
 
   // ── Prerequisite arrows: a line from the middle of the needed tool's pill (under it) to the edge of the tool that builds on it, bowed a little ──
