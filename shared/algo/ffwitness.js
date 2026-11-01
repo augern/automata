@@ -314,8 +314,8 @@ function ffwTheory(kind) {
     return {
       nodes: [node("S"), node("B"), node("A", { kind: "focus" })],
       levels: [
-        { left: [cell("…", "α₁", { cls: "is-dim" })], right: [cell("a …", "β₂", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] },
-        { left: [cell("…", "α₂", { cls: "is-dim" })], right: [cell("ε", "β₁")] },
+        { left: [cell("…", "α₁", { cls: "is-dim" })], right: [cell("a …", "aβ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] },
+        { left: [cell("…", "α₂", { cls: "is-dim" })], right: [cell("ε", "γ")] },
       ],
       bottom: cell("…", "x", { cls: "is-dim" }),
       terminus: true, // A derives x in as many steps as it needs
