@@ -125,7 +125,8 @@ function drawCTGFigureInto(root, lay, opts = {}) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
     // no outline: the shape is its tint
     const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, svg);
-    if (t.colour) fill.style.fill = ctgTone(t.colour, t.tone, 0);
+    if (t.share !== undefined) fill.style.fill = `color-mix(in srgb, ${t.colour} ${t.share}%, var(--bg))`;
+    else if (t.colour) fill.style.fill = ctgTone(t.colour, t.tone, 0);
   }
   for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
   for (const t of lay.tokens) {

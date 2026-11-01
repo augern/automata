@@ -135,9 +135,9 @@ function ctgSpineLayout(spec, opts = {}) {
   const width = Math.max(o.minWidth || 0, 2 * o.marginX + 2 * half(0) + (spec.outer ? 2 * c : 0));
   const cx = width / 2;
   const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, x: cx, y: apexY(k) + 6, cls: n.cls || "", kind: n.kind || "", footL: cx - half(k), footR: cx + half(k) }));
-  // a triangle without a colour of its own is grey, in two shades that alternate down the spine: enough to tell the nested ones
-  // apart without a gradient that would draw the eye to the depth
-  const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour !== undefined ? n.colour : "var(--text-lo)", tone: n.tone !== undefined ? n.tone : k % 2 }));
+  // a triangle without a colour of its own is a faint grey, in two shades that alternate down the spine (share: percent of the
+  // grey in the page's background): enough to tell the nested ones apart without a gradient that would draw the eye to the depth
+  const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour !== undefined ? n.colour : "var(--text-lo)", tone: n.tone !== undefined ? n.tone : 0, share: n.colour !== undefined ? undefined : k % 2 ? 21 : 10 }));
   const tokens = [];
   const tok = (f, centre) => { tokens.push({ text: f.text, id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
   for (let k = 0; k < m; k++) {

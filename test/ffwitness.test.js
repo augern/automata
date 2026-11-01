@@ -229,3 +229,25 @@ test("ways of showing a member: the different ways are different derivations", (
   assert.equal(A.ffwFirst(g, rec, "S", "c").count, 2);
   assert.notEqual(forms(0), forms(1));
 });
+
+test("the general case: a figure for nullable, FIRST and FOLLOW that reads as the definition says", () => {
+  for (const kind of ["nullable", "first", "follow"]) {
+    const spec = A.ffwTheory(kind);
+    assert.equal(spec.nodes.length, spec.levels.length + 1, kind);
+    const lay = A.ctgSpineLayout(spec);
+    assert.ok(Number.isFinite(lay.width) && Number.isFinite(lay.height), kind);
+    assert.ok(spec.statement.length > 20 && spec.forms.length >= 2, kind);
+    if (kind === "nullable") assert.ok(lay.tokens.every((t) => t.eps));
+    if (kind === "first") {
+      assert.equal(lay.tokens.find((t) => !t.eps).text, "a", "the first token seen from the left");
+      assert.ok(lay.arrows[0].side === "left" && Math.abs(lay.arrows[0].x0 - lay.nodes[0].footL) < 1e-9);
+    }
+    if (kind === "follow") {
+      const bottom = lay.tokens.find((t) => Math.abs(t.x + t.w / 2 - lay.cx) < 1e-6);
+      const next = lay.tokens.filter((t) => t.x > bottom.x && !t.eps)[0];
+      assert.equal(next.id, "t");
+      assert.equal(next.text.split(" ")[0], "a", "what follows B starts with a");
+      assert.ok(Math.abs(lay.arrows[0].x0 - lay.nodes[2].footR) < 1e-9, "from the right foot of B");
+    }
+  }
+});

@@ -76,6 +76,8 @@
       #wit-alt { display: flex; align-items: center; gap: var(--sp-2); }
       #wit-alt-n { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-dim); min-width: 3.2em; text-align: center; }
       #wit-all-wrap { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; }
+      #wit-theory .btn { height: 22px; font-size: var(--fs-2xs); padding: 0 var(--sp-3); }
+      #wit-theory .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
       #wit-all-wrap.is-off { opacity: 0.45; cursor: default; }
       #wit-canvas { flex: 1; min-height: 160px; }
       #wit-forms { flex-shrink: 0; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border); background: var(--bg-panel); font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.7; overflow-x: auto; white-space: nowrap; }
@@ -152,6 +154,11 @@
                 <span id="wit-alt-n"></span>
                 <button class="btn" id="btn-alt-next" title="Next way of showing it">&#8250;</button>
               </div>
+              <div class="step-group" id="wit-theory" title="The general case, with symbols in place of a grammar">
+                <button class="btn" data-theory="nullable">Nullable</button>
+                <button class="btn" data-theory="first">FIRST</button>
+                <button class="btn" data-theory="follow">FOLLOW</button>
+              </div>
               <label id="wit-all-wrap" title="Show a witness for every member of this set, side by side"><input type="checkbox" id="wit-all" /> Whole set</label>
             </div>
           </div>
@@ -196,7 +203,7 @@
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
-    <script src="../../shared/algo/ctg.js?v=284125c2"></script>
+    <script src="../../shared/algo/ctg.js?v=63c00c5f"></script>
     <script src="../../shared/algo/firstfollow.js?v=36abb92e"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
@@ -204,14 +211,14 @@
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=5e76baa5"></script>
+    <script src="../../shared/algo/ffwitness.js?v=6536b2b5"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
-    <script src="../../shared/ctg.js?v=1e3a5f39"></script>
+    <script src="../../shared/ctg.js?v=e99e62f5"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=f7304497"></script>
+    <script src="guide.js?v=21deed70"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar", +1);
@@ -226,6 +233,7 @@
       let rec = null; // ffRecord of the grammar
       let sel = null; // the member shown in the witness panel: { kind: "first" | "follow" | "nullable", nt, tok }
       let alt = 0; // which way of showing it (the shortest is 0)
+      let theory = null; // nullable | first | follow: the general case is shown instead of a member
       const ctgPref = ctgPrefs({ all: false }); // remembered for this tool: a witness for the whole set
       const el = (id) => document.getElementById(id);
       const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
@@ -266,17 +274,28 @@
       const sameMember = (a, b) => a && b && a.kind === b.kind && a.nt === b.nt && a.tok === b.tok;
       function selectMember(m) {
         sel = m;
+        theory = null;
         alt = 0;
         saveShare();
         renderSets(sim.pos);
         drawWitness();
       }
-      // The construction names the member it has just added: show why it is there.
+      // The construction names the member it has just added: show why it is there. A step that adds nothing shows the general case
+      // of its phase.
       function followStep() {
         const ev = sim.pos >= 0 ? rec.events[sim.pos] : null;
-        if (!ev || !ev.added.length) return;
+        if (!ev || !ev.added.length) {
+          theory = ev ? ev.phase : "nullable";
+          drawWitness();
+          return;
+        }
         const m = ev.phase === "nullable" ? { kind: "nullable", nt: ev.added[0] } : { kind: ev.phase, nt: ev.target, tok: ev.added[0] };
-        if (memberExists(m) && !sameMember(sel, m)) { sel = m; alt = 0; renderSets(sim.pos); drawWitness(); }
+        if (!memberExists(m)) return;
+        sel = m;
+        theory = null;
+        alt = 0;
+        renderSets(sim.pos);
+        drawWitness();
       }
       const witnessOf = (m, k) => (m.kind === "first" ? ffwFirst(grammar, rec, m.nt, m.tok, k) : m.kind === "follow" ? ffwFollow(grammar, rec, m.nt, m.tok, k) : ffwNullable(grammar, rec, m.nt, k));
       let witView = null, witBox = null;
@@ -307,11 +326,20 @@
         el("wit-forms").innerHTML = "";
         el("wit-alt").hidden = true;
         witBox = null;
-        el("wit-empty").hidden = !!sel;
-        const whole = ctgPref.get().all && sel && sel.kind !== "nullable";
+        el("wit-empty").hidden = !!sel || !!theory;
+        document.querySelectorAll("#wit-theory .btn").forEach((b) => b.classList.toggle("is-on", b.dataset.theory === theory));
+        const whole = !theory && ctgPref.get().all && sel && sel.kind !== "nullable";
+        const noSet = theory || !sel || sel.kind === "nullable";
         el("wit-all").checked = ctgPref.get().all;
-        el("wit-all").disabled = !sel || sel.kind === "nullable";
-        el("wit-all-wrap").classList.toggle("is-off", !sel || sel.kind === "nullable");
+        el("wit-all").disabled = !!noSet;
+        el("wit-all-wrap").classList.toggle("is-off", !!noSet);
+        if (theory) {
+          const spec = ffwTheory(theory);
+          showFigures([spec], 0);
+          el("wit-bar").textContent = spec.statement;
+          el("wit-forms").innerHTML = spec.forms.map(esc).join(' <span class="wit-arrow">⇒*</span> ');
+          return;
+        }
         if (!sel) return;
         if (whole) {
           const toks = [...rec[sel.kind][sel.nt]].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
@@ -480,6 +508,7 @@
       const way = (d) => { if (sel) { const w = witnessOf(sel, alt); alt = (w.alt + d + w.count) % w.count; drawWitness(); } };
       el("btn-alt-prev").addEventListener("click", () => way(-1));
       el("btn-alt-next").addEventListener("click", () => way(1));
+      document.querySelectorAll("#wit-theory .btn").forEach((b) => b.addEventListener("click", () => { theory = b.dataset.theory; drawWitness(); }));
       el("wit-all").addEventListener("change", () => { ctgPref.set({ all: el("wit-all").checked }); drawWitness(); });
       el("ff-sets").addEventListener("click", (e) => {
         const m = e.target.closest("[data-set]");

@@ -300,3 +300,41 @@ function ffwSpec(w) {
   else spec.statement = `${w.sym} is nullable: ${w.sym} can derive the empty string`;
   return spec;
 }
+
+// ── The general case ───────────────────────────────────────────────────────────────────────────────────────────
+// ffwTheory(kind) -> a spec of ctgSpineLayout (with "statement" and "forms" as ffwSpec has) that shows what nullable, FIRST or
+// FOLLOW mean for any grammar, with symbols in place of a grammar: the null state of the witness figure.
+function ffwTheory(kind) {
+  const cell = (text, label, extra = {}) => ({ text, label, ...extra });
+  const node = (sym, extra = {}) => ({ sym, jag: false, ...extra });
+  if (kind === "first") {
+    return {
+      nodes: [node("A", { kind: "focus" }), node("a", { kind: "first", colour: "var(--accent)", tone: 1 })],
+      levels: [{ left: [cell("ε", "X₁ … Xᵢ")], right: [cell("β", "the rest")] }],
+      bottom: cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }),
+      arrows: [{ fromNode: 0, side: "left", toId: "t" }],
+      forms: ["A", "X₁ … Xᵢ a β"],
+      statement: "a ∈ FIRST(A) when A derives X₁ … Xᵢ a β and each of X₁ … Xᵢ derives ε: from the left foot of A the first token that is not ε is a",
+    };
+  }
+  if (kind === "follow") {
+    return {
+      nodes: [node("S"), node("A"), node("B", { kind: "focus" })],
+      levels: [
+        { left: [cell("α", "α")], right: [cell("a w", "δ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(B)" } })] },
+        { left: [cell("γ", "γ")], right: [cell("ε", "β")] },
+      ],
+      bottom: cell("x", ""),
+      arrows: [{ fromNode: 2, side: "right", toId: "t" }],
+      forms: ["S", "α A δ", "α γ B β δ"],
+      statement: "a ∈ FOLLOW(B) when S derives α A δ with δ starting with a, and A derives γ B β with β deriving ε: the end of B is the end of A, so a comes next",
+    };
+  }
+  return {
+    nodes: [node("A", { kind: "focus" })],
+    levels: [],
+    bottom: cell("ε", "X₁ … Xₙ", { kind: "focus", mark: { kind: "focus", label: "A derives ε" } }),
+    forms: ["A", "X₁ … Xₙ", "ε"],
+    statement: "A is nullable when some rule A → X₁ … Xₙ has every Xᵢ nullable: the whole string vanishes",
+  };
+}
