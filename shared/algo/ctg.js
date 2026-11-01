@@ -111,7 +111,8 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //       head: the leading part of the text that is emphasised; id: what an arrow points at
 //       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
 //       mark: { kind, label } is a pointer under the token
-//     colour is a CSS colour for the triangle of the node, tone how much of it (default: a grey, deeper with each level; none for the top)
+//     colour is a CSS colour for the triangle of the node, tone how much of it (default: a grey in two shades that alternate down
+//     the spine; colour "" is the page's own grey)
 //   opts: depth (the base line is where a spine of that many nodes would have it, default: the spine's own), colWidth and
 //         minWidth (at least that wide), and the constants below
 //   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags, arrows }
@@ -134,8 +135,9 @@ function ctgSpineLayout(spec, opts = {}) {
   const width = Math.max(o.minWidth || 0, 2 * o.marginX + 2 * half(0) + (spec.outer ? 2 * c : 0));
   const cx = width / 2;
   const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, x: cx, y: apexY(k) + 6, cls: n.cls || "", kind: n.kind || "", footL: cx - half(k), footR: cx + half(k) }));
-  // a triangle without a colour of its own gets a grey that deepens with the depth, so that the nested ones can be told apart
-  const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour || (k ? "var(--text-lo)" : ""), tone: n.tone !== undefined ? n.tone : k }));
+  // a triangle without a colour of its own is grey, in two shades that alternate down the spine: enough to tell the nested ones
+  // apart without a gradient that would draw the eye to the depth
+  const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour !== undefined ? n.colour : "var(--text-lo)", tone: n.tone !== undefined ? n.tone : k % 2 }));
   const tokens = [];
   const tok = (f, centre) => { tokens.push({ text: f.text, id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
   for (let k = 0; k < m; k++) {
@@ -197,7 +199,7 @@ function ctgSplitLayout(fig, opts = {}) {
   if (o.unify) {
     const nodes = [], levels = [];
     const jag = (k) => (!fig.rootIsUp && k === 1 ? (i === 0 ? hops.top + hops.mid : hops.top) : hops.mid) > 1; // the step into node k
-    if (!fig.rootIsUp) nodes.push({ sym: fig.root });
+    if (!fig.rootIsUp) nodes.push({ sym: fig.root, colour: "" });
     for (let k = 1; k <= i; k++) nodes.push({ sym: fig.up, cls: "pp-up", colour: "var(--hot)", tone: k - 1 });
     nodes.push({ sym: fig.up, cls: "pp-low", colour: "var(--accent)", tone: 1 });
     nodes.forEach((n, k) => { if (k) n.jag = jag(k); });

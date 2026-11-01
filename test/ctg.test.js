@@ -254,3 +254,10 @@ test("spine layout: the label of a pointer fits inside the figure, which is wide
   const plain = A.ctgSpineLayout({ ...spec, bottom: flank("d") });
   assert.ok(lay.width > plain.width);
 });
+
+test("spine layout: triangles without a colour alternate two shades; a colour given is kept, \"\" is the page's own grey", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B" }, { sym: "C" }, { sym: "D" }, { sym: "E", colour: "var(--accent)", tone: 1 }, { sym: "F", colour: "" }], levels: Array.from({ length: 5 }, () => ({ left: null, right: null })), bottom: flank("x") };
+  const lay = A.ctgSpineLayout(spec);
+  assert.deepEqual(js(lay.tris.slice(0, 4).map((t) => [t.colour, t.tone])), [["var(--text-lo)", 0], ["var(--text-lo)", 1], ["var(--text-lo)", 0], ["var(--text-lo)", 1]]);
+  assert.deepEqual(js([lay.tris[4].colour, lay.tris[4].tone, lay.tris[5].colour]), ["var(--accent)", 1, ""]);
+});
