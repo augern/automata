@@ -134,7 +134,7 @@ function drawCTGFigureInto(root, lay, opts = {}) {
     const label = make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg);
     if (t.head && t.text.startsWith(t.head) && t.head !== t.text) { // the leading part emphasised
       make("tspan", { class: "ctg-head" + kindCls(t.kind) }, label, t.head);
-      make("tspan", {}, label, t.text.slice(t.head.length));
+      make("tspan", { class: "ctg-rest" }, label, t.text.slice(t.head.length)); // what follows the emphasised part is not spelled out
     } else label.textContent = t.text;
     const staple = t.label && opts.staples !== false;
     if (staple) { // a staple under the token, with the name of the part

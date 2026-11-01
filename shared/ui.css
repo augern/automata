@@ -840,3 +840,4 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ctg-arrow path { fill: var(--text-dim); }
 .ctg-arrow.ctg-k-first line, .ctg-arrow.ctg-k-first path { stroke: var(--accent); } .ctg-arrow.ctg-k-first path { fill: var(--accent); }
 .ctg-arrow.ctg-k-follow line, .ctg-arrow.ctg-k-follow path { stroke: var(--green); } .ctg-arrow.ctg-k-follow path { fill: var(--green); }
+.ctg-tok.is-dim, .ctg-rest { opacity: 0.45; }

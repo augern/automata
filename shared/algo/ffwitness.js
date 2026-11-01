@@ -315,7 +315,7 @@ function ffwTheory(kind) {
   if (kind === "first") {
     return {
       nodes: [node("A", { kind: "focus" }), node("a", { kind: "first", colour: "var(--accent)", tone: 1 })],
-      levels: [{ left: [cell("ε", "X₁ … Xᵢ")], right: [cell("β", "the rest")] }],
+      levels: [{ left: [cell("ε", "X₁ … Xᵢ")], right: [cell("…", "β", { cls: "is-dim" })] }],
       bottom: cell("a", "", { id: "t", kind: "first", mark: { kind: "first", label: "a ∈ FIRST(A)" } }),
       arrows: [{ fromNode: 0, side: "left", toId: "t" }],
       forms: ["A", "X₁ … Xᵢ a β"],
@@ -326,10 +326,10 @@ function ffwTheory(kind) {
     return {
       nodes: [node("S"), node("A"), node("B", { kind: "focus" })],
       levels: [
-        { left: [cell("α", "α")], right: [cell("a w", "δ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(B)" } })] },
-        { left: [cell("γ", "γ")], right: [cell("ε", "β")] },
+        { left: [cell("…", "α", { cls: "is-dim" })], right: [cell("a …", "δ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(B)" } })] },
+        { left: [cell("…", "γ", { cls: "is-dim" })], right: [cell("ε", "β")] },
       ],
-      bottom: cell("x", ""),
+      bottom: cell("…", "x", { cls: "is-dim" }),
       arrows: [{ fromNode: 2, side: "right", toId: "t" }],
       forms: ["S", "α A δ", "α γ B β δ"],
       statement: "a ∈ FOLLOW(B) when S derives α A δ with δ starting with a, and A derives γ B β with β deriving ε: the end of B is the end of A, so a comes next",
