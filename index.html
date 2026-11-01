@@ -55,11 +55,11 @@ body[data-view="list"] #view-map { display: none; }
 .pill { cursor: pointer; }
 .ring-name { pointer-events: none; }
 
-/* Progression arrows: the suggested order through the tools; those at a hovered or focused tool are lit */
-.flow path { fill: none; stroke: var(--text-lo); stroke-width: 1.3; marker-end: url(#flow-head); transition: stroke var(--dur) var(--ease); pointer-events: none; }
-.flow path.is-on { stroke: var(--accent); marker-end: url(#flow-head-on); }
-#flow-head path { fill: var(--text-lo); }
-#flow-head-on path { fill: var(--accent); }
+/* Prerequisite arrows, drawn from TOOLS; only those at a hovered or focused tool show, dashed where the need is a soft one */
+.flow path { fill: none; stroke: var(--accent); stroke-width: 1.4; marker-end: url(#flow-head); opacity: 0; transition: opacity var(--dur) var(--ease); pointer-events: none; }
+.flow path.is-on { opacity: 0.9; }
+.flow path.is-soft { stroke-dasharray: 4 3; }
+#flow-head path { fill: var(--accent); }
 
 /* Tooltip for rings and tools: fixed, so showing it never moves anything */
 #tip {
@@ -138,22 +138,9 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   <text x="152" y="268" class="ring-name">LL(1)</text>
   <text x="180" y="322" class="ring-name">Regular</text>
 
-  <!-- Progression arrows, below the tools; a path may run between pills, never over a ring name -->
-  <defs>
-    <marker id="flow-head" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 Z"/></marker>
-    <marker id="flow-head-on" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 Z"/></marker>
-  </defs>
-  <g class="flow">
-    <path data-from="nfa" data-to="regex" d="M291,361 L303,361"/>
-    <path data-from="regex" data-to="derivation" d="M465,353 C484,345 496,333 513,326"/>
-    <path data-from="pda" data-to="pumping" d="M330,149 L340,149"/>
-    <path data-from="pumping" data-to="rdp" d="M440,149 L450,149"/>
-    <path data-from="pda" data-to="tm" d="M286,130 C300,60 420,36 525,36"/>
-    <path data-from="derivation" data-to="rdp" d="M618,304 C626,255 606,205 588,170"/>
-    <path data-from="rdp" data-to="ll1" d="M470,168 C448,195 448,222 466,242"/>
-    <path data-from="firstfollow" data-to="ll1" d="M382,261 L392,261"/>
-    <path data-from="ll1" data-to="lr" d="M520,242 L520,225"/>
-  </g>
+  <!-- Prerequisite arrows, below the tools -->
+  <defs><marker id="flow-head" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 Z"/></marker></defs>
+  <g class="flow"></g>
 
   <!-- Tools: placed by the languages they work with; their text comes from TOOLS below -->
   <a class="pill" id="t-tm" href="tools/tm/" tabindex="0"><rect x="527" y="19" width="129" height="34" rx="17"/><text x="591.5" y="36">Turing Machine</text></a>
@@ -196,7 +183,7 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
     nfa: { href: "tools/nfa/", title: "NFA Simulator", group: "Regular languages",
       desc: "Nondeterministic finite automata with ε-transitions — transition table and state graph, and the computation tree of a nondeterministic run.",
       builds: "the idea of a finite automaton (states, transitions, DFAs)" },
-    regex: { href: "tools/regex/", title: "Regular Expressions", group: "Regular languages",
+    regex: { href: "tools/regex/", title: "Regular Expressions", group: "Regular languages", after: ["nfa"],
       desc: "Thompson's construction, subset construction and DFA minimisation — the translation from a regular expression to an NFA, a DFA and its minimal form, with simulation of string recognition.",
       builds: "NFA Simulator" },
     derivation: { href: "tools/derivation/", title: "Grammar Derivations", group: "Grammars of any class",
@@ -205,25 +192,25 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
     rewrite: { href: "tools/grammar-rewrite/", title: "Grammar Transformations", group: "Grammars of any class",
       desc: "Normalisation of context-free grammars — removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form.",
       builds: "context-free grammars" },
-    pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages",
+    pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages", after: ["nfa", "derivation"],
       desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
       builds: "NFA Simulator, Grammar Derivations" },
-    pumping: { href: "tools/pumping/", title: "Pumping", group: "Context-free languages",
+    pumping: { href: "tools/pumping/", title: "Pumping", group: "Context-free languages", after: ["nfa", "derivation"],
       desc: "Why the pumping lemmas hold — a repeated state on a DFA's path, a repeated nonterminal on a parse tree's path — with the loop pumped step by step.",
       builds: "NFA Simulator (DFAs), Grammar Derivations (parse trees)" },
-    rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages",
+    rdp: { href: "tools/rdp/", title: "Recursive Descent", group: "Context-free languages", after: ["derivation"], soft: ["rewrite"],
       desc: "Top-down parsing by recursive procedures — generated from a grammar and run predictively (LL(1), the next token chooses, no backtracking) or by search, with guesses, backtracking and dead ends.",
       builds: "Grammar Derivations; Grammar Transformations removes the left recursion it cannot handle" },
     firstfollow: { href: "tools/firstfollow/", title: "FIRST & FOLLOW", group: "LL(1) languages",
       desc: "Nullable symbols, FIRST and FOLLOW sets of a context-free grammar by fixpoint iteration — one rule application at a time, with the right-hand side read past nullable symbols.",
       builds: "context-free grammars" },
-    ll1: { href: "tools/ll1/", title: "Predictive Parsing", group: "LL(1) languages",
+    ll1: { href: "tools/ll1/", title: "Predictive Parsing", group: "LL(1) languages", after: ["rdp", "firstfollow"], soft: ["rewrite"],
       desc: "Top-down predictive parsing with one symbol of lookahead (LL(1)) — computation of FIRST and FOLLOW sets, the parsing table M[A, a] and LL(1) conflicts, with a traced leftmost derivation and parse tree.",
       builds: "FIRST & FOLLOW; Recursive Descent (LL(1) is the case that never has to backtrack); Grammar Transformations removes the left recursion LL(1) cannot handle" },
-    lr: { href: "tools/lr/", title: "LR Parser", group: "Deterministic context-free languages",
+    lr: { href: "tools/lr/", title: "LR Parser", group: "Deterministic context-free languages", after: ["ll1", "nfa"],
       desc: "Bottom-up shift–reduce parsing — LR(0), SLR(1), LALR(1) and LR(1) item-set automata, ACTION and GOTO tables and their conflicts, with a traced rightmost derivation and parse tree.",
       builds: "Predictive Parsing, NFA Simulator (the automaton of items)" },
-    tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages",
+    tm: { href: "tools/tm/", title: "Turing Machine", group: "Recursively enumerable languages", after: ["pda"],
       desc: "Deterministic single-tape Turing machines — transition function, tape and head, and stepwise execution of the computation.",
       builds: "PDA Simulator" },
   };
@@ -292,8 +279,28 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   map.addEventListener("focusin", (e) => { if (tipFor(e.target)) { const r = e.target.getBoundingClientRect(); place(r.left, r.bottom + 8); } });
   map.addEventListener("focusout", () => { tip.hidden = true; });
 
-  // the arrows at a hovered or focused tool are lit
-  const lit = (a) => document.querySelectorAll(".flow path").forEach((p) => p.classList.toggle("is-on", !!a && (a === "t-" + p.dataset.from || a === "t-" + p.dataset.to)));
+  // ── Prerequisite arrows: from the edge of a needed tool's pill to the edge of the tool that builds on it, bowed a little ──
+  const flow = map.querySelector(".flow");
+  const box = (id) => { const r = document.querySelector("#t-" + id + " rect").getBBox(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, hw: r.width / 2, hh: r.height / 2 }; };
+  const edge = (a, b, gap) => { // where the line from a's centre to b's centre leaves a's pill
+    const dx = b.x - a.x, dy = b.y - a.y, k = Math.min(dx ? (a.hw + gap) / Math.abs(dx) : Infinity, dy ? (a.hh + gap) / Math.abs(dy) : Infinity);
+    return [a.x + dx * k, a.y + dy * k];
+  };
+  for (const [id, t] of Object.entries(TOOLS)) {
+    for (const [needs, soft] of [...(t.after || []).map((n) => [n, false]), ...(t.soft || []).map((n) => [n, true])]) {
+      const a = box(needs), b = box(id), [x0, y0] = edge(a, b, 3), [x1, y1] = edge(b, a, 5);
+      const bow = 0.12, side = Math.sign(b.x - a.x);
+      const next = Math.abs(b.y - a.y) < 10 && Math.abs(b.x - a.x) - a.hw - b.hw < 24; // pills side by side: too close for a line between them, so an arc over the tops
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", next
+        ? `M${a.x + side * a.hw * 0.55},${a.y - a.hh - 2} Q${(a.x + b.x) / 2},${a.y - a.hh - 30} ${b.x - side * b.hw * 0.55},${b.y - b.hh - 5}`
+        : `M${x0},${y0} Q${(x0 + x1) / 2 - (y1 - y0) * bow},${(y0 + y1) / 2 + (x1 - x0) * bow} ${x1},${y1}`);
+      path.dataset.from = needs; path.dataset.to = id;
+      if (soft) path.classList.add("is-soft");
+      flow.appendChild(path);
+    }
+  }
+  const lit = (a) => flow.querySelectorAll("path").forEach((p) => p.classList.toggle("is-on", !!a && (a === "t-" + p.dataset.from || a === "t-" + p.dataset.to)));
   map.addEventListener("mouseover", (e) => { const a = e.target.closest && e.target.closest(".pill"); lit(a && a.id); });
   map.addEventListener("mouseleave", () => lit(null));
   map.addEventListener("focusin", (e) => { const a = e.target.closest && e.target.closest(".pill"); lit(a && a.id); });
