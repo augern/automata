@@ -92,10 +92,11 @@ function drawCTG(host, tree, opts = {}) {
   return { svg, layout: lay };
 }
 
-// The pumping figure of algo/ctg.js (ctgSplitLayout), drawn into an <svg> in the host. Options: unify, scale, staples (false: none under the tokens).
-function drawCTGSplit(host, fig, opts = {}) {
+// The pumping figure of algo/ctg.js (ctgSplitLayout), drawn into a <g> that the caller owns, so that it can be panned and zoomed
+// (createFitView). Options: unify, staples (false: none under the tokens). -> the layout; the drawing is in the layout's own
+// coordinates, x from 0 to its width, y from 0 to its height.
+function drawCTGSplitInto(root, fig, opts = {}) {
   const lay = ctgSplitLayout(fig, opts);
-  const hostEl = typeof host === "string" ? document.getElementById(host) : host;
   const make = (tag, attrs, parent, text) => {
     const e = document.createElementNS(CTG_NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -103,10 +104,7 @@ function drawCTGSplit(host, fig, opts = {}) {
     if (parent) parent.appendChild(e);
     return e;
   };
-  const sc = opts.scale || 1;
-  hostEl.innerHTML = "";
-  const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
-  svg.style.maxWidth = "none"; // a wide figure scrolls; shrinking it would move the apexes between the modes
+  const svg = root;
   for (const t of lay.tris) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
     // no outline: the shape is its tint
@@ -140,7 +138,7 @@ function drawCTGSplit(host, fig, opts = {}) {
     make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }
-  return { svg, layout: lay };
+  return lay;
 }
 
 // A colour (a CSS colour or variable) as a tint on the page background, one step more saturated for each tone. Built from the

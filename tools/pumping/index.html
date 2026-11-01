@@ -71,8 +71,6 @@
       .pt-e { fill: none; stroke: var(--border-hi); stroke-width: 1.2; }
 
       /* ── The path figure (the Christmas-tree graph) ── */
-      #canvas-ctg { flex: 1; position: relative; overflow: auto; display: flex; }
-      #ctg-host { margin: 0 auto; padding: var(--sp-6) var(--sp-5); }
       #view-group .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
       #base-group { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; }
       .ctg-tok.pp-u { fill: var(--pp-u); } .ctg-tok.pp-v, .ctg-tok.pp-y { fill: var(--pp-y); } .ctg-tok.pp-x { fill: var(--pp-x); } .ctg-tok.pp-z { fill: var(--pp-z); }
@@ -157,9 +155,9 @@
                 <svg id="dfa-svg"><g id="dfa-graph-root"></g></svg>
                 <div id="dfa-graph-empty" class="ui-canvas__empty">Define a DFA.</div>
               </div>
-              <div id="canvas-ctg" hidden>
-                <div id="ctg-host"></div>
-                <div id="ctg-empty" class="ui-empty" hidden></div>
+              <div id="canvas-ctg" class="ui-canvas" hidden>
+                <svg id="ctg-svg"><g id="ctg-root" class="ctg"></g></svg>
+                <div id="ctg-empty" class="ui-canvas__empty" hidden></div>
               </div>
               <div id="canvas-tree" class="ui-canvas" hidden>
                 <svg id="tree-svg"><g id="tree-root"></g></svg>
@@ -182,10 +180,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=4022e63a"></script>
+    <script src="../../shared/algo/ctg.js?v=8c9bb871"></script>
     <script src="../../shared/algo/pumping.js?v=5982ad8a"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=159d48b8"></script>
+    <script src="../../shared/ctg.js?v=04c891cc"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -331,7 +329,7 @@
         if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
-drawCTGSplit("ctg-host", gen, { scale: 1.25, unify: ppBase === "joined", staples: false }); // the letters are the tokens
+drawFigure(gen, pumpGeneralCF(+$("pump-i").max), { staples: false }); // the letters are the tokens
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
@@ -542,14 +540,33 @@ drawCTGSplit("ctg-host", gen, { scale: 1.25, unify: ppBase === "joined", staples
       }
 
       // The path between the repeated nonterminals: a jagged spine with the strings hanging off it.
+      // The figure of the pumping lemma in a view that pans and zooms. The view fits the figure for the largest number of copies, so
+      // that dragging the slider or switching the baselines does not move anything.
+      let ctgView = null, ctgBox = null;
+      function drawFigure(fig, widest, opts) {
+        if (!ctgView) ctgView = createFitView({ svg: "ctg-svg", root: "ctg-root", scaleExtent: [0.08, 4], maxScale: 1.5, pad: 16, align: "top", bounds: () => ctgBox, hasContent: () => ppMode === "cf" && ppView === "path" && !!ctgBox });
+        const root = $("ctg-root");
+        root.innerHTML = "";
+        $("ctg-empty").hidden = true;
+        const lay = ctgSplitLayout(widest, { unify: true });
+        drawCTGSplitInto(root, fig, { unify: ppBase === "joined", minWidth: lay.width, ...opts });
+        ctgBox = { x: 0, y: 0, width: lay.width, height: lay.height };
+        ctgView.refit();
+      }
+      function clearFigure(message) {
+        $("ctg-root").innerHTML = "";
+        ctgBox = null;
+        $("ctg-empty").hidden = !message;
+        $("ctg-empty").textContent = message || "";
+      }
+
+      // The path between the repeated nonterminals, as nested triangles over the string.
       function drawPath(tree) {
-        $("ctg-host").innerHTML = "";
         const pair = tree && ppCF && ppCF.pairs && ppCF.pairs[ppCF.pairIdx];
-        $("ctg-empty").hidden = !!pair;
-        if (!pair) { $("ctg-empty").textContent = !ppG ? "" : tree ? "No path of this tree repeats a nonterminal with something between the occurrences." : "Enter a string the grammar generates."; return; }
+        if (!pair) { clearFigure(!ppG ? "" : tree ? "No path of this tree repeats a nonterminal with something between the occurrences." : "Enter a string the grammar generates."); return; }
         const hops = { top: pair.up.length, mid: pair.low.length - pair.up.length };
-        const fig = pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), +$("pump-i").value, pair.up.length === 0, hops);
-        drawCTGSplit("ctg-host", fig, { scale: 1.25, unify: ppBase === "joined" });
+        const figure = (i) => pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), i, pair.up.length === 0, hops);
+        drawFigure(figure(+$("pump-i").value), figure(+$("pump-i").max));
       }
 
       let treeView = null;

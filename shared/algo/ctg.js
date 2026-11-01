@@ -101,6 +101,7 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 // Further copies of v … y are inlaid in the frame, each one step lower, in the same columns, so the frame keeps its shape; each
 // copy has its own base line, and x is on that of the last. With no copy, v and y are gone, x hangs from the place of the
 // first copy, and the root triangle has that place blanked out of it (a blank triangle over it).
+// With opts.minWidth the figure is centred in that width (so that figures of different sizes share one axis).
 // With opts.unify every triangle's legs are extended down to the lowest base line and the whole string stands on it: the same
 // figure, extended; the apexes do not move.
 //   fig: { root, up, rootIsUp, i, hops?, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
@@ -126,7 +127,7 @@ function ctgSplitLayout(fig, opts = {}) {
   const unified = o.unify;
   const lastCopy = Math.max(i, 1);
   // the width is that of the unified figure in both modes, so that switching does not move anything
-  const width = 2 * o.marginX + Math.max(5 * c, 2 * half(B, apexY(0)) + (fig.rootIsUp ? 2 * c : 0));
+  const width = Math.max(o.minWidth || 0, 2 * o.marginX + Math.max(5 * c, 2 * half(B, apexY(0)) + (fig.rootIsUp ? 2 * c : 0)));
   const cx = width / 2;
   const nodes = [], tris = [], tokens = [], jags = [];
   const tok = (p, centre, level) => tokens.push({ text: fig.parts[p].text, part: p, cls: fig.parts[p].cls || "", label: fig.parts[p].label || "", x: centre - c / 2, w: c, y: level, eps: fig.parts[p].text === CTG_EPS });

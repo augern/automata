@@ -130,3 +130,13 @@ test("split layout: a connection is jagged only where it hides steps", () => {
   assert.deepEqual(js(A.ctgSplitLayout(figure(1)).jags.map((j) => j.jag)), [true, true], "the general case hides steps everywhere");
   assert.deepEqual(js(jag({ top: 1, mid: 1 }, 1)), [false, false]);
 });
+
+test("split layout: with a minimum width the figure is centred in it, so figures of different sizes share one axis", () => {
+  const wide = A.ctgSplitLayout(figure(4), { unify: true });
+  for (const i of [0, 1, 2, 3, 4]) {
+    const lay = A.ctgSplitLayout(figure(i), { minWidth: wide.width });
+    assert.equal(lay.width, wide.width);
+    assert.equal(lay.cx, wide.cx);
+    assert.equal(lay.height >= 0, true);
+  }
+});
