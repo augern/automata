@@ -596,7 +596,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         if (undress) { root.classList.remove("xmas"); undress(); undress = null; return; }
         const was = { mode: ppMode, g: $("grammar-input").value, w: $("w-input").value, i: $("pump-i").value, ex: $("examples-select").value };
         root.classList.add("xmas");
-        $("grammar-input").value = "S -> Happy H lidays!\nH -> ho H | eps";
+        $("grammar-input").value = "S -> Happy A lidays!\nA -> B\nB -> H\nH -> ho K | N\nK -> H\nN -> eps";
         $("w-input").value = "Happy ho lidays!";
         $("pump-i").value = 5;
         ppMode === "cf" ? buildDef() : setMode("cf");
