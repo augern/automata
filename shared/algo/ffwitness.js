@@ -325,11 +325,8 @@ function ffwTheory(kind) {
     return {
       cases: [
         {
-          nodes: [node("S"), node("B"), node("A", { kind: "focus" })],
-          levels: [
-            { left: [cell("…", "", { cls: "is-dim", group: "α" })], right: [cell("a …", "aβ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] },
-            { left: [cell("…", "", { cls: "is-dim", group: "α" })], right: [cell("ε", "")] },
-          ],
+          nodes: [node("S"), node("A", { kind: "focus" })],
+          levels: [{ left: [cell("…", "α", { cls: "is-dim" })], right: [cell("a …", "aβ", { id: "t", kind: "follow", head: "a", mark: { kind: "follow", label: "a ∈ FOLLOW(A)" } })] }],
           bottom: cell("…", "A", { cls: "is-dim" }),
           terminus: true, // A derives its string in as many steps as it needs
         },

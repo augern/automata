@@ -279,7 +279,7 @@ test("the general case: a string that is not spelled out is a faded … with its
     const lay = A.ctgSpineLayout(A.ffwTheory(kind).cases[0]);
     for (const tok of lay.tokens) assert.ok(["ε", "a", "…", "a …"].includes(tok.text), `${kind}: ${tok.text} on the base line`);
     const unspelled = lay.tokens.filter((t) => t.text === "…");
-    assert.ok(unspelled.length >= 1 && unspelled.every((t) => (["β", "A"].includes(t.label) || (t.label === "" && /^(?:α|)$/.test(t.group))) && t.cls === "is-dim"), `${kind}: the names are below`);
+    assert.ok(unspelled.length >= 1 && unspelled.every((t) => ["α", "β", "A"].includes(t.label) && t.cls === "is-dim"), `${kind}: the names are below`);
   }
   const follow = A.ctgSpineLayout(A.ffwTheory("follow").cases[0]);
   assert.equal(follow.tokens.find((t) => t.id === "t").head, "a", "the token that follows is spelled, the rest of its string is not");
