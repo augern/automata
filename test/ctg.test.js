@@ -76,19 +76,33 @@ test("ctgSpineTree: the spine as nested nodes, the string in order, the anchor t
   assert.equal(lay.byId.s2.src.jag, false);
 });
 
-test("split layout: the frame for i = 1, copies poke down one step each, no copy leaves ε slots", () => {
+test("split layout: the frame for i = 1, copies poke down one step each, no copy is a bite with x raised onto a bar", () => {
   const part = (p, text) => ({ text: text || p, label: p, cls: "pp-" + p });
   const fig = (i) => ({ root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
   const one = A.ctgSplitLayout(fig(1)), two = A.ctgSplitLayout(fig(2)), none = A.ctgSplitLayout(fig(0)), three = A.ctgSplitLayout(fig(3));
   const lv = (lay, p) => lay.tokens.filter((t) => t.part === p).map((t) => t.y);
+  const L0 = one.tokens[0].y;
   assert.equal(new Set(one.tokens.map((t) => t.y)).size, 1, "i = 1: one base line");
-  assert.equal(one.lines.length, 1);
+  assert.equal(one.tris[0].base.length, 1, "i = 1: the root triangle has a whole base");
   assert.equal(one.width, two.width, "the frame keeps its width");
   assert.equal(one.tris[0].y, two.tris[0].y, "the root triangle is the same");
-  assert.deepEqual(js(lv(two, "v")), [one.tokens[0].y, one.tokens[0].y + 60]);
-  assert.equal(lv(two, "x")[0], one.tokens[0].y + 60, "x moves down with the last copy");
-  assert.equal(Math.max(...lv(three, "x")), one.tokens[0].y + 120);
-  assert.deepEqual(js(none.tokens.filter((t) => t.eps).map((t) => [t.part, t.text])), [["v", "ε"], ["y", "ε"]]);
-  assert.equal(none.tris.filter((t) => t.ghost).length, 1, "the removed copy is drawn as a ghost");
-  assert.ok(two.lines.length > one.lines.length, "the base line is split");
+  assert.deepEqual(js(lv(two, "v")), [L0, L0 + 60]);
+  assert.equal(lv(two, "x")[0], L0 + 60, "x moves down with the last copy");
+  assert.equal(Math.max(...lv(three, "x")), L0 + 120);
+  assert.equal(two.tris[0].base.length, 2, "the base line is split where the copies poke down");
+  // no copy: no v and y at all, x on a bar one step above the base line, a bite out of the root's base
+  assert.deepEqual(js(none.tokens.map((t) => t.part).sort()), ["u", "x", "z"]);
+  assert.deepEqual(js(lv(none, "x")), [L0 - 60]);
+  assert.equal(none.tris[0].base.length, 2, "the root triangle keeps only its feet");
+  assert.ok(none.tris[0].base[0].x1 < none.tris[0].base[1].x0);
+  assert.equal(none.nodes.length, 2, "the root and the lowest node");
+});
+
+test("split layout, no copy: the bar runs between the legs of the root triangle at the height of x", () => {
+  const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
+  const lay = A.ctgSplitLayout({ root: "S", up: "A", rootIsUp: false, i: 0, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
+  const r = lay.tris[0];
+  assert.equal(r.bar.y, lay.tokens.find((t) => t.part === "x").y);
+  assert.ok(r.bar.x0 > r.x0 && r.bar.x1 < r.x1 && r.bar.x0 < lay.cx && r.bar.x1 > lay.cx);
+  assert.ok(Math.abs((lay.cx - r.bar.x0) - (r.bar.x1 - lay.cx)) < 1e-6, "symmetric about the spine");
 });

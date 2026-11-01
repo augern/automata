@@ -126,10 +126,13 @@ function ctgSpineTree(spec) {
 // ── The split figure ──────────────────────────────────────────────────────────────────────────────────────────
 // The pumping figure with separate base lines. The figure for one copy of the middle part (i = 1) is the frame: nested
 // triangles over u v x y z on one base line. Further copies of v … y are inlaid in it and poke down through the base line,
-// each on a base line one step lower, in the same columns, so the frame keeps its shape; with no copy the part is a gap (ε).
+// each on a base line one step lower, in the same columns, so the frame keeps its shape. With no copy, v and y are gone, x is
+// raised onto a bar one step above the frame's base line, and the base line is missing under it: a bite out of the triangle.
+// A triangle's base is drawn only where tokens stand on it.
 //   fig: { root, up, rootIsUp, i, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
-//   -> { width, height, cx, nodes: [{ sym, x, y, cls, ghost }], tris: [{ x0, x1, apex, ay, y, cls, ghost }],
-//        tokens: [{ text, part, cls, x, w, y, label }], lines: [{ x0, x1, y }], jags: [{ from, to }] }
+//   -> { width, height, cx, nodes: [{ sym, x, y, cls }], tris: [{ x0, x1, apex, ay, y, cls, base: [{ x0, x1 }] }],
+//        tokens: [{ text, part, cls, x, w, y, label, eps }], jags: [{ from, to }] }
+//   with no copy the root triangle has bar: { y, x0, x1 }, the line between its legs that x stands on
 function ctgSplitLayout(fig, opts = {}) {
   const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, ...opts };
   const i = fig.i;
@@ -142,10 +145,10 @@ function ctgSplitLayout(fig, opts = {}) {
   const right = x - o.tokGap + o.padRoot + o.marginX;
   const cx = x0.x + w.x / 2;
   const first = fig.rootIsUp ? 0 : 1; // the node level of the first copy of the repeated nonterminal
-  const lowJ = first + Math.max(i, 1);
-  const L0 = o.topPad + 11 + (first + 1) * o.step + o.baseH; // the frame's base line: that of one copy
+  const lowJ = first + i;
   const apexY = (j) => o.topPad + 11 + j * o.step;
-  const lowBase = L0 + Math.max(i - 1, 0) * o.step;
+  const L0 = apexY(first + 1) + o.baseH; // the frame's base line: that of one copy
+  const lowBase = L0 + (i - 1) * o.step;
   const nodes = [], tris = [], tokens = [], jags = [];
   const tok = (p, level) => tokens.push({ text: fig.parts[p].text, part: p, cls: fig.parts[p].cls || "", label: fig.parts[p].label || "", x: x0[p], w: w[p], y: level, eps: fig.parts[p].text === CTG_EPS });
   if (!fig.rootIsUp) {
@@ -154,30 +157,37 @@ function ctgSplitLayout(fig, opts = {}) {
   }
   tok("u", L0);
   tok("z", L0);
-  const copies = Math.max(i, 1);
-  for (let k = 1; k <= copies; k++) {
-    const j = first + k - 1, base = L0 + (k - 1) * o.step, ghost = i === 0;
-    nodes.push({ sym: fig.up, x: cx, y: apexY(j) + 6, cls: "pp-up", ghost });
-    tris.push({ x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(j), y: base, cls: "pp-up", ghost });
-    if (!ghost) { tok("v", base); tok("y", base); }
+  for (let k = 1; k <= i; k++) {
+    const j = first + k - 1, base = L0 + (k - 1) * o.step;
+    nodes.push({ sym: fig.up, x: cx, y: apexY(j) + 6, cls: "pp-up" });
+    tris.push({ x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(j), y: base, cls: "pp-up" });
+    tok("v", base);
+    tok("y", base);
   }
-  if (i === 0) for (const p of ["v", "y"]) { tok(p, L0); const t = tokens[tokens.length - 1]; t.text = CTG_EPS; t.eps = true; } // the slots of the removed copy
   nodes.push({ sym: fig.up, x: cx, y: apexY(lowJ) + 6, cls: "pp-low" });
   tris.push({ x0: x0.x - o.padLow, x1: x0.x + w.x + o.padLow, apex: cx, ay: apexY(lowJ), y: lowBase, cls: "pp-low" });
   tok("x", lowBase);
   for (let k = 1; k < nodes.length; k++) jags.push({ from: k - 1, to: k });
-  // base lines under the tokens of each level, joined where they touch
-  const lines = [];
-  const byLevel = new Map();
-  for (const t of tokens) byLevel.set(t.y, (byLevel.get(t.y) || []).concat(t));
-  for (const [y, ts] of byLevel) {
-    ts.sort((a, b) => a.x - b.x);
-    let cur = null;
-    for (const t of ts) {
-      if (cur && t.x - cur.x1 <= o.tokGap + 1) cur.x1 = t.x + t.w;
-      else { cur = { x0: t.x, x1: t.x + t.w, y }; lines.push(cur); }
+  // the base of each triangle: the stretches of its base line that have tokens on them, the outer ones reaching to its corners
+  for (const t of tris) {
+    const here = tokens.filter((k) => k.y === t.y && k.x >= t.x0 && k.x + k.w <= t.x1).sort((a, b) => a.x - b.x);
+    t.base = [];
+    for (const k of here) {
+      const last = t.base[t.base.length - 1];
+      if (last && k.x - last.x1 <= o.tokGap + 1) last.x1 = k.x + k.w;
+      else t.base.push({ x0: k.x, x1: k.x + k.w });
+    }
+    if (t.base.length) {
+      if (t.base[0].x0 - t.x0 <= o.padRoot) t.base[0].x0 = t.x0;
+      const e = t.base[t.base.length - 1];
+      if (t.x1 - e.x1 <= o.padRoot) e.x1 = t.x1;
     }
   }
+  // no copy: the bar between the legs of the root triangle, with x on it
+  if (i === 0 && !fig.rootIsUp) {
+    const r = tris[0], t = (r.y - lowBase) / (r.y - r.ay); // how far up the legs the bar is
+    r.bar = { y: lowBase, x0: r.x0 + (r.apex - r.x0) * t, x1: r.x1 - (r.x1 - r.apex) * t };
+  }
   const lowest = Math.max(...tokens.map((t) => t.y));
-  return { width: right, height: lowest + 50, cx, nodes, tris, tokens, lines, jags };
+  return { width: right, height: lowest + 50, cx, nodes, tris, tokens, jags };
 }

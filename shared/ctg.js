@@ -142,8 +142,14 @@ function drawCTGSplit(host, fig, opts = {}) {
   const sc = opts.scale || 1;
   hostEl.innerHTML = "";
   const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
-  for (const t of lay.tris) make("polygon", { class: "ctg-tri" + (t.cls ? " " + t.cls : "") + (t.ghost ? " is-ghost" : ""), points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, svg);
-  for (const l of lay.lines) make("line", { class: "ctg-line", x1: l.x0, x2: l.x1, y1: l.y, y2: l.y }, svg);
+  for (const t of lay.tris) {
+    const g = make("g", { class: "ctg-node" + (t.cls ? " " + t.cls : "") }, svg);
+    // with a bar the part below it is the bite: not filled
+    make("polygon", { class: "ctg-tri-fill", points: t.bar ? `${t.bar.x0},${t.bar.y} ${t.apex},${t.ay} ${t.bar.x1},${t.bar.y}` : `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
+    make("path", { class: "ctg-legs", d: `M${t.x0},${t.y} L${t.apex},${t.ay} L${t.x1},${t.y}` }, g);
+    for (const b of t.base) make("line", { class: "ctg-legs", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
+    if (t.bar) make("line", { class: "ctg-legs", x1: t.bar.x0, x2: t.bar.x1, y1: t.bar.y, y2: t.bar.y }, g);
+  }
   for (const t of lay.tokens) {
     make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 16, "text-anchor": "middle" }, svg, t.text);
     if (t.label && t.label !== t.text) make("text", { class: "ctg-part", x: t.x + t.w / 2, y: t.y + 31, "text-anchor": "middle" }, svg, t.label);
@@ -154,11 +160,11 @@ function drawCTGSplit(host, fig, opts = {}) {
     const y0 = a.y + nodeH / 2, y1 = b.y - nodeH / 2, steps = Math.max(2, Math.round((y1 - y0) / 9));
     let d = `M${a.x},${y0}`;
     for (let i = 1; i < steps; i++) d += ` L${a.x + (i % 2 ? 5 : -5)},${y0 + ((y1 - y0) * i) / steps}`;
-    make("path", { class: "ctg-jag" + (a.ghost || b.ghost ? " is-ghost" : ""), d: d + ` L${b.x},${y1}` }, svg);
+    make("path", { class: "ctg-jag", d: d + ` L${b.x},${y1}` }, svg);
   }
   for (const n of lay.nodes) {
     const w = Math.max(26, String(n.sym).length * 8 + 14);
-    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") + (n.ghost ? " is-ghost" : "") }, svg);
+    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
     make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }
