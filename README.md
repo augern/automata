@@ -72,6 +72,7 @@ parser-tools/
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping
 │   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
 │   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations
+│   │   ├── ctg.js                      ← pure: layout of the Christmas-tree graph (triangles, tokens, points for empty nodes)
 │   │   ├── firstfollow.js              ← pure: nullable, FIRST and FOLLOW as recorded fixpoint iterations, the sets after each step
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
@@ -86,6 +87,7 @@ parser-tools/
 │   ├── scanner-editor.js, .css         ← the scanner editor: the token rules as a table (Scanner and Compiler tools); model in algo/scanner-model.js
 │   ├── scanner-graph.js                ← the scanner DFA as a graph with the scanner marked on it: part view, tooltips (Scanner and Compiler tools)
 │   ├── grammar-editor.js, .css         ← the grammar editor: a table of productions with chips (LL(1), LR, derivation, recursive-descent grammar-transformation and compiler tools); model in algo/grammar-model.js
+│   ├── ctg.js                          ← the Christmas-tree graph: an abstract parse tree as nested triangles on a base line (layout in algo/ctg.js), for FIRST/FOLLOW and pumping figures
 │   ├── fit-view.js                     ← pan/zoom and automatic fit-to-view, shared by every graph and tree view
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action

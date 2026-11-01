@@ -6,7 +6,7 @@
 <title>UI Kit | Parser Tools</title>
 <link rel="stylesheet" href="shared/shared.css?v=3e2c71b3" />
 <script src="shared/theme.js?v=9222f18e"></script>
-<link rel="stylesheet" href="shared/ui.css?v=b0845852" />
+<link rel="stylesheet" href="shared/ui.css?v=1070fde9" />
 <style>
   /* The tools are full-viewport apps; this page just scrolls. */
   body { height: auto; overflow: auto; user-select: text; display: block; }
@@ -151,6 +151,10 @@
     <div class="box"><div class="ui-canvas"><svg id="kit-svg"><g id="kit-graph-root"></g></svg><div class="ui-canvas__empty" id="kit-graph-empty">empty</div></div></div>
   </div>
 
+  <h2>Christmas-tree graph</h2>
+  <p class="note">Drawn by <code>drawCTG</code> in <code>ctg.js</code>; layout in <code>algo/ctg.js</code>. A nonterminal is a triangle over the string it derives; an empty one is a point.</p>
+  <div class="demo"><div class="row" id="kit-ctg-a"></div><div class="row" id="kit-ctg-b"></div></div>
+
   <h2>Configuration tree</h2>
   <div class="demo flush"><div class="box" style="height: 200px"><div class="ui-canvas"><svg id="ct-svg" viewBox="0 0 520 190"></svg></div></div></div>
 </main>
@@ -164,6 +168,8 @@
 <script src="shared/qr-modal.js?v=4dcb4b2f"></script>
 <script src="shared/quick-link.js?v=fca552e1"></script>
 <script src="shared/view-menu.js?v=eada4185"></script>
+<script src="shared/algo/ctg.js?v=9b28afcb"></script>
+<script src="shared/ctg.js?v=aa7d7725"></script>
 <script src="shared/fit-view.js?v=9af2be16"></script>
 <script src="shared/automaton-graph.js?v=f2f7c58b"></script>
 <script>
@@ -187,6 +193,12 @@
   let kitOpts = { checked: true };
   UI.menu("kit-kebab", () => [{ label: "Algorithm", onSelect: () => UI.toast("Algorithm") }, { label: "Show grid", checked: kitOpts.checked, onSelect: () => (kitOpts.checked = !kitOpts.checked) }, { separator: true }, { label: "Focus on this panel" }, { label: "Disabled item", disabled: true }], { align: "left" });
   UI.menu("kit-view", () => [{ label: "Copy link to this view", hint: "share" }, { label: "Switch to dark theme", onSelect: themeToggle }, { separator: true }, { heading: "Layout" }, { label: "Restore default layout" }], { align: "left" });
+
+  // Christmas-tree graph: a pumping split, and FIRST and FOLLOW of an inner triangle
+  drawCTG("kit-ctg-a", { sym: "S", kids: ["a", { sym: "A", id: "A1", kids: ["b", { sym: "A", id: "A2", kids: ["c"] }, "d"] }, "e"] },
+    { endMarker: true, nodeKinds: { A1: "focus" }, spans: [{ node: "A1", label: "A" }, { node: "A2", label: "x" }], marks: [{ leaf: 1, kind: "first", label: "FIRST(A)" }, { leaf: 4, kind: "follow", label: "FOLLOW(A)" }] });
+  drawCTG("kit-ctg-b", { sym: "S", kids: ["x", { sym: "B", id: "B", kids: [{ sym: "A", kids: [] }, { sym: "C", kids: [] }] }, "y"] },
+    { endMarker: true, nodeKinds: { B: "focus" }, marks: [{ leaf: 1, kind: "first", label: "FIRST(B)" }, { leaf: 1, kind: "follow", label: "FOLLOW(B)" }] });
 
   // Graph
   const kitView = createGraphView("kit", { fallbackWidth: 600 });

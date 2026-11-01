@@ -799,3 +799,27 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ui-table td.is-error { color: var(--st-reject); font-style: italic; text-align: center; opacity: 0.75; }
 .ct-node.is-error circle { stroke: var(--st-reject); }
 .ag-err-x { stroke: var(--st-reject); stroke-width: 1.3; opacity: 0.7; pointer-events: none; }
+
+/* ── Christmas-tree graph (shared/ctg.js): nested triangles on a base line ── */
+.ctg { display: block; max-width: 100%; font-family: var(--font-mono); font-size: var(--fs-sm); }
+.ctg-line { stroke: var(--border-hi); stroke-width: 1.2; }
+.ctg-tri { fill: var(--bg-cell); fill-opacity: 0.55; stroke: var(--text-lo); stroke-width: 1.3; stroke-linejoin: round; }
+.ctg-sym { fill: var(--text-dim); font-style: italic; pointer-events: none; }
+.ctg-point { fill: var(--text-lo); }
+.ctg-node.is-empty .ctg-sym { fill: var(--text-lo); }
+.ctg-node:hover .ctg-tri { stroke: var(--accent); }
+.ctg-tok { fill: var(--text); }
+.ctg-tok.is-end { fill: var(--text-lo); }
+.ctg-tok-bg { fill: none; }
+.ctg-node.ctg-k-first .ctg-tri, .ctg-tok-bg.ctg-k-first { fill: var(--accent-bg); stroke: var(--accent); }
+.ctg-node.ctg-k-follow .ctg-tri, .ctg-tok-bg.ctg-k-follow { fill: var(--green-bg); stroke: var(--green); }
+.ctg-node.ctg-k-focus .ctg-tri, .ctg-tok-bg.ctg-k-focus { fill: var(--amber-bg); stroke: var(--amber); }
+.ctg-node.ctg-k-first .ctg-point { fill: var(--accent); }
+.ctg-node.ctg-k-follow .ctg-point { fill: var(--green); }
+.ctg-node.ctg-k-focus .ctg-point { fill: var(--amber); }
+.ctg-mark text { font-size: var(--fs-2xs); }
+.ctg-mark.ctg-k-first { fill: var(--accent); }
+.ctg-mark.ctg-k-follow { fill: var(--green); }
+.ctg-mark.ctg-k-focus { fill: var(--amber); }
+.ctg-span path { fill: none; stroke: var(--text-lo); stroke-width: 1.2; }
+.ctg-span text { fill: var(--text-dim); font-size: var(--fs-xs); font-style: italic; }
