@@ -1,6 +1,6 @@
 // Pure: a small subset of LaTeX math to MathML, for the formulas of the Definitions pop-ups. No DOM access.
 //   texToMathML(src) -> '<math>…</math>'
-// Supported: letters (italic) and digits, { } groups, ^ and _, \mathrm{…}, \text{…}, \bigcup with limits, \{ \} \$, the spaces
+// Supported: \overset{above}{base}, letters (italic) and digits, { } groups, ^ and _, \mathrm{…}, \text{…}, \bigcup with limits, \{ \} \$, the spaces
 // \, \; \quad \qquad and the symbol names of TEX_SYMBOLS. Anything else is an error: a formula must not render wrongly.
 const TEX_SYMBOLS = {
   alpha: ["i", "α"], beta: ["i", "β"], gamma: ["i", "γ"], delta: ["i", "δ"], eta: ["i", "η"], varepsilon: ["i", "ε"], Sigma: ["i", "Σ"],
@@ -30,6 +30,7 @@ function texToMathML(src) {
     if (name === "mathrm") return { ml: `<mi mathvariant="normal">${esc(word())}</mi>` };
     if (name === "text") return { ml: `<mtext>${nbsp(esc(word()))}</mtext>` };
     if (name in TEX_SPACE) return { ml: `<mspace width="${TEX_SPACE[name]}"/>` };
+    if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mover>${base}${over}</mover>` }; }
     if (name === "{" || name === "}") return { ml: `<mo>${name}</mo>` };
     if (name === "$") return { ml: `<mi mathvariant="normal">$</mi>` };
     const s = TEX_SYMBOLS[name];

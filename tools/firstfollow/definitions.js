@@ -21,12 +21,12 @@ window.TOOL_DEFINITIONS = {
         },
         {
           term: "Derivation",
-          formal: ["\\alpha \\Rightarrow \\beta \\quad\\text{iff}\\quad \\alpha = \\gamma A \\delta,\\; A \\to \\eta \\in P,\\; \\beta = \\gamma \\eta \\delta", "\\Rightarrow^{*} \\text{ is the reflexive and transitive closure of } \\Rightarrow"],
+          formal: ["\\alpha \\Rightarrow \\beta \\quad\\text{iff}\\quad \\alpha = \\gamma A \\delta,\\; A \\to \\eta \\in P,\\; \\beta = \\gamma \\eta \\delta", "\\overset{*}{\\Rightarrow} \\text{ is the reflexive and transitive closure of } \\Rightarrow"],
           refs: ["hmu §5.1.3"],
         },
         {
           term: "Sentential form, sentence, language",
-          formal: ["\\alpha \\in (N \\cup \\Sigma)^{*} \\text{ is a sentential form iff } S \\Rightarrow^{*} \\alpha", "\\text{a sentential form in } \\Sigma^{*} \\text{ is a sentence};\\quad L(G) = \\{\\, w \\in \\Sigma^{*} \\mid S \\Rightarrow^{*} w \\,\\}"],
+          formal: ["\\alpha \\in (N \\cup \\Sigma)^{*} \\text{ is a sentential form iff } S \\overset{*}{\\Rightarrow} \\alpha", "\\text{a sentential form in } \\Sigma^{*} \\text{ is a sentence};\\quad L(G) = \\{\\, w \\in \\Sigma^{*} \\mid S \\overset{*}{\\Rightarrow} w \\,\\}"],
           refs: ["hmu §5.1.5–5.1.6"],
         },
       ],
@@ -36,12 +36,12 @@ window.TOOL_DEFINITIONS = {
       items: [
         {
           term: "Nullable",
-          formal: ["A \\in N \\text{ is nullable} \\quad\\text{iff}\\quad A \\Rightarrow^{*} \\varepsilon", "X_1 \\ldots X_n \\text{ is nullable} \\quad\\text{iff}\\quad \\text{every } X_i \\text{ is}\\quad (\\varepsilon \\text{ is nullable})"],
+          formal: ["A \\in N \\text{ is nullable} \\quad\\text{iff}\\quad A \\overset{*}{\\Rightarrow} \\varepsilon", "X_1 \\ldots X_n \\text{ is nullable} \\quad\\text{iff}\\quad \\text{every } X_i \\text{ is}\\quad (\\varepsilon \\text{ is nullable})"],
           refs: ["hmu §7.1.3", "appel §3.2"],
         },
         {
           term: "FIRST",
-          formal: ["\\mathrm{FIRST}(\\alpha) = \\{\\, a \\in \\Sigma \\mid \\alpha \\Rightarrow^{*} a\\beta \\text{ for some } \\beta \\in (N \\cup \\Sigma)^{*} \\,\\}", "\\varepsilon \\in \\mathrm{FIRST}(\\alpha) \\quad\\text{iff}\\quad \\alpha \\Rightarrow^{*} \\varepsilon"],
+          formal: ["\\mathrm{FIRST}(\\alpha) = \\{\\, a \\in \\Sigma \\mid \\alpha \\overset{*}{\\Rightarrow} a\\beta \\text{ for some } \\beta \\in (N \\cup \\Sigma)^{*} \\,\\}", "\\varepsilon \\in \\mathrm{FIRST}(\\alpha) \\quad\\text{iff}\\quad \\alpha \\overset{*}{\\Rightarrow} \\varepsilon"],
           text: "The terminals a string derived from α can start with. ε is included when α is nullable.",
           refs: ["alsu §4.4.2", "appel §3.2", "rs"],
         },
@@ -53,7 +53,7 @@ window.TOOL_DEFINITIONS = {
         },
         {
           term: "FOLLOW",
-          formal: ["\\mathrm{FOLLOW}(A) = \\{\\, a \\in \\Sigma \\mid S \\Rightarrow^{*} \\alpha A a \\beta \\text{ for some } \\alpha, \\beta \\in (N \\cup \\Sigma)^{*} \\,\\}", "\\$ \\in \\mathrm{FOLLOW}(A) \\quad\\text{iff}\\quad S \\Rightarrow^{*} \\alpha A;\\quad \\text{in particular } \\$ \\in \\mathrm{FOLLOW}(S)"],
+          formal: ["\\mathrm{FOLLOW}(A) = \\{\\, a \\in \\Sigma \\mid S \\overset{*}{\\Rightarrow} \\alpha A a \\beta \\text{ for some } \\alpha, \\beta \\in (N \\cup \\Sigma)^{*} \\,\\}", "\\$ \\in \\mathrm{FOLLOW}(A) \\quad\\text{iff}\\quad S \\overset{*}{\\Rightarrow} \\alpha A;\\quad \\text{in particular } \\$ \\in \\mathrm{FOLLOW}(S)"],
           text: "The terminals that can come right after A in a sentential form. $ is an end marker, not a terminal of the grammar.",
           refs: ["alsu §4.4.2", "appel §3.2", "rs"],
         },
