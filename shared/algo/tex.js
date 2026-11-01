@@ -30,8 +30,8 @@ function texToMathML(src) {
     if (name === "mathrm") return { ml: `<mi mathvariant="normal">${esc(word())}</mi>` };
     if (name === "text") return { ml: `<mtext>${nbsp(esc(word()))}</mtext>` };
     if (name in TEX_SPACE) return { ml: `<mspace width="${TEX_SPACE[name]}"/>` };
-    // the font's gap above the base is wide: the mark is pulled down to it
-    if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mover>${base}<mpadded voffset="-0.2em" height="0.5em">${over}</mpadded></mover>` }; }
+    // accent="true": the mark sits close to the base in every engine; the gap of a plain over-script differs between them
+    if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mover accent="true">${base}${over}</mover>` }; }
     if (name === "{" || name === "}") return { ml: `<mo>${name}</mo>` };
     if (name === "$") return { ml: `<mi mathvariant="normal">$</mi>` };
     const s = TEX_SYMBOLS[name];
