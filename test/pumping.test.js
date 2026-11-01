@@ -179,7 +179,8 @@ test("figures: the unified string is the pumped yield, and the layouts keep thei
           assert.equal(uni.tokens.filter((t) => !t.eps).map((t) => t.text).join(sep), yieldText, where);
           for (let k = 1; k < uni.tokens.length; k++) assert.ok(uni.tokens[k].x >= uni.tokens[k - 1].x + uni.tokens[k - 1].w - 1e-6, `${where}: tokens overlap`);
           // the apexes do not move between the modes; the nodes lie one step apart down the spine
-          assert.deepEqual(JSON.parse(JSON.stringify(uni.nodes)), JSON.parse(JSON.stringify(split.nodes)), where);
+          const placed = (lay) => JSON.parse(JSON.stringify(lay.nodes.map((n) => [n.sym, Math.round(n.x * 1e6) / 1e6, Math.round(n.y * 1e6) / 1e6, n.cls])));
+          assert.deepEqual(placed(uni), placed(split), where);
           for (let k = 1; k < uni.nodes.length; k++) assert.ok(uni.nodes[k].y > uni.nodes[k - 1].y, `${where}: nodes in order`);
           // triangles nest: strictly inside the one before
           for (const lay of [split, uni]) {

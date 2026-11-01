@@ -94,6 +94,55 @@ const ctgFirstLeaf = (lay, id) => lay.byId[id].first;
 // The leaf right after a node's stretch of the string.
 const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 
+// ── The spine figure ──────────────────────────────────────────────────────────────────────────────────────────
+// A path of nonterminals from the top down, drawn as nested triangles on one base line with a vertical spine of nodes at their
+// apexes. Between two neighbouring triangles the legs enclose one strip on each side; a strip is one column of the base line
+// and holds the string that the symbols on that side derive. All triangles have the same apex angle and the columns are equally
+// wide (as wide as the widest string), so the triangles tile. The string reads left to right along the base: the strips of the
+// outer levels first, then the bottom, then the strips on the right from the innermost level out.
+//   spec: { nodes: [{ sym, cls?, colour?, tone?, kind?, jag? }],      top to bottom; jag: the step from the node above hides steps
+//           levels: [{ left, right }],                                one per pair of neighbouring nodes
+//           bottom: flank,                                            what the last node derives
+//           outer?: { left, right } }                                 strings outside the top triangle
+//     flank: { text, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
+//       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
+//       mark: { kind, label } is a pointer under the token
+//     colour is a CSS colour for the triangle of the node, tone how much of it (default: a grey, deeper with each level; none for the top)
+//   opts: depth (the base line is where a spine of that many nodes would have it, default: the spine's own), colWidth and
+//         minWidth (at least that wide), and the constants below
+//   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags }
+//      footL and footR are where the legs of a node's triangle meet the base line
+function ctgSpineLayout(spec, opts = {}) {
+  const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, ...opts };
+  const m = spec.nodes.length - 1;
+  const flanks = [spec.bottom, ...(spec.outer ? [spec.outer.left, spec.outer.right] : []), ...spec.levels.flatMap((l) => [l.left, l.right])].filter(Boolean);
+  const c = Math.max(o.minCol, o.colWidth || 0, ...flanks.map((f) => Math.max(1, f.text.length) * o.charW + 2 * o.tokPad));
+  // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
+  const step = Math.min(c / o.tan, o.maxStep), tan = c / step, baseH = step / 2;
+  const apexY = (k) => o.topPad + 11 + k * step;
+  const B = apexY(Math.max(m, o.depth || 0)) + baseH;
+  const half = (k) => (B - apexY(k)) * tan;
+  const width = Math.max(o.minWidth || 0, 2 * o.marginX + 2 * half(0) + (spec.outer ? 2 * c : 0));
+  const cx = width / 2;
+  const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, x: cx, y: apexY(k) + 6, cls: n.cls || "", kind: n.kind || "", footL: cx - half(k), footR: cx + half(k) }));
+  // a triangle without a colour of its own gets a grey that deepens with the depth, so that the nested ones can be told apart
+  const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour || (k ? "var(--text-lo)" : ""), tone: n.tone !== undefined ? n.tone : k }));
+  const tokens = [];
+  const tok = (f, centre) => { if (f) tokens.push({ text: f.text, part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
+  for (let k = 0; k < m; k++) {
+    tok(spec.levels[k].left, (nodes[k].footL + nodes[k + 1].footL) / 2);
+    tok(spec.levels[k].right, (nodes[k].footR + nodes[k + 1].footR) / 2);
+  }
+  tok(spec.bottom, cx);
+  if (spec.outer) { tok(spec.outer.left, nodes[0].footL - c / 2); tok(spec.outer.right, nodes[0].footR + c / 2); }
+  tokens.sort((a, b) => a.x - b.x);
+  const base = tokens.length ? [{ x0: tokens[0].x, x1: tokens[tokens.length - 1].x + c, y: B }] : [];
+  const jags = [];
+  for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
+  const pointers = tokens.some((t) => t.mark) ? 22 : 0;
+  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags };
+}
+
 // ── The split figure ──────────────────────────────────────────────────────────────────────────────────────────
 // The pumping figure. The figure for one copy of the middle part (i = 1) is the frame: nested triangles over u v x y z on one
 // base line. Every triangle has the same apex angle and the columns are equally wide (as wide as the widest part), so the
@@ -103,7 +152,7 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 // first copy, and the root triangle has that place blanked out of it (a blank triangle over it).
 // With opts.minWidth the figure is centred in that width (so that figures of different sizes share one axis).
 // With opts.unify every triangle's legs are extended down to the lowest base line and the whole string stands on it: the same
-// figure, extended; the apexes do not move.
+// figure, extended; the apexes do not move. That figure is a spine figure (ctgSpineLayout) and is made by it.
 //   fig: { root, up, rootIsUp, i, hops?, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
 //     hops: { top, mid }: the number of steps from the root to the first copy, and between two copies; a longer path than one
 //     step is drawn jagged (default: all of them)
@@ -115,64 +164,57 @@ function ctgSplitLayout(fig, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, unify: false, ...opts };
   const i = fig.i, order = ["u", "v", "x", "y", "z"];
   const c = Math.max(o.minCol, ...order.map((p) => Math.max(1, fig.parts[p].text.length) * o.charW + 2 * o.tokPad));
+  const first = fig.rootIsUp ? 0 : 1; // the level of the first copy of the repeated nonterminal
+  const hops = fig.hops || { top: Infinity, mid: Infinity };
+  const flank = (p) => ({ text: fig.parts[p].text, part: p, cls: fig.parts[p].cls || "", label: fig.parts[p].label || "" });
+  // the width is that of the unified figure in both modes, so that switching does not move anything
+  const unifiedWidth = (lay) => Math.max(o.minWidth || 0, 2 * o.marginX + 5 * c, lay);
+  if (o.unify) {
+    const nodes = [], levels = [];
+    const jag = (k) => (!fig.rootIsUp && k === 1 ? (i === 0 ? hops.top + hops.mid : hops.top) : hops.mid) > 1; // the step into node k
+    if (!fig.rootIsUp) nodes.push({ sym: fig.root });
+    for (let k = 1; k <= i; k++) nodes.push({ sym: fig.up, cls: "pp-up", colour: "var(--hot)", tone: k - 1 });
+    nodes.push({ sym: fig.up, cls: "pp-low", colour: "var(--accent)", tone: 1 });
+    nodes.forEach((n, k) => { if (k) n.jag = jag(k); });
+    for (let k = 0; k + 1 < nodes.length; k++) levels.push(!fig.rootIsUp && k === 0 ? { left: flank("u"), right: flank("z") } : { left: flank("v"), right: flank("y") });
+    const spec = { nodes, levels, bottom: flank("x"), outer: fig.rootIsUp ? { left: flank("u"), right: flank("z") } : null };
+    return ctgSpineLayout(spec, { ...o, colWidth: c, depth: first + Math.max(i, 1), minWidth: Math.max(o.minWidth || 0, 2 * o.marginX + 5 * c) });
+  }
   // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
   const step = Math.min(c / o.tan, o.maxStep), tan = c / step, baseH = step / 2;
-  const first = fig.rootIsUp ? 0 : 1; // the level of the first copy of the repeated nonterminal
   const lowJ = first + i;
   const apexY = (j) => o.topPad + 11 + j * step;
   const L0 = apexY(first + 1) + baseH; // the base line of the frame: that of one copy
   const lowBase = L0 + (i - 1) * step;
   const B = Math.max(L0, lowBase); // the lowest base line
   const half = (y, apex) => (y - apex) * tan;
-  const unified = o.unify;
-  const lastCopy = Math.max(i, 1);
-  // the width is that of the unified figure in both modes, so that switching does not move anything
-  const width = Math.max(o.minWidth || 0, 2 * o.marginX + Math.max(5 * c, 2 * half(B, apexY(0)) + (fig.rootIsUp ? 2 * c : 0)));
+  const width = unifiedWidth(2 * o.marginX + 2 * half(B, apexY(0)) + (fig.rootIsUp ? 2 * c : 0));
   const cx = width / 2;
   const nodes = [], tris = [], tokens = [], jags = [];
   const tok = (p, centre, level) => tokens.push({ text: fig.parts[p].text, part: p, cls: fig.parts[p].cls || "", label: fig.parts[p].label || "", x: centre - c / 2, w: c, y: level, eps: fig.parts[p].text === CTG_EPS });
-  const tri = (apex, base, cls, tone) => ({ x0: cx - half(base, apex), x1: cx + half(base, apex), apex: cx, ay: apex, y: base, cls, tone });
+  const tri = (apex, base, cls, tone, colour) => ({ x0: cx - half(base, apex), x1: cx + half(base, apex), apex: cx, ay: apex, y: base, cls, tone, colour });
   const node = (j, cls) => nodes.push({ sym: cls === "" ? fig.root : fig.up, x: cx, y: apexY(j) + 6, cls });
   // the triangles, outermost first
-  if (!fig.rootIsUp) { node(0, ""); tris.push(tri(apexY(0), unified ? B : L0, "")); }
-  for (let k = 1; k <= i; k++) { node(first + k - 1, "pp-up"); tris.push(tri(apexY(first + k - 1), unified ? B : L0 + (k - 1) * step, "pp-up", k - 1)); }
-  if (i === 0 && !fig.rootIsUp && !unified) tris.splice(1, 0, { ...tri(apexY(first), L0, ""), blank: true });
+  if (!fig.rootIsUp) { node(0, ""); tris.push(tri(apexY(0), L0, "", 0, "")); }
+  for (let k = 1; k <= i; k++) { node(first + k - 1, "pp-up"); tris.push(tri(apexY(first + k - 1), L0 + (k - 1) * step, "pp-up", k - 1, "var(--hot)")); }
+  if (i === 0 && !fig.rootIsUp) tris.splice(1, 0, { ...tri(apexY(first), L0, "", 0, ""), blank: true });
   node(lowJ, "pp-low");
-  tris.push(tri(apexY(lowJ), unified ? B : lowBase, "pp-low", 1));
+  tris.push(tri(apexY(lowJ), lowBase, "pp-low", 1, "var(--accent)"));
   const real = tris.filter((t) => !t.blank);
-  // the tokens
-  if (!unified) {
-    const col = (n) => cx + (n - 2) * c; // the centres of the five columns
-    tok("u", col(0), L0);
-    tok("z", col(4), L0);
-    for (let k = 1; k <= i; k++) { tok("v", col(1), L0 + (k - 1) * step); tok("y", col(3), L0 + (k - 1) * step); }
-    tok("x", col(2), lowBase);
-  } else {
-    // between the feet of two neighbouring triangles stands one part; outside the outermost one, u and z when the root is a copy
-    const feet = real.map((t) => [t.x0, t.x1]);
-    const isFrame = (k) => !fig.rootIsUp && k === 0;
-    for (let k = 0; k + 1 < real.length; k++) {
-      tok(isFrame(k) ? "u" : "v", (feet[k][0] + feet[k + 1][0]) / 2, B);
-      tok(isFrame(k) ? "z" : "y", (feet[k][1] + feet[k + 1][1]) / 2, B);
-    }
-    if (fig.rootIsUp) { tok("u", feet[0][0] - c / 2, B); tok("z", feet[0][1] + c / 2, B); }
-    tok("x", cx, B);
-    // the order of the string, left to right
-    tokens.sort((a, b) => a.x - b.x);
-  }
-  // the base lines: one when unified, else under the tokens of each level, where they touch
+  const col = (n) => cx + (n - 2) * c; // the centres of the five columns
+  tok("u", col(0), L0);
+  tok("z", col(4), L0);
+  for (let k = 1; k <= i; k++) { tok("v", col(1), L0 + (k - 1) * step); tok("y", col(3), L0 + (k - 1) * step); }
+  tok("x", col(2), lowBase);
+  // the base lines: under the tokens of each level, where they touch
   const base = [];
-  if (unified) base.push({ x0: Math.min(...tokens.map((t) => t.x)), x1: Math.max(...tokens.map((t) => t.x + t.w)), y: B });
-  else {
-    const sorted = [...tokens].sort((a, b) => a.y - b.y || a.x - b.x);
-    let cur = null;
-    for (const k of sorted) {
-      if (cur && cur.y === k.y && k.x - cur.x1 < 1e-6) cur.x1 = k.x + k.w;
-      else { cur = { x0: k.x, x1: k.x + k.w, y: k.y }; base.push(cur); }
-    }
+  const sorted = [...tokens].sort((a, b) => a.y - b.y || a.x - b.x);
+  let cur = null;
+  for (const k of sorted) {
+    if (cur && cur.y === k.y && k.x - cur.x1 < 1e-6) cur.x1 = k.x + k.w;
+    else { cur = { x0: k.x, x1: k.x + k.w, y: k.y }; base.push(cur); }
   }
   // the connections down the spine; jagged where steps are hidden
-  const hops = fig.hops || { top: Infinity, mid: Infinity };
   for (let k = 1; k < nodes.length; k++) {
     const fromFrame = !fig.rootIsUp && k === 1;
     jags.push({ from: k - 1, to: k, jag: (fromFrame ? (i === 0 ? hops.top + hops.mid : hops.top) : hops.mid) > 1 });

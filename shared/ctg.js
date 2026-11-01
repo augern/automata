@@ -108,11 +108,10 @@ function drawCTG(host, tree, opts = {}) {
   return { svg, layout: lay };
 }
 
-// The pumping figure of algo/ctg.js (ctgSplitLayout), drawn into a <g> that the caller owns, so that it can be panned and zoomed
-// (createFitView). Options: unify, staples (false: none under the tokens). -> the layout; the drawing is in the layout's own
-// coordinates, x from 0 to its width, y from 0 to its height.
-function drawCTGSplitInto(root, fig, opts = {}) {
-  const lay = ctgSplitLayout(fig, opts);
+// A figure of algo/ctg.js (a layout of ctgSplitLayout or ctgSpineLayout) drawn into a <g> that the caller owns, so that it can be
+// panned and zoomed (createFitView). The drawing is in the layout's own coordinates, x from 0 to its width, y from 0 to its
+// height. Option staples: false leaves out the staples under the tokens.
+function drawCTGFigureInto(root, lay, opts = {}) {
   const make = (tag, attrs, parent, text) => {
     const e = document.createElementNS(CTG_NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -120,21 +119,29 @@ function drawCTGSplitInto(root, fig, opts = {}) {
     if (parent) parent.appendChild(e);
     return e;
   };
+  const kindCls = (k) => (CTG_KIND[k] ? " " + CTG_KIND[k] : "");
   const svg = root;
   for (const t of lay.tris) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
     // no outline: the shape is its tint
     const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, svg);
-    const colour = t.cls === "pp-up" ? "var(--hot)" : t.cls === "pp-low" ? "var(--accent)" : null;
-    if (colour) fill.style.fill = ctgTone(colour, t.tone, 0);
+    if (t.colour) fill.style.fill = ctgTone(t.colour, t.tone, 0);
   }
   for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
   for (const t of lay.tokens) {
+    if (t.kind) make("rect", { class: "ctg-tok-bg" + kindCls(t.kind), x: t.x + 2, y: t.y + 3, width: t.w - 4, height: 20, rx: 3 }, svg);
     make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg, t.text);
-    if (t.label && opts.staples !== false) { // a staple under the token, with the name of the part
+    const staple = t.label && opts.staples !== false;
+    if (staple) { // a staple under the token, with the name of the part
       const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;
       make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
       if (t.label !== t.text) make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);
+    }
+    if (t.mark) { // a pointer under the token
+      const cx = t.x + t.w / 2, y = t.y + (staple ? 44 : 26);
+      const g = make("g", { class: "ctg-mark" + kindCls(t.mark.kind) }, svg);
+      make("path", { d: `M${cx - 4},${y + 6} L${cx},${y} L${cx + 4},${y + 6} Z` }, g);
+      if (t.mark.label) make("text", { x: cx + 8, y: y + 8 }, g, t.mark.label);
     }
   }
   const nodeH = 22;
@@ -150,9 +157,13 @@ function drawCTGSplitInto(root, fig, opts = {}) {
   }
   for (const n of lay.nodes) {
     const w = Math.max(26, String(n.sym).length * 8 + 14);
-    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
+    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") + kindCls(n.kind) }, svg);
     make("rect", { x: n.x - w / 2, y: n.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
     make("text", { x: n.x, y: n.y + 4, "text-anchor": "middle" }, g, n.sym);
   }
   return lay;
 }
+
+// The pumping figure (ctgSplitLayout) and the spine figure (ctgSpineLayout) of a specification, drawn as above.
+const drawCTGSplitInto = (root, fig, opts = {}) => drawCTGFigureInto(root, ctgSplitLayout(fig, opts), opts);
+const drawCTGSpineInto = (root, spec, opts = {}) => drawCTGFigureInto(root, ctgSpineLayout(spec, opts), opts);

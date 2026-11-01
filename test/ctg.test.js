@@ -152,3 +152,68 @@ test("ctgTone: the share of the colour grows with the tone and stays a valid per
     }
   }
 });
+
+// FIRST(E) ∋ id for E → T E′, T → F T′, F → id: the path E, T, F with nothing on the left and the rest on the right
+const flank = (text, extra = {}) => ({ text, ...extra });
+const firstSpec = () => ({
+  nodes: [{ sym: "E" }, { sym: "T", jag: false }, { sym: "F", jag: false }],
+  levels: [{ left: null, right: flank("+ id", { label: "E′" }) }, { left: null, right: flank("ε", { label: "T′" }) }],
+  bottom: flank("id", { label: "F", kind: "first", mark: { kind: "first", label: "FIRST(E)" } }),
+});
+
+test("spine layout: the string reads along the base, outer levels first on the left, innermost first on the right", () => {
+  const spec = { nodes: [{ sym: "S" }, { sym: "A" }, { sym: "B" }], levels: [{ left: flank("x"), right: flank("y") }, { left: flank("ε"), right: flank("z") }], bottom: flank("t") };
+  const lay = A.ctgSpineLayout(spec);
+  assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["x", "ε", "t", "z", "y"]);
+  assert.equal(new Set(lay.tokens.map((t) => t.y)).size, 1, "one base line");
+  assert.equal(lay.base.length, 1);
+  for (let k = 1; k < lay.tokens.length; k++) assert.ok(Math.abs(lay.tokens[k].x - (lay.tokens[k - 1].x + lay.tokens[k - 1].w)) < 1e-9, "the columns touch");
+  assert.equal(lay.tokens[1].eps, true);
+  assert.equal(new Set(lay.nodes.map((n) => n.x)).size, 1, "the spine is vertical");
+  lay.nodes.forEach((n, k) => k && assert.ok(n.y > lay.nodes[k - 1].y));
+});
+
+test("spine layout: the triangles share one apex angle and tile, the feet are where the strips begin", () => {
+  const lay = A.ctgSpineLayout(firstSpec());
+  const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
+  for (const t of lay.tris) assert.ok(Math.abs(slope(t) - slope(lay.tris[0])) < 1e-9);
+  for (let k = 0; k + 1 < lay.nodes.length; k++) {
+    assert.ok(Math.abs((lay.nodes[k].footR - lay.nodes[k + 1].footR) - lay.c) < 1e-9, "a strip is one column wide");
+    assert.ok(Math.abs((lay.nodes[k + 1].footL - lay.nodes[k].footL) - lay.c) < 1e-9);
+  }
+  assert.ok(Math.abs((lay.nodes[2].footR - lay.nodes[2].footL) - lay.c) < 1e-9, "the lowest triangle is one column wide");
+});
+
+test("spine layout: an empty column (null) has no token, the others keep their place", () => {
+  const lay = A.ctgSpineLayout(firstSpec());
+  assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["id", "ε", "+ id"]);
+  const id = lay.tokens[0];
+  assert.ok(Math.abs(id.x + id.w / 2 - lay.cx) < 1e-9, "the bottom is centred on the spine");
+  assert.equal(id.kind, "first");
+  assert.deepEqual(js(id.mark), { kind: "first", label: "FIRST(E)" });
+  assert.ok(A.ctgSpineLayout(firstSpec()).height > A.ctgSpineLayout({ ...firstSpec(), bottom: flank("id") }).height, "room for the pointer");
+});
+
+test("spine layout: connections are jagged where the node says so, outer strings stand outside the top triangle", () => {
+  const spec = { nodes: [{ sym: "A" }, { sym: "B", jag: true }], levels: [{ left: flank("a"), right: flank("b") }], bottom: flank("c"), outer: { left: flank("ε"), right: flank("ε") } };
+  const lay = A.ctgSpineLayout(spec);
+  assert.deepEqual(js(lay.jags.map((j) => j.jag)), [true]);
+  assert.deepEqual(js(lay.tokens.map((t) => t.text)), ["ε", "a", "c", "b", "ε"]);
+  assert.ok(lay.tokens[0].x + lay.tokens[0].w <= lay.nodes[0].footL + 1e-9, "outside the top triangle");
+  assert.ok(lay.tokens[4].x >= lay.nodes[0].footR - 1e-9);
+});
+
+test("spine layout: depth reserves room, a minimum width centres the figure on the same axis", () => {
+  const deep = A.ctgSpineLayout(firstSpec(), { depth: 5 }), plain = A.ctgSpineLayout(firstSpec());
+  assert.ok(deep.B > plain.B && deep.nodes[0].y === plain.nodes[0].y);
+  const wide = A.ctgSpineLayout(firstSpec(), { minWidth: 800 });
+  assert.equal(wide.width, 800);
+  assert.equal(wide.cx, 400);
+});
+
+test("spine layout: a long string makes the triangles flatter, not taller", () => {
+  const long = A.ctgSpineLayout({ ...firstSpec(), bottom: flank("a very long string indeed") });
+  assert.ok(long.step <= 104 + 1e-9);
+  const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
+  for (const t of long.tris) assert.ok(Math.abs(slope(t) - slope(long.tris[0])) < 1e-9);
+});
