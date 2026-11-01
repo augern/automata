@@ -127,12 +127,12 @@ function ctgSpineTree(spec) {
 // The pumping figure with separate base lines. The figure for one copy of the middle part (i = 1) is the frame: nested
 // triangles over u v x y z on one base line. Further copies of v … y are inlaid in it and poke down through the base line,
 // each on a base line one step lower, in the same columns, so the frame keeps its shape. With no copy, v and y are gone, x is
-// raised onto a bar one step above the frame's base line, and the base line is missing under it: a bite out of the triangle.
+// drawn as in the frame but anchored one step higher, at the place of the first copy, and the root triangle is an inverted V.
 // A triangle's base is drawn only where tokens stand on it.
 //   fig: { root, up, rootIsUp, i, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
 //   -> { width, height, cx, nodes: [{ sym, x, y, cls }], tris: [{ x0, x1, apex, ay, y, cls, base: [{ x0, x1 }] }],
 //        tokens: [{ text, part, cls, x, w, y, label, eps }], jags: [{ from, to }] }
-//   with no copy the root triangle has bar: { y, x0, x1 }, the line between its legs that x stands on
+//   with no copy the root triangle is open: legs only, no base and no fill
 function ctgSplitLayout(fig, opts = {}) {
   const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, ...opts };
   const i = fig.i;
@@ -183,11 +183,8 @@ function ctgSplitLayout(fig, opts = {}) {
       if (t.x1 - e.x1 <= o.padRoot) e.x1 = t.x1;
     }
   }
-  // no copy: the bar between the legs of the root triangle, with x on it
-  if (i === 0 && !fig.rootIsUp) {
-    const r = tris[0], t = (r.y - lowBase) / (r.y - r.ay); // how far up the legs the bar is
-    r.bar = { y: lowBase, x0: r.x0 + (r.apex - r.x0) * t, x1: r.x1 - (r.x1 - r.apex) * t };
-  }
+  // no copy: the root triangle is an inverted V, its legs only
+  if (i === 0 && !fig.rootIsUp) { tris[0].open = true; tris[0].base = []; }
   const lowest = Math.max(...tokens.map((t) => t.y));
   return { width: right, height: lowest + 50, cx, nodes, tris, tokens, jags };
 }

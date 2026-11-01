@@ -144,11 +144,9 @@ function drawCTGSplit(host, fig, opts = {}) {
   const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
   for (const t of lay.tris) {
     const g = make("g", { class: "ctg-node" + (t.cls ? " " + t.cls : "") }, svg);
-    // with a bar the part below it is the bite: not filled
-    make("polygon", { class: "ctg-tri-fill", points: t.bar ? `${t.bar.x0},${t.bar.y} ${t.apex},${t.ay} ${t.bar.x1},${t.bar.y}` : `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
+    if (!t.open) make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
     make("path", { class: "ctg-legs", d: `M${t.x0},${t.y} L${t.apex},${t.ay} L${t.x1},${t.y}` }, g);
     for (const b of t.base) make("line", { class: "ctg-legs", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
-    if (t.bar) make("line", { class: "ctg-legs", x1: t.bar.x0, x2: t.bar.x1, y1: t.bar.y, y2: t.bar.y }, g);
   }
   for (const t of lay.tokens) {
     make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 16, "text-anchor": "middle" }, svg, t.text);
