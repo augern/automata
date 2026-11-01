@@ -22,6 +22,8 @@
         display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
         padding: var(--sp-2) var(--sp-5); border-bottom: 1px solid var(--border); background: var(--bg-panel);
       }
+      #ff-skip-wrap { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; }
+      .ff-fix { margin-top: var(--sp-3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--green); font-family: var(--font-mono); }
       #ff-phases { display: flex; gap: 0; }
       #ff-phases .btn { border-radius: 0; margin-left: -1px; }
       #ff-phases .btn:first-child { border-radius: var(--r-sm, 3px) 0 0 var(--r-sm, 3px); margin-left: 0; }
@@ -144,6 +146,7 @@
               <button class="btn" id="btn-round" title="Apply the rest of this round">Round &#8250;&#8250;</button>
               <button class="btn icon-run-all" id="btn-all" title="Run to the fixpoint"></button>
             </div>
+            <label id="ff-skip-wrap" title="Leave out the steps that add nothing, in the stepping and in the log"><input type="checkbox" id="ff-skip" /> Skip idle steps</label>
             <div id="ff-phases">
               <button class="btn" data-phase="nullable" title="Jump to the end of the nullable phase">Nullable</button>
               <button class="btn" data-phase="first" title="Jump to the end of the FIRST phase">FIRST</button>
@@ -234,7 +237,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=3be9239f"></script>
+    <script src="guide.js?v=e40aacaf"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar", +1);
@@ -327,7 +330,7 @@ ${kw("return")} Follow`,
       let alt = 0; // which way of showing it (the shortest is 0)
       let theory = null; // nullable | first | follow: the general case is shown instead of a member
       let shownStep = null; // the step of the construction whose member (or phase) the witness shows
-      const ctgPref = ctgPrefs({ all: false }); // remembered for this tool: a witness for the whole set
+      const ctgPref = ctgPrefs({ all: false, skip: false }); // remembered for this tool: a witness for the whole set; steps that add nothing left out
       const el = (id) => document.getElementById(id);
       const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
 
@@ -496,19 +499,27 @@ ${kw("return")} Follow`,
         const top = log.scrollTop;
         if (!rec.events.length) { log.innerHTML = ""; return; }
         let html = "";
+        const skip = ctgPref.get().skip;
+        const done = nextStop(pos) < 0; // nothing left to stop at: the last phase has reached its fixpoint too
         for (const rd of rec.rounds) {
-          if (rd.from > pos) continue;
           const finished = rd.to - 1 <= pos;
-          html += '<div class="ff-round">' + PHASE_NAME[rd.phase] + (rd.round ? " · round " + rd.round : " · start") +
-            (finished ? " · " + (rd.added ? rd.added + " added" : '<span class="ff-done">nothing added: fixpoint</span>') : "") + "</div>";
+          // skipping: a round that adds nothing is the fixpoint, said in one line; the rows are the steps that add something
+          const idle = skip && !rd.added && rd.round > 0;
+          if (idle && (finished || (done && rec.events.findIndex((e) => e.phase === rd.phase) <= pos))) { html += '<div class="ff-fix">' + PHASE_NAME[rd.phase] + " · fixpoint: nothing more to add</div>"; continue; }
+          if (rd.from > pos) continue;
+          const rows = [];
           for (let i = rd.from; i < rd.to && i <= pos; i++) {
             const ev = rec.events[i];
+            if (skip && !ev.added.length) continue;
             const add = ev.added.length
               ? '<span class="ff-new">+ ' + setOf(ev.added) + " → " + (ev.phase === "nullable" ? "nullable" : SET_NAME[ev.phase] + "(" + esc(ev.target) + ")") + "</span>"
               : '<span class="ff-nothing">nothing new</span>';
-            html += '<div class="ff-row' + (i === pos ? " is-current" : "") + (i === shownStep ? " is-shown" : "") + '" data-i="' + i + '"' + (ev.rule >= 0 ? ' data-prod="' + (ev.rule + 1) + '"' : "") +
-              ' title="' + esc(ffExplain(grammar, ev) + " (click: show in the witness)") + '"><span class="ff-rule">' + ruleText(ev) + "</span>" + add + "</div>";
+            rows.push('<div class="ff-row' + (i === pos ? " is-current" : "") + (i === shownStep ? " is-shown" : "") + '" data-i="' + i + '"' + (ev.rule >= 0 ? ' data-prod="' + (ev.rule + 1) + '"' : "") +
+              ' title="' + esc(ffExplain(grammar, ev) + " (click: show in the witness)") + '"><span class="ff-rule">' + ruleText(ev) + "</span>" + add + "</div>");
           }
+          if (skip && !rows.length) continue;
+          html += '<div class="ff-round">' + PHASE_NAME[rd.phase] + (rd.round ? " · round " + rd.round : " · start") +
+            (finished ? " · " + (rd.added ? rd.added + " added" : '<span class="ff-done">nothing added: fixpoint</span>') : "") + "</div>" + rows.join("");
         }
         log.innerHTML = html;
         // stepping brings the current row into view; anything else (a click on a row) leaves the list where it is
@@ -572,29 +583,40 @@ ${kw("return")} Follow`,
         renderSets(pos);
         document.querySelectorAll("#ff-phases .btn").forEach((b) => b.classList.toggle("is-on", !!ev && ev.phase === b.dataset.phase));
         document.querySelectorAll("#ff-phases .btn").forEach((b) => (b.disabled = !rec.events.length));
-        el("btn-round").disabled = sim.pos >= rec.events.length - 1;
+        el("btn-round").disabled = sim.pos >= lastStop();
       }
 
       // ── Controls ─────────────────────────────────────────────────────────
+      // The steps that can be stopped at: all of them, or with "skip idle steps" only those that add something.
+      const stop = (i) => !ctgPref.get().skip || rec.events[i].added.length > 0;
+      const nextStop = (pos) => { for (let i = pos + 1; i < rec.events.length; i++) if (stop(i)) return i; return -1; };
+      const prevStop = (pos) => { for (let i = Math.min(pos, rec.events.length) - 1; i >= 0; i--) if (stop(i)) return i; return -1; };
+      const lastStop = () => { for (let i = rec.events.length - 1; i >= 0; i--) if (stop(i)) return i; return -1; };
+      const stepNext = () => { const i = nextStop(sim.pos); if (i >= 0) sim.go(i); };
+      const stepBack = () => { if (sim.pos >= 0) sim.go(prevStop(sim.pos)); };
       const sim = createStepper({
         buttons: { reset: "btn-reset", back: "btn-back", step: "btn-step", all: "btn-all" },
         min: -1,
-        last: () => (rec && rec.events.length ? rec.events.length - 1 : null),
+        last: () => (rec && rec.events.length ? lastStop() : null),
         onChange: () => { render(); showStep(sim.pos); },
       });
       el("btn-reset").addEventListener("click", () => sim.reset());
-      el("btn-back").addEventListener("click", () => sim.prev());
-      el("btn-step").addEventListener("click", () => sim.next());
+      el("btn-back").addEventListener("click", stepBack);
+      el("btn-step").addEventListener("click", stepNext);
       el("btn-all").addEventListener("click", () => sim.end());
       el("btn-round").addEventListener("click", () => {
-        const rd = rec.rounds.find((r) => r.to - 1 > sim.pos);
-        if (rd) sim.go(rd.to - 1);
+        // the end of the current round, or of the next one that has a step to stop at
+        for (const rd of rec.rounds) {
+          let end = -1;
+          for (let i = rd.to - 1; i >= rd.from; i--) if (stop(i)) { end = i; break; }
+          if (end > sim.pos) { sim.go(end); return; }
+        }
       });
       document.querySelectorAll("#ff-phases .btn").forEach((b) =>
         b.addEventListener("click", () => {
-          let last = -1;
-          rec.events.forEach((e, i) => { if (e.phase === b.dataset.phase) last = i; });
-          sim.go(last);
+          let last = -1, stopLast = -1;
+          rec.events.forEach((e, i) => { if (e.phase === b.dataset.phase) { last = i; if (stop(i)) stopLast = i; } });
+          sim.go(stopLast >= 0 ? stopLast : last); // a phase that adds nothing at all: its end
         })
       );
       const way = (d) => { if (sel) { const w = witnessOf(sel, alt); alt = (w.alt + d + w.count) % w.count; drawWitness(); } };
@@ -611,7 +633,9 @@ ${kw("return")} Follow`,
         if (row) showStep(+row.dataset.i); // not a step back in time: the construction stays where it is
       });
       // ←/→ (or ,/.) step, Home restarts, End runs.
-      registerStepper("p-run", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
+      registerStepper("p-run", { step: stepNext, back: stepBack, reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
+      el("ff-skip").checked = ctgPref.get().skip;
+      el("ff-skip").addEventListener("change", () => { ctgPref.set({ skip: el("ff-skip").checked }); render(); sim.refresh(); });
 
       window.onerror = function (msg, src, line, col, err) {
         if (line === 0 && !src) return false;
