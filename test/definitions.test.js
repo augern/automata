@@ -38,7 +38,7 @@ test("tex: the subset renders as MathML, anything else is an error", () => {
   assert.equal(T.texToMathML("A_i^{*}"), '<math><mrow><msubsup><mi>A</mi><mi>i</mi><mrow><mo>*</mo></mrow></msubsup></mrow></math>');
   assert.match(T.texToMathML("\\mathrm{FIRST}(\\alpha) \\in \\Sigma"), /<mi mathvariant="normal">FIRST<\/mi><mo>\(<\/mo><mi>α<\/mi>/);
   assert.match(T.texToMathML("\\bigcup_{i} x"), /<munder><mo largeop="true">⋃<\/mo>/);
-  assert.equal(T.texToMathML("\\overset{*}{\\Rightarrow}"), '<math><mrow><mover accent="true"><mrow><mo>⇒</mo></mrow><mrow><mo>*</mo></mrow></mover></mrow></math>');
+  assert.equal(T.texToMathML("\\Rightarrow^{*}"), '<math><mrow><msup><mo rspace="0">⇒</mo><mrow><mo>*</mo></mrow></msup></mrow></math>');
   assert.throws(() => T.texToMathML("\\frac{a}{b}"), /unknown/);
   assert.throws(() => T.texToMathML("{a"), /missing/);
 });

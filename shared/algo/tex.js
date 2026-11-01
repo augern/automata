@@ -1,6 +1,6 @@
 // Pure: a small subset of LaTeX math to MathML, for the formulas of the Definitions pop-ups. No DOM access.
 //   texToMathML(src) -> '<math>…</math>'
-// Supported: \overset{above}{base}, \mathcal{…}, letters (italic) and digits, { } groups, ^ and _, \mathrm{…}, \text{…}, \bigcup with limits, \{ \} \$, the spaces
+// Supported: \mathcal{…}, letters (italic) and digits, { } groups, ^ and _, \mathrm{…}, \text{…}, \bigcup with limits, \{ \} \$, the spaces
 // \, \; \quad \qquad and the symbol names of TEX_SYMBOLS. Anything else is an error: a formula must not render wrongly.
 const TEX_SYMBOLS = {
   alpha: ["i", "α"], beta: ["i", "β"], gamma: ["i", "γ"], delta: ["i", "δ"], eta: ["i", "η"], varepsilon: ["i", "ε"], Sigma: ["i", "Σ"],
@@ -32,9 +32,7 @@ function texToMathML(src) {
     if (name === "mathrm") return { ml: `<mi mathvariant="normal">${esc(word())}</mi>` };
     if (name === "text") return { ml: `<mtext>${nbsp(esc(word()))}</mtext>` };
     if (name in TEX_SPACE) return { ml: `<mspace width="${TEX_SPACE[name]}"/>` };
-    // accent="true": the mark sits close to the base; shared/definitions.js closes what gap an engine still leaves
     if (name === "mathcal") return { ml: `<mi mathvariant="script">${esc(word())}</mi>` };
-    if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mover accent="true">${base}${over}</mover>` }; }
     if (name === "{" || name === "}") return { ml: `<mo>${name}</mo>` };
     if (name === "$") return { ml: `<mi mathvariant="normal">$</mi>` };
     const s = TEX_SYMBOLS[name];
@@ -62,7 +60,9 @@ function texToMathML(src) {
         const s = atom().ml;
         if (which === "^") sup = s; else sub = s;
       }
-      out += sub && sup ? `<msubsup>${a.ml}${sub}${sup}</msubsup>` : sub ? (a.limits ? `<munder>${a.ml}${sub}</munder>` : `<msub>${a.ml}${sub}</msub>`) : sup ? `<msup>${a.ml}${sup}</msup>` : a.ml;
+      // an operator that carries a script ends there: no space between it and its script
+      const base = (sub || sup) && a.ml.startsWith("<mo>") ? a.ml.replace("<mo>", '<mo rspace="0">') : a.ml;
+      out += sub && sup ? `<msubsup>${base}${sub}${sup}</msubsup>` : sub ? (a.limits ? `<munder>${a.ml}${sub}</munder>` : `<msub>${base}${sub}</msub>`) : sup ? `<msup>${base}${sup}</msup>` : a.ml;
     }
     if (close && src[pos] !== close) fail(`${close} missing`);
     return out;

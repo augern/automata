@@ -71,12 +71,12 @@ window.DEF_LIBRARY = {
     },
     derivation: {
       term: "Derivation",
-      formal: [T`\alpha \Rightarrow \beta \quad\text{iff}\quad \alpha = \gamma A \delta,\; A \to \eta \in P,\; \beta = \gamma \eta \delta`, T`\overset{*}{\Rightarrow} \text{ is the reflexive and transitive closure of } \Rightarrow`],
+      formal: [T`\alpha \Rightarrow \beta \quad\text{iff}\quad \alpha = \gamma A \delta,\; A \to \eta \in P,\; \beta = \gamma \eta \delta`, T`\Rightarrow^{*} \text{ is the reflexive and transitive closure of } \Rightarrow`],
       refs: ["hmu §5.1.3"],
     },
     sentential: {
       term: "Sentential form, sentence, language",
-      formal: [T`\alpha \in (N \cup \Sigma)^{*} \text{ is a sentential form iff } S \overset{*}{\Rightarrow} \alpha`, T`\text{a sentential form in } \Sigma^{*} \text{ is a sentence};\quad L(G) = \{\, w \in \Sigma^{*} \mid S \overset{*}{\Rightarrow} w \,\}`],
+      formal: [T`\alpha \in (N \cup \Sigma)^{*} \text{ is a sentential form iff } S \Rightarrow^{*} \alpha`, T`\text{a sentential form in } \Sigma^{*} \text{ is a sentence};\quad L(G) = \{\, w \in \Sigma^{*} \mid S \Rightarrow^{*} w \,\}`],
       refs: ["hmu §5.1.5–5.1.6"],
     },
     leftmost: {
@@ -110,12 +110,12 @@ window.DEF_LIBRARY = {
     // ── Nullable, FIRST and FOLLOW ──
     nullable: {
       term: "Nullable",
-      formal: [T`A \in N \text{ is nullable} \quad\text{iff}\quad A \overset{*}{\Rightarrow} \varepsilon`, T`X_1 \ldots X_n \text{ is nullable} \quad\text{iff}\quad \text{every } X_i \text{ is}\quad (\varepsilon \text{ is nullable})`],
+      formal: [T`A \in N \text{ is nullable} \quad\text{iff}\quad A \Rightarrow^{*} \varepsilon`, T`X_1 \ldots X_n \text{ is nullable} \quad\text{iff}\quad \text{every } X_i \text{ is}\quad (\varepsilon \text{ is nullable})`],
       refs: ["hmu §7.1.3", "appel §3.2"],
     },
     first: {
       term: "FIRST",
-      formal: [T`\mathrm{FIRST}(\alpha) = \{\, a \in \Sigma \mid \alpha \overset{*}{\Rightarrow} a\beta \text{ for some } \beta \in (N \cup \Sigma)^{*} \,\}`, T`\varepsilon \in \mathrm{FIRST}(\alpha) \quad\text{iff}\quad \alpha \overset{*}{\Rightarrow} \varepsilon`],
+      formal: [T`\mathrm{FIRST}(\alpha) = \{\, a \in \Sigma \mid \alpha \Rightarrow^{*} a\beta \text{ for some } \beta \in (N \cup \Sigma)^{*} \,\}`, T`\varepsilon \in \mathrm{FIRST}(\alpha) \quad\text{iff}\quad \alpha \Rightarrow^{*} \varepsilon`],
       refs: ["alsu §4.4.2", "appel §3.2", "rs"],
     },
     firstString: {
@@ -125,7 +125,7 @@ window.DEF_LIBRARY = {
     },
     follow: {
       term: "FOLLOW",
-      formal: [T`\mathrm{FOLLOW}(A) = \{\, a \in \Sigma \mid S \overset{*}{\Rightarrow} \alpha A a \beta \text{ for some } \alpha, \beta \in (N \cup \Sigma)^{*} \,\}`, T`\$ \in \mathrm{FOLLOW}(A) \quad\text{iff}\quad S \overset{*}{\Rightarrow} \alpha A;\quad \text{in particular } \$ \in \mathrm{FOLLOW}(S)`],
+      formal: [T`\mathrm{FOLLOW}(A) = \{\, a \in \Sigma \mid S \Rightarrow^{*} \alpha A a \beta \text{ for some } \alpha, \beta \in (N \cup \Sigma)^{*} \,\}`, T`\$ \in \mathrm{FOLLOW}(A) \quad\text{iff}\quad S \Rightarrow^{*} \alpha A;\quad \text{in particular } \$ \in \mathrm{FOLLOW}(S)`],
       text: "$ is an end marker, not a terminal of the grammar.",
       refs: ["alsu §4.4.2", "appel §3.2", "rs"],
     },
@@ -143,7 +143,7 @@ window.DEF_LIBRARY = {
     },
     pdaAccept: {
       term: "Acceptance by final state and by empty stack",
-      formal: [T`L(P) = \{\, w \mid (q_0, w, Z_0) \overset{*}{\vdash} (q, \varepsilon, \gamma),\; q \in F \,\}`, T`N(P) = \{\, w \mid (q_0, w, Z_0) \overset{*}{\vdash} (q, \varepsilon, \varepsilon) \,\}`],
+      formal: [T`L(P) = \{\, w \mid (q_0, w, Z_0) \vdash^{*} (q, \varepsilon, \gamma),\; q \in F \,\}`, T`N(P) = \{\, w \mid (q_0, w, Z_0) \vdash^{*} (q, \varepsilon, \varepsilon) \,\}`],
       text: "A language is context-free exactly when some PDA accepts it, by either criterion.",
       refs: ["hmu §6.2, §6.3", "sipser Thm. 2.20"],
     },
@@ -158,7 +158,7 @@ window.DEF_LIBRARY = {
       formal: [
         T`u\, q\, a v \vdash u\, b\, p\, v \quad\text{if}\quad \delta(q, a) = (p, b, R)`,
         T`u c\, q\, a v \vdash u\, p\, c b\, v \quad\text{if}\quad \delta(q, a) = (p, b, L)`,
-        T`L(M) = \{\, w \in \Sigma^{*} \mid q_0 w \overset{*}{\vdash} u\, q_{\mathrm{acc}}\, v \,\}`,
+        T`L(M) = \{\, w \in \Sigma^{*} \mid q_0 w \vdash^{*} u\, q_{\mathrm{acc}}\, v \,\}`,
       ],
       text: "u q v: tape uv, head on the first symbol of v, state q. L(M) is recursively enumerable; decidable if M halts on every input.",
       refs: ["sipser §3.1", "hmu §8.2"],
@@ -179,7 +179,7 @@ window.DEF_LIBRARY = {
     // ── Top-down parsing ──
     leftRecursion: {
       term: "Left recursion",
-      formal: [T`A \overset{+}{\Rightarrow} A\alpha \quad\text{for some } A \in N,\; \alpha`],
+      formal: [T`A \Rightarrow^{+} A\alpha \quad\text{for some } A \in N,\; \alpha`],
       text: "A top-down parser that expands the leftmost nonterminal first loops on it.",
       refs: ["alsu §4.3.3"],
     },
@@ -187,7 +187,7 @@ window.DEF_LIBRARY = {
       term: "LL(1) grammar",
       formal: [
         T`\mathrm{FIRST}(\alpha) \cap \mathrm{FIRST}(\beta) = \emptyset`,
-        T`\beta \overset{*}{\Rightarrow} \varepsilon \;\Longrightarrow\; \mathrm{FIRST}(\alpha) \cap \mathrm{FOLLOW}(A) = \emptyset`,
+        T`\beta \Rightarrow^{*} \varepsilon \;\Longrightarrow\; \mathrm{FIRST}(\alpha) \cap \mathrm{FOLLOW}(A) = \emptyset`,
       ],
       text: "Both conditions hold for every pair of different productions A → α and A → β, with α and β in either role: the next token and the left-hand side decide the production.",
       refs: ["alsu §4.4.3", "ls68", "rs"],
@@ -201,7 +201,7 @@ window.DEF_LIBRARY = {
     // ── Bottom-up parsing ──
     handle: {
       term: "Handle",
-      formal: [T`S \overset{*}{\Rightarrow}_{\mathrm{rm}} \alpha A w \Rightarrow_{\mathrm{rm}} \alpha \beta w`],
+      formal: [T`S \Rightarrow^{*}_{\mathrm{rm}} \alpha A w \Rightarrow_{\mathrm{rm}} \alpha \beta w`],
       text: "Reducing a handle undoes a step of a rightmost derivation.",
       refs: ["alsu §4.5", "knuth65"],
     },
@@ -224,13 +224,13 @@ window.DEF_LIBRARY = {
     // ── Grammar transformations ──
     useless: {
       term: "Useless symbols",
-      formal: [T`X \text{ generating} \quad\text{iff}\quad X \overset{*}{\Rightarrow} w \text{ for some } w \in \Sigma^{*}`, T`X \text{ reachable} \quad\text{iff}\quad S \overset{*}{\Rightarrow} \alpha X \beta \text{ for some } \alpha, \beta`],
+      formal: [T`X \text{ generating} \quad\text{iff}\quad X \Rightarrow^{*} w \text{ for some } w \in \Sigma^{*}`, T`X \text{ reachable} \quad\text{iff}\quad S \Rightarrow^{*} \alpha X \beta \text{ for some } \alpha, \beta`],
       text: "A symbol is useful when it is both generating and reachable.",
       refs: ["hmu §7.1.1"],
     },
     unit: {
       term: "Unit pair",
-      formal: [T`(A, B) \text{ unit pair} \quad\text{iff}\quad A \overset{*}{\Rightarrow} B \text{ by unit productions only}`],
+      formal: [T`(A, B) \text{ unit pair} \quad\text{iff}\quad A \Rightarrow^{*} B \text{ by unit productions only}`],
       text: "A unit production has a single nonterminal as its right side.",
       refs: ["hmu §7.1.4"],
     },
