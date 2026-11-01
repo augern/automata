@@ -54,6 +54,11 @@
       "<div class=\"algo-modal-body guide-body\">" + html(d) + "</div></div>";
     overlay.querySelector(".algo-close").addEventListener("click", close);
     overlay.classList.remove("hidden");
+    // engines leave different gaps above an over-script: move each mark down until it touches its base
+    overlay.querySelectorAll("mover").forEach((m) => {
+      const [base, over] = m.children, gap = base.getBoundingClientRect().top - over.getBoundingClientRect().bottom;
+      if (gap > 0.5) over.style.transform = "translateY(" + gap + "px)";
+    });
     overlay.querySelector(".algo-close").focus();
   }
 

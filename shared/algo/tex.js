@@ -32,9 +32,9 @@ function texToMathML(src) {
     if (name === "mathrm") return { ml: `<mi mathvariant="normal">${esc(word())}</mi>` };
     if (name === "text") return { ml: `<mtext>${nbsp(esc(word()))}</mtext>` };
     if (name in TEX_SPACE) return { ml: `<mspace width="${TEX_SPACE[name]}"/>` };
-    // a zero-width box before the base, raised: engines space an over-script differently, but agree on this
+    // accent="true": the mark sits close to the base; shared/definitions.js closes what gap an engine still leaves
     if (name === "mathcal") return { ml: `<mi mathvariant="script">${esc(word())}</mi>` };
-    if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mrow><mpadded width="0" lspace="0.65em" voffset="0.3em" height="0" depth="0">${over}</mpadded>${base}</mrow>` }; }
+    if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mover accent="true">${base}${over}</mover>` }; }
     if (name === "{" || name === "}") return { ml: `<mo>${name}</mo>` };
     if (name === "$") return { ml: `<mi mathvariant="normal">$</mi>` };
     const s = TEX_SYMBOLS[name];
