@@ -361,6 +361,7 @@ function ffwTheory(kind) {
     nodes: [node("A", { kind: "focus", jag: false })],
     levels: [],
     bottom: [cell("ε", "", { node: { sym: "X₁", jag: true } }), cell("ε", "", { node: { sym: "X₂", jag: true } }), cell("…", "", { cls: "is-dim" }), cell("ε", "", { node: { sym: "Xₙ", jag: true } })],
+    span: { label: "X₁ … Xₙ", mark: { kind: "focus", label: "A derives ε" } },
   };
   return {
     figures: [direct, indirect],

@@ -110,6 +110,7 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //           outer?: { left, right },                                  strings outside the top triangle
 //           arrows?: [{ fromNode, side: "left" | "right", toId }],   a scan arrow from the foot of a node to the token with that id
 //           caption?: string,                                         a line of text above the figure
+//           span?: { label?, mark? },                                 a staple under the whole base line, with a pointer below it (free layout)
 //           terminus?: boolean }                                      a jagged line from the last node down to its string: what it derives
 //                                                                     is more than one rule step (see ends in the layout)
 //     a bottom cell may have node: { sym, jag?, kind?, cls? }: it is then a node of its own with a small triangle over its string, under
@@ -220,6 +221,7 @@ function ctgSpineFree(spec, opts = {}) {
   let maxX = Math.max(footR[0], capW / 2, ...put.map(([f, x0]) => x0 + wOf(f)));
   // a pointer's label runs to the right of its token
   for (const [f, x0] of put) if (f.mark && f.mark.label) maxX = Math.max(maxX, x0 + wOf(f) / 2 + 8 + f.mark.label.length * 6.4);
+  if (spec.span && spec.span.mark && put.length) maxX = Math.max(maxX, (Math.min(...put.map(([, x0]) => x0)) + Math.max(...put.map(([f, x0]) => x0 + wOf(f)))) / 2 + 8 + (spec.span.mark.label || "").length * 6.4);
   let width = maxX - minX + 2 * o.marginX, cx = o.marginX - minX;
   if (o.minWidth && o.minWidth > width) { cx += (o.minWidth - width) / 2; width = o.minWidth; }
   const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, x: cx, y: apexAt(k) + 6, cls: n.cls || "", kind: n.kind || "", footL: cx + footL[k], footR: cx + footR[k] }));
@@ -248,7 +250,8 @@ function ctgSpineFree(spec, opts = {}) {
     const right = a.side === "right";
     arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
   }
-  return { width, height: B + 56 + (tokens.some((t) => t.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, subs, ends, caption: spec.caption || "" };
+  const span = spec.span && tokens.length ? { x0: base[0].x0, x1: base[0].x1, y: B, label: spec.span.label || "", mark: spec.span.mark || null } : null;
+  return { width, height: B + 56 + (tokens.some((t) => t.mark) || (span && span.mark) ? 30 : 0), cx, B, step: o.step, nodes, tris, tokens, base, jags, arrows, subs, ends, span, caption: spec.caption || "" };
 }
 
 // The spine figure: with opts.tile the tiled one (one apex angle, equal columns: the pumping figures), else a column for each

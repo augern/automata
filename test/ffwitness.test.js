@@ -300,6 +300,9 @@ test("the line down to the string: jagged where the lowest node derives it in mo
   assert.equal(A.ffwSpec(A.ffwFollow(g2, A.ffRecord(g2), "A", "b")).terminus, true, "A → B → a: more than one");
   assert.ok(A.ctgSpineLayout(A.ffwSpec(A.ffwFollow(g2, A.ffRecord(g2), "A", "b"))).ends.length === 1);
   assert.equal(A.ctgSpineLayout(A.ffwSpec(A.ffwFollow(g1, rec, "A", "b"))).ends.length, 0);
+  const indirect = A.ctgSpineLayout(A.ffwTheory("nullable").figures[1]);
+  assert.ok(indirect.span && indirect.span.mark.label === "A derives ε", "one staple and the marker under the whole base line");
+  assert.ok(Math.abs(indirect.span.x0 - indirect.base[0].x0) < 1e-9 && Math.abs(indirect.span.x1 - indirect.base[0].x1) < 1e-9);
   assert.equal(A.ffwTheory("follow").terminus, true, "B derives x in any number of steps");
 });
 

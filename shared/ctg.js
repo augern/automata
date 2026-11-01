@@ -153,6 +153,16 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       if (t.mark.label) make("text", { x: cx + 8, y: y + 8 }, g, t.mark.label);
     }
   }
+  if (lay.span) { // one staple under the whole base line, below the staples of the tokens
+    const sp = lay.span, y = sp.y + 25, cx = (sp.x0 + sp.x1) / 2, g = make("g", { class: "ctg-span" }, svg);
+    make("path", { d: `M${sp.x0 + 3},${y - 4} V${y} H${sp.x1 - 3} V${y - 4}` }, g);
+    if (sp.label) make("text", { x: cx, y: y + 12, "text-anchor": "middle" }, g, sp.label);
+    if (sp.mark) {
+      const m = make("g", { class: "ctg-mark" + kindCls(sp.mark.kind) }, svg), my = sp.y + 46;
+      make("path", { d: `M${cx - 4},${my + 6} L${cx},${my} L${cx + 4},${my + 6} Z` }, m);
+      if (sp.mark.label) make("text", { x: cx + 8, y: my + 8 }, m, sp.mark.label);
+    }
+  }
   for (const a of lay.arrows || []) { // from a node's foot to a token, along the base line
     const dir = a.side === "right" ? 1 : -1, tip = a.x1 - dir * 2;
     const g = make("g", { class: "ctg-arrow" + kindCls(a.kind) }, svg);
