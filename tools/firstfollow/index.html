@@ -195,6 +195,7 @@
         sim.pos = -1;
         render();
         sim.refresh();
+        el("btn-round").disabled = false;
       }
 
       // ── The rule being applied ───────────────────────────────────────────
@@ -316,6 +317,7 @@
         renderSets(pos);
         document.querySelectorAll("#ff-phases .btn").forEach((b) => b.classList.toggle("is-on", !!ev && ev.phase === b.dataset.phase));
         document.querySelectorAll("#ff-phases .btn").forEach((b) => (b.disabled = !rec.events.length));
+        el("btn-round").disabled = sim.pos >= rec.events.length - 1;
       }
 
       // ── Controls ─────────────────────────────────────────────────────────
@@ -325,6 +327,10 @@
         last: () => (rec && rec.events.length ? rec.events.length - 1 : null),
         onChange: () => render(),
       });
+      el("btn-reset").addEventListener("click", () => sim.reset());
+      el("btn-back").addEventListener("click", () => sim.prev());
+      el("btn-step").addEventListener("click", () => sim.next());
+      el("btn-all").addEventListener("click", () => sim.end());
       el("btn-round").addEventListener("click", () => {
         const rd = rec.rounds.find((r) => r.to - 1 > sim.pos);
         if (rd) sim.go(rd.to - 1);
