@@ -122,3 +122,15 @@ test("v and y when the repeat spans an intermediate nonterminal", () => {
   const parts = P.pumpDecompose(t, pair);
   assert.deepEqual([parts.u, parts.v, parts.x, parts.y, parts.z].map((a) => a.join("")), ["", "ab", "abcd", "cd", ""]);
 });
+
+test("pumpCTG: triangles for the marked paths, the five parts as tokens, repeated copies of the middle part", () => {
+  const g = P.rdpParseGrammar("S -> a S b | eps");
+  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "aabb")).tree;
+  const pair = P.pumpPairs(tree)[0];
+  const tagged = P.pumpTag(tree, pair);
+  const count = (i) => { const r = P.pumpCTG(P.pumpTree(tagged, pair, i)); let n = 0; (function w(x) { n++; for (const k of x.kids) if (k.sym !== undefined) w(k); })(r.tree); return { n, parts: arr(r.parts).join("") }; };
+  assert.equal(count(1).n, 3); // the root and the two chosen S
+  assert.equal(count(3).n, 5);
+  assert.equal(count(0).n, 2);
+  assert.equal(count(2).parts.split("v").length - 1, 2); // v once per copy
+});

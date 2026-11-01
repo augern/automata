@@ -2,10 +2,11 @@
 //
 //   const { svg, layout } = drawCTG("host", tree, {
 //     endMarker: true,                          // a $ after the string
-//     marks: [{ leaf: 2, kind: "first", label: "FIRST" }],   // a token marked from below; kind: first | follow | focus
+//     marks: [{ leaf: 2, kind: "first", label: "FIRST" }],   // a token marked from below (by index, or leafId of a leaf object's id); kind: first | follow | focus
 //     nodeKinds: { n3: "focus" },               // triangles drawn emphasised, by node id
 //     spans: [{ node: "n3", label: "x" }, { from: 0, to: 1, label: "u" }],   // brackets under the line (a node's base, or leaves from..to)
-//     title: (node) => "text",                  // tooltip of a triangle
+//     scale: 1.5,                               // the drawing enlarged by this factor
+//     title: (node, layout) => "text",          // tooltip of a triangle
 //     ...layout options of ctgLayout
 //   });
 // The host is an element or an element id; its content is replaced. Triangles carry data-ctg="id", tokens data-leaf="i".
@@ -26,7 +27,7 @@ function drawCTG(host, tree, opts = {}) {
   const kindCls = (k) => (CTG_KIND[k] ? " " + CTG_KIND[k] : "");
 
   const tokH = 22, markH = 18, spanH = 18;
-  const marks = (opts.marks || []).filter((m) => m.leaf >= 0 && m.leaf < lay.leaves.length);
+  const marks = (opts.marks || []).map((m) => ({ ...m, leaf: m.leafId !== undefined ? lay.leafById[m.leafId] : m.leaf })).filter((m) => m.leaf >= 0 && m.leaf < lay.leaves.length);
   const spans = (opts.spans || []).map((s) => {
     const n = s.node !== undefined ? lay.byId[s.node] : null;
     if (n && n.empty) { // nothing to bracket: the stretch of its points, or the point itself
@@ -52,13 +53,13 @@ function drawCTG(host, tree, opts = {}) {
   const base = lay.top + 4;
   const height = base + tokH + markRows * markH + rows.length * spanH + 6;
   hostEl.innerHTML = "";
-  const svg = make("svg", { class: "ctg", width: lay.width, height, viewBox: `0 0 ${lay.width} ${height}`, role: "img" }, hostEl);
+  const svg = make("svg", { class: "ctg", width: lay.width * (opts.scale || 1), height: height * (opts.scale || 1), viewBox: `0 0 ${lay.width} ${height}`, role: "img" }, hostEl);
   make("line", { class: "ctg-line", x1: 0, x2: lay.width, y1: base, y2: base }, svg);
 
   for (const n of lay.nodes) {
     const k = (opts.nodeKinds || {})[n.id];
     const g = make("g", { class: "ctg-node" + (n.empty ? " is-empty" : "") + (n.cls ? " " + n.cls : "") + kindCls(k), "data-ctg": n.id }, svg);
-    if (opts.title) make("title", {}, g, opts.title(n));
+    if (opts.title) make("title", {}, g, opts.title(n, lay));
     if (n.point) {
       make("circle", { class: "ctg-point", cx: n.px, cy: base, r: 3.5 }, g);
       make("text", { class: "ctg-sym", x: n.px, y: base - n.h, "text-anchor": "middle" }, g, n.sym);

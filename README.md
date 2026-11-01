@@ -73,6 +73,7 @@ parser-tools/
 │   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
 │   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations
 │   │   ├── ctg.js                      ← pure: layout of the Christmas-tree graph (triangles, tokens, points for empty nodes)
+│   │   ├── ffwitness.js                ← pure: a Christmas-tree graph proving each member of a nullable, FIRST or FOLLOW set (shortest derivations, the path from the start symbol)
 │   │   ├── firstfollow.js              ← pure: nullable, FIRST and FOLLOW as recorded fixpoint iterations, the sets after each step
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting

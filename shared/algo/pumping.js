@@ -234,3 +234,30 @@ function pumpTree(tree, pair, i) {
   for (let k = 0; k < i; k++) cur = pumpReplace(pumpClone(up), rel, cur);
   return pumpReplace(tree, pair.up, cur);
 }
+
+// A pumped (tagged) parse tree as a Christmas-tree graph (see algo/ctg.js): the nonterminals on the paths to the two
+// chosen nodes are triangles, everything off the paths is the string it derives, cut into the parts u v x y z.
+// -> { tree, parts }: the CTG input, and the part (u v x y z) of each of its tokens in order.
+function pumpCTG(tree, sep = "") {
+  const CLS = { up: "pp-up", low: "pp-low", both: "pp-both" };
+  const marked = (n) => !n.leaf && (!!n.mark || n.children.some(marked));
+  const parts = [];
+  let k = 0;
+  function conv(node) {
+    const kids = [];
+    const push = (sym, part) => {
+      const last = kids[kids.length - 1];
+      if (last && last.part === part && typeof last !== "string" && last.text !== undefined) last.text += sep + sym;
+      else { kids.push({ text: sym, part, cls: part ? "pp-" + part : "" }); }
+    };
+    for (const c of node.children) {
+      if (c.leaf) { if (!c.eps) push(c.sym, c.part); }
+      else if (marked(c)) kids.push(conv(c));
+      else for (const l of pumpLeaves(c)) push(l.sym, l.part);
+    }
+    return { sym: node.sym, id: "p" + k++, cls: node.mark ? CLS[node.mark] : "", kids };
+  }
+  const out = conv(tree);
+  (function collect(n) { for (const kid of n.kids) { if (kid.text !== undefined) parts.push(kid.part || ""); else collect(kid); } })(out);
+  return { tree: out, parts };
+}

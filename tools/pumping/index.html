@@ -70,6 +70,17 @@
       .pt-n.pt-both .pt-shape { stroke: var(--pp-y); stroke-width: 3; fill: var(--st-active-bg); }
       .pt-e { fill: none; stroke: var(--border-hi); stroke-width: 1.2; }
 
+      /* ── Triangles (the Christmas-tree graph) ── */
+      #canvas-ctg { flex: 1; position: relative; overflow: auto; display: flex; }
+      #ctg-host { margin: auto; padding: var(--sp-6) var(--sp-5); }
+      #view-group .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+      .ctg-node.pp-up .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--hot-bg); }
+      .ctg-node.pp-low .ctg-tri { stroke: var(--pp-x); stroke-width: 2.4; fill: var(--st-active-bg); }
+      .ctg-node.pp-both .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
+      .ctg-tok.pp-u { fill: var(--pp-u); } .ctg-tok.pp-v, .ctg-tok.pp-y { fill: var(--pp-y); } .ctg-tok.pp-x { fill: var(--pp-x); } .ctg-tok.pp-z { fill: var(--pp-z); }
+      .ctg-tok { font-weight: 600; }
+      .ctg-tok.is-in { text-decoration: underline; text-underline-offset: 4px; }
+
       #explain { padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
       #explain p { margin: 0 0 var(--sp-4); }
     </style>
@@ -132,6 +143,11 @@
                 <button class="btn primary" id="btn-walk-step" onclick="walk.next()" disabled>Step &#8250;</button>
                 <button class="btn icon-run-all" id="btn-walk-all" onclick="walk.end()" title="To the end" disabled></button>
               </div>
+              <span class="ui-label" id="view-label" hidden>view</span>
+              <div class="step-group" id="view-group" hidden>
+                <button class="btn is-on" id="btn-view-tree" onclick="setView('tree')" title="The parse tree">Tree</button>
+                <button class="btn" id="btn-view-ctg" onclick="setView('ctg')" title="The nonterminals on the paths as triangles over the string they derive">Triangles</button>
+              </div>
               <button class="btn" id="btn-other" onclick="otherRepeat()" title="Use another repeated nonterminal on the path" hidden>Another repeat</button>
             </div>
           </div>
@@ -140,6 +156,10 @@
               <div id="canvas-dfa" class="ui-canvas">
                 <svg id="dfa-svg"><g id="dfa-graph-root"></g></svg>
                 <div id="dfa-graph-empty" class="ui-canvas__empty">Define a DFA.</div>
+              </div>
+              <div id="canvas-ctg" hidden>
+                <div id="ctg-host"></div>
+                <div id="ctg-empty" class="ui-empty" hidden></div>
               </div>
               <div id="canvas-tree" class="ui-canvas" hidden>
                 <svg id="tree-svg"><g id="tree-root"></g></svg>
@@ -162,8 +182,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/pumping.js?v=9850ae52"></script>
+    <script src="../../shared/algo/ctg.js?v=2506f1c9"></script>
+    <script src="../../shared/algo/pumping.js?v=43e6c442"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
+    <script src="../../shared/ctg.js?v=3573e7a8"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -182,6 +204,7 @@
       const $ = (id) => document.getElementById(id);
 
       let ppMode = "regular"; // regular | cf
+      let ppView = "tree"; // context-free drawing: tree | ctg
       let ppDFA = null; // the parsed DFA (regular mode)
       let ppG = null; // the parsed grammar (context-free mode)
       let ppStrings = []; // sample strings of the loaded example
@@ -197,7 +220,9 @@
         $("def-title").textContent = m === "regular" ? "DFA" : "Grammar";
         $("regex-row").hidden = m !== "regular";
         $("canvas-dfa").hidden = m !== "regular";
-        $("canvas-tree").hidden = m !== "cf";
+        $("canvas-tree").hidden = m !== "cf" || ppView !== "tree";
+        $("canvas-ctg").hidden = m !== "cf" || ppView !== "ctg";
+        $("view-label").hidden = $("view-group").hidden = m !== "cf";
         $("walk-bar").querySelector(".step-group").hidden = m !== "regular";
         $("walk-label").hidden = m !== "regular";
         $("btn-other").hidden = m !== "cf";
@@ -206,6 +231,15 @@
         $("grammar-input").placeholder = m === "regular" ? "start: q0\naccept: q1\nq0 a q1\nq1 b q0" : "S -> a S b | eps";
         saveShare();
         buildDef();
+      }
+
+      function setView(v) {
+        ppView = v;
+        $("btn-view-tree").classList.toggle("is-on", v === "tree");
+        $("btn-view-ctg").classList.toggle("is-on", v === "ctg");
+        $("canvas-tree").hidden = ppMode !== "cf" || v !== "tree";
+        $("canvas-ctg").hidden = ppMode !== "cf" || v !== "ctg";
+        if (ppMode === "cf") renderCF();
       }
 
       function setError(msg) { $("error-msg").textContent = msg || ""; }
@@ -405,11 +439,11 @@
         $("btn-other").disabled = !(ppCF && ppCF.pairs && ppCF.pairs.length > 1);
         const strip = $("strip"), ex = $("explain");
         const sep = ppSep();
-        if (!ppG) { strip.innerHTML = ""; ex.innerHTML = "<p>Define a grammar on the left.</p>"; drawTree(null); return; }
+        if (!ppG) { strip.innerHTML = ""; ex.innerHTML = "<p>Define a grammar on the left.</p>"; drawCF(null); return; }
         if (!ppCF || !ppCF.tree) {
           strip.innerHTML = "";
           ex.innerHTML = ppCF && ppCF.aborted === "left-recursion" ? "<p>The grammar is left-recursive, which the parser cannot handle.</p>" : "<p>The grammar does not generate <b>" + esc(ppCF ? ppCF.w || "ε" : "") + "</b>: there is no parse tree to pump.</p>";
-          drawTree(null);
+          drawCF(null);
           return;
         }
         const pair = ppCF.pairs[ppCF.pairIdx];
@@ -437,7 +471,31 @@
           t += "<p>No path of this tree repeats a nonterminal with something between the occurrences. A longer string is needed.</p>";
         }
         ex.innerHTML = t;
-        drawTree(pair ? pumpTree(ppCF.tagged, pair, i) : ppCF.tree);
+        drawCF(pair ? pumpTree(ppCF.tagged, pair, i) : ppCF.tree);
+      }
+
+      function drawCF(tree) {
+        if (ppView === "tree") { drawTree(tree); return; }
+        drawTriangles(tree);
+      }
+
+      // The triangles: the paths to the two repeated nonterminals, the rest as the five parts of the string.
+      function drawTriangles(tree) {
+        $("ctg-host").innerHTML = "";
+        $("ctg-empty").hidden = !!tree;
+        if (!tree) { $("ctg-empty").textContent = ppG ? "Enter a string the grammar generates." : ""; return; }
+        const sep = ppSep();
+        const { tree: ctg, parts } = pumpCTG(tree, sep);
+        const { svg, layout } = drawCTG("ctg-host", ctg, {
+          scale: 1.5,
+          spans: parts.map((p, k) => ({ from: k, to: k, label: p })),
+          title: (n, lay) => n.sym + (n.empty ? " derives ε" : " derives “" + lay.leaves.slice(n.first, n.last + 1).map((l) => l.text).join(sep) + "”"),
+        });
+        svg.querySelectorAll(".ctg-node").forEach((g) => {
+          const n = layout.byId[g.dataset.ctg];
+          g.addEventListener("mouseenter", () => svg.querySelectorAll(".ctg-tok").forEach((t) => t.classList.toggle("is-in", +t.dataset.leaf >= n.first && +t.dataset.leaf <= n.last)));
+          g.addEventListener("mouseleave", () => svg.querySelectorAll(".ctg-tok.is-in").forEach((t) => t.classList.remove("is-in")));
+        });
       }
 
       let treeView = null;

@@ -2,8 +2,8 @@
 // A nonterminal is a triangle whose base is the stretch of the string it derives; a nonterminal that derives the empty
 // string is a point on the line. No DOM access.
 //
-//   tree: { sym, id?, cls?, kids: [ node | "token" | { text, cls? } ] }     (kids in left-to-right order)
-//   ctgLayout(tree, opts) -> { width, top, leaves, nodes, byId }
+//   tree: { sym, id?, cls?, kids: [ node | "token" | { text, cls?, id? } ] }     (kids in left-to-right order)
+//   ctgLayout(tree, opts) -> { width, top, leaves, nodes, byId, leafById }   leafById: leaf ids to indices; "end" is the end marker
 //     leaves  [{ i, text, x, w, end, cls }]   the tokens on the base line; with opts.endMarker the last one is the end marker $
 //     nodes   [{ id, sym, kids, parent, level, first, last, empty, point, x0, x1, ax, h, px, cls }]
 //             first..last are the indices of the node's leaves; an empty node has last = first - 1, so `first` is the first
@@ -15,8 +15,8 @@
 // kept inside the parent triangle, so a child never crosses an edge of its parent.
 
 function ctgLayout(tree, opts = {}) {
-  const o = { charW: 9, tokPad: 8, minGap: 14, padStep: 5, padMax: 24, baseH: 36, stepH: 28, marginX: 16, labelH: 20, endMarker: false, ...opts };
-  const nodes = [], leaves = [], byId = {}, items = [];
+  const o = { charW: 9, tokPad: 8, minGap: 14, padStep: 8, padMax: 40, baseH: 36, stepH: 28, marginX: 16, labelH: 20, endMarker: false, ...opts };
+  const nodes = [], leaves = [], byId = {}, items = [], leafById = {};
   const padOf = (level) => Math.min(o.padStep * level, o.padMax);
 
   function walk(n, parent) {
@@ -27,6 +27,7 @@ function ctgLayout(tree, opts = {}) {
       if (typeof k === "string" || k.text !== undefined) {
         const text = typeof k === "string" ? k : k.text;
         items.push({ leaf: leaves.length, w: Math.max(1, text.length) * o.charW + 2 * o.tokPad });
+        if (typeof k !== "string" && k.id !== undefined) leafById[k.id] = leaves.length;
         leaves.push({ i: leaves.length, text, cls: typeof k === "string" ? "" : k.cls || "", end: false });
       } else node.kids.push(walk(k, node).id);
     }
@@ -41,6 +42,7 @@ function ctgLayout(tree, opts = {}) {
   walk(tree, null);
   if (o.endMarker) {
     items.push({ leaf: leaves.length, w: o.charW + 2 * o.tokPad });
+    leafById.end = leaves.length;
     leaves.push({ i: leaves.length, text: "$", cls: "", end: true });
   }
 
@@ -84,7 +86,7 @@ function ctgLayout(tree, opts = {}) {
     n.ax = ax;
     top = Math.max(top, n.h + o.labelH);
   }
-  return { width, top, leaves, nodes, byId };
+  return { width, top, leaves, nodes, byId, leafById };
 }
 
 // The leaf a node shows first: its own first token, or, when it is empty, the token after it. Past the last leaf: leaves.length.
