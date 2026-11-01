@@ -23,7 +23,6 @@
       #regex-row { flex-shrink: 0; display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-lo); }
       #regex-row input { flex: 1; min-width: 0; }
       .def-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-      #dfa-input { flex: 1; background: transparent; color: var(--text); border: none; outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); resize: none; }
             #def-note { flex-shrink: 0; padding: 0 var(--sp-5) var(--sp-3); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
       #def-note:empty { display: none; }
 
@@ -112,7 +111,13 @@
             <input id="regex-input" class="ui-input" type="text" spellcheck="false" placeholder="regular expression, e.g. (a|b)*abb" />
             <button class="btn" onclick="regexToDFA()" title="Replace the DFA below by the minimal DFA of this expression">→ DFA</button>
           </div>
-          <div id="dfa-wrap" class="def-wrap"><textarea id="dfa-input" spellcheck="false" placeholder="start: q0&#10;accept: q1&#10;q0 a q1&#10;q1 b q0"></textarea></div>
+          <div id="dfa-wrap" class="def-wrap">
+            <div id="dfa-table" class="ui-scroll"></div>
+            <div class="ui-footer">
+              <button class="btn" onclick="regTable.addState()">+ State</button>
+              <button class="btn" onclick="regTable.addSymbol()">+ Symbol</button>
+            </div>
+          </div>
           <div id="grammar-wrap" class="def-wrap"><textarea id="grammar-input" spellcheck="false" placeholder="S -> a S b | eps"></textarea></div>
           <div id="def-note"></div>
           <div id="grammar-footer"><div id="error-msg"></div></div>
@@ -187,7 +192,7 @@
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
     <script src="../../shared/algo/ctg.js?v=a2369985"></script>
-    <script src="../../shared/algo/pumping.js?v=360829dd"></script>
+    <script src="../../shared/algo/pumping.js?v=a07bb3ac"></script>
     <script src="../../shared/shared.js?v=2ab85b1b"></script>
     <script src="../../shared/algo/runfig.js?v=1275c63a"></script>
     <script src="../../shared/ctg.js?v=92086183"></script>
@@ -202,11 +207,13 @@
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=b3a54ab2"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=ff33c495"></script>
+    <script src="guide.js?v=b8296c3e"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
+    <script src="../../shared/algo/states.js?v=107884d8"></script>
+    <script src="../../shared/automaton-table.js?v=3d8c5285"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
     <script>
       initResize("rh-1", "p-def", +1);
@@ -221,7 +228,10 @@
       let ppView = ctgPref.get().view; // context-free drawing: path | tree
       let ppRegView = ctgPref.get().reg; // regular drawing: run | dfa
       let ppBase = ctgPref.get().unify ? "joined" : "split"; // base lines of the path drawing: split | joined
-      let ppDFA = null; // the parsed DFA (regular mode)
+      let ppDFA = null; // the DFA built from the table (regular mode)
+      const regM = pumpDFAToModel(pumpParseDFA("start: q0\naccept: q1\nq0 a q1\nq1 a q1")); // the table edits this in place
+      let regTable = null;
+      let regText = pumpDFAToText(pumpDFAFromModel(regM)); // the DFA as text, as of the last valid table: what the link keeps
       let ppG = null; // the parsed grammar (context-free mode)
       let ppStrings = []; // sample strings of the loaded example
       let ppReg = null; // regular explorer: { w, run, loop, parts }
@@ -262,7 +272,14 @@
         const long = n >= p;
         return '<div class="pp-row"><span class="ui-label">length</span><span class="pp-formula ' + (long ? "pp-len-ok" : "pp-len-short") + '">|w| = ' + n + (long ? " ≥ " : " < ") + "p = " + fmtLength(p) + ": " + (long ? yes : maybe) + "</span></div>";
       }
-      const defInput = () => $(ppMode === "regular" ? "dfa-input" : "grammar-input"); // the text of the machine or grammar
+      // the machine or grammar as text, for the link and the examples; the DFA is a table, so its text is made and read here
+      const defText = () => (ppMode === "regular" ? regText : $("grammar-input").value);
+      function setDefText(text) {
+        if (ppMode !== "regular") { $("grammar-input").value = text; return; }
+        const m = pumpDFAToModel(pumpParseDFA(text));
+        Object.assign(regM, m);
+        regTable.render();
+      }
       const isGeneral = () => !$("w-input").value.trim();
       const redraw = () => (isGeneral() ? renderGeneral() : ppMode === "regular" ? renderRegular() : renderCF());
 
@@ -308,11 +325,11 @@
 
       // ── Definition ────────────────────────────────────────────
       function buildDef() {
-        const text = defInput().value;
+        const text = defText();
         setError("");
         $("def-note").textContent = "";
         if (ppMode === "regular") {
-          try { ppDFA = pumpParseDFA(text); } catch (e) { ppDFA = null; setError(e.message); }
+          try { ppDFA = pumpDFAFromModel(regM); regText = pumpDFAToText(ppDFA); } catch (e) { ppDFA = null; setError(e.message); }
           $("def-note").textContent = ppDFA ? "Pumping length p = " + ppDFA.states.length + ", the number of states: a string of at least p symbols visits some state twice, so it splits as x y z with |xy| ≤ p and |y| ≥ 1." : "";
           drawDFA();
         } else {
@@ -330,7 +347,8 @@
         if (!src) return;
         try {
           const min = minimizeDFA(subsetConstruct(regexToNFA(src)));
-          $("dfa-input").value = pumpDFAToText(pumpDFAFromMin(min));
+          Object.assign(regM, pumpDFAToModel(pumpDFAFromMin(min)));
+          regTable.render();
           buildDef();
         } catch (e) { setError(e.message); }
       }
@@ -659,7 +677,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         if (undress) { root.classList.remove("xmas"); dressed = null; undress(); undress = null; return; }
         const was = { mode: ppMode, g: $("grammar-input").value, w: $("w-input").value, i: $("pump-i").value, ex: $("examples-select").value };
         root.classList.add("xmas");
-        dressed = { g: defInput().value, s: was.w, m: was.mode };
+        dressed = { g: defText(), s: was.w, m: was.mode };
         $("grammar-input").value = "★ -> Happy ✶ lidays!\n✶ -> ✷\n✷ -> ✦\n✦ -> ho ✧ | ✺\n✧ -> ✦\n✺ -> eps";
         $("w-input").value = "Happy ho lidays!";
         $("pump-i").value = 5;
@@ -727,7 +745,9 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
 
       // ── Wiring ────────────────────────────────────────────────
       grammarEditor = GrammarEditor.attach($("grammar-input"));
-      for (const id of ["grammar-input", "dfa-input"]) $(id).addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
+      regTable = createAutomatonTable("dfa-table", { model: regM, deterministic: true, onChange: () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 150); } });
+      regTable.render();
+      for (const id of ["grammar-input"]) $(id).addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
       let ppTimer = null;
       $("w-input").addEventListener("input", () => { explore(); saveShare(); });
       $("pump-i").addEventListener("input", () => redraw());
@@ -762,21 +782,22 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         if (!ex) return;
         $("examples-select").value = k;
         ppStrings = ex.strings || [];
-        $(ex.mode === "cf" ? "grammar-input" : "dfa-input").value = ex.text;
+        if (ex.mode === "cf") $("grammar-input").value = ex.text;
+        else Object.assign(regM, pumpDFAToModel(pumpParseDFA(ex.text))), regTable.render();
         $("w-input").value = "";
         $("pump-i").value = ex.i === undefined ? 2 : ex.i;
         if ((ex.mode || "regular") !== ppMode) setMode(ex.mode || "regular");
         else buildDef();
       }
 
-      const saveShare = createShareSaver(() => dressed || { g: defInput().value, s: $("w-input").value, m: ppMode });
+      const saveShare = createShareSaver(() => dressed || { g: defText(), s: $("w-input").value, m: ppMode });
       let sharedStateApplied = false;
       function applyShareState() {
         const st = shareValidateTextState(readShareState(), "g", ["regular", "cf"]);
         if (!st) return;
         sharedStateApplied = true;
         if (st.m) ppMode = st.m;
-        defInput().value = st.g;
+        try { setDefText(st.g); } catch (e) { /* a link with a broken definition: the examples load */ sharedStateApplied = false; }
         $("w-input").value = st.s;
       }
 

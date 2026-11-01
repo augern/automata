@@ -56,6 +56,30 @@ function pumpDFAFromMin(min) {
   return { states: Array.from({ length: n }, (_, i) => "q" + i), start: 0, accepts: new Set(min.dfaAccepts), next, alpha: [...min.alpha].sort() };
 }
 
+// The editable table (shared/automaton-table.js) of a DFA, and back. A cell is a list of at most one state; blank is no transition.
+function pumpDFAToModel(dfa) {
+  const trans = {};
+  dfa.states.forEach((name, i) => {
+    trans[name] = {};
+    for (const a of dfa.alpha) trans[name][a] = dfa.next[i][a] === undefined ? [] : [dfa.states[dfa.next[i][a]]];
+  });
+  return { states: [...dfa.states], alphabet: [...dfa.alpha], start: dfa.start, accepts: new Set(dfa.accepts), trans };
+}
+
+function pumpDFAFromModel(model) {
+  const idx = new Map(model.states.map((n, i) => [n, i]));
+  const next = model.states.map(() => ({}));
+  model.states.forEach((name, i) => {
+    for (const a of model.alphabet) {
+      const cell = (model.trans[name] && model.trans[name][a]) || [];
+      if (cell.length > 1) throw new Error(name + " on " + a + " goes to two states: this is not a DFA");
+      if (cell.length && !idx.has(cell[0])) throw new Error(name + " on " + a + " goes to " + cell[0] + ", which is not a state");
+      if (cell.length) next[i][a] = idx.get(cell[0]);
+    }
+  });
+  return { states: [...model.states], start: model.start, accepts: new Set(model.accepts), next, alpha: [...model.alphabet].sort() };
+}
+
 function pumpDFAToText(dfa) {
   const out = ["start: " + dfa.states[dfa.start], "accept: " + [...dfa.accepts].map((i) => dfa.states[i]).join(" ")];
   dfa.states.forEach((name, s) => {

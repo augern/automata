@@ -236,3 +236,16 @@ test("run figure of a DFA run: the states at the ends of x, at each round of y a
   assert.equal(gen.spans.length, 0, "no staples for the letters of the general case");
   assert.equal(gen.nodes.length, 5);
 });
+
+test("the DFA as a table and back: the model of a DFA gives the same DFA, and a cell with two states is not a DFA", () => {
+  const dfa = P.pumpParseDFA(ENDS_ABB);
+  const back = P.pumpDFAFromModel(P.pumpDFAToModel(dfa));
+  assert.equal(P.pumpDFAToText(back), P.pumpDFAToText(dfa));
+  const model = P.pumpDFAToModel(dfa);
+  model.trans.q0.a = ["q0", "q1"];
+  assert.throws(() => P.pumpDFAFromModel(model), /not a DFA/);
+  model.trans.q0.a = ["nowhere"];
+  assert.throws(() => P.pumpDFAFromModel(model), /not a state/);
+  model.trans.q0.a = [];
+  assert.equal(P.pumpDFAFromModel(model).next[0].a, undefined, "a blank cell is no transition");
+});

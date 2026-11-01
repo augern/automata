@@ -4,7 +4,7 @@ window.TOOL_GUIDE = {
   title: "Pumping",
   intro: "Shows why the pumping lemmas hold: a path in a DFA or a parse tree repeats a state or a nonterminal, and the loop can be repeated or removed.",
   use: [
-    "Regular: define a DFA as text (`q0 a q1` is a transition; `start:` and `accept:` name states) or convert a regular expression. For a string, the first state visited twice splits it into x, y and z. Run shows the states over the string: a jagged edge hides the states between two shown; DFA shows the automaton.",
+    "Regular: edit the DFA as a table (→ start state, ★ accepting states, one target for each cell, blank for none) or convert a regular expression. For a string, the first state visited twice splits it into x, y and z. Run shows the states over the string: a jagged edge hides the states between two shown; DFA shows the automaton.",
     "The slider repeats y (regular) or v and y (context-free) i times; 0 removes the loop. Stepping follows the DFA through the string.",
     "Context-free: enter a grammar and a string it generates. “Another repeat” selects another repeating pair.",
     "Without a string the figure is the general case. Path draws the repeated nonterminals as nested triangles; Tree draws the parse tree. Unify baselines puts the string on one base line. The figure pans and zooms; double-click fits it.",
