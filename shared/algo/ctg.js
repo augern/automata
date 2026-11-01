@@ -129,7 +129,8 @@ function ctgSpineTree(spec) {
 // each on a base line one step lower, in the same columns, so the frame keeps its shape. With no copy, v and y are gone, x is
 // drawn as in the frame but anchored one step higher, at the place of the first copy; the root triangle is as in the frame
 // with the place of the first copy blanked out of it (a blank triangle over it), so only the parts by u and z are left.
-// A triangle's base is drawn only where tokens stand on it.
+// A triangle's base is drawn only where tokens stand on it. With opts.tile all the triangles are similar and the columns equally
+// wide, so that they tile without slivers or overlap (the strings are then centred in columns as wide as the longest).
 //   fig: { root, up, rootIsUp, i, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
 //   -> { width, height, cx, nodes: [{ sym, x, y, cls }], tris: [{ x0, x1, apex, ay, y, cls, tone?, base: [{ x0, x1 }] }],
 //   tone: 0 for the first copy of the middle part, one more for each further copy; the shade follows it (more saturated, more
@@ -137,11 +138,18 @@ function ctgSpineTree(spec) {
 //        tokens: [{ text, part, cls, x, w, y, label, eps }], jags: [{ from, to }] }
 //   with no copy there is a { blank: true } triangle over the place of the first copy, to be drawn in the background colour
 function ctgSplitLayout(fig, opts = {}) {
-  const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, ...opts };
+  const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, tile: false, tan: 0.45, ...opts };
   const i = fig.i;
   const order = ["u", "v", "x", "y", "z"];
   const w = {};
   for (const p of order) w[p] = Math.max(1, fig.parts[p].text.length) * o.charW + 2 * o.tokPad;
+  if (o.tile) {
+    // every triangle has the same apex angle and the columns are equally wide, so the triangles tile: the parts by u and z
+    // are strips of constant width between the legs of the root triangle and those of the next one, and so on down
+    const c = Math.max(36, ...order.map((p) => w[p]));
+    for (const p of order) w[p] = c;
+    Object.assign(o, { tokGap: 0, padRoot: 0, padUp: 0, padLow: 0, step: c / o.tan, baseH: c / o.tan / 2 });
+  }
   const x0 = {};
   let x = o.marginX + o.padRoot;
   for (const p of order) { x0[p] = x; x += w[p] + o.tokGap; }

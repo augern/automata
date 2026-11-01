@@ -190,10 +190,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=458ae49a"></script>
+    <script src="../../shared/algo/ctg.js?v=eaa25572"></script>
     <script src="../../shared/algo/pumping.js?v=9443238a"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=abcff8cf"></script>
+    <script src="../../shared/ctg.js?v=bed3555f"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -341,7 +341,7 @@
         if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
-        if (ppView === "path" && ppBase === "split") drawCTGSplit("ctg-host", gen.split, { scale: 1.4 });
+        if (ppView === "path" && ppBase === "split") drawCTGSplit("ctg-host", gen.split, { scale: 1.25, tile: true });
         else if (ppView === "path") drawCTGPath("ctg-host", gen.spine, { scale: 1.4 });
         else drawCTG("ctg-host", gen.tree, { scale: 1.5 });
       }

@@ -108,3 +108,22 @@ test("split layout: each copy of the middle part is one tone further, the root h
   assert.deepEqual(js(lay.tris.filter((t) => t.cls === "pp-up").map((t) => t.tone)), [0, 1, 2]);
   assert.equal(lay.tris[0].tone, undefined);
 });
+
+test("split layout, tiled: all triangles have one apex angle and the parts by u and z are strips of constant width", () => {
+  const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
+  const fig = (i) => ({ root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
+  for (const i of [0, 1, 2, 3]) {
+    const lay = A.ctgSplitLayout(fig(i), { tile: true });
+    const tris = lay.tris.filter((t) => !t.blank);
+    const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
+    for (const t of tris) assert.ok(Math.abs(slope(t) - slope(tris[0])) < 1e-9, `i = ${i}: the same angle`);
+  }
+  const lay = A.ctgSplitLayout(fig(1), { tile: true });
+  const [s, a, low] = lay.tris;
+  assert.ok(Math.abs((a.x0 - s.x0) - (s.x1 - a.x1)) < 1e-9, "the strips by u and z are equally wide");
+  assert.ok(Math.abs((low.x0 - a.x0) - (a.x1 - low.x1)) < 1e-9);
+  // the strip is the horizontal distance between parallel legs that start one step apart
+  const t = (s.x1 - s.x0) / 2 / (s.y - s.ay);
+  assert.ok(Math.abs((a.x0 - s.x0) - (a.ay - s.ay) * t) < 1e-9, "u: the width of the strip is what the legs' offset gives");
+  assert.ok(Math.abs((low.x0 - a.x0) - (low.ay - a.ay) * t) < 1e-9, "v: the same one level down");
+});

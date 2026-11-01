@@ -175,10 +175,8 @@ function drawCTGSplit(host, fig, opts = {}) {
   return { svg, layout: lay };
 }
 
-// A colour (a CSS colour or variable) as a tint on the page background, one step stronger for each tone: more saturated, and
-// toward the text colour for more contrast. Built from theme tokens, so it follows the light and the dark theme.
-// line: the stronger version for a base line.
+// A colour (a CSS colour or variable) as a tint on the page background, one step more saturated for each tone. Built from the
+// theme's tokens, so it follows the light and the dark theme. line: the stronger version for a base line.
 function ctgTone(colour, tone, line) {
-  const share = (line ? 62 : 26) + 12 * tone, contrast = (line ? 0 : 3) + 4 * tone;
-  return `color-mix(in srgb, color-mix(in srgb, ${colour} ${share}%, var(--bg)) ${100 - contrast}%, var(--text) ${contrast}%)`;
+  return `color-mix(in srgb, ${colour} ${(line ? 62 : 26) + 12 * tone}%, var(--bg))`;
 }
