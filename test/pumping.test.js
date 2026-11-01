@@ -123,36 +123,9 @@ test("v and y when the repeat spans an intermediate nonterminal", () => {
   assert.deepEqual([parts.u, parts.v, parts.x, parts.y, parts.z].map((a) => a.join("")), ["", "ab", "abcd", "cd", ""]);
 });
 
-test("pumpSpine: the spine of marked nodes, the strings beside each stretch, repeated per copy of the middle part", () => {
-  const g = P.rdpParseGrammar("S -> a S b | eps");
-  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "aabb")).tree;
-  const pair = P.pumpPairs(tree)[0];
-  const tagged = P.pumpTag(tree, pair);
-  const sp = (i) => P.pumpSpine(P.pumpTree(tagged, pair, i));
-  const one = sp(1);
-  assert.equal(one.nodes.length, 3);
-  assert.deepEqual(JSON.parse(JSON.stringify(one.segments.map((s) => [s.left && s.left.text, s.left && s.left.part, s.right && s.right.text, s.right && s.right.part]))), [["a", "u", "b", "z"], ["a", "v", "b", "y"]]);
-  assert.equal(one.bottom.text, "ε"); // an empty string is drawn as ε
-  assert.equal(sp(3).nodes.length, 5);
-  assert.equal(sp(0).nodes.length, 2);
-});
-
-test("pumpSpine: the right-hand string of a stretch with several nodes is in the order of the yield", () => {
-  const g = P.rdpParseGrammar("S -> a A d | eps\nA -> b S c");
-  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "abcd")).tree;
-  const pair = P.pumpPairs(tree)[0];
-  const sp = P.pumpSpine(P.pumpTree(P.pumpTag(tree, pair), pair, 2));
-  assert.equal(sp.segments[1].right.text, "cd");
-  assert.equal(sp.segments[1].left.text, "ab");
-});
-
-test("pumpGeneralCF: i copies of the middle part between the first A and the lowest one", () => {
-  const sizes = (i) => { const g = P.pumpGeneralCF(i); return [g.spine.nodes.length, g.spine.segments.length]; };
-  assert.deepEqual(sizes(0), [2, 1]);
-  assert.deepEqual(sizes(1), [3, 2]);
-  assert.deepEqual(sizes(3), [5, 4]);
-  const parts = P.pumpGeneralCF(2).spine.segments.map((s) => s.left.part + s.right.part);
-  assert.deepEqual(JSON.parse(JSON.stringify(parts)), ["uz", "vy", "vy"]);
+test("pumpGeneralCF: the letters of the lemma, in the figure's input form", () => {
+  const g = P.pumpGeneralCF(2);
+  assert.deepEqual(JSON.parse(JSON.stringify([g.root, g.up, g.i, g.rootIsUp, Object.keys(g.parts).join("")])), ["S", "A", 2, false, "uvxyz"]);
 });
 
 test("empty parts are ε in the path figure, in the part they belong to", () => {
@@ -160,13 +133,8 @@ test("empty parts are ε in the path figure, in the part they belong to", () => 
   const tree = P.pumpParseTree(g, P.rdpTokenise(g, "abcd")).tree;
   const pair = P.pumpPairs(tree)[0]; // the root S and the S below A: u, x and z are empty
   const tagged = P.pumpTag(tree, pair);
-  const sp = P.pumpSpine(P.pumpTree(tagged, pair, 1));
-  assert.equal(sp.bottom.text, "ε");
-  assert.equal(sp.bottom.part, "x");
-  const tree2 = P.pumpParseTree(P.rdpParseGrammar("S -> a S b | eps"), ["a", "b"]).tree;
-  const pair2 = P.pumpPairs(tree2)[0];
-  const sp2 = P.pumpSpine(P.pumpTree(P.pumpTag(tree2, pair2), pair2, 1));
-  assert.deepEqual(JSON.parse(JSON.stringify([sp2.segments[0].left.text, sp2.segments[0].left.part, sp2.bottom.text])), ["a", "v", "ε"]);
+  const f = P.pumpSplitFigure("S", "S", P.pumpDecompose(tree, pair), "", 1, pair.up.length === 0, { top: pair.up.length, mid: pair.low.length - pair.up.length });
+  assert.deepEqual(JSON.parse(JSON.stringify([f.parts.u.text, f.parts.x.text, f.parts.z.text, f.rootIsUp])), ["ε", "ε", "ε", true]);
 });
 
 test("pumpSplitFigure: the parts of the original string, ε for an empty one", () => {

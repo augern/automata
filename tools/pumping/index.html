@@ -8,7 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=3e2c71b3" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=9ccedda6" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=3f0a50c2" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -72,17 +72,13 @@
 
       /* ── The path figure (the Christmas-tree graph) ── */
       #canvas-ctg { flex: 1; position: relative; overflow: auto; display: flex; }
-      #ctg-host { margin: auto; padding: var(--sp-6) var(--sp-5); }
+      #ctg-host { margin: 0 auto; padding: var(--sp-6) var(--sp-5); }
       #view-group .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
-      .ctg-node.pp-up .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--hot-bg); }
-      .ctg-node.pp-low .ctg-tri { stroke: var(--pp-x); stroke-width: 2.4; fill: var(--st-active-bg); }
-      .ctg-node.pp-both .ctg-tri { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
       #base-group { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-serif); font-size: var(--fs-xs); cursor: pointer; }
       .ctg-tok.pp-u { fill: var(--pp-u); } .ctg-tok.pp-v, .ctg-tok.pp-y { fill: var(--pp-y); } .ctg-tok.pp-x { fill: var(--pp-x); } .ctg-tok.pp-z { fill: var(--pp-z); }
       .ctg-tok { font-weight: 600; }
       .ctg-snode.pp-up rect { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--hot-bg); }
       .ctg-snode.pp-low rect { stroke: var(--pp-x); stroke-width: 2.4; fill: var(--st-active-bg); }
-      .ctg-snode.pp-both rect { stroke: var(--pp-y); stroke-width: 2.4; fill: var(--st-active-bg); }
 
       #explain { padding: var(--sp-5); font-family: var(--font-serif); font-size: var(--fs-sm); line-height: 1.65; }
       #explain p { margin: 0 0 var(--sp-4); }
@@ -186,10 +182,10 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
-    <script src="../../shared/algo/ctg.js?v=3c51083e"></script>
-    <script src="../../shared/algo/pumping.js?v=b9085f2e"></script>
+    <script src="../../shared/algo/ctg.js?v=bd2828e6"></script>
+    <script src="../../shared/algo/pumping.js?v=5982ad8a"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
-    <script src="../../shared/ctg.js?v=de1f4ac5"></script>
+    <script src="../../shared/ctg.js?v=0076501f"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -335,8 +331,7 @@
         if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
-        if (ppBase === "split") drawCTGSplit("ctg-host", gen.split, { scale: 1.25, tile: true });
-        else drawCTGPath("ctg-host", gen.spine, { scale: 1.4 });
+drawCTGSplit("ctg-host", gen, { scale: 1.25, unify: ppBase === "joined" });
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
@@ -549,13 +544,12 @@
       // The path between the repeated nonterminals: a jagged spine with the strings hanging off it.
       function drawPath(tree) {
         $("ctg-host").innerHTML = "";
-        $("ctg-empty").hidden = !!tree;
-        if (!tree) { $("ctg-empty").textContent = ppG ? "Enter a string the grammar generates." : ""; return; }
-        const pair = ppCF && ppCF.pairs && ppCF.pairs[ppCF.pairIdx];
-        if (ppBase === "split" && pair) {
-          const fig = pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), +$("pump-i").value, pair.up.length === 0);
-          drawCTGSplit("ctg-host", fig, { scale: 1.4 });
-        } else drawCTGPath("ctg-host", pumpSpine(tree, ppSep()), { scale: 1.4 });
+        const pair = tree && ppCF && ppCF.pairs && ppCF.pairs[ppCF.pairIdx];
+        $("ctg-empty").hidden = !!pair;
+        if (!pair) { $("ctg-empty").textContent = !ppG ? "" : tree ? "No path of this tree repeats a nonterminal with something between the occurrences." : "Enter a string the grammar generates."; return; }
+        const hops = { top: pair.up.length, mid: pair.low.length - pair.up.length };
+        const fig = pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), +$("pump-i").value, pair.up.length === 0, hops);
+        drawCTGSplit("ctg-host", fig, { scale: 1.25, unify: ppBase === "joined" });
       }
 
       let treeView = null;

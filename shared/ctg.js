@@ -62,13 +62,12 @@ function drawCTG(host, tree, opts = {}) {
     if (opts.title) make("title", {}, g, opts.title(n, lay));
     if (n.point) {
       make("circle", { class: "ctg-point", cx: n.px, cy: base, r: 3.5 }, g);
-      if (!opts.spine) make("text", { class: "ctg-sym", x: n.px, y: base - n.h, "text-anchor": "middle" }, g, n.sym);
+      make("text", { class: "ctg-sym", x: n.px, y: base - n.h, "text-anchor": "middle" }, g, n.sym);
       continue;
     }
     make("polygon", { class: "ctg-tri", points: `${n.x0},${base} ${n.ax},${base - n.h} ${n.x1},${base}` }, g);
-    if (!opts.spine) make("text", { class: "ctg-sym", x: n.ax, y: base - n.h + 15, "text-anchor": "middle" }, g, n.sym);
+    make("text", { class: "ctg-sym", x: n.ax, y: base - n.h + 15, "text-anchor": "middle" }, g, n.sym);
   }
-  if (opts.spine) drawCTGSpineNodes(svg, lay, base, make);
 
   for (const m of marks) {
     const l = lay.leaves[m.leaf];
@@ -93,42 +92,7 @@ function drawCTG(host, tree, opts = {}) {
   return { svg, layout: lay };
 }
 
-// The nodes of a spine figure over nested triangles: a bubble at each apex, joined to its parent's by a straight or jagged line.
-function drawCTGSpineNodes(svg, lay, base, make) {
-  const nodeH = 22;
-  const at = (n) => (n.point ? { x: n.px, y: base - 30 } : { x: n.ax, y: base - n.h + 6 });
-  for (const n of lay.nodes) {
-    if (!n.parent) continue;
-    const a = at(n.parent), b = at(n);
-    const y0 = a.y + nodeH / 2, y1 = b.y - nodeH / 2;
-    let d = `M${a.x},${y0}`;
-    if (n.src.jag) {
-      const steps = Math.max(2, Math.round((y1 - y0) / 9));
-      for (let i = 1; i < steps; i++) d += ` L${a.x + (b.x - a.x) * (i / steps) + (i % 2 ? 5 : -5)},${y0 + ((y1 - y0) * i) / steps}`;
-    }
-    make("path", { class: "ctg-jag", d: d + ` L${b.x},${y1}` }, svg);
-  }
-  for (const n of lay.nodes) {
-    const p = at(n), w = Math.max(26, String(n.sym).length * 8 + 14);
-    const g = make("g", { class: "ctg-snode" + (n.cls ? " " + n.cls : "") }, svg);
-    make("rect", { x: p.x - w / 2, y: p.y - nodeH / 2, width: w, height: nodeH, rx: nodeH / 2 }, g);
-    make("text", { x: p.x, y: p.y + 4, "text-anchor": "middle" }, g, n.sym);
-  }
-}
-
-// The spine figure over nested triangles on one base line, the string reading along it. spec as for ctgSpineTree.
-function drawCTGPath(host, spec, opts = {}) {
-  const { tree, parts, anchor } = ctgSpineTree(spec);
-  const spans = parts.map((p, k) => ({ from: k, to: k, label: p.label })).filter((s, k) => s.label && s.label !== ctgLeafText(tree, k));
-  return drawCTG(host, tree, { padStep: 0, minGap: 6, baseH: 46, stepH: 56, slope: 0.9, anchor, spine: true, spans, scale: opts.scale, title: opts.title });
-}
-function ctgLeafText(tree, k) {
-  const out = [];
-  (function walk(n) { for (const x of n.kids) { if (x.text !== undefined) out.push(x.text); else if (typeof x !== "string") walk(x); } })(tree);
-  return out[k];
-}
-
-// The split figure of algo/ctg.js (ctgSplitLayout): the frame for one copy of the middle part, further copies poking down.
+// The pumping figure of algo/ctg.js (ctgSplitLayout), drawn into an <svg> in the host. Options: unify, scale.
 function drawCTGSplit(host, fig, opts = {}) {
   const lay = ctgSplitLayout(fig, opts);
   const hostEl = typeof host === "string" ? document.getElementById(host) : host;
@@ -142,28 +106,32 @@ function drawCTGSplit(host, fig, opts = {}) {
   const sc = opts.scale || 1;
   hostEl.innerHTML = "";
   const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
+  svg.style.maxWidth = "none"; // a wide figure scrolls; shrinking it would move the apexes between the modes
   for (const t of lay.tris) {
     if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
-    // no outline: the shape is its tint, the base lines are what stands under the tokens
-    const g = make("g", { class: "ctg-node" + (t.cls ? " " + t.cls : "") }, svg);
-    const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
+    // no outline: the shape is its tint
+    const fill = make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, svg);
     const colour = t.cls === "pp-up" ? "var(--hot)" : t.cls === "pp-low" ? "var(--accent)" : null;
     if (colour) fill.style.fill = ctgTone(colour, t.tone, 0);
-    for (const b of t.base) {
-      const line = make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
-      if (colour) line.style.stroke = ctgTone(colour, t.tone, 1);
-    }
   }
+  for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
   for (const t of lay.tokens) {
-    make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 16, "text-anchor": "middle" }, svg, t.text);
-    if (t.label && t.label !== t.text) make("text", { class: "ctg-part", x: t.x + t.w / 2, y: t.y + 31, "text-anchor": "middle" }, svg, t.label);
+    make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg, t.text);
+    if (t.label) { // a staple under the token, with the name of the part
+      const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;
+      make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
+      if (t.label !== t.text) make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);
+    }
   }
   const nodeH = 22;
   for (const j of lay.jags) {
     const a = lay.nodes[j.from], b = lay.nodes[j.to];
-    const y0 = a.y + nodeH / 2, y1 = b.y - nodeH / 2, steps = Math.max(2, Math.round((y1 - y0) / 9));
+    const y0 = a.y + nodeH / 2, y1 = b.y - nodeH / 2;
     let d = `M${a.x},${y0}`;
-    for (let i = 1; i < steps; i++) d += ` L${a.x + (i % 2 ? 5 : -5)},${y0 + ((y1 - y0) * i) / steps}`;
+    if (j.jag) {
+      const steps = Math.max(2, Math.round((y1 - y0) / 9));
+      for (let i = 1; i < steps; i++) d += ` L${a.x + (i % 2 ? 5 : -5)},${y0 + ((y1 - y0) * i) / steps}`;
+    }
     make("path", { class: "ctg-jag", d: d + ` L${b.x},${y1}` }, svg);
   }
   for (const n of lay.nodes) {

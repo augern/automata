@@ -62,68 +62,71 @@ test("an empty node over empty children is a triangle over their points", () => 
   assert.equal(A.ctgFirstLeaf(lay, "B"), 1);
 });
 
-test("ctgSpineTree: the spine as nested nodes, the string in order, the anchor the lowest node", () => {
-  const part = (p) => ({ text: p, part: p, cls: "pp-" + p });
-  const spec = { nodes: [{ sym: "S" }, { sym: "A" }, { sym: "A" }], segments: [{ left: part("u"), right: part("z"), jag: true }, { left: part("v"), right: part("y"), jag: false }], bottom: part("x") };
-  const t = A.ctgSpineTree(spec);
-  assert.deepEqual(js(t.parts.map((p) => p.part)), ["u", "v", "x", "y", "z"]);
-  assert.equal(t.anchor, "s2");
-  const lay = A.ctgLayout(t.tree, { padStep: 0, minGap: 10, anchor: t.anchor });
-  assert.deepEqual(js(lay.leaves.map((l) => l.text)), ["u", "v", "x", "y", "z"]);
-  const cx = (n) => n.ax;
-  assert.ok(Math.abs(cx(lay.byId.s0) - cx(lay.byId.s2)) < 1e-6 && Math.abs(cx(lay.byId.s1) - cx(lay.byId.s2)) < 1e-6, "the apexes lie on one vertical line");
-  assert.equal(lay.byId.s1.src.jag, true); // reached from S over the first, abstract stretch
-  assert.equal(lay.byId.s2.src.jag, false);
-});
-
-test("split layout: the frame for i = 1, copies poke down one step each, no copy blanks out the first copy and raises the lowest triangle", () => {
+const figure = (i, extra = {}) => {
   const part = (p, text) => ({ text: text || p, label: p, cls: "pp-" + p });
-  const fig = (i) => ({ root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
-  const one = A.ctgSplitLayout(fig(1)), two = A.ctgSplitLayout(fig(2)), none = A.ctgSplitLayout(fig(0)), three = A.ctgSplitLayout(fig(3));
-  const lv = (lay, p) => lay.tokens.filter((t) => t.part === p).map((t) => t.y);
-  const L0 = one.tokens[0].y;
-  assert.equal(new Set(one.tokens.map((t) => t.y)).size, 1, "i = 1: one base line");
-  assert.equal(one.tris[0].base.length, 1, "i = 1: the root triangle has a whole base");
-  assert.equal(one.width, two.width, "the frame keeps its width");
-  assert.equal(one.tris[0].y, two.tris[0].y, "the root triangle is the same");
-  assert.deepEqual(js(lv(two, "v")), [L0, L0 + 60]);
-  assert.equal(lv(two, "x")[0], L0 + 60, "x moves down with the last copy");
-  assert.equal(Math.max(...lv(three, "x")), L0 + 120);
-  assert.equal(two.tris[0].base.length, 2, "the base line is split where the copies poke down");
-  // no copy: no v and y at all, the lowest triangle one step higher as in the frame, the root triangle an inverted V
-  assert.deepEqual(js(none.tokens.map((t) => t.part).sort()), ["u", "x", "z"]);
-  assert.deepEqual(js(lv(none, "x")), [L0 - 60]);
-  assert.equal(none.tris[0].x0, one.tris[0].x0, "the root triangle is the same");
-  assert.equal(none.tris[0].x1, one.tris[0].x1);
-  assert.equal(none.tris[0].base.length, 2, "u and z keep their feet");
-  const blank = none.tris.find((t) => t.blank);
-  assert.equal(blank.ay, one.tris[1].ay, "the blank triangle is where the first copy is in the frame");
-  assert.equal(none.tris[none.tris.length - 1].base.length, 1, "the lowest triangle has its own base");
-  assert.equal(none.nodes.length, 2, "the root and the lowest node");
-});
+  return { root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") }, ...extra };
+};
 
-test("split layout: each copy of the middle part is one tone further, the root has no tone", () => {
-  const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
-  const lay = A.ctgSplitLayout({ root: "S", up: "A", rootIsUp: false, i: 3, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
-  assert.deepEqual(js(lay.tris.filter((t) => t.cls === "pp-up").map((t) => t.tone)), [0, 1, 2]);
-  assert.equal(lay.tris[0].tone, undefined);
-});
-
-test("split layout, tiled: all triangles have one apex angle and the parts by u and z are strips of constant width", () => {
-  const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
-  const fig = (i) => ({ root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
-  for (const i of [0, 1, 2, 3]) {
-    const lay = A.ctgSplitLayout(fig(i), { tile: true });
+test("split layout: all triangles have one apex angle and the strips beside the legs have constant width", () => {
+  for (const i of [0, 1, 2, 3]) for (const unify of [false, true]) {
+    const lay = A.ctgSplitLayout(figure(i), { unify });
     const tris = lay.tris.filter((t) => !t.blank);
     const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
     for (const t of tris) assert.ok(Math.abs(slope(t) - slope(tris[0])) < 1e-9, `i = ${i}: the same angle`);
   }
-  const lay = A.ctgSplitLayout(fig(1), { tile: true });
-  const [s, a, low] = lay.tris;
-  assert.ok(Math.abs((a.x0 - s.x0) - (s.x1 - a.x1)) < 1e-9, "the strips by u and z are equally wide");
-  assert.ok(Math.abs((low.x0 - a.x0) - (a.x1 - low.x1)) < 1e-9);
-  // the strip is the horizontal distance between parallel legs that start one step apart
+  const [s, a, low] = A.ctgSplitLayout(figure(1)).tris;
   const t = (s.x1 - s.x0) / 2 / (s.y - s.ay);
-  assert.ok(Math.abs((a.x0 - s.x0) - (a.ay - s.ay) * t) < 1e-9, "u: the width of the strip is what the legs' offset gives");
+  assert.ok(Math.abs((a.x0 - s.x0) - (a.ay - s.ay) * t) < 1e-9, "u: the width of the strip is what the offset of the legs gives");
   assert.ok(Math.abs((low.x0 - a.x0) - (low.ay - a.ay) * t) < 1e-9, "v: the same one level down");
+  assert.ok(Math.abs((a.x0 - s.x0) - (s.x1 - a.x1)) < 1e-9, "u and z equally wide");
+});
+
+test("split layout: the frame for i = 1, copies poke down one step each, no copy blanks out the first copy", () => {
+  const one = A.ctgSplitLayout(figure(1)), two = A.ctgSplitLayout(figure(2)), none = A.ctgSplitLayout(figure(0)), three = A.ctgSplitLayout(figure(3));
+  const lv = (lay, p) => lay.tokens.filter((t) => t.part === p).map((t) => t.y);
+  const L0 = one.tokens[0].y, step = two.tris[2].ay - two.tris[1].ay;
+  assert.equal(new Set(one.tokens.map((t) => t.y)).size, 1, "i = 1: one base line");
+  assert.equal(one.base.length, 1);
+  assert.equal(one.tris[0].x0 - one.cx, two.tris[0].x0 - two.cx, "the frame keeps its shape");
+  assert.equal(one.tris[0].y, two.tris[0].y, "the root triangle is the same");
+  assert.deepEqual(js(lv(two, "v")), [L0, L0 + step]);
+  assert.equal(lv(two, "x")[0], L0 + step, "x moves down with the last copy");
+  assert.equal(Math.max(...lv(three, "x")), L0 + 2 * step);
+  assert.ok(two.base.length > one.base.length, "the base line is split where the copies poke down");
+  assert.deepEqual(js(none.tokens.map((t) => t.part).sort()), ["u", "x", "z"]);
+  assert.equal(lv(none, "x")[0], L0 - step, "x is raised to where the first copy hangs");
+  assert.equal(none.tris[0].x0, one.tris[0].x0, "the root triangle is the same");
+  assert.equal(none.tris.find((t) => t.blank).ay, one.tris[1].ay, "the blank triangle is where the first copy is in the frame");
+  assert.equal(none.nodes.length, 2, "the root and the lowest node");
+});
+
+test("split layout, unified: the same apexes, the legs extended to one base line, the string on it in order", () => {
+  for (const i of [0, 1, 2, 3]) {
+    const split = A.ctgSplitLayout(figure(i)), uni = A.ctgSplitLayout(figure(i), { unify: true });
+    assert.deepEqual(js(uni.nodes.map((n) => [n.sym, n.y, n.cls])), js(split.nodes.map((n) => [n.sym, n.y, n.cls])), `i = ${i}: the nodes keep their heights`);
+    const real = (lay) => lay.tris.filter((t) => !t.blank);
+    real(split).forEach((t, k) => assert.equal(real(uni)[k].ay, t.ay));
+    assert.equal(uni.base.length, 1);
+    assert.equal(new Set(uni.tokens.map((t) => t.y)).size, 1, "one base line");
+    assert.equal(uni.height, split.height, "the same height");
+    assert.equal(uni.width, split.width, "the same width, so that the apexes stay where they are");
+    assert.equal(uni.cx, split.cx);
+  }
+  const uni = A.ctgSplitLayout(figure(2), { unify: true });
+  assert.equal(uni.tokens.map((t) => t.part).join(""), "uvvxyyz", "the string, left to right");
+  for (let k = 1; k < uni.tokens.length; k++) assert.ok(uni.tokens[k].x >= uni.tokens[k - 1].x + uni.tokens[k - 1].w - 1e-6, "no overlap");
+  // i = 1 is the frame in both modes: the same tokens in the same places
+  const f1 = A.ctgSplitLayout(figure(1)), u1 = A.ctgSplitLayout(figure(1), { unify: true });
+  const key = (lay) => lay.tokens.map((t) => [t.part, Math.round(t.x), t.y].join(":")).sort().join(" ");
+  assert.equal(key(u1), key(f1));
+});
+
+test("split layout: a connection is jagged only where it hides steps", () => {
+  const jag = (hops, i = 2) => A.ctgSplitLayout(figure(i, { hops })).jags.map((j) => j.jag);
+  assert.deepEqual(js(jag({ top: 1, mid: 1 })), [false, false, false]);
+  assert.deepEqual(js(jag({ top: 3, mid: 1 })), [true, false, false]);
+  assert.deepEqual(js(jag({ top: 1, mid: 2 })), [false, true, true]);
+  assert.deepEqual(js(jag({ top: 1, mid: 1 }, 0)), [true], "no copy: the root reaches the lowest node over both steps");
+  assert.deepEqual(js(A.ctgSplitLayout(figure(1)).jags.map((j) => j.jag)), [true, true], "the general case hides steps everywhere");
+  assert.deepEqual(js(jag({ top: 1, mid: 1 }, 1)), [false, false]);
 });
