@@ -1,12 +1,14 @@
 // Pure: a small subset of LaTeX math to MathML, for the formulas of the Definitions pop-ups. No DOM access.
 //   texToMathML(src) -> '<math>…</math>'
-// Supported: \overset{above}{base}, letters (italic) and digits, { } groups, ^ and _, \mathrm{…}, \text{…}, \bigcup with limits, \{ \} \$, the spaces
+// Supported: \overset{above}{base}, \mathcal{…}, letters (italic) and digits, { } groups, ^ and _, \mathrm{…}, \text{…}, \bigcup with limits, \{ \} \$, the spaces
 // \, \; \quad \qquad and the symbol names of TEX_SYMBOLS. Anything else is an error: a formula must not render wrongly.
 const TEX_SYMBOLS = {
   alpha: ["i", "α"], beta: ["i", "β"], gamma: ["i", "γ"], delta: ["i", "δ"], eta: ["i", "η"], varepsilon: ["i", "ε"], Sigma: ["i", "Σ"],
   in: ["o", "∈"], subseteq: ["o", "⊆"], Rightarrow: ["o", "⇒"], Longrightarrow: ["o", "⟹"], to: ["o", "→"], cup: ["o", "∪"],
   setminus: ["o", "∖"], times: ["o", "×"], mid: ["o", "|"], ne: ["o", "≠"], ast: ["o", "∗"], ldots: ["o", "…"], bigcup: ["l", "⋃"],
-  emptyset: ["i", "∅"],
+  emptyset: ["i", "∅"], Gamma: ["i", "Γ"], Delta: ["i", "Δ"], lambda: ["i", "λ"], sigma: ["i", "σ"],
+  vdash: ["o", "⊢"], notin: ["o", "∉"], cap: ["o", "∩"], cdot: ["o", "·"], forall: ["o", "∀"], exists: ["o", "∃"], le: ["o", "≤"], ge: ["o", "≥"],
+  Leftrightarrow: ["o", "⇔"], sqcup: ["i", "⊔"], langle: ["o", "⟨"], rangle: ["o", "⟩"], cdots: ["o", "⋯"], colon: ["o", ":"], equiv: ["o", "≡"], Lambda: ["i", "Λ"],
 };
 const TEX_SPACE = { ",": "0.17em", ";": "0.28em", quad: "1em", qquad: "2em" };
 
@@ -31,6 +33,7 @@ function texToMathML(src) {
     if (name === "text") return { ml: `<mtext>${nbsp(esc(word()))}</mtext>` };
     if (name in TEX_SPACE) return { ml: `<mspace width="${TEX_SPACE[name]}"/>` };
     // accent="true": the mark sits close to the base in every engine; the gap of a plain over-script differs between them
+    if (name === "mathcal") return { ml: `<mi mathvariant="script">${esc(word())}</mi>` };
     if (name === "overset") { const over = atom().ml, base = atom().ml; return { ml: `<mover accent="true">${base}${over}</mover>` }; }
     if (name === "{" || name === "}") return { ml: `<mo>${name}</mo>` };
     if (name === "$") return { ml: `<mi mathvariant="normal">$</mi>` };

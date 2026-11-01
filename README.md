@@ -94,7 +94,8 @@ parser-tools/
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
 │   ├── view-menu.js                    ← the top bar's Index button and View menu (share, theme, layout presets)
 │   ├── quick-link.js, qr-modal.js      ← the QR button: tool, example and panel set as a full-screen QR code (#q=…)
-│   ├── definitions.js                  ← the top bar's Definitions button and pop-up: formal definitions with their sources (mechanism; text in tools/<tool>/definitions.js, so far FIRST & FOLLOW; general theory only, what is specific to the tool is in the Guide)
+│   ├── definitions.js                  ← the top bar's Definitions button and pop-up: formal definitions with their sources (the mechanism; each tool names the items it shows in tools/<tool>/definitions.js)
+│   ├── def-library.js                  ← the definitions and the sources they cite, each stated once; formulas are LaTeX, rendered to MathML by algo/tex.js
 │   ├── guide.js                        ← the top bar's Guide button and pop-up (the mechanism; each tool supplies its text in tools/<tool>/guide.js)
 │   ├── stepper.js                      ← Back/Step/Reset/Run-all control for recorded simulations
 │   ├── shared.css                      ← common visual language — edit to retheme all tools
@@ -116,7 +117,7 @@ D3 and Dagre are bundled in `vendor/`; there are no CDN dependencies at runtime.
 
 > **Adding or editing examples**: each tool's examples live in its own
 > `tools/<tool>/examples.json`. No HTML changes are needed — just edit the JSON.
-> The text of a tool's Guide pop-up is `tools/<tool>/guide.js`.
+> The text of a tool's Guide pop-up is `tools/<tool>/guide.js`; the Definitions pop-up lists keys of `shared/def-library.js` in `tools/<tool>/definitions.js`.
 
 ### Example JSON format
 

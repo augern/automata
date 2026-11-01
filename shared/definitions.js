@@ -1,26 +1,28 @@
 // The "Definitions" button in the top bar and its pop-up: the formal definitions the tool rests on, each with its source.
 // Like the Guide it is on demand and belongs to the tool, not to a panel. A tool supplies its text in
-// tools/<tool>/definitions.js (window.TOOL_DEFINITIONS); this file is only the mechanism.
-// Needs algo/tex.js, shared.css (the .algo-* modal styles) and ui.css (.guide-body, .def-*).
+// tools/<tool>/definitions.js (window.TOOL_DEFINITIONS): sections of items, each the key of an item of def-library.js or an item of
+// its own; this file is only the mechanism.
+// Needs algo/tex.js, def-library.js, shared.css (the .algo-* modal styles) and ui.css (.guide-body, .def-*).
 (function () {
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const fmt = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>");
 
   // a source is "key" or "key §section"; the numbers follow the order in which the sources are first cited
   function html(d) {
-    const order = [];
+    const lib = window.DEF_LIBRARY, order = [];
     const cite = (r) => {
       const key = r.split(" ")[0];
       if (!order.includes(key)) order.push(key);
-      return "<span class=\"def-src\" title=\"" + esc(d.refs[key]) + "\">[" + (order.indexOf(key) + 1) + "]" + esc(r.slice(key.length)) + "</span>";
+      return "<span class=\"def-src\" title=\"" + esc(lib.sources[key]) + "\">[" + (order.indexOf(key) + 1) + "]" + esc(r.slice(key.length)) + "</span>";
     };
-    const item = (it) =>
+    const item = (it) => (typeof it === "string" ? lib.items[it] : it);
+    const card = (it) =>
       "<div class=\"def-item\"><div class=\"def-term\">" + esc(it.term) + "</div>" +
-      "<div class=\"def-formal\">" + it.formal.map((l) => "<div class=\"def-line\">" + texToMathML(l) + "</div>").join("") + "</div>" +
+      (it.formal.length ? "<div class=\"def-formal\">" + it.formal.map((l) => "<div class=\"def-line\">" + texToMathML(l) + "</div>").join("") + "</div>" : "") +
       (it.text ? "<p class=\"def-text\">" + fmt(it.text) + "</p>" : "") +
       "<div class=\"def-from\">" + (it.refs.length ? it.refs.map(cite).join(" ") : "this tool") + "</div></div>";
-    const body = d.sections.map((s) => "<h3 class=\"guide-h\">" + esc(s.title) + "</h3>" + s.items.map(item).join("")).join("");
-    return body + "<h3 class=\"guide-h\">Sources</h3><ol class=\"def-refs\">" + order.map((k) => "<li>" + esc(d.refs[k]) + "</li>").join("") + "</ol>";
+    const body = d.sections.map((s) => "<h3 class=\"guide-h\">" + esc(s.title) + "</h3>" + s.items.map((k) => card(item(k))).join("")).join("");
+    return body + "<h3 class=\"guide-h\">Sources</h3><ol class=\"def-refs\">" + order.map((k) => "<li>" + esc(lib.sources[k]) + "</li>").join("") + "</ol>";
   }
 
   let overlay = null;

@@ -3,20 +3,33 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-// Each tool with a Definitions pop-up: every source it cites is listed, and every listed source is cited.
-for (const dir of fs.readdirSync(path.join(__dirname, "../tools"))) {
-  const file = path.join(__dirname, "../tools", dir, "definitions.js");
-  if (!fs.existsSync(file)) continue;
-  test(`tools/${dir}/definitions.js: sources`, () => {
-    const window = {};
-    new Function("window", fs.readFileSync(file, "utf8"))(window);
-    const d = window.TOOL_DEFINITIONS;
-    const cited = new Set(d.sections.flatMap((s) => s.items.flatMap((i) => i.refs.map((r) => r.split(" ")[0]))));
-    for (const k of cited) assert.ok(d.refs[k], `${k}: cited but not listed`);
-    for (const k of Object.keys(d.refs)) assert.ok(cited.has(k), `${k}: listed but not cited`);
-    for (const s of d.sections) for (const i of s.items) assert.ok(i.term && i.formal.length, i.term);
-  });
-}
+const run = (file) => {
+  const window = {};
+  new Function("window", fs.readFileSync(file, "utf8"))(window);
+  return window;
+};
+const lib = run(path.join(__dirname, "../shared/def-library.js")).DEF_LIBRARY;
+const toolFiles = fs.readdirSync(path.join(__dirname, "../tools")).map((d) => path.join(__dirname, "../tools", d, "definitions.js")).filter((f) => fs.existsSync(f));
+
+test("the definitions library: every source an item cites is listed, every listed source is cited", () => {
+  const cited = new Set();
+  for (const [k, it] of Object.entries(lib.items)) {
+    assert.ok(it.term && Array.isArray(it.formal) && Array.isArray(it.refs) && it.refs.length, k);
+    for (const r of it.refs) { cited.add(r.split(" ")[0]); assert.ok(lib.sources[r.split(" ")[0]], `${k}: ${r}`); }
+  }
+  for (const k of Object.keys(lib.sources)) assert.ok(cited.has(k), `${k}: listed but not cited`);
+});
+
+test("every tool's Definitions pop-up names items of the library, and each of its tools is used", () => {
+  const used = new Set();
+  for (const f of toolFiles) {
+    const d = run(f).TOOL_DEFINITIONS;
+    for (const s of d.sections) for (const it of s.items) {
+      if (typeof it === "string") { assert.ok(lib.items[it], `${f}: ${it}`); used.add(it); }
+    }
+  }
+  for (const k of Object.keys(lib.items)) assert.ok(used.has(k), `${k}: in no tool's pop-up`);
+});
 
 const { load } = require("./load");
 const T = load("tex.js");
@@ -30,12 +43,6 @@ test("tex: the subset renders as MathML, anything else is an error", () => {
   assert.throws(() => T.texToMathML("{a"), /missing/);
 });
 
-test("every formula of a Definitions pop-up renders", () => {
-  for (const dir of fs.readdirSync(path.join(__dirname, "../tools"))) {
-    const file = path.join(__dirname, "../tools", dir, "definitions.js");
-    if (!fs.existsSync(file)) continue;
-    const window = {};
-    new Function("window", fs.readFileSync(file, "utf8"))(window);
-    for (const s of window.TOOL_DEFINITIONS.sections) for (const i of s.items) for (const f of i.formal) T.texToMathML(f);
-  }
+test("every formula of the definitions library renders", () => {
+  for (const it of Object.values(lib.items)) for (const f of it.formal) T.texToMathML(f);
 });
