@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="FIRST and FOLLOW sets of a context-free grammar, built by fixpoint iteration: nullable symbols, then FIRST, then FOLLOW, one rule at a time." />
+    <title>FIRST &amp; FOLLOW | Parser Tools</title>
+    <link rel="stylesheet" href="../../shared/shared.css?v=3e2c71b3" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=b0845852" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <style>
+      /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
+      #p-run { --pw: 560; --pmin: 280px; }
+      #p-sets { --pw: 440; --pmin: 260px; }
+
+      .ff-body { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+      #ff-controls {
+        display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+        padding: var(--sp-2) var(--sp-5); border-bottom: 1px solid var(--border); background: var(--bg-panel);
+      }
+      #ff-phases { display: flex; gap: 0; }
+      #ff-phases .btn { border-radius: 0; margin-left: -1px; }
+      #ff-phases .btn:first-child { border-radius: var(--r-sm, 3px) 0 0 var(--r-sm, 3px); margin-left: 0; }
+      #ff-phases .btn:last-child { border-radius: 0 var(--r-sm, 3px) var(--r-sm, 3px) 0; }
+      #ff-phases .btn.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); position: relative; }
+
+      /* The rule being applied: its right-hand side as cells read from the left */
+      #ff-now { flex-shrink: 0; padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--border); background: var(--bg); min-height: 92px; }
+      #ff-now .ff-why { font-size: var(--fs-xs); color: var(--text-dim); margin-bottom: var(--sp-3); }
+      #ff-now .ff-line { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-sm); }
+      #ff-now .ff-lhs { padding-top: 2px; color: var(--text); font-weight: 600; }
+      #ff-now .ff-arrow { padding-top: 2px; color: var(--text-lo); }
+      #ff-now .ff-result { margin-top: var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-dim); }
+      .ff-cell {
+        display: inline-flex; flex-direction: column; align-items: center; min-width: 30px;
+        padding: 2px var(--sp-3); border: 1.5px solid var(--border-hi); border-radius: var(--r-sm, 3px);
+        font-family: var(--font-mono); background: var(--bg-cell);
+      }
+      .ff-cell b { font-weight: 600; color: var(--text); }
+      .ff-cell i { font-style: normal; font-size: var(--fs-2xs); color: var(--text-dim); min-height: 1.3em; }
+      .ff-cell.ff-pass { border-style: dashed; border-color: var(--green); background: transparent; }
+      .ff-cell.ff-stop { border-color: var(--accent); background: var(--accent-bg); }
+      .ff-cell.ff-unread { opacity: 0.4; }
+      .ff-cell.ff-target { border-color: var(--amber); background: var(--amber-bg); }
+      .ff-cell.ff-plain { border-color: transparent; background: transparent; }
+      .ff-end { align-self: center; color: var(--green); font-size: var(--fs-xs); }
+      .ff-add { color: var(--accent); font-weight: 600; }
+
+      #ff-log { flex: 1; overflow-y: auto; padding: var(--sp-3) var(--sp-5); background: var(--bg); }
+      .ff-round {
+        margin-top: var(--sp-4); padding-bottom: var(--sp-1); border-bottom: 1px solid var(--border-lo);
+        font-size: var(--fs-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-lo);
+        font-family: var(--font-mono);
+      }
+      .ff-round:first-child { margin-top: 0; }
+      .ff-round .ff-done { color: var(--green); text-transform: none; letter-spacing: 0; font-weight: normal; }
+      .ff-row {
+        display: flex; gap: var(--sp-5); align-items: baseline; padding: var(--sp-1) 0; cursor: pointer;
+        font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-dim);
+        border-bottom: 1px solid var(--border-lo);
+      }
+      .ff-row .ff-rule { flex: 1; }
+      .ff-row .ff-new { color: var(--accent); }
+      .ff-row .ff-nothing { color: var(--text-lo); }
+      .ff-row.is-current { color: var(--text); background: var(--accent-bg); }
+      .ff-row .ff-occ { color: var(--amber); font-weight: 600; }
+
+      /* Sets */
+      #ff-sets { padding: var(--sp-4) var(--sp-5); overflow-y: auto; }
+      #ff-sets td.ff-set { text-align: left; padding-left: var(--sp-3); color: var(--text); }
+      #ff-sets td.ff-nul { color: var(--green); font-weight: bold; }
+      #ff-sets td.ff-follow { color: var(--green); }
+      #ff-sets .ff-m.is-new { color: var(--accent); font-weight: bold; outline: 1px solid var(--accent); border-radius: 2px; }
+      #ff-sets .ff-eps { color: var(--text-lo); }
+      #ff-sets tr.is-target td.state-cell { background: var(--accent-bg); color: var(--accent); }
+      #ff-seq { margin-top: var(--sp-5); }
+      #ff-seq-out { margin-top: var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-sm); }
+      #ff-seq-out .ff-line { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1>FIRST &amp; FOLLOW Tool</h1>
+    </div>
+
+    <div id="panels">
+      <!-- 1. Grammar -->
+      <div class="panel" id="p-grammar" data-priority="2" data-collapse="left">
+        <div class="panel-header">
+          <span class="panel-title">Grammar</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-grammar')">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div id="examples-bar">
+            <select id="examples-select" onchange="loadExample(this.value)">
+              <option value="">Example Grammar</option>
+            </select>
+          </div>
+          <textarea id="grammar-input" spellcheck="false" placeholder="E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id"></textarea>
+          <div id="grammar-footer">
+            <div id="error-msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <!-- 2. Construction -->
+      <div class="panel" id="p-run" data-priority="3" data-collapse="left">
+        <div class="panel-header">
+          <span class="panel-title">Construction</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run')">&#8249;</button>
+        </div>
+        <div class="panel-body ff-body">
+          <div id="ff-controls">
+            <div class="step-group">
+              <button class="btn icon-restart" id="btn-reset" title="Restart"></button>
+              <button class="btn" id="btn-back">&#8249; Back</button>
+              <button class="btn primary" id="btn-step" title="Apply the next rule">Step &#8250;</button>
+              <button class="btn" id="btn-round" title="Apply the rest of this round">Round &#8250;&#8250;</button>
+              <button class="btn icon-run-all" id="btn-all" title="Run to the fixpoint"></button>
+            </div>
+            <div id="ff-phases">
+              <button class="btn" data-phase="nullable" title="Jump to the end of the nullable phase">Nullable</button>
+              <button class="btn" data-phase="first" title="Jump to the end of the FIRST phase">FIRST</button>
+              <button class="btn" data-phase="follow" title="Jump to the end of the FOLLOW phase">FOLLOW</button>
+            </div>
+          </div>
+          <div id="ff-now"></div>
+          <div id="ff-log"></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <!-- 3. Sets -->
+      <div class="panel" id="p-sets" data-priority="1">
+        <div class="panel-header">
+          <span class="panel-title">Sets</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sets')">&#8250;</button>
+        </div>
+        <div class="panel-body" style="padding: 0">
+          <div id="ff-sets"></div>
+        </div>
+      </div>
+    </div>
+    <!-- #panels -->
+
+    <script src="../../shared/algo/grammar.js?v=14930600"></script>
+    <script src="../../shared/algo/panels.js?v=92261e45"></script>
+    <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
+    <script src="../../shared/algo/firstfollow.js?v=36abb92e"></script>
+    <script src="../../shared/shared.js?v=42ed2a33"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
+    <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
+    <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
+    <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
+    <script src="../../shared/quick-link.js?v=fca552e1"></script>
+    <script src="../../shared/view-menu.js?v=eada4185"></script>
+    <script src="guide.js?v=d954a139"></script>
+    <script src="../../shared/guide.js?v=98cfe80c"></script>
+    <script>
+      initResize("rh-1", "p-grammar", +1);
+      initResize("rh-2", "p-run", +1);
+
+      const EXAMPLES = {};
+      const PHASE_NAME = { nullable: "Nullable", first: "FIRST", follow: "FOLLOW" };
+      const SET_NAME = { first: "FIRST", follow: "FOLLOW" };
+
+      let grammar = null;
+      let rec = null; // ffRecord of the grammar
+      const el = (id) => document.getElementById(id);
+      const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
+
+      function setError(msg) {
+        el("error-msg").textContent = msg || "";
+        el("error-msg").classList.remove("is-note");
+      }
+
+      function build() {
+        setError("");
+        try {
+          grammar = parseBNF(el("grammar-input").value.trim(), false);
+        } catch (e) {
+          setError(e.message);
+          return;
+        }
+        showGrammarNotes(grammar);
+        saveShare();
+        rec = ffRecord(grammar);
+        sim.pos = -1;
+        render();
+        sim.refresh();
+      }
+
+      // ── The rule being applied ───────────────────────────────────────────
+      const CELL = {
+        pass: { cls: "ff-pass", title: "can derive ε: the scan goes on" },
+        stop: { cls: "ff-stop", title: "cannot derive ε: the scan stops here" },
+        unread: { cls: "ff-unread", title: "not read" },
+      };
+      function cellHtml(c, phase) {
+        const toks = phase === "nullable" || c.state === "unread" ? "" : setOf(c.toks);
+        return '<span class="ff-cell ' + CELL[c.state].cls + '" title="' + CELL[c.state].title + '"><b>' + esc(c.sym) + "</b><i>" + toks + "</i></span>";
+      }
+
+      function renderNow(ev) {
+        const box = el("ff-now");
+        if (!ev) {
+          box.innerHTML = '<div class="ff-why">' + (rec ? "Step applies the first rule of the nullable phase." : "") + "</div>";
+          return;
+        }
+        let html = '<div class="ff-why">' + PHASE_NAME[ev.phase] + (ev.round ? ", round " + ev.round : ", start") + ": " + esc(ffExplain(grammar, ev)) + "</div>";
+        if (ev.rule >= 0) {
+          const r = grammar.rules[ev.rule];
+          let line = '<span class="ff-lhs">' + esc(r.lhs) + '</span><span class="ff-arrow">→</span>';
+          if (!r.rhs.length) line += '<span class="ff-cell ff-plain"><b>' + EPSILON + "</b></span>";
+          else if (ev.phase === "follow") {
+            line += r.rhs.slice(0, ev.pos).map((s) => '<span class="ff-cell ff-plain"><b>' + esc(s) + "</b></span>").join("");
+            line += '<span class="ff-cell ff-target" title="' + esc("receives the tokens") + '"><b>' + esc(r.rhs[ev.pos]) + "</b><i>FOLLOW</i></span>";
+            line += ev.cells.map((c) => cellHtml(c, ev.phase)).join("");
+          } else line += ev.cells.map((c) => cellHtml(c, ev.phase)).join("");
+          if (ev.end) line += '<span class="ff-end" title="Every symbol read can derive ε">' + (ev.phase === "follow" ? "▸ end: FOLLOW(" + esc(r.lhs) + ") flows in" : "▸ end") + "</span>";
+          html += '<div class="ff-line" data-prod="' + (ev.rule + 1) + '">' + line + "</div>";
+        }
+        let res;
+        if (ev.phase === "nullable") res = ev.added.length ? '<span class="ff-add">' + esc(ev.target) + "</span> is nullable" : ev.end ? "already nullable" : "nothing new";
+        else res = ev.added.length ? '<span class="ff-add">+ ' + setOf(ev.added) + "</span> in " + SET_NAME[ev.phase] + "(" + esc(ev.target) + ")" : "nothing new";
+        html += '<div class="ff-result">' + res + "</div>";
+        box.innerHTML = html;
+      }
+
+      // ── The log, round by round ──────────────────────────────────────────
+      function ruleText(ev) {
+        const r = grammar.rules[ev.rule];
+        if (ev.rule < 0) return "start symbol " + esc(grammar.start);
+        const syms = r.rhs.map((s, i) => (ev.phase === "follow" && i === ev.pos ? '<span class="ff-occ">' + esc(s) + "</span>" : esc(s)));
+        return esc(r.lhs) + " → " + (syms.join(" ") || EPSILON);
+      }
+      function renderLog(pos) {
+        const log = el("ff-log");
+        if (!rec.events.length) { log.innerHTML = ""; return; }
+        let html = "";
+        for (const rd of rec.rounds) {
+          if (rd.from > pos) continue;
+          const finished = rd.to - 1 <= pos;
+          html += '<div class="ff-round">' + PHASE_NAME[rd.phase] + (rd.round ? " · round " + rd.round : " · start") +
+            (finished ? " · " + (rd.added ? rd.added + " added" : '<span class="ff-done">nothing added: fixpoint</span>') : "") + "</div>";
+          for (let i = rd.from; i < rd.to && i <= pos; i++) {
+            const ev = rec.events[i];
+            const add = ev.added.length
+              ? '<span class="ff-new">+ ' + setOf(ev.added) + " → " + (ev.phase === "nullable" ? "nullable" : SET_NAME[ev.phase] + "(" + esc(ev.target) + ")") + "</span>"
+              : '<span class="ff-nothing">nothing new</span>';
+            html += '<div class="ff-row' + (i === pos ? " is-current" : "") + '" data-i="' + i + '"' + (ev.rule >= 0 ? ' data-prod="' + (ev.rule + 1) + '"' : "") +
+              ' title="' + esc(ffExplain(grammar, ev)) + '"><span class="ff-rule">' + ruleText(ev) + "</span>" + add + "</div>";
+          }
+        }
+        log.innerHTML = html;
+        const cur = log.querySelector(".is-current");
+        if (cur) cur.scrollIntoView({ block: "nearest" });
+      }
+
+      // ── The sets ─────────────────────────────────────────────────────────
+      function renderSets(pos) {
+        const st = ffStateAt(grammar, rec, pos);
+        const ev = pos >= 0 ? rec.events[pos] : null;
+        const nts = [...new Set(grammar.rules.map((r) => r.lhs))];
+        const member = (by, tok, set, nt) => {
+          const i = by[tok];
+          const e = rec.events[i];
+          return '<span class="ff-m' + (i === pos ? " is-new" : "") + '" title="' + esc(tok + " ∈ " + set + "(" + nt + "): " + ffExplain(grammar, e)) + '"' + (e.rule >= 0 ? ' data-prod="' + (e.rule + 1) + '"' : "") + ">" + esc(tok) + "</span>";
+        };
+        const members = (set, by, name, nt) => [...set].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1)).map((t) => member(by, t, name, nt)).join(", ");
+        let html = '<table class="parse-table"><thead><tr><th class="state-col">NT</th>' +
+          '<th title="Can derive the empty string">Nullable</th><th title="Terminals a string derived from the symbol can start with">FIRST</th><th title="Terminals that can come right after the symbol">FOLLOW</th></tr></thead><tbody>';
+        for (const nt of nts) {
+          const nul = st.nullable.has(nt);
+          const ne = nul ? rec.events[st.by.nullable[nt]] : null;
+          const fs = members(st.first[nt], st.by.first[nt], "FIRST", nt);
+          const ls = members(st.follow[nt], st.by.follow[nt], "FOLLOW", nt);
+          const eps = nul ? '<span class="ff-eps" title="Nullable: ε would be in FIRST"> ε</span>' : "";
+          html += '<tr' + (ev && ev.target === nt ? ' class="is-target"' : "") + '><td class="state-cell">' + esc(nt) + "</td>" +
+            '<td class="ff-nul"' + (nul ? ' title="' + esc(ffExplain(grammar, ne)) + '" data-prod="' + (ne.rule + 1) + '"' : "") + ">" + (nul ? (ev && ev.phase === "nullable" && ev.added[0] === nt ? '<span class="ff-m is-new">✓</span>' : "✓") : "") + "</td>" +
+            '<td class="ff-set">{ ' + (fs || "") + (fs && eps ? "," : "") + eps + (fs || eps ? "" : "&mdash;") + " }</td>" +
+            '<td class="ff-set ff-follow">{ ' + (ls || "&mdash;") + " }</td></tr>";
+        }
+        html += "</tbody></table>";
+        html += '<div id="ff-seq"><div class="tbl-section-label" title="FIRST and nullability of any string of symbols, from the finished sets">FIRST of a string of symbols</div>' +
+          '<input id="ff-seq-in" class="ui-input ui-input--grow" type="text" spellcheck="false" placeholder="T E\' x" value="' + esc(seqText) + '"><div id="ff-seq-out"></div></div>';
+        el("ff-sets").innerHTML = html;
+        const inp = el("ff-seq-in");
+        inp.addEventListener("input", () => { seqText = inp.value; renderSeq(); });
+        renderSeq();
+      }
+
+      let seqText = "";
+      function renderSeq() {
+        const out = el("ff-seq-out");
+        const syms = seqText.trim() ? seqText.trim().split(/\s+/) : [];
+        if (!seqText.trim()) { out.innerHTML = ""; return; }
+        const sc = ffScan(syms, grammar.nonterminals, rec.nullable, rec.first, true);
+        out.innerHTML = '<div class="ff-line">' + sc.cells.map((c) => cellHtml(c, "first")).join("") + "</div>" +
+          "FIRST = " + setOf(sc.toks.concat(sc.end ? [EPSILON] : [])) + (sc.end ? " · can derive ε" : "");
+      }
+
+      function render() {
+        if (!grammar || !rec) return;
+        const pos = sim.pos;
+        const ev = pos >= 0 ? rec.events[pos] : null;
+        renderNow(ev);
+        renderLog(pos);
+        renderSets(pos);
+        document.querySelectorAll("#ff-phases .btn").forEach((b) => b.classList.toggle("is-on", !!ev && ev.phase === b.dataset.phase));
+        document.querySelectorAll("#ff-phases .btn").forEach((b) => (b.disabled = !rec.events.length));
+      }
+
+      // ── Controls ─────────────────────────────────────────────────────────
+      const sim = createStepper({
+        buttons: { reset: "btn-reset", back: "btn-back", step: "btn-step", all: "btn-all" },
+        min: -1,
+        last: () => (rec && rec.events.length ? rec.events.length - 1 : null),
+        onChange: () => render(),
+      });
+      el("btn-round").addEventListener("click", () => {
+        const rd = rec.rounds.find((r) => r.to - 1 > sim.pos);
+        if (rd) sim.go(rd.to - 1);
+      });
+      document.querySelectorAll("#ff-phases .btn").forEach((b) =>
+        b.addEventListener("click", () => {
+          let last = -1;
+          rec.events.forEach((e, i) => { if (e.phase === b.dataset.phase) last = i; });
+          sim.go(last);
+        })
+      );
+      el("ff-log").addEventListener("click", (e) => {
+        const row = e.target.closest(".ff-row");
+        if (row) sim.go(+row.dataset.i);
+      });
+      // ←/→ (or ,/.) step, Home restarts, End runs.
+      registerStepper("p-run", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() }, { primary: true });
+
+      window.onerror = function (msg, src, line, col, err) {
+        if (line === 0 && !src) return false;
+        let detail = err ? err.message : msg;
+        if (src) detail += " — " + src.split("/").pop() + ":" + line;
+        el("error-msg").textContent = detail;
+        return false;
+      };
+
+      // ── Shareable link ───────────────────────────────────────────────────
+      const saveShare = createShareSaver(() => ({
+        g: el("grammar-input").value,
+        x: exampleShareKey(),
+      }));
+      function applyShareState() {
+        const st = shareValidateTextState(readShareState(), "g");
+        if (!st) return;
+        el("grammar-input").value = st.g;
+        exampleRestoreLater(st.x);
+      }
+
+      window.addEventListener("load", () => {
+        GrammarEditor.attach(el("grammar-input"));
+        loadPanelState();
+        loadExamplesInto("examples.json", "examples-select", EXAMPLES);
+        el("grammar-input").value = "E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id";
+        applyShareState();
+        build();
+        let timer = null;
+        el("grammar-input").addEventListener("input", () => {
+          clearTimeout(timer);
+          timer = setTimeout(build, 400);
+        });
+      });
+    </script>
+  </body>
+</html>

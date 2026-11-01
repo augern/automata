@@ -265,3 +265,22 @@ test("scanner examples: the token rules compile, every string scans to the end, 
     assert.equal(sc.shadowed.length > 0, expectShadowed, `${ex.label}: shadowed rules`);
   }
 });
+
+test("FIRST & FOLLOW examples: the recorded sets are computeFirst and computeFollow, and the claimed round counts hold", () => {
+  const AF = load("grammar.js", "ll1.js", "firstfollow.js");
+  const rounds = (rec, phase) => rec.rounds.filter((r) => r.phase === phase).length;
+  const by = {};
+  for (const ex of examples("firstfollow")) {
+    const g = AF.parseBNF(textOf(ex), false);
+    const rec = AF.ffRecord(g);
+    const first = AF.computeFirst(g), follow = AF.computeFollow(g, first);
+    for (const nt of g.nonterminals) {
+      assert.deepEqual([...rec.follow[nt]].sort(), [...follow[nt]].sort(), `${ex.label}: FOLLOW(${nt})`);
+      assert.deepEqual([...rec.first[nt]].sort(), [...first[nt]].filter((t) => t !== AF.EPSILON).sort(), `${ex.label}: FIRST(${nt})`);
+    }
+    by[ex.label] = rec;
+  }
+  assert.equal(rounds(by["Nullable chain"], "nullable"), 5);
+  assert.equal(rounds(by["Arithmetic (LL(1) form)"], "first"), 4);
+  assert.equal(rounds(by["Rules in reverse order"], "first"), 2);
+});

@@ -9,6 +9,7 @@ regular languages, context-free grammars and parsing, and Turing machines.
 | **NFA Simulator** | ε-NFA — editable transition table, NFA graph, nondeterministic simulation tree |
 | **Grammar Transformations Tool** | Grammar cleanup, ε-production elimination, unit production elimination, Chomsky Normal Form (CNF), left-recursion elimination, Greibach Normal Form (GNF) |
 | **Grammar Derivations Tool** | Manual derivations for CFG, CSG and Type 0 grammars — select a range, choose a rule, build the sentential form step by step, or let a seeded "Random choice" stepper derive for you (Back/forward, Reseed, ←/→ keys, seed kept in share links) |
+| **FIRST & FOLLOW Tool** | Nullable symbols, FIRST and FOLLOW as fixpoint iterations — one rule application at a time, round by round; the right-hand side read past nullable symbols; FIRST of any string of symbols |
 | **PDA Simulator** | Nondeterministic PDA / ε-PDA — transition rule list, automaton graph, configuration-set simulation |
 | **Pumping** | Why the pumping lemmas hold: a repeated state on a DFA's path and a repeated nonterminal on a parse tree's path, pumped step by step |
 | **Recursive Descent** | The procedures generated from a grammar and the run — predictive (LL(1), no backtracking: the next token chooses, a syntax error ends the run) or the search for a parse — guesses, backtracking and dead ends as a call tree, the read position over time, linked to the highlighted code; complete search, ordered choice or packrat (memoised), left recursion detected |
@@ -47,6 +48,7 @@ parser-tools/
 │   ├── pda/                            ← PDA simulator
 │   ├── pumping/                        ← pumping explorer
 │   ├── rdp/                            ← backtracking recursive descent
+│   ├── firstfollow/                    ← FIRST and FOLLOW by fixpoint iteration
 │   ├── ll1/                            ← LL(1) parser
 │   ├── lr/                             ← LR parser
 │   └── tm/                             ← Turing machine simulator
@@ -70,6 +72,7 @@ parser-tools/
 │   │   ├── pumping.js                  ← pure: DFA text, pigeonhole loop, parse-tree pumping
 │   │   ├── qr.js                       ← pure: QR code generator (from the CPOS toolkit)
 │   │   ├── rdp.js                      ← pure: recursive-descent procedures, the recorded parse run (complete or ordered choice), state at a step, node explanations
+│   │   ├── firstfollow.js              ← pure: nullable, FIRST and FOLLOW as recorded fixpoint iterations, the sets after each step
 │   │   ├── ll1.js                      ← pure: LL(1) table construction, predictive-parser step
 │   │   ├── panels.js                   ← pure: panel drag, auto-collapse fitting
 │   │   ├── nfa.js                      ← pure: ε-closure, NFA simulation tree, exact acceptance

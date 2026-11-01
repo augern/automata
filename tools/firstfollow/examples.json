@@ -1,0 +1,85 @@
+{
+  "groups": [
+    {
+      "label": "Nullable symbols",
+      "examples": [
+        {
+          "label": "Optional parts",
+          "purpose": "Three optional symbols in a row: FIRST of the sequence reads past each of them, and FOLLOW flows in from the left side.",
+          "text": [
+            "S -> A B C d",
+            "A -> a | eps",
+            "B -> b | eps",
+            "C -> c | eps"
+          ]
+        },
+        {
+          "label": "Nullable chain",
+          "purpose": "Nullability needs one round per level when the rules are listed top-down: the fixpoint is reached late.",
+          "text": [
+            "S -> A A",
+            "A -> B B",
+            "B -> C C",
+            "C -> c | eps"
+          ]
+        },
+        {
+          "label": "Balanced parentheses",
+          "purpose": "A single nullable nonterminal around itself: FOLLOW(S) gets ) from inside and $ from the start.",
+          "grammar": "parentheses-eps"
+        }
+      ]
+    },
+    {
+      "label": "Expressions",
+      "examples": [
+        {
+          "label": "Arithmetic (LL(1) form)",
+          "purpose": "The textbook sets for the expression grammar with the left recursion removed: FOLLOW(E′) flows down to FOLLOW(T′).",
+          "text": [
+            "E -> T E'",
+            "E' -> + T E' | eps",
+            "T -> F T'",
+            "T' -> * F T' | eps",
+            "F -> ( E ) | id"
+          ]
+        },
+        {
+          "label": "Arithmetic (left-recursive)",
+          "purpose": "FIRST(E) is fed by FIRST(T) and by E itself: left recursion puts cycles in the dependencies.",
+          "text": [
+            "E -> E + T | T",
+            "T -> T * F | F",
+            "F -> ( E ) | id"
+          ]
+        },
+        {
+          "label": "Rules in reverse order",
+          "purpose": "The sets of the LL(1) form with the rules listed bottom-up: FIRST needs two rounds instead of four.",
+          "text": [
+            "F -> ( E ) | id",
+            "T' -> * F T' | eps",
+            "T -> F T'",
+            "E' -> + T E' | eps",
+            "E -> T E'"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Larger",
+      "examples": [
+        {
+          "label": "Sentences",
+          "purpose": "A grammar without ε: FIRST comes from the first symbol of each rule, FOLLOW from the symbol after.",
+          "grammar": "sentences"
+        },
+        {
+          "label": "Pascal excerpt (declarations)",
+          "purpose": "Declaration lists with nullable parts: many nullable symbols and long FOLLOW chains.",
+          "grammar": "pascal-declarations"
+        }
+      ]
+    }
+  ]
+}

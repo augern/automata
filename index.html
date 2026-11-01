@@ -143,6 +143,7 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
   <a class="pill" id="t-regex" href="tools/regex/" tabindex="0"><rect x="305" y="344" width="158" height="34" rx="17"/><text x="384" y="361">Regular Expressions</text></a>
   <!-- The grammar tools are not tied to one class: each pill reaches from inside Regular out across every inner boundary -->
   <a class="pill" id="t-derivation" href="tools/derivation/" tabindex="0"><rect x="515" y="306" width="169" height="34" rx="17"/><text x="599.5" y="323">Grammar Derivations</text></a>
+  <a class="pill" id="t-firstfollow" href="tools/firstfollow/" tabindex="0"><rect x="482" y="394" width="202" height="34" rx="17"/><text x="583" y="411">FIRST &amp; FOLLOW</text></a>
   <a class="pill" id="t-rewrite" href="tools/grammar-rewrite/" tabindex="0"><rect x="482" y="350" width="202" height="34" rx="17"/><text x="583" y="367">Grammar Transformations</text></a>
 
 </svg>
@@ -180,6 +181,9 @@ body[data-view="list"] #view-compiler { margin-top: calc(22px - var(--sp-5)); }
       builds: "context-free grammars" },
     rewrite: { href: "tools/grammar-rewrite/", title: "Grammar Transformations", group: "Grammars of any class",
       desc: "Normalisation of context-free grammars — removal of useless symbols, ε-productions, unit productions and left recursion; conversion to Chomsky normal form.",
+      builds: "context-free grammars" },
+    firstfollow: { href: "tools/firstfollow/", title: "FIRST & FOLLOW", group: "Grammars of any class",
+      desc: "Nullable symbols, FIRST and FOLLOW sets of a context-free grammar by fixpoint iteration — one rule application at a time, with the right-hand side read past nullable symbols.",
       builds: "context-free grammars" },
     pda: { href: "tools/pda/", title: "PDA Simulator", group: "Context-free languages",
       desc: "Nondeterministic pushdown automata — transition relation and state graph, acceptance by final state or empty stack, and the evolution of the set of reachable configurations.",
