@@ -207,7 +207,7 @@
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=b3a54ab2"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=b8296c3e"></script>
+    <script src="guide.js?v=b9752f36"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
@@ -775,6 +775,15 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
       let ppTimer = null;
       $("w-input").addEventListener("input", () => { explore(); saveShare(); });
       $("pump-i").addEventListener("input", () => redraw());
+      // Up and down change the repeat count wherever the keys are not already in use (fields, menus, pop-ups)
+      document.addEventListener("keydown", (e) => {
+        if ((e.key !== "ArrowUp" && e.key !== "ArrowDown") || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+        if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+        if (document.querySelector(".ui-menu, .algo-overlay:not(.hidden)")) return;
+        const r = $("pump-i"), v = Math.max(+r.min, Math.min(+r.max, +r.value + (e.key === "ArrowUp" ? 1 : -1)));
+        e.preventDefault();
+        if (v !== +r.value) { r.value = v; redraw(); }
+      });
       registerStepper("p-main", { step: () => walk.next(), back: () => walk.prev(), reset: () => walk.reset(), end: () => walk.end() }, { primary: true });
 
       UI.stringInput("w-input", {
