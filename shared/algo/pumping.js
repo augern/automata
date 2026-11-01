@@ -243,34 +243,44 @@ function pumpCTG(tree, sep = "") {
   const marked = (n) => !n.leaf && (!!n.mark || n.children.some(marked));
   const parts = [];
   let k = 0;
-  function conv(node) {
+  function conv(node, inside) {
+    inside = inside || node.mark === "up" || node.mark === "both";
     const kids = [];
     const push = (sym, part) => {
       const last = kids[kids.length - 1];
       if (last && last.part === part && typeof last !== "string" && last.text !== undefined) last.text += sep + sym;
       else { kids.push({ text: sym, part, cls: part ? "pp-" + part : "" }); }
     };
-    for (const c of node.children) {
-      if (c.leaf) { if (!c.eps) push(c.sym, c.part); }
-      else if (marked(c)) kids.push(conv(c));
+    const eps = (part) => kids.push({ text: "ε", part, cls: "pp-" + part });
+    const next = node.children.findIndex(marked);
+    node.children.forEach((c, j) => {
+      if (j === next && next >= 0) {
+        if (!kids.length) eps(inside ? "v" : "u"); // nothing to the left of the next node on the path
+        kids.push(conv(c, inside));
+      } else if (c.leaf) { if (!c.eps) push(c.sym, c.part); }
       else for (const l of pumpLeaves(c)) push(l.sym, l.part);
-    }
+    });
+    if (next >= 0 && !(kids[kids.length - 1].kids === undefined)) eps(inside ? "y" : "z");
+    else if (next < 0 && !kids.length) eps("x"); // an empty lowest node
     return { sym: node.sym, id: "p" + k++, cls: node.mark ? CLS[node.mark] : "", kids };
   }
-  const out = conv(tree);
+  const out = conv(tree, false);
   (function collect(n) { for (const kid of n.kids) { if (kid.text !== undefined) parts.push(kid.part || ""); else collect(kid); } })(out);
   return { tree: out, parts };
 }
 
-// The same pumped (tagged) tree as the spine figure of algo/ctg.js (ctgSpineLayout): the path from the root through every
+// The same pumped (tagged) tree as the spine figure of algo/ctg.js (ctgSpineTree): the path from the root through every
 // marked node, the strings left and right of each stretch of the path, and what the lowest marked node derives.
 function pumpSpine(tree, sep = "") {
   const CLS = { up: "pp-up", low: "pp-low", both: "pp-both" };
   const marked = (n) => !n.leaf && (!!n.mark || n.children.some(marked));
-  const text = (leaves) => leaves.map((l) => l.sym).join(sep);
-  const flank = (leaves) => (leaves.length ? { text: text(leaves), part: leaves[0].part || "", cls: leaves[0].part ? "pp-" + leaves[0].part : "", label: leaves[0].part || "" } : null);
+  // an empty string is drawn as ε, in the part it belongs to
+  const flank = (leaves, part) => {
+    const p = leaves.length ? leaves[0].part || part : part;
+    return { text: leaves.length ? leaves.map((l) => l.sym).join(sep) : "ε", part: p, cls: "pp-" + p, label: p };
+  };
   const nodes = [{ sym: tree.sym, cls: tree.mark ? CLS[tree.mark] : "" }], segments = [];
-  let cur = tree, left = [], right = [], hops = 0;
+  let cur = tree, left = [], right = [], hops = 0, inside = !!tree.mark && tree.mark !== "low";
   for (;;) {
     const next = cur.children.findIndex(marked);
     if (next < 0) break;
@@ -282,24 +292,32 @@ function pumpSpine(tree, sep = "") {
     cur = cur.children[next];
     hops++;
     if (cur.mark) {
-      segments.push({ left: flank(left), right: flank(right), jag: hops > 1 });
+      segments.push({ left: flank(left, inside ? "v" : "u"), right: flank(right, inside ? "y" : "z"), jag: hops > 1 });
       nodes.push({ sym: cur.sym, cls: CLS[cur.mark] });
       left = []; right = []; hops = 0;
+      inside = cur.mark !== "low";
     }
   }
-  const x = pumpLeaves(cur);
-  return { nodes, segments, bottom: x.length ? flank(x) : { text: "", part: "x", label: "x" } };
+  return { nodes, segments, bottom: flank(pumpLeaves(cur), "x") };
+}
+
+// The split figure (ctgSplitLayout) of a decomposition: the parts of the original string, the nonterminals of the tree's root
+// and of the repeated pair, and the number of copies of the middle part. parts: { u, v, x, y, z } as arrays of symbols.
+function pumpSplitFigure(root, a, parts, sep, i, rootIsUp) {
+  const part = (p) => ({ text: parts[p].length ? parts[p].join(sep) : "ε", label: p, cls: "pp-" + p });
+  return { root, up: a, rootIsUp, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
 }
 
 // The general case of the context-free pumping lemma for the spine and triangle figures: S ⇒* uAz, A ⇒* vAy, A ⇒* x,
-// with the middle part taken i times. -> { spine, tree }: input of ctgSpineLayout and of ctgLayout.
+// with the middle part taken i times. -> { spine, tree, split }: input of ctgSpineTree, ctgLayout and ctgSplitLayout.
 function pumpGeneralCF(i) {
   const part = (p) => ({ text: p, part: p, cls: "pp-" + p });
+  const letters = { root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
   const nodes = [{ sym: "S" }], segments = [{ left: part("u"), right: part("z"), jag: true }];
   for (let k = 0; k < i; k++) { nodes.push({ sym: "A", cls: "pp-up" }); segments.push({ left: part("v"), right: part("y"), jag: true }); }
   nodes.push({ sym: "A", cls: "pp-low" });
   const spine = { nodes, segments, bottom: part("x") };
   let cur = { sym: "A", cls: "pp-low", kids: [part("x")] };
   for (let k = 0; k < i; k++) cur = { sym: "A", cls: "pp-up", kids: [part("v"), cur, part("y")] };
-  return { spine, tree: { sym: "S", kids: [part("u"), cur, part("z")] } };
+  return { spine, tree: { sym: "S", kids: [part("u"), cur, part("z")] }, split: letters };
 }

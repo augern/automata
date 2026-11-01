@@ -62,20 +62,6 @@ test("an empty node over empty children is a triangle over their points", () => 
   assert.equal(A.ctgFirstLeaf(lay, "B"), 1);
 });
 
-test("spine layout: split mode keeps the width whatever the number of segments, joined mode grows with it", () => {
-  const seg = { left: { text: "aa", part: "v" }, right: { text: "bb", part: "y" }, jag: true };
-  const spec = (n) => ({ nodes: Array.from({ length: n + 1 }, () => ({ sym: "A" })), segments: Array.from({ length: n }, () => seg), bottom: { text: "x" } });
-  const w = (n, mode) => A.ctgSpineLayout(spec(n), { mode }).width;
-  assert.equal(w(2, "split"), w(5, "split"));
-  assert.ok(w(5, "joined") > w(2, "joined"));
-  const split = A.ctgSpineLayout(spec(3), { mode: "split" }), joined = A.ctgSpineLayout(spec(3), { mode: "joined" });
-  assert.ok(new Set(split.flanks.map((f) => f.y1)).size > 1, "split: the bases step down");
-  assert.equal(new Set(joined.flanks.map((f) => f.y1)).size, 1, "joined: one base line");
-  assert.equal(joined.flanks[0].y1, joined.base);
-  const left = joined.flanks.filter((f) => f.side === "left");
-  assert.ok(left.every((f, i) => i === 0 || f.x0 >= left[i - 1].x1), "joined: the left pieces read in order and do not overlap");
-});
-
 test("ctgSpineTree: the spine as nested nodes, the string in order, the anchor the lowest node", () => {
   const part = (p) => ({ text: p, part: p, cls: "pp-" + p });
   const spec = { nodes: [{ sym: "S" }, { sym: "A" }, { sym: "A" }], segments: [{ left: part("u"), right: part("z"), jag: true }, { left: part("v"), right: part("y"), jag: false }], bottom: part("x") };
@@ -88,4 +74,21 @@ test("ctgSpineTree: the spine as nested nodes, the string in order, the anchor t
   assert.ok(Math.abs(cx(lay.byId.s0) - cx(lay.byId.s2)) < 1e-6 && Math.abs(cx(lay.byId.s1) - cx(lay.byId.s2)) < 1e-6, "the apexes lie on one vertical line");
   assert.equal(lay.byId.s1.src.jag, true); // reached from S over the first, abstract stretch
   assert.equal(lay.byId.s2.src.jag, false);
+});
+
+test("split layout: the frame for i = 1, copies poke down one step each, no copy leaves ε slots", () => {
+  const part = (p, text) => ({ text: text || p, label: p, cls: "pp-" + p });
+  const fig = (i) => ({ root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
+  const one = A.ctgSplitLayout(fig(1)), two = A.ctgSplitLayout(fig(2)), none = A.ctgSplitLayout(fig(0)), three = A.ctgSplitLayout(fig(3));
+  const lv = (lay, p) => lay.tokens.filter((t) => t.part === p).map((t) => t.y);
+  assert.equal(new Set(one.tokens.map((t) => t.y)).size, 1, "i = 1: one base line");
+  assert.equal(one.lines.length, 1);
+  assert.equal(one.width, two.width, "the frame keeps its width");
+  assert.equal(one.tris[0].y, two.tris[0].y, "the root triangle is the same");
+  assert.deepEqual(js(lv(two, "v")), [one.tokens[0].y, one.tokens[0].y + 60]);
+  assert.equal(lv(two, "x")[0], one.tokens[0].y + 60, "x moves down with the last copy");
+  assert.equal(Math.max(...lv(three, "x")), one.tokens[0].y + 120);
+  assert.deepEqual(js(none.tokens.filter((t) => t.eps).map((t) => [t.part, t.text])), [["v", "ε"], ["y", "ε"]]);
+  assert.equal(none.tris.filter((t) => t.ghost).length, 1, "the removed copy is drawn as a ghost");
+  assert.ok(two.lines.length > one.lines.length, "the base line is split");
 });

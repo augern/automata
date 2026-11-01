@@ -144,7 +144,7 @@ test("pumpSpine: the spine of marked nodes, the strings beside each stretch, rep
   const one = sp(1);
   assert.equal(one.nodes.length, 3);
   assert.deepEqual(JSON.parse(JSON.stringify(one.segments.map((s) => [s.left && s.left.text, s.left && s.left.part, s.right && s.right.text, s.right && s.right.part]))), [["a", "u", "b", "z"], ["a", "v", "b", "y"]]);
-  assert.equal(one.bottom.text, "");
+  assert.equal(one.bottom.text, "ε"); // an empty string is drawn as ε
   assert.equal(sp(3).nodes.length, 5);
   assert.equal(sp(0).nodes.length, 2);
 });
@@ -165,4 +165,25 @@ test("pumpGeneralCF: i copies of the middle part between the first A and the low
   assert.deepEqual(sizes(3), [5, 4, 5]);
   const parts = P.pumpGeneralCF(2).spine.segments.map((s) => s.left.part + s.right.part);
   assert.deepEqual(JSON.parse(JSON.stringify(parts)), ["uz", "vy", "vy"]);
+});
+
+test("empty parts are ε in the triangles and the path figures, in the part they belong to", () => {
+  const g = P.rdpParseGrammar("S -> a A d | eps\nA -> b S c");
+  const tree = P.pumpParseTree(g, P.rdpTokenise(g, "abcd")).tree;
+  const pair = P.pumpPairs(tree)[0]; // the root S and the S below A: u, x and z are empty
+  const tagged = P.pumpTag(tree, pair);
+  const ctg = P.pumpCTG(P.pumpTree(tagged, pair, 1));
+  assert.deepEqual(JSON.parse(JSON.stringify(ctg.parts)), ["v", "v", "x", "y", "y"]); // the root is the repeated node, the empty x is ε
+  const sp = P.pumpSpine(P.pumpTree(tagged, pair, 1));
+  assert.equal(sp.bottom.text, "ε");
+  assert.equal(sp.bottom.part, "x");
+  const tree2 = P.pumpParseTree(P.rdpParseGrammar("S -> a S b | eps"), ["a", "b"]).tree;
+  const pair2 = P.pumpPairs(tree2)[0];
+  const sp2 = P.pumpSpine(P.pumpTree(P.pumpTag(tree2, pair2), pair2, 1));
+  assert.deepEqual(JSON.parse(JSON.stringify([sp2.segments[0].left.text, sp2.segments[0].left.part, sp2.bottom.text])), ["a", "v", "ε"]);
+});
+
+test("pumpSplitFigure: the parts of the original string, ε for an empty one", () => {
+  const f = P.pumpSplitFigure("S", "A", { u: [], v: ["a", "b"], x: [], y: ["c"], z: [] }, "", 2, false);
+  assert.deepEqual(JSON.parse(JSON.stringify([f.parts.u.text, f.parts.v.text, f.parts.x.text, f.parts.y.text, f.i])), ["ε", "ab", "ε", "c", 2]);
 });

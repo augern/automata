@@ -15,6 +15,8 @@
 // Triangles nest: a triangle's base is wider than its children's by a margin that grows with its level, and its apex is
 // kept inside the parent triangle, so a child never crosses an edge of its parent.
 
+const CTG_EPS = "ε";
+
 function ctgLayout(tree, opts = {}) {
   const o = { charW: 9, tokPad: 8, minGap: 14, padStep: 8, padMax: 40, baseH: 36, stepH: 28, marginX: 16, labelH: 20, endMarker: false, ...opts };
   const nodes = [], leaves = [], byId = {}, items = [], leafById = {};
@@ -101,53 +103,8 @@ const ctgFirstLeaf = (lay, id) => lay.byId[id].first;
 // The leaf right after a node's stretch of the string.
 const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 
-// ── The spine figure (Kozen's pumping pictures) ─────────────────────────────────────────────────────────────
-// A path of nonterminals from the root down, drawn as a vertical spine; the stretches of the path that are not
-// drawn node by node are jagged lines (an abstract derivation: A ⇒* vAy). The string derived to the left and to the
-// right of each stretch hangs off the spine as a triangle (a flank), and the lowest node has a triangle of its own.
-//   spec: { nodes: [{ sym, cls? }],                           the nodes on the spine, top to bottom
-//           segments: [{ left, right, jag }],                 one between each two nodes; left/right: { text, part?, cls?, label? } or null
-//           bottom: { text, part?, cls?, label? } }           what the last node derives
-//   opts.mode "split": every flank has its own base line (the bases step down the spine) and the flanks of all segments
-//                       share one column per side, so the width does not depend on the number of segments;
-//             "joined": every flank reaches down to one lowest base line, the string reads left to right along it.
-// -> { width, height, cx, base, nodes: [{ x, y, w, sym, cls }], flanks: [{ side, x0, x1, apex, y0, y1, text, ... }], segs: [{ y0, y1, jag }], bottom }
-function ctgSpineLayout(spec, opts = {}) {
-  const o = { charW: 9, tokPad: 8, gap: 12, colGap: 10, segH: 70, bottomH: 52, topPad: 24, marginX: 18, nodeH: 22, mode: "split", ...opts };
-  const m = spec.segments.length;
-  const wOf = (f) => (f && f.text ? Math.max(1, f.text.length) * o.charW + 2 * o.tokPad : 0);
-  const wl = spec.segments.map((s) => wOf(s.left)), wr = spec.segments.map((s) => wOf(s.right));
-  const nodeW = (n) => Math.max(26, String(n.sym).length * 8 + 14);
-  const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, cls: n.cls || "", y: o.topPad + o.nodeH / 2 + k * o.segH, w: nodeW(n), x: 0 }));
-  const lastY = nodes[nodes.length - 1].y;
-  const bw = Math.max(wOf(spec.bottom), 34);
-  const base = lastY + o.nodeH / 2 + o.bottomH;
-  const sum = (ws, from, to) => ws.slice(from, to).reduce((a, w) => a + w + o.colGap, 0);
-  let cx, width;
-  if (o.mode === "joined") cx = o.marginX + sum(wl, 0, m) + o.gap;
-  else cx = o.marginX + Math.max(0, ...wl) + o.gap;
-  const rightWidth = o.mode === "joined" ? sum(wr, 0, m) : Math.max(0, ...wr);
-  width = Math.max(cx + o.gap + rightWidth + o.marginX, cx + bw / 2 + o.marginX);
-  const flanks = [], segs = [];
-  spec.segments.forEach((s, k) => {
-    const y0 = nodes[k].y + o.nodeH / 2, y1 = nodes[k + 1].y - o.nodeH / 2;
-    segs.push({ y0, y1, jag: !!s.jag });
-    const baseY = o.mode === "joined" ? base : y1 + o.nodeH / 2;
-    const add = (f, side, x0, w) => { if (f && f.text) flanks.push({ side, k, text: f.text, part: f.part || "", cls: f.cls || "", label: f.label || "", x0, x1: x0 + w, apex: cx, y0: nodes[k].y, y1: baseY }); };
-    if (o.mode === "joined") {
-      add(s.left, "left", o.marginX + sum(wl, 0, k), wl[k]);
-      add(s.right, "right", cx + o.gap + sum(wr, k + 1, m), wr[k]);
-    } else {
-      add(s.left, "left", cx - o.gap - wl[k], wl[k]);
-      add(s.right, "right", cx + o.gap, wr[k]);
-    }
-  });
-  nodes.forEach((n) => { n.x = cx; });
-  const bottom = { text: spec.bottom.text || "", part: spec.bottom.part || "", cls: spec.bottom.cls || "", label: spec.bottom.label || "", x0: cx - bw / 2, x1: cx + bw / 2, apex: cx, y0: lastY, y1: base, empty: !spec.bottom.text };
-  return { width, height: base + 44, cx, base, nodes, flanks, segs, bottom, nodeH: o.nodeH, mode: o.mode };
-}
-
-// A spine spec (see ctgSpineLayout) as nested triangles: the tree of the path, each node holding the string to its left,
+// A spine spec { nodes: [{ sym, cls? }], segments: [{ left, right, jag }], bottom }, the nodes of the path with the strings
+// { text, part?, cls?, label? } beside each stretch of it, as nested triangles: the tree of the path, each node holding the string to its left,
 // the next node and the string to its right. -> { tree, parts, anchor } with the part letter of each token in order and the id
 // of the lowest node; a node reached over an abstract stretch has jag: true.
 function ctgSpineTree(spec) {
@@ -164,4 +121,63 @@ function ctgSpineTree(spec) {
   };
   const tree = build(0);
   return { tree, parts, anchor: "s" + (spec.nodes.length - 1) };
+}
+
+// ── The split figure ──────────────────────────────────────────────────────────────────────────────────────────
+// The pumping figure with separate base lines. The figure for one copy of the middle part (i = 1) is the frame: nested
+// triangles over u v x y z on one base line. Further copies of v … y are inlaid in it and poke down through the base line,
+// each on a base line one step lower, in the same columns, so the frame keeps its shape; with no copy the part is a gap (ε).
+//   fig: { root, up, rootIsUp, i, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
+//   -> { width, height, cx, nodes: [{ sym, x, y, cls, ghost }], tris: [{ x0, x1, apex, ay, y, cls, ghost }],
+//        tokens: [{ text, part, cls, x, w, y, label }], lines: [{ x0, x1, y }], jags: [{ from, to }] }
+function ctgSplitLayout(fig, opts = {}) {
+  const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, ...opts };
+  const i = fig.i;
+  const order = ["u", "v", "x", "y", "z"];
+  const w = {};
+  for (const p of order) w[p] = Math.max(1, fig.parts[p].text.length) * o.charW + 2 * o.tokPad;
+  const x0 = {};
+  let x = o.marginX + o.padRoot;
+  for (const p of order) { x0[p] = x; x += w[p] + o.tokGap; }
+  const right = x - o.tokGap + o.padRoot + o.marginX;
+  const cx = x0.x + w.x / 2;
+  const first = fig.rootIsUp ? 0 : 1; // the node level of the first copy of the repeated nonterminal
+  const lowJ = first + Math.max(i, 1);
+  const L0 = o.topPad + 11 + (first + 1) * o.step + o.baseH; // the frame's base line: that of one copy
+  const apexY = (j) => o.topPad + 11 + j * o.step;
+  const lowBase = L0 + Math.max(i - 1, 0) * o.step;
+  const nodes = [], tris = [], tokens = [], jags = [];
+  const tok = (p, level) => tokens.push({ text: fig.parts[p].text, part: p, cls: fig.parts[p].cls || "", label: fig.parts[p].label || "", x: x0[p], w: w[p], y: level, eps: fig.parts[p].text === CTG_EPS });
+  if (!fig.rootIsUp) {
+    nodes.push({ sym: fig.root, x: cx, y: apexY(0) + 6, cls: "" });
+    tris.push({ x0: x0.u - o.padRoot, x1: x0.z + w.z + o.padRoot, apex: cx, ay: apexY(0), y: L0, cls: "" });
+  }
+  tok("u", L0);
+  tok("z", L0);
+  const copies = Math.max(i, 1);
+  for (let k = 1; k <= copies; k++) {
+    const j = first + k - 1, base = L0 + (k - 1) * o.step, ghost = i === 0;
+    nodes.push({ sym: fig.up, x: cx, y: apexY(j) + 6, cls: "pp-up", ghost });
+    tris.push({ x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(j), y: base, cls: "pp-up", ghost });
+    if (!ghost) { tok("v", base); tok("y", base); }
+  }
+  if (i === 0) for (const p of ["v", "y"]) { tok(p, L0); const t = tokens[tokens.length - 1]; t.text = CTG_EPS; t.eps = true; } // the slots of the removed copy
+  nodes.push({ sym: fig.up, x: cx, y: apexY(lowJ) + 6, cls: "pp-low" });
+  tris.push({ x0: x0.x - o.padLow, x1: x0.x + w.x + o.padLow, apex: cx, ay: apexY(lowJ), y: lowBase, cls: "pp-low" });
+  tok("x", lowBase);
+  for (let k = 1; k < nodes.length; k++) jags.push({ from: k - 1, to: k });
+  // base lines under the tokens of each level, joined where they touch
+  const lines = [];
+  const byLevel = new Map();
+  for (const t of tokens) byLevel.set(t.y, (byLevel.get(t.y) || []).concat(t));
+  for (const [y, ts] of byLevel) {
+    ts.sort((a, b) => a.x - b.x);
+    let cur = null;
+    for (const t of ts) {
+      if (cur && t.x - cur.x1 <= o.tokGap + 1) cur.x1 = t.x + t.w;
+      else { cur = { x0: t.x, x1: t.x + t.w, y }; lines.push(cur); }
+    }
+  }
+  const lowest = Math.max(...tokens.map((t) => t.y));
+  return { width: right, height: lowest + 50, cx, nodes, tris, tokens, lines, jags };
 }
