@@ -226,7 +226,7 @@
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=9f23f60b"></script>
+    <script src="../../shared/algo/ffwitness.js?v=bf971f1f"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/ctg.js?v=78849444"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
@@ -428,15 +428,11 @@ ${kw("return")} Follow`,
         const added = !theory && stepEv && stepEv.phase !== "nullable" && stepEv.added.length > 1 && sel && sel.kind === stepEv.phase && sel.nt === stepEv.target ? stepEv.added : null; // the members that the shown step adds
         if (theory) {
           const spec = ffwTheory(theory);
-          if (spec.cases) { // one case at a time
-            whichCount = spec.cases.length;
-            which = Math.min(which, whichCount - 1);
-            showFigures([spec.cases[which]], 0);
-            el("wit-alt").hidden = false;
-            el("wit-alt-n").textContent = which + 1 + " / " + whichCount;
-            return;
-          }
-          showFigures(spec.figures || [spec], 60);
+          whichCount = spec.cases.length; // one case at a time
+          which = Math.min(which, whichCount - 1);
+          showFigures([spec.cases[which]], 0);
+          el("wit-alt").hidden = false;
+          el("wit-alt-n").textContent = which + 1 + " / " + whichCount;
           return;
         }
         if (!sel) return;

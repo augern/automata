@@ -302,7 +302,7 @@ function ffwTheory(kind) {
   const cell = (text, label, extra = {}) => ({ text, label, ...extra });
   // every edge of a general figure stands for derivations of any length (⇒*), so it is jagged
   const node = (sym, extra = {}) => ({ sym, jag: true, ...extra });
-  // FIRST and FOLLOW each have a second case in their definitions: the figures are cases, shown one at a time
+  // the figures are cases, shown one at a time: FIRST and FOLLOW each have a second case in their definitions, nullable is direct or indirect
   if (kind === "first") {
     return {
       cases: [
@@ -344,7 +344,7 @@ function ffwTheory(kind) {
     };
   }
   // nullable: A derives ε directly (a rule A → ε), or through other symbols: a rule A → X₁ … Xₙ in which every Xᵢ is nullable in
-  // its turn, directly or not. Two figures; no Xᵢ is singled out: each is a node of its own with a small triangle under A, and a jagged
+  // its turn, directly or not. Two cases; no Xᵢ is singled out: each is a node of its own with a small triangle under A, and a jagged
   // edge down to its ε, since it derives ε in any number of steps.
   const direct = {
     caption: "directly",
@@ -360,6 +360,6 @@ function ffwTheory(kind) {
     span: { label: "X₁ … Xₙ", mark: { kind: "focus", label: "A derives ε" } },
   };
   return {
-    figures: [direct, indirect],
+    cases: [direct, indirect],
   };
 }
