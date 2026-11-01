@@ -248,3 +248,10 @@ function pumpGeneralCF(i) {
   const part = (p) => ({ text: p, label: p, cls: "pp-" + p });
   return { root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } };
 }
+
+// The pumping length the lemma guarantees for a grammar: b^(|V|+1), b the length of the longest right-hand side (at least 2) and
+// |V| the number of nonterminals. A string of at least this length has a parse tree with a path that repeats a nonterminal.
+function pumpLengthCF(g) {
+  const b = Math.max(2, ...g.base.rules.map((r) => r.rhs.length));
+  return Math.pow(b, g.nonterminals.size + 1);
+}

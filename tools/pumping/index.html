@@ -52,6 +52,7 @@
       .pp-ch.pp-now { background: var(--st-active-bg); border-color: var(--st-active); }
       .pp-ch.pp-read { text-decoration: underline; text-underline-offset: 3px; }
       .pp-arrow { color: var(--text-lo); font-size: var(--fs-2xs); }
+      .pp-len-ok { color: var(--st-accept); } .pp-len-short { color: var(--st-warn); }
 
       /* ── The drawings ── */
       #canvases .ui-canvas { flex: 1; }
@@ -185,7 +186,7 @@
     <script src="../../shared/algo/regex.js?v=d838253b"></script>
     <script src="../../shared/algo/rdp.js?v=72eea912"></script>
     <script src="../../shared/algo/ctg.js?v=8c9bb871"></script>
-    <script src="../../shared/algo/pumping.js?v=5982ad8a"></script>
+    <script src="../../shared/algo/pumping.js?v=71f6f32a"></script>
     <script src="../../shared/shared.js?v=42ed2a33"></script>
     <script src="../../shared/ctg.js?v=04c891cc"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
@@ -195,7 +196,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=bacb2c32"></script>
+    <script src="guide.js?v=5a201d7e"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
@@ -249,6 +250,12 @@
         ppStrings = [];
         setMode(m);
       }
+      // The pumping length, and what it says of the string at hand.
+      const fmtLength = (p) => (p < 1e12 ? p.toLocaleString("en") : p.toExponential(2));
+      function lengthRow(n, p, yes, maybe) {
+        const long = n >= p;
+        return '<div class="pp-row"><span class="ui-label">length</span><span class="pp-formula ' + (long ? "pp-len-ok" : "pp-len-short") + '">|w| = ' + n + (long ? " ≥ " : " < ") + "p = " + fmtLength(p) + ": " + (long ? yes : maybe) + "</span></div>";
+      }
       const defInput = () => $(ppMode === "regular" ? "dfa-input" : "grammar-input"); // the text of the machine or grammar
       const isGeneral = () => !$("w-input").value.trim();
       const redraw = () => (isGeneral() ? renderGeneral() : ppMode === "regular" ? renderRegular() : renderCF());
@@ -277,12 +284,13 @@
         $("def-note").textContent = "";
         if (ppMode === "regular") {
           try { ppDFA = pumpParseDFA(text); } catch (e) { ppDFA = null; setError(e.message); }
-          $("def-note").textContent = ppDFA ? ppDFA.states.length + " states: a string with at least that many symbols must visit some state twice." : "";
+          $("def-note").textContent = ppDFA ? "Pumping length p = " + ppDFA.states.length + ", the number of states: a string of at least p symbols visits some state twice, so it splits as x y z with |xy| ≤ p and |y| ≥ 1." : "";
           drawDFA();
         } else {
           try { ppG = rdpParseGrammar(text); } catch (e) { ppG = null; setError(e.message); }
           const rec = ppG ? rdpLeftRecursive(ppG) : [];
-          $("def-note").textContent = rec.length ? "Left-recursive: " + rec.join(", ") + ". The parser used here cannot handle that; remove the left recursion first (Grammar Transformations)." : "";
+          const lengthNote = ppG ? "Pumping length p = " + fmtLength(pumpLengthCF(ppG)) + " = b^(|V|+1), with b = " + Math.max(2, ...ppG.base.rules.map((r) => r.rhs.length)) + " (the longest right-hand side, at least 2) and |V| = " + ppG.nonterminals.size + " nonterminals: a string of at least p symbols splits as u v x y z with |vxy| ≤ p and |vy| ≥ 1. Shorter strings may split too." : "";
+          $("def-note").textContent = (lengthNote + " " + (rec.length ? "Left-recursive: " + rec.join(", ") + ". The parser used here cannot handle that; remove the left recursion first (Grammar Transformations)." : "")).trim();
         }
         saveShare();
         explore();
@@ -331,7 +339,7 @@
           text = "<p>On a long path of a parse tree some nonterminal <b>A</b> occurs twice. The upper <b>A</b> derives <b class=\"pp-v\">v</b> <b class=\"pp-x\">x</b> <b class=\"pp-y\">y</b>, the lower one <b class=\"pp-x\">x</b>; the jagged line is the derivation between them.</p>" +
             "<p>Both are <b>A</b>, so the part between them can be repeated or cut out: <b class=\"pp-u\">u</b> <b class=\"pp-v\">v</b><sup>" + i + "</sup> <b class=\"pp-x\">x</b> <b class=\"pp-y\">y</b><sup>" + i + "</sup> <b class=\"pp-z\">z</b> is in the language for every i ≥ 0.</p>";
         }
-        $("strip").innerHTML = '<div class="pp-row"><span class="ui-label">split</span><span class="pp-formula">' + split + "</span></div>" +
+        $("strip").innerHTML = '<div class="pp-row"><span class="ui-label">length</span><span class="pp-formula">|w| ≥ p</span></div><div class="pp-row"><span class="ui-label">split</span><span class="pp-formula">' + split + "</span></div>" +
           '<div class="pp-row"><span class="ui-label">string</span><div class="pp-body">' + body + "</div></div>";
         $("explain").innerHTML = text + hint;
         if (ppMode === "regular") { drawDFA(); paintGraph(); walk.pos = 0; walk.refresh(); return; }
@@ -373,7 +381,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         const px = parts ? [...parts.x].length : 0, py = parts ? [...parts.y].length : 0;
         const roleAt = (pos) => (!parts ? "z" : pos < px ? "x" : pos < px + i * py ? "y" : "z");
 
-        let html = "";
+        let html = lengthRow([...w].length, k, "a state must repeat", "a state may still repeat");
         if (parts) {
           html += '<div class="pp-row"><span class="ui-label">split</span><span class="pp-formula">w = <b class="pp-x">x</b> <b class="pp-y">y</b> <b class="pp-z">z</b> with <b class="pp-x">x</b> = ' + q(parts.x) + ", <b class=\"pp-y\">y</b> = " + q(parts.y) + ", <b class=\"pp-z\">z</b> = " + q(parts.z) + "; |xy| = " + loop.t + " ≤ " + k + "</span></div>";
         } else {
@@ -517,7 +525,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         }
         const pair = ppCF.pairs[ppCF.pairIdx];
         const nts = ppG.nonterminals.size;
-        let html = "";
+        let html = lengthRow(ppCF.tokens.length, pumpLengthCF(ppG), "a split exists", "a split may still exist");
         if (pair) {
           const pr = ppCF.parts;
           const j = (a) => a.join(sep);
@@ -553,20 +561,33 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
       // view fits the figure for FIT_COPIES, so dragging the slider or switching the baselines moves nothing; more copies than that
       // extend beyond the view, to be panned or zoomed out.
       const FIT_COPIES = 4;
-      let ctgView = null, ctgBox = null;
+      let ctgView = null, ctgBox = null, ctgNow = null, ctgFitNow = false;
       function drawFigure(fig, widest, fitted, opts) {
-        if (!ctgView) ctgView = createFitView({ svg: "ctg-svg", root: "ctg-root", scaleExtent: [0.08, 4], maxScale: 1.5, pad: 16, align: "top", bounds: () => ctgBox, hasContent: () => ppMode === "cf" && ppView === "path" && !!ctgBox });
+        if (!ctgView) {
+          ctgView = createFitView({ svg: "ctg-svg", root: "ctg-root", scaleExtent: [0.08, 4], maxScale: 1.5, pad: 16, align: "top", bounds: () => (ctgFitNow ? ctgNow : ctgBox), hasContent: () => ppMode === "cf" && ppView === "path" && !!ctgBox });
+          // double-click fits the figure as it is now (the automatic fit keeps room for the larger ones), and keeps that view
+          $("ctg-svg").addEventListener("dblclick", (e) => {
+            e.stopImmediatePropagation();
+            if (!ctgNow) return;
+            ctgFitNow = true;
+            ctgView.fit();
+            ctgFitNow = false;
+            ctgView.hold();
+          }, true);
+        }
         const root = $("ctg-root");
         root.innerHTML = "";
         $("ctg-empty").hidden = true;
         const lay = ctgSplitLayout(widest, { unify: true }), fit = ctgSplitLayout(fitted, { unify: true });
         drawCTGSplitInto(root, fig, { unify: ppBase === "joined", minWidth: lay.width, ...opts });
         ctgBox = { x: lay.cx - fit.width / 2, y: 0, width: fit.width, height: fit.height };
+        const own = ctgSplitLayout(fig, { unify: ppBase === "joined", ...opts });
+        ctgNow = { x: lay.cx - own.width / 2, y: 0, width: own.width, height: own.height };
         ctgView.refit();
       }
       function clearFigure(message) {
         $("ctg-root").innerHTML = "";
-        ctgBox = null;
+        ctgBox = ctgNow = null;
         $("ctg-empty").hidden = !message;
         $("ctg-empty").textContent = message || "";
       }

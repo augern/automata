@@ -197,3 +197,9 @@ test("figures: the unified string is the pumped yield, and the layouts keep thei
   }
   assert.ok(figures > 300, "enough figures were checked: " + figures);
 });
+
+test("pumpLengthCF: b^(|V|+1) with b the longest right-hand side, at least 2", () => {
+  assert.equal(P.pumpLengthCF(P.rdpParseGrammar("S -> a S b | eps")), 9);
+  assert.equal(P.pumpLengthCF(P.rdpParseGrammar("E -> T + E | T\nT -> F * T | F\nF -> ( E ) | a")), 81);
+  assert.equal(P.pumpLengthCF(P.rdpParseGrammar("S -> a")), 4, "b is at least 2");
+});
