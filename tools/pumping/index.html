@@ -209,6 +209,7 @@
       const $ = (id) => document.getElementById(id);
 
       let ppMode = "regular"; // regular | cf
+      let dressed = null; // the state that the link keeps while the Easter egg shows another
       let grammarEditor = null; // the editor of the grammar's productions
       const ctgPref = ctgPrefs({ view: "path", unify: false }); // remembered for this tool
       let ppView = ctgPref.get().view; // context-free drawing: path | tree
@@ -593,9 +594,10 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
       let typed = "", undress = null;
       function dress() {
         const root = $("ctg-root");
-        if (undress) { root.classList.remove("xmas"); undress(); undress = null; return; }
+        if (undress) { root.classList.remove("xmas"); dressed = null; undress(); undress = null; return; }
         const was = { mode: ppMode, g: $("grammar-input").value, w: $("w-input").value, i: $("pump-i").value, ex: $("examples-select").value };
         root.classList.add("xmas");
+        dressed = { g: defInput().value, s: was.w, m: was.mode };
         $("grammar-input").value = "★ -> Happy ✶ lidays!\n✶ -> ✷\n✷ -> ✦\n✦ -> ho ✧ | ✺\n✧ -> ✦\n✺ -> eps";
         $("w-input").value = "Happy ho lidays!";
         $("pump-i").value = 5;
@@ -705,7 +707,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPI
         else buildDef();
       }
 
-      const saveShare = createShareSaver(() => ({ g: defInput().value, s: $("w-input").value, m: ppMode }));
+      const saveShare = createShareSaver(() => dressed || { g: defInput().value, s: $("w-input").value, m: ppMode });
       let sharedStateApplied = false;
       function applyShareState() {
         const st = shareValidateTextState(readShareState(), "g", ["regular", "cf"]);
