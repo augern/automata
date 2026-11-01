@@ -111,17 +111,18 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //   tone: 0 for the first copy of the middle part, one more for each further copy; the shade follows it; the root has none
 //   blank: the triangle to be drawn in the background colour over the root's
 function ctgSplitLayout(fig, opts = {}) {
-  const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, topPad: 26, marginX: 22, unify: false, ...opts };
+  const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, unify: false, ...opts };
   const i = fig.i, order = ["u", "v", "x", "y", "z"];
   const c = Math.max(o.minCol, ...order.map((p) => Math.max(1, fig.parts[p].text.length) * o.charW + 2 * o.tokPad));
-  const step = c / o.tan, baseH = step / 2;
+  // a wide column makes the triangles flatter, not taller: the step down the spine is capped, and the angle follows from it
+  const step = Math.min(c / o.tan, o.maxStep), tan = c / step, baseH = step / 2;
   const first = fig.rootIsUp ? 0 : 1; // the level of the first copy of the repeated nonterminal
   const lowJ = first + i;
   const apexY = (j) => o.topPad + 11 + j * step;
   const L0 = apexY(first + 1) + baseH; // the base line of the frame: that of one copy
   const lowBase = L0 + (i - 1) * step;
   const B = Math.max(L0, lowBase); // the lowest base line
-  const half = (y, apex) => (y - apex) * o.tan;
+  const half = (y, apex) => (y - apex) * tan;
   const unified = o.unify;
   const lastCopy = Math.max(i, 1);
   // the width is that of the unified figure in both modes, so that switching does not move anything

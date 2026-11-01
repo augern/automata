@@ -140,6 +140,95 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Larger grammars",
+      "examples": [
+        {
+          "label": "Palindromes",
+          "purpose": "The repeated pair can sit anywhere: pumping the outer letters keeps the palindrome. Several repeats on the longest path.",
+          "mode": "cf",
+          "grammar": "palindromes",
+          "strings": [
+            "abba",
+            "abaaba"
+          ]
+        },
+        {
+          "label": "Mutual recursion",
+          "purpose": "A and B call each other: the repeated A is two steps below the first, so the path between them is drawn jagged.",
+          "mode": "cf",
+          "text": [
+            "A -> b B | a",
+            "B -> c A | d"
+          ],
+          "strings": [
+            "bcbcbca",
+            "bcbd"
+          ]
+        },
+        {
+          "label": "Nested data",
+          "purpose": "A JSON-like value: lists and records inside each other. Many repeats; pick another with the button.",
+          "mode": "cf",
+          "text": [
+            "V -> { M } | [ L ] | a",
+            "M -> k : V , M | k : V | eps",
+            "L -> V , L | V | eps"
+          ],
+          "strings": [
+            "[a,[a,{k:a}]]",
+            "{k:[a,a],k:a}"
+          ]
+        },
+        {
+          "label": "Nested expressions",
+          "purpose": "Right-recursive expressions with parentheses and unary minus: deep trees, repeats on several nonterminals.",
+          "mode": "cf",
+          "text": [
+            "E -> T + E | T",
+            "T -> F * T | F",
+            "F -> ( E ) | - F | a"
+          ],
+          "strings": [
+            "(a+(a*a))*-a",
+            "((a))"
+          ]
+        },
+        {
+          "label": "Long pieces",
+          "purpose": "v and y are three symbols long: the columns of the figure are wide.",
+          "mode": "cf",
+          "text": [
+            "S -> a b c S d e f | x"
+          ],
+          "strings": [
+            "abcabcxdefdef"
+          ]
+        },
+        {
+          "label": "if–then–else",
+          "purpose": "Terminals of several characters, separated by spaces in the input; an ambiguous grammar, of which the parser finds one tree.",
+          "mode": "cf",
+          "text": [
+            "S -> if E then S else S | if E then S | a",
+            "E -> e"
+          ],
+          "strings": [
+            "if e then if e then a else a"
+          ]
+        },
+        {
+          "label": "Regular expressions",
+          "purpose": "A larger grammar: the repeated nonterminal is several steps below the first one on the longest path.",
+          "mode": "cf",
+          "grammar": "regex-language-ll",
+          "strings": [
+            "(a|b)*abb",
+            "a(b|c)*"
+          ]
+        }
+      ]
     }
   ]
 }

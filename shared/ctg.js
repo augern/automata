@@ -92,7 +92,7 @@ function drawCTG(host, tree, opts = {}) {
   return { svg, layout: lay };
 }
 
-// The pumping figure of algo/ctg.js (ctgSplitLayout), drawn into an <svg> in the host. Options: unify, scale.
+// The pumping figure of algo/ctg.js (ctgSplitLayout), drawn into an <svg> in the host. Options: unify, scale, staples (false: none under the tokens).
 function drawCTGSplit(host, fig, opts = {}) {
   const lay = ctgSplitLayout(fig, opts);
   const hostEl = typeof host === "string" ? document.getElementById(host) : host;
@@ -117,7 +117,7 @@ function drawCTGSplit(host, fig, opts = {}) {
   for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
   for (const t of lay.tokens) {
     make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg, t.text);
-    if (t.label) { // a staple under the token, with the name of the part
+    if (t.label && opts.staples !== false) { // a staple under the token, with the name of the part
       const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;
       make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
       if (t.label !== t.text) make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);

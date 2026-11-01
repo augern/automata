@@ -2,7 +2,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const P = load("grammar.js", "strings.js", "rdp.js", "regex.js", "pumping.js");
+const P = load("grammar.js", "strings.js", "rdp.js", "regex.js", "pumping.js", "ctg.js");
+const fs = require("node:fs");
+const path = require("node:path");
 const arr = (x) => [...x];
 
 // ── DFA ───────────────────────────────────────────────────────────────
@@ -140,4 +142,58 @@ test("empty parts are ε in the path figure, in the part they belong to", () => 
 test("pumpSplitFigure: the parts of the original string, ε for an empty one", () => {
   const f = P.pumpSplitFigure("S", "A", { u: [], v: ["a", "b"], x: [], y: ["c"], z: [] }, "", 2, false);
   assert.deepEqual(JSON.parse(JSON.stringify([f.parts.u.text, f.parts.v.text, f.parts.x.text, f.parts.y.text, f.i])), ["ε", "ab", "ε", "c", 2]);
+});
+
+// The figure for every pair of random sentences of several grammars, at every number of copies.
+test("figures: the unified string is the pumped yield, and the layouts keep their invariants", () => {
+  const root = path.join(__dirname, "..");
+  const lib = JSON.parse(fs.readFileSync(path.join(root, "shared", "grammars.json"), "utf8"));
+  const data = JSON.parse(fs.readFileSync(path.join(root, "tools", "pumping", "examples.json"), "utf8"));
+  const grammars = [];
+  for (const grp of data.groups) for (const ex of grp.examples) if (ex.mode === "cf") grammars.push([ex.label, ex.grammar ? lib[ex.grammar].text.join("\n") : ex.text.join("\n")]);
+  for (const key of ["java-statements-expressions-ll", "python-statements-expressions-ll"]) grammars.push([key, lib[key].text.join("\n")]);
+  let seed = 11;
+  const rng = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let figures = 0;
+  for (const [label, text] of grammars) {
+    const g = P.rdpParseGrammar(text);
+    if (P.rdpLeftRecursive(g).length) continue;
+    const sep = [...g.terminals].some((t) => [...t].length > 1) ? " " : "";
+    for (let n = 0; n < 12; n++) {
+      const sentence = P.grammarRandomSentence(g.base, rng, { minTerms: 6, maxTerms: 18 });
+      if (!sentence) continue;
+      const parsed = P.pumpParseTree(g, sentence);
+      if (!parsed.tree) continue;
+      const pairs = P.pumpPairs(parsed.tree);
+      for (const pair of pairs.slice(0, 2)) {
+        const parts = P.pumpDecompose(parsed.tree, pair);
+        const tagged = P.pumpTag(parsed.tree, pair);
+        const hops = { top: pair.up.length, mid: pair.low.length - pair.up.length };
+        for (let i = 0; i <= 4; i++) {
+          const yieldText = P.pumpYield(P.pumpTree(tagged, pair, i)).join(sep);
+          const fig = P.pumpSplitFigure(parsed.tree.sym, P.pumpGet(parsed.tree, pair.up).sym, parts, sep, i, pair.up.length === 0, hops);
+          const split = P.ctgSplitLayout(fig), uni = P.ctgSplitLayout(fig, { unify: true });
+          const where = `${label}: "${sentence.join(sep)}", ${i} copies`;
+          figures++;
+          // the unified figure reads as the pumped string
+          assert.equal(uni.tokens.filter((t) => !t.eps).map((t) => t.text).join(sep), yieldText, where);
+          for (let k = 1; k < uni.tokens.length; k++) assert.ok(uni.tokens[k].x >= uni.tokens[k - 1].x + uni.tokens[k - 1].w - 1e-6, `${where}: tokens overlap`);
+          // the apexes do not move between the modes; the nodes lie one step apart down the spine
+          assert.deepEqual(JSON.parse(JSON.stringify(uni.nodes)), JSON.parse(JSON.stringify(split.nodes)), where);
+          for (let k = 1; k < uni.nodes.length; k++) assert.ok(uni.nodes[k].y > uni.nodes[k - 1].y, `${where}: nodes in order`);
+          // triangles nest: strictly inside the one before
+          for (const lay of [split, uni]) {
+            const tris = lay.tris.filter((t) => !t.blank);
+            const slope = (t) => (t.x1 - t.x0) / 2 / (t.y - t.ay);
+            tris.forEach((t, k) => {
+              assert.ok(Math.abs(slope(t) - slope(tris[0])) < 1e-9, `${where}: one angle`);
+              if (k && lay === uni) assert.ok(t.x0 > tris[k - 1].x0 && t.x1 < tris[k - 1].x1, `${where}: nested`);
+            });
+            assert.ok(lay.width > 0 && Number.isFinite(lay.height), where);
+          }
+        }
+      }
+    }
+  }
+  assert.ok(figures > 300, "enough figures were checked: " + figures);
 });
