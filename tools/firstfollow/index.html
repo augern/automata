@@ -170,9 +170,9 @@
             <div id="wit-bar"></div>
             <div id="wit-ctl">
               <div class="step-group" id="wit-alt" hidden>
-                <button class="btn" id="btn-alt-prev" title="Previous way of showing it">&#8249;</button>
+                <button class="btn" id="btn-alt-prev" title="Previous">&#8249;</button>
                 <span id="wit-alt-n"></span>
-                <button class="btn" id="btn-alt-next" title="Next way of showing it">&#8250;</button>
+                <button class="btn" id="btn-alt-next" title="Next">&#8250;</button>
               </div>
               <div class="step-group" id="wit-theory" title="The general case, with symbols in place of a grammar">
                 <button class="btn" data-theory="nullable">Nullable</button>
@@ -180,7 +180,7 @@
                 <button class="btn" data-theory="follow">FOLLOW</button>
               </div>
               <label id="wit-samples-wrap" class="wit-opt" title="Spell out the strings that only stand for what a symbol derives, faded, instead of …"><input type="checkbox" id="wit-samples" /> Show sample strings</label>
-              <label id="wit-all-wrap" title="Show a witness for every member of this set, side by side"><input type="checkbox" id="wit-all" /> Whole set</label>
+              <label id="wit-all-wrap" title="Step through a witness for every member of this set"><input type="checkbox" id="wit-all" /> Whole set</label>
             </div>
           </div>
           <div id="wit-canvas" class="ui-canvas">
@@ -238,7 +238,7 @@
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
     <script src="../../shared/view-menu.js?v=eada4185"></script>
-    <script src="guide.js?v=d3ee3efc"></script>
+    <script src="guide.js?v=ccfc0fe2"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script>
       initResize("rh-1", "p-grammar", +1);
@@ -329,6 +329,7 @@ ${kw("return")} Follow`,
       let rec = null; // ffRecord of the grammar
       let sel = null; // the member shown in the witness panel: { kind: "first" | "follow" | "nullable", nt, tok }
       let alt = 0; // which way of showing it (the shortest is 0)
+      let which = 0, whichCount = 0; // with several members shown (a step that adds some, the whole set): which one, and how many
       let theory = null; // nullable | first | follow: the general case is shown instead of a member
       let shownStep = null; // the step of the construction whose member (or phase) the witness shows
       const ctgPref = ctgPrefs({ all: false, skip: false, samples: false }); // remembered for this tool: a witness for the whole set; sample strings in the witness; steps that add nothing left out
@@ -376,6 +377,7 @@ ${kw("return")} Follow`,
         theory = null;
         shownStep = null;
         alt = 0;
+        which = 0;
         saveShare();
         renderSets(sim.pos);
         drawWitness();
@@ -386,7 +388,7 @@ ${kw("return")} Follow`,
         const ev = i >= 0 ? rec.events[i] : null;
         shownStep = i >= 0 ? i : null;
         const m = ev && ev.added.length ? (ev.phase === "nullable" ? { kind: "nullable", nt: ev.added[0] } : { kind: ev.phase, nt: ev.target, tok: ev.added[0] }) : null;
-        if (m && memberExists(m)) { sel = m; theory = null; alt = 0; }
+        if (m && memberExists(m)) { sel = m; theory = null; alt = 0; which = 0; }
         else theory = ev ? ev.phase : "nullable";
         renderLog(sim.pos);
         renderSets(sim.pos);
@@ -420,6 +422,7 @@ ${kw("return")} Follow`,
         el("wit-bar").textContent = "";
         el("wit-forms").innerHTML = "";
         el("wit-alt").hidden = true;
+        whichCount = 0;
         witBox = null;
         el("wit-empty").hidden = !!sel || !!theory;
         document.querySelectorAll("#wit-theory .btn").forEach((b) => b.classList.toggle("is-on", b.dataset.theory === theory));
@@ -438,19 +441,20 @@ ${kw("return")} Follow`,
           return;
         }
         if (!sel) return;
-        if (added) {
-          const toks = [...added].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
-          showFigures(toks.map((t) => ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: t }, 0), { samples: ctgPref.get().samples })), 60);
-          el("wit-bar").textContent = "{ " + toks.join(", ") + " } ⊆ " + SET_LABEL[sel.kind] + "(" + sel.nt + "): the shortest witness of each member this step adds";
+        const many = added || (whole && [...rec[sel.kind][sel.nt]]);
+        if (many) {
+          const toks = [...many].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
+          whichCount = toks.length;
+          which = Math.min(which, whichCount - 1);
+          const spec = ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: toks[which] }, 0), { samples: ctgPref.get().samples });
+          showFigures([spec], 0);
+          el("wit-bar").textContent = (added ? "{ " + toks.join(", ") + " } ⊆ " : SET_LABEL[sel.kind] + "(" + sel.nt + ") = { " + toks.join(", ") + " }: ") + (added ? SET_LABEL[sel.kind] + "(" + sel.nt + "): added by this step. " : "the shortest witness of each member. ") + spec.statement;
+          el("wit-forms").innerHTML = spec.forms.map(esc).join(' <span class="wit-arrow">⇒</span> ');
+          el("wit-alt").hidden = whichCount < 2;
+          el("wit-alt-n").textContent = which + 1 + " / " + whichCount;
           return;
         }
-        if (whole) {
-          const toks = [...rec[sel.kind][sel.nt]].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
-          const specs = toks.map((t) => ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: t }, 0), { samples: ctgPref.get().samples }));
-          showFigures(specs, 60);
-          el("wit-bar").textContent = SET_LABEL[sel.kind] + "(" + sel.nt + ") = { " + toks.join(", ") + " }: the shortest witness of each member";
-          return;
-        }
+        whichCount = 0;
         const w = witnessOf(sel, alt);
         if (!w) { sel = null; drawWitness(); return; }
         const spec = ffwSpec(w, { samples: ctgPref.get().samples });
@@ -630,7 +634,9 @@ ${kw("return")} Follow`,
           sim.go(stopLast >= 0 ? stopLast : last); // a phase that adds nothing at all: its end
         })
       );
-      const way = (d) => { if (sel) { const w = witnessOf(sel, alt); alt = (w.alt + d + w.count) % w.count; drawWitness(); } };
+      const way = (d) => {
+        if (whichCount > 1) { which = (which + d + whichCount) % whichCount; drawWitness(); return; }
+        if (sel) { const w = witnessOf(sel, alt); alt = (w.alt + d + w.count) % w.count; drawWitness(); } };
       el("btn-alt-prev").addEventListener("click", () => way(-1));
       el("btn-alt-next").addEventListener("click", () => way(1));
       document.querySelectorAll("#wit-theory .btn").forEach((b) => b.addEventListener("click", () => { theory = b.dataset.theory; drawWitness(); }));
