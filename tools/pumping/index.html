@@ -8,6 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=3e2c71b3" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <link rel="stylesheet" href="../../shared/ui.css?v=3f0a50c2" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -21,6 +22,8 @@
 
       #regex-row { flex-shrink: 0; display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-lo); }
       #regex-row input { flex: 1; min-width: 0; }
+      .def-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      #dfa-input { flex: 1; background: transparent; color: var(--text); border: none; outline: none; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.75; padding: var(--sp-5); resize: none; }
             #def-note { flex-shrink: 0; padding: 0 var(--sp-5) var(--sp-3); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
       #def-note:empty { display: none; }
 
@@ -107,7 +110,8 @@
             <input id="regex-input" class="ui-input" type="text" spellcheck="false" placeholder="regular expression, e.g. (a|b)*abb" />
             <button class="btn" onclick="regexToDFA()" title="Replace the DFA below by the minimal DFA of this expression">→ DFA</button>
           </div>
-          <textarea id="grammar-input" spellcheck="false"></textarea>
+          <div id="dfa-wrap" class="def-wrap"><textarea id="dfa-input" spellcheck="false" placeholder="start: q0&#10;accept: q1&#10;q0 a q1&#10;q1 b q0"></textarea></div>
+          <div id="grammar-wrap" class="def-wrap"><textarea id="grammar-input" spellcheck="false" placeholder="S -> a S b | eps"></textarea></div>
           <div id="def-note"></div>
           <div id="grammar-footer"><div id="error-msg"></div></div>
         </div>
@@ -129,7 +133,7 @@
             </div>
             <div id="pump-bar" class="ui-bar">
               <span class="ui-label" id="pump-label">repeat y</span>
-              <input id="pump-i" type="range" min="0" max="6" value="1" />
+              <input id="pump-i" type="range" min="0" max="10" value="1" />
               <span id="pump-i-val">i = 1</span>
             </div>
             <div id="walk-bar" class="ui-bar">
@@ -194,6 +198,8 @@
     <script src="guide.js?v=bacb2c32"></script>
     <script src="../../shared/guide.js?v=98cfe80c"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
+    <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
     <script>
       initResize("rh-1", "p-def", +1);
@@ -202,6 +208,7 @@
       const $ = (id) => document.getElementById(id);
 
       let ppMode = "regular"; // regular | cf
+      let grammarEditor = null; // the editor of the grammar's productions
       let ppView = "path"; // context-free drawing: path | tree
       let ppBase = "joined"; // base lines of the path drawing: split | joined
       let ppDFA = null; // the parsed DFA (regular mode)
@@ -217,7 +224,9 @@
         $("btn-mode-regular").classList.toggle("active", m === "regular");
         $("btn-mode-cf").classList.toggle("active", m === "cf");
         $("def-title").textContent = m === "regular" ? "DFA" : "Grammar";
-        $("regex-row").hidden = m !== "regular";
+        $("regex-row").hidden = $("dfa-wrap").hidden = m !== "regular";
+        $("grammar-wrap").hidden = m === "regular";
+        if (grammarEditor && m === "cf") grammarEditor.render(); // it measures its fields, which needs the panel to be shown
         $("canvas-dfa").hidden = m !== "regular";
         $("canvas-tree").hidden = m !== "cf" || ppView !== "tree";
         $("canvas-ctg").hidden = m !== "cf" || ppView === "tree";
@@ -227,8 +236,7 @@
         $("walk-label").hidden = m !== "regular";
         $("btn-other").hidden = m !== "cf";
         $("pump-label").textContent = m === "regular" ? "repeat y" : "repeat v, y";
-        $("pump-i").max = m === "regular" ? 6 : 4;
-        $("grammar-input").placeholder = m === "regular" ? "start: q0\naccept: q1\nq0 a q1\nq1 b q0" : "S -> a S b | eps";
+        $("pump-i").max = m === "regular" ? 10 : 8;
         saveShare();
         buildDef();
       }
@@ -241,6 +249,7 @@
         ppStrings = [];
         setMode(m);
       }
+      const defInput = () => $(ppMode === "regular" ? "dfa-input" : "grammar-input"); // the text of the machine or grammar
       const isGeneral = () => !$("w-input").value.trim();
       const redraw = () => (isGeneral() ? renderGeneral() : ppMode === "regular" ? renderRegular() : renderCF());
 
@@ -263,7 +272,7 @@
 
       // ── Definition ────────────────────────────────────────────
       function buildDef() {
-        const text = $("grammar-input").value;
+        const text = defInput().value;
         setError("");
         $("def-note").textContent = "";
         if (ppMode === "regular") {
@@ -284,7 +293,7 @@
         if (!src) return;
         try {
           const min = minimizeDFA(subsetConstruct(regexToNFA(src)));
-          $("grammar-input").value = pumpDFAToText(pumpDFAFromMin(min));
+          $("dfa-input").value = pumpDFAToText(pumpDFAFromMin(min));
           buildDef();
         } catch (e) { setError(e.message); }
       }
@@ -329,7 +338,7 @@
         if (ppView === "tree") { setView("path"); return; }
         const gen = pumpGeneralCF(i);
         $("ctg-empty").hidden = true;
-drawFigure(gen, pumpGeneralCF(+$("pump-i").max), { staples: false }); // the letters are the tokens
+drawFigure(gen, pumpGeneralCF(+$("pump-i").max), pumpGeneralCF(Math.min(FIT_COPIES, +$("pump-i").max)), { staples: false }); // the letters are the tokens
       }
 
       const partOf = (parts, pos) => (pos < parts.x.length ? "x" : pos < parts.x.length + parts.yN ? "y" : "z");
@@ -540,17 +549,19 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), { staples: false }); // the let
       }
 
       // The path between the repeated nonterminals: a jagged spine with the strings hanging off it.
-      // The figure of the pumping lemma in a view that pans and zooms. The view fits the figure for the largest number of copies, so
-      // that dragging the slider or switching the baselines does not move anything.
+      // The figure of the pumping lemma in a view that pans and zooms. Every figure is centred on the axis of the largest one, and the
+      // view fits the figure for FIT_COPIES, so dragging the slider or switching the baselines moves nothing; more copies than that
+      // extend beyond the view, to be panned or zoomed out.
+      const FIT_COPIES = 4;
       let ctgView = null, ctgBox = null;
-      function drawFigure(fig, widest, opts) {
+      function drawFigure(fig, widest, fitted, opts) {
         if (!ctgView) ctgView = createFitView({ svg: "ctg-svg", root: "ctg-root", scaleExtent: [0.08, 4], maxScale: 1.5, pad: 16, align: "top", bounds: () => ctgBox, hasContent: () => ppMode === "cf" && ppView === "path" && !!ctgBox });
         const root = $("ctg-root");
         root.innerHTML = "";
         $("ctg-empty").hidden = true;
-        const lay = ctgSplitLayout(widest, { unify: true });
+        const lay = ctgSplitLayout(widest, { unify: true }), fit = ctgSplitLayout(fitted, { unify: true });
         drawCTGSplitInto(root, fig, { unify: ppBase === "joined", minWidth: lay.width, ...opts });
-        ctgBox = { x: 0, y: 0, width: lay.width, height: lay.height };
+        ctgBox = { x: lay.cx - fit.width / 2, y: 0, width: fit.width, height: fit.height };
         ctgView.refit();
       }
       function clearFigure(message) {
@@ -566,7 +577,7 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), { staples: false }); // the let
         if (!pair) { clearFigure(!ppG ? "" : tree ? "No path of this tree repeats a nonterminal with something between the occurrences." : "Enter a string the grammar generates."); return; }
         const hops = { top: pair.up.length, mid: pair.low.length - pair.up.length };
         const figure = (i) => pumpSplitFigure(ppCF.tree.sym, pumpGet(ppCF.tree, pair.up).sym, ppCF.parts, ppSep(), i, pair.up.length === 0, hops);
-        drawFigure(figure(+$("pump-i").value), figure(+$("pump-i").max));
+        drawFigure(figure(+$("pump-i").value), figure(+$("pump-i").max), figure(Math.min(FIT_COPIES, +$("pump-i").max)));
       }
 
       let treeView = null;
@@ -599,7 +610,8 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), { staples: false }); // the let
       }
 
       // ── Wiring ────────────────────────────────────────────────
-      $("grammar-input").addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
+      grammarEditor = GrammarEditor.attach($("grammar-input"));
+      for (const id of ["grammar-input", "dfa-input"]) $(id).addEventListener("input", () => { clearTimeout(ppTimer); ppTimer = setTimeout(buildDef, 300); });
       let ppTimer = null;
       $("w-input").addEventListener("input", () => { explore(); saveShare(); });
       $("pump-i").addEventListener("input", () => redraw());
@@ -634,22 +646,22 @@ drawFigure(gen, pumpGeneralCF(+$("pump-i").max), { staples: false }); // the let
         if (!ex) return;
         $("examples-select").value = k;
         ppStrings = ex.strings || [];
-        $("grammar-input").value = ex.text;
+        $(ex.mode === "cf" ? "grammar-input" : "dfa-input").value = ex.text;
         $("w-input").value = "";
         $("pump-i").value = ex.i === undefined ? 2 : ex.i;
         if ((ex.mode || "regular") !== ppMode) setMode(ex.mode || "regular");
         else buildDef();
       }
 
-      const saveShare = createShareSaver(() => ({ g: $("grammar-input").value, s: $("w-input").value, m: ppMode }));
+      const saveShare = createShareSaver(() => ({ g: defInput().value, s: $("w-input").value, m: ppMode }));
       let sharedStateApplied = false;
       function applyShareState() {
         const st = shareValidateTextState(readShareState(), "g", ["regular", "cf"]);
         if (!st) return;
         sharedStateApplied = true;
-        $("grammar-input").value = st.g;
-        $("w-input").value = st.s;
         if (st.m) ppMode = st.m;
+        defInput().value = st.g;
+        $("w-input").value = st.s;
       }
 
       initPanelStorage("pumping-tool-v2", ["p-def", "p-main"]);
