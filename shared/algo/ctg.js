@@ -103,14 +103,16 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //   spec: { nodes: [{ sym, cls?, colour?, tone?, kind?, jag? }],      top to bottom; jag: the step from the node above hides steps
 //           levels: [{ left, right }],                                one per pair of neighbouring nodes
 //           bottom: flank,                                            what the last node derives
-//           outer?: { left, right } }                                 strings outside the top triangle
-//     flank: { text, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
+//           outer?: { left, right },                                  strings outside the top triangle
+//           arrows?: [{ fromNode, side: "left" | "right", toId }] }    a scan arrow from the foot of a node to the token with that id
+//     flank: { text, id?, head?, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
+//       head: the leading part of the text that is emphasised; id: what an arrow points at
 //       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
 //       mark: { kind, label } is a pointer under the token
 //     colour is a CSS colour for the triangle of the node, tone how much of it (default: a grey, deeper with each level; none for the top)
 //   opts: depth (the base line is where a spine of that many nodes would have it, default: the spine's own), colWidth and
 //         minWidth (at least that wide), and the constants below
-//   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags }
+//   -> { width, height, cx, B, c, step, nodes: [{ sym, x, y, cls, kind, footL, footR }], tris, tokens, base, jags, arrows }
 //      footL and footR are where the legs of a node's triangle meet the base line
 function ctgSpineLayout(spec, opts = {}) {
   const o = { charW: 9, tokPad: 6, minCol: 36, tan: 0.45, maxStep: 104, topPad: 26, marginX: 22, ...opts };
@@ -128,7 +130,7 @@ function ctgSpineLayout(spec, opts = {}) {
   // a triangle without a colour of its own gets a grey that deepens with the depth, so that the nested ones can be told apart
   const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour || (k ? "var(--text-lo)" : ""), tone: n.tone !== undefined ? n.tone : k }));
   const tokens = [];
-  const tok = (f, centre) => { if (f) tokens.push({ text: f.text, part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
+  const tok = (f, centre) => { if (f) tokens.push({ text: f.text, id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
   for (let k = 0; k < m; k++) {
     tok(spec.levels[k].left, (nodes[k].footL + nodes[k + 1].footL) / 2);
     tok(spec.levels[k].right, (nodes[k].footR + nodes[k + 1].footR) / 2);
@@ -140,7 +142,15 @@ function ctgSpineLayout(spec, opts = {}) {
   const jags = [];
   for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
   const pointers = tokens.some((t) => t.mark) ? 22 : 0;
-  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags };
+  // a scan arrow runs along the base line from the foot of a node to a token, over the columns between
+  const arrows = [];
+  for (const a of spec.arrows || []) {
+    const to = tokens.find((t) => t.id === a.toId);
+    if (!to) continue;
+    const right = a.side === "right";
+    arrows.push({ x0: right ? nodes[a.fromNode].footR : nodes[a.fromNode].footL, x1: right ? to.x : to.x + to.w, y: B - 5, side: a.side, kind: to.kind });
+  }
+  return { width, height: B + 56 + pointers, cx, B, c, step, nodes, tris, tokens, base, jags, arrows };
 }
 
 // ── The split figure ──────────────────────────────────────────────────────────────────────────────────────────

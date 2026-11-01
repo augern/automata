@@ -6,7 +6,7 @@
 <title>UI Kit | Parser Tools</title>
 <link rel="stylesheet" href="shared/shared.css?v=3e2c71b3" />
 <script src="shared/theme.js?v=9222f18e"></script>
-<link rel="stylesheet" href="shared/ui.css?v=8cc0b0e1" />
+<link rel="stylesheet" href="shared/ui.css?v=12b028d2" />
 <style>
   /* The tools are full-viewport apps; this page just scrolls. */
   body { height: auto; overflow: auto; user-select: text; display: block; }
@@ -159,6 +159,14 @@
   <p class="note">Drawn by <code>drawCTGSpineInto</code>: a path of nonterminals, a string on each side of it, one base line. Here FIRST(E) ∋ id.</p>
   <div class="demo flush"><div class="box" style="height: 320px"><div class="ui-canvas"><svg id="kit-spine"><g id="kit-spine-root" class="ctg"></g></svg></div></div></div>
 
+  <h2>Witness figures</h2>
+  <p class="note">The spine figure of a witness (<code>ffwSpec</code> in <code>algo/ffwitness.js</code>) for the expression grammar: FIRST(E) ∋ id, FOLLOW(T) ∋ ), and E′ nullable.</p>
+  <div class="demo flush"><div class="row" style="gap: 0">
+    <div class="box" style="height: 300px; flex: 1"><div class="ui-canvas"><svg id="kit-w1"><g id="kit-w1-root" class="ctg"></g></svg></div></div>
+    <div class="box" style="height: 300px; flex: 1"><div class="ui-canvas"><svg id="kit-w2"><g id="kit-w2-root" class="ctg"></g></svg></div></div>
+    <div class="box" style="height: 300px; flex: 1"><div class="ui-canvas"><svg id="kit-w3"><g id="kit-w3-root" class="ctg"></g></svg></div></div>
+  </div></div>
+
   <h2>Configuration tree</h2>
   <div class="demo flush"><div class="box" style="height: 200px"><div class="ui-canvas"><svg id="ct-svg" viewBox="0 0 520 190"></svg></div></div></div>
 </main>
@@ -166,14 +174,16 @@
 <script src="vendor/d3.min.js?v=6d64bd2f"></script>
 <script src="vendor/dagre.min.js?v=15b1e755"></script>
 <script src="shared/algo/grammar.js?v=14930600"></script>
+<script src="shared/algo/firstfollow.js?v=36abb92e"></script>
+<script src="shared/algo/ffwitness.js?v=2f8aac6c"></script>
 <script src="shared/shared.js?v=42ed2a33"></script>
 <script src="shared/ui.js?v=b7fb54c9"></script>
 <script src="shared/algo/qr.js?v=bbd7ba7a"></script>
 <script src="shared/qr-modal.js?v=4dcb4b2f"></script>
 <script src="shared/quick-link.js?v=fca552e1"></script>
 <script src="shared/view-menu.js?v=eada4185"></script>
-<script src="shared/algo/ctg.js?v=a6808bae"></script>
-<script src="shared/ctg.js?v=7433c24b"></script>
+<script src="shared/algo/ctg.js?v=0d2dc989"></script>
+<script src="shared/ctg.js?v=cd1128d4"></script>
 <script src="shared/fit-view.js?v=9af2be16"></script>
 <script src="shared/automaton-graph.js?v=f2f7c58b"></script>
 <script>
@@ -211,6 +221,16 @@
     bottom: { text: "id", label: "F", kind: "first", mark: { kind: "first", label: "FIRST(E)" } },
   });
   createFitView({ svg: "kit-spine", root: "kit-spine-root", maxScale: 1.4, pad: 16, align: "top" });
+
+  // Witness figures, from the engine
+  {
+    const g = parseBNF("E -> T E'\nE' -> + T E' | eps\nT -> F T'\nT' -> * F T' | eps\nF -> ( E ) | id", false);
+    const rec = ffRecord(g);
+    [["kit-w1", ffwFirst(g, rec, "E", "id")], ["kit-w2", ffwFollow(g, rec, "T", ")")], ["kit-w3", ffwNullable(g, rec, "E'")]].forEach(([id, w]) => {
+      drawCTGSpineInto(document.getElementById(id + "-root"), ffwSpec(w));
+      createFitView({ svg: id, root: id + "-root", maxScale: 1.4, pad: 12, align: "top" });
+    });
+  }
 
   // Graph
   const kitView = createGraphView("kit", { fallbackWidth: 600 });

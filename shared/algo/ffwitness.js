@@ -3,7 +3,8 @@
 //   FIRST(A) ∋ t     A derives a string that starts with t; the symbols before t's are points (they derive ε)
 //   FOLLOW(B) ∋ t    the start symbol derives a string with B's stretch immediately followed by t ($ = the end)
 //   nullable A       A derives the empty string
-// ffwFirst / ffwFollow / ffwNullable(g, rec, ...) -> { tree, marks, nodeKinds, abstract } or null if the member is not in the set.
+// ffwFirst / ffwFollow / ffwNullable(g, rec, ...) -> { kind, sym, token, tree, marks, nodeKinds } or null if the member is not in the set.
+//   kind      first | follow | nullable; sym the symbol asked about, token the member
 //   tree      the CTG input; the node of the symbol asked about has id "target", the token of the member has the leaf id "t"
 //   marks, nodeKinds   for drawCTG
 //   unreachable  FOLLOW: the symbol cannot be reached from the start symbol, so the tree starts at the nearest ancestor known
@@ -70,7 +71,7 @@ function ffwFirst(g, rec, A, t) {
   const b = ffwBuilder(g, rec);
   const tree = ffwFirstTree(g, rec, b, A, t, "t");
   tree.id = "target";
-  return { tree, marks: [{ leafId: "t", kind: "first", label: `${t} ∈ FIRST(${A})` }], nodeKinds: { target: "focus" } };
+  return { kind: "first", sym: A, token: t, tree, marks: [{ leafId: "t", kind: "first", label: `${t} ∈ FIRST(${A})` }], nodeKinds: { target: "focus" } };
 }
 
 // A derivation of A to ε, every step shown: each symbol of the rule is itself such a derivation.
@@ -84,7 +85,7 @@ function ffwNullable(g, rec, A) {
   const b = ffwBuilder(g, rec);
   const tree = ffwNullableTree(g, rec, b, A);
   tree.id = "target";
-  return { tree, marks: [], nodeKinds: { target: "focus" } };
+  return { kind: "nullable", sym: A, tree, marks: [], nodeKinds: { target: "focus" } };
 }
 
 // For every nonterminal, the rule and position through which it is first reached from the start symbol: { A: { rule, pos } }.
@@ -144,5 +145,80 @@ function ffwFollow(g, rec, B, t) {
   w.at.id = "target";
   w.at.abstract = true;
   w.at.kids = y ? y.slice() : ["…"];
-  return { tree: w.root, marks: [{ leafId: t === "$" ? "end" : "t", kind: "follow", label: `${t} ∈ FOLLOW(${B})` }], nodeKinds: { target: "focus" }, endMarker: t === "$", unreachable: !!w.unreachable };
+  return { kind: "follow", sym: B, token: t, tree: w.root, marks: [{ leafId: t === "$" ? "end" : "t", kind: "follow", label: `${t} ∈ FOLLOW(${B})` }], nodeKinds: { target: "focus" }, endMarker: t === "$", unreachable: !!w.unreachable };
+}
+
+// ── The witness as a spine figure (ctgSpineLayout) ─────────────────────────────────────────────────────────────
+// ffwSpec(w) -> the spec of ctgSpineLayout for a witness of ffwFirst, ffwFollow or ffwNullable.
+// The spine is the path of the derivation to the member; what stands beside the path at each step is a string on each side, the
+// shortest strings that the other symbols of the rule derive (ε for the ones that vanish), the symbols named under them.
+//   FIRST(A) ∋ t    the path from A down to the rule that has t; t is the last node. An arrow runs from the left foot of A to t.
+//   FOLLOW(B) ∋ t   the path from the start symbol down to B, whose string is the bottom. The first string on its right that
+//                   is not ε starts with t (marked); an arrow runs from the right foot of B to it. $ stands after the whole string.
+//   nullable A      the path from A down the first symbol that does not derive ε at once; every string beside it is ε.
+const ffwTokens = (x) => (typeof x === "string" ? [x] : x.text !== undefined ? [x.text] : x.kids.flatMap(ffwTokens));
+const ffwLabel = (x) => (typeof x === "string" ? x : x.text !== undefined ? x.text : x.sym);
+const ffwHas = (x, id) => typeof x !== "string" && (x.id === id || (x.kids !== undefined && x.kids.some((k) => ffwHas(k, id))));
+
+// the string beside the path: the tokens of the symbols, ε if none; the symbols as its label
+function ffwFlank(sibs, extra = {}) {
+  if (!sibs.length) return null;
+  const toks = sibs.flatMap(ffwTokens);
+  return { text: toks.length ? toks.join(" ") : "ε", label: sibs.map(ffwLabel).join(" "), ...extra };
+}
+
+function ffwSpec(w) {
+  // the nodes of the path, from the root: next(node) is the index of the kid that the path goes on through, or -1
+  const path = (next) => {
+    const nodes = [w.tree];
+    for (let cur = w.tree; ; ) {
+      const j = next(cur);
+      if (j < 0 || typeof cur.kids[j] === "string" || cur.kids[j].text !== undefined) break;
+      cur = cur.kids[j];
+      nodes.push(cur);
+    }
+    return nodes;
+  };
+  const level = (node, j, extra = {}) => ({ left: ffwFlank(node.kids.slice(0, j)), right: ffwFlank(node.kids.slice(j + 1), extra) });
+  const spec = (nodes, levels, bottom, extra = {}) => ({ nodes, levels, bottom, ...extra });
+  const nodeOf = (n, k, kind) => ({ sym: n.sym, jag: false, kind: k === 0 && kind ? kind : "", cls: "" });
+
+  if (w.kind === "first") {
+    const nodes = path((n) => n.kids.findIndex((k) => ffwHas(k, "t")));
+    const last = nodes[nodes.length - 1];
+    const at = last.kids.findIndex((k) => ffwHas(k, "t"));
+    const levels = nodes.slice(0, -1).map((n, k) => level(n, n.kids.findIndex((x) => x === nodes[k + 1])));
+    levels.push(level(last, at));
+    const specNodes = nodes.map((n, k) => nodeOf(n, k, "focus"));
+    specNodes.push({ sym: w.token, jag: false, kind: "first", colour: "var(--accent)", tone: 1, cls: "" });
+    return spec(specNodes, levels, { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } }, { arrows: [{ fromNode: 0, side: "left", toId: "t" }] });
+  }
+
+  if (w.kind === "follow") {
+    const nodes = path((n) => n.kids.findIndex((k) => ffwHas(k, "target")));
+    const m = nodes.length - 1;
+    const levels = nodes.slice(0, -1).map((n, k) => level(n, n.kids.findIndex((x) => x === nodes[k + 1])));
+    // the string on the right that starts with the token: the innermost level whose right-hand string has the leaf t
+    let outer = null;
+    const mark = { kind: "follow", label: `${w.token} ∈ FOLLOW(${w.sym})` };
+    if (w.token === "$") outer = { left: null, right: { text: "$", id: "t", kind: "follow", mark } };
+    else {
+      for (let k = m - 1; k >= 0; k--) {
+        const n = nodes[k], j = n.kids.findIndex((x) => x === nodes[k + 1]);
+        if (n.kids.slice(j + 1).some((x) => ffwHas(x, "t"))) { levels[k].right = { ...levels[k].right, id: "t", kind: "follow", head: w.token, mark }; break; }
+      }
+    }
+    const target = nodes[m];
+    const toks = ffwTokens(target);
+    const specNodes = nodes.map((n, k) => ({ sym: n.sym, jag: false, kind: k === m ? "focus" : "", cls: "" }));
+    return spec(specNodes, levels, { text: toks.length ? toks.join(" ") : "ε", label: "" }, { outer, arrows: [{ fromNode: m, side: "right", toId: "t" }] });
+  }
+
+  // nullable: the path goes on through the first symbol that has a rule of its own to apply
+  const nodes = path((n) => n.kids.findIndex((k) => typeof k !== "string" && k.text === undefined && k.kids.length));
+  const levels = nodes.slice(0, -1).map((n, k) => level(n, n.kids.findIndex((x) => x === nodes[k + 1])));
+  const last = nodes[nodes.length - 1];
+  // the last node's own symbols all vanish: they are the bottom
+  const bottom = { text: "ε", label: last.kids.map(ffwLabel).join(" "), kind: "focus", mark: { kind: "focus", label: `${w.sym} derives ε` } };
+  return spec(nodes.map((n, k) => nodeOf(n, k, "focus")), levels, bottom);
 }

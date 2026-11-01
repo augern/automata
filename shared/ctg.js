@@ -130,7 +130,11 @@ function drawCTGFigureInto(root, lay, opts = {}) {
   for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
   for (const t of lay.tokens) {
     if (t.kind) make("rect", { class: "ctg-tok-bg" + kindCls(t.kind), x: t.x + 2, y: t.y + 3, width: t.w - 4, height: 20, rx: 3 }, svg);
-    make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg, t.text);
+    const label = make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg);
+    if (t.head && t.text.startsWith(t.head) && t.head !== t.text) { // the leading part emphasised
+      make("tspan", { class: "ctg-head" + kindCls(t.kind) }, label, t.head);
+      make("tspan", {}, label, t.text.slice(t.head.length));
+    } else label.textContent = t.text;
     const staple = t.label && opts.staples !== false;
     if (staple) { // a staple under the token, with the name of the part
       const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;
@@ -143,6 +147,12 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       make("path", { d: `M${cx - 4},${y + 6} L${cx},${y} L${cx + 4},${y + 6} Z` }, g);
       if (t.mark.label) make("text", { x: cx + 8, y: y + 8 }, g, t.mark.label);
     }
+  }
+  for (const a of lay.arrows || []) { // from a node's foot to a token, along the base line
+    const dir = a.side === "right" ? 1 : -1, tip = a.x1 - dir * 2;
+    const g = make("g", { class: "ctg-arrow" + kindCls(a.kind) }, svg);
+    make("line", { x1: a.x0, x2: tip - dir * 5, y1: a.y, y2: a.y }, g);
+    make("path", { d: `M${tip},${a.y} L${tip - dir * 7},${a.y - 4} L${tip - dir * 7},${a.y + 4} Z` }, g);
   }
   const nodeH = 22;
   for (const j of lay.jags) {
