@@ -217,6 +217,16 @@ function ffwCell(x, samples) {
 }
 const ffwFlank = (sibs, samples) => (sibs.length ? sibs.map((x) => ffwCell(x, samples)) : null);
 
+// A run of nodes joined by steps that have no strings beside them (unit rules) says only that the top derives the bottom one: the
+// nodes between are left out and the edge into the bottom one is jagged. The first and last node of a run stay.
+function ffwCompact(spec) {
+  const bare = (l) => !l.left && !l.right, n = spec.nodes.length;
+  const kept = spec.nodes.map((_, k) => k).filter((k) => k === 0 || k === n - 1 || !(bare(spec.levels[k - 1]) && bare(spec.levels[k])));
+  const nodes = kept.map((k, i) => (i && k - kept[i - 1] > 1 ? { ...spec.nodes[k], jag: true } : spec.nodes[k]));
+  const levels = kept.slice(1).map((k, i) => (k - kept[i] > 1 ? { left: null, right: null } : spec.levels[kept[i]]));
+  return { ...spec, nodes, levels, arrows: (spec.arrows || []).map((a) => ({ ...a, fromNode: kept.indexOf(a.fromNode) })) };
+}
+
 function ffwFigure(w, opts = {}) {
   // the nodes of the path, from the root: next(node) is the index of the kid that the path goes on through, or -1
   const path = (next) => {
@@ -241,7 +251,7 @@ function ffwFigure(w, opts = {}) {
     levels.push(level(last, at));
     const specNodes = nodes.map((n, k) => nodeOf(n, k, "focus"));
     specNodes.push({ sym: w.token, jag: false, kind: "first", colour: "var(--accent)", tone: 1, cls: "" });
-    return spec(specNodes, levels, { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } }, { arrows: [{ fromNode: 0, side: "left", toId: "t" }] });
+    return ffwCompact(spec(specNodes, levels, { text: w.token, id: "t", kind: "first", mark: { kind: "first", label: `${w.token} ∈ FIRST(${w.sym})` } }, { arrows: [{ fromNode: 0, side: "left", toId: "t" }] }));
   }
 
   if (w.kind === "follow") {
@@ -264,7 +274,7 @@ function ffwFigure(w, opts = {}) {
     const specNodes = nodes.map((n, k) => ({ sym: n.sym, jag: false, kind: k === m ? "focus" : "", cls: "" }));
     // the symbol derives its string in more than one rule step: a jagged line down to it
     const bottom = !toks.length ? { text: "ε", label: "" } : { text: opts.samples ? toks.join(" ") : "…", label: "", cls: "is-dim", tip: "e.g. " + toks.join(" ") };
-    return spec(specNodes, levels, bottom, { outer, terminus: !w.oneStep, arrows: [{ fromNode: m, side: "right", toId: "t" }] });
+    return ffwCompact(spec(specNodes, levels, bottom, { outer, terminus: !w.oneStep, arrows: [{ fromNode: m, side: "right", toId: "t" }] }));
   }
 
   // nullable: the root's rule: each of its symbols is a node of its own with a small triangle over its ε, the root bare. A symbol with an

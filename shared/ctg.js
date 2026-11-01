@@ -140,11 +140,11 @@ function drawCTGFigureInto(root, lay, opts = {}) {
       make("tspan", { class: "ctg-rest" }, label, t.text.slice(t.head.length)); // what follows the emphasised part is not spelled out
     } else label.textContent = t.text;
     if (t.tip) make("title", {}, label, t.tip);
-    const staple = t.label && opts.staples !== false;
-    if (staple) { // a staple under the token, with the name of the part
+    // the label of a string under it; the bracket only where it says which characters the label names
+    if (t.label && t.label !== t.text && opts.staples !== false) {
       const g = make("g", { class: "ctg-span" }, svg), y = t.y + 25;
-      make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
-      if (t.label !== t.text) make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);
+      if (!t.eps && t.text !== "…" && t.text.length > 1) make("path", { d: `M${t.x + 3},${y - 4} V${y} H${t.x + t.w - 3} V${y - 4}` }, g);
+      make("text", { x: t.x + t.w / 2, y: y + 12, "text-anchor": "middle" }, g, t.label);
     }
     if (t.mark) { // a pointer under the token
       const cx = t.x + t.w / 2, y = t.y + 46; // below the staples of the neighbouring tokens too

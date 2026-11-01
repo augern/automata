@@ -231,9 +231,9 @@
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
-    <script src="../../shared/algo/ffwitness.js?v=9803ac19"></script>
+    <script src="../../shared/algo/ffwitness.js?v=2073bbbb"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
-    <script src="../../shared/ctg.js?v=4be75142"></script>
+    <script src="../../shared/ctg.js?v=a5549cd1"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -334,6 +334,8 @@ ${kw("return")} Follow`,
       const ctgPref = ctgPrefs({ all: false, skip: false, samples: false }); // remembered for this tool: a witness for the whole set; sample strings in the witness; steps that add nothing left out
       const el = (id) => document.getElementById(id);
       const setOf = (xs) => "{" + xs.map(esc).join(", ") + "}";
+      // what a step adds, as set notation: one member ∈ the set, several ⊆ it
+      const addedTo = (ev) => (ev.added.length === 1 ? esc(ev.added[0]) + " ∈ " : setOf(ev.added) + " ⊆ ") + (ev.phase === "nullable" ? "Nullable" : SET_NAME[ev.phase] + "(" + esc(ev.target) + ")");
 
       function setError(msg) {
         el("error-msg").textContent = msg || "";
@@ -421,7 +423,9 @@ ${kw("return")} Follow`,
         witBox = null;
         el("wit-empty").hidden = !!sel || !!theory;
         document.querySelectorAll("#wit-theory .btn").forEach((b) => b.classList.toggle("is-on", b.dataset.theory === theory));
-        const whole = !theory && ctgPref.get().all && sel && sel.kind !== "nullable";
+        const stepEv = shownStep !== null ? rec.events[shownStep] : null;
+        const added = !theory && stepEv && stepEv.phase !== "nullable" && stepEv.added.length > 1 && sel && sel.kind === stepEv.phase && sel.nt === stepEv.target ? stepEv.added : null; // the members that the shown step adds
+        const whole = !theory && !stepEv && ctgPref.get().all && sel && sel.kind !== "nullable";
         const noSet = theory || !sel || sel.kind === "nullable";
         el("wit-all").checked = ctgPref.get().all;
         el("wit-all").disabled = !!noSet;
@@ -434,6 +438,12 @@ ${kw("return")} Follow`,
           return;
         }
         if (!sel) return;
+        if (added) {
+          const toks = [...added].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
+          showFigures(toks.map((t) => ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: t }, 0), { samples: ctgPref.get().samples })), 60);
+          el("wit-bar").textContent = "{ " + toks.join(", ") + " } ⊆ " + SET_LABEL[sel.kind] + "(" + sel.nt + "): the shortest witness of each member this step adds";
+          return;
+        }
         if (whole) {
           const toks = [...rec[sel.kind][sel.nt]].sort((a, b) => (a === "$") - (b === "$") || (a < b ? -1 : 1));
           const specs = toks.map((t) => ffwSpec(witnessOf({ kind: sel.kind, nt: sel.nt, tok: t }, 0), { samples: ctgPref.get().samples }));
@@ -482,8 +492,8 @@ ${kw("return")} Follow`,
           html += '<div class="ff-line" data-prod="' + (ev.rule + 1) + '">' + line + "</div>";
         }
         let res;
-        if (ev.phase === "nullable") res = ev.added.length ? '<span class="ff-add">' + esc(ev.target) + "</span> is nullable" : ev.end ? "already nullable" : "nothing new";
-        else res = ev.added.length ? '<span class="ff-add">+ ' + setOf(ev.added) + "</span> in " + SET_NAME[ev.phase] + "(" + esc(ev.target) + ")" : "nothing new";
+        if (ev.phase === "nullable") res = ev.added.length ? '<span class="ff-add">' + addedTo(ev) + "</span>" : ev.end ? "already nullable" : "nothing new";
+        else res = ev.added.length ? '<span class="ff-add">' + addedTo(ev) + "</span>" : "nothing new";
         html += '<div class="ff-result">' + res + "</div>";
         box.innerHTML = html;
       }
@@ -513,7 +523,7 @@ ${kw("return")} Follow`,
             const ev = rec.events[i];
             if (skip && !ev.added.length) continue;
             const add = ev.added.length
-              ? '<span class="ff-new">+ ' + setOf(ev.added) + " → " + (ev.phase === "nullable" ? "nullable" : SET_NAME[ev.phase] + "(" + esc(ev.target) + ")") + "</span>"
+              ? '<span class="ff-new">' + addedTo(ev) + "</span>"
               : '<span class="ff-nothing">nothing new</span>';
             rows.push('<div class="ff-row' + (i === pos ? " is-current" : "") + (i === shownStep ? " is-shown" : "") + '" data-i="' + i + '"' + (ev.rule >= 0 ? ' data-prod="' + (ev.rule + 1) + '"' : "") +
               ' title="' + esc(ffExplain(grammar, ev) + " (click: show in the witness)") + '"><span class="ff-rule">' + ruleText(ev) + "</span>" + add + "</div>");
