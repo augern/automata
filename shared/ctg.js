@@ -132,6 +132,14 @@ function drawCTGFigureInto(root, lay, opts = {}) {
   }
   for (const sub of lay.subs || []) make("polygon", { class: "ctg-tri-fill", style: `fill: color-mix(in srgb, var(--text-lo) ${sub.share}%, var(--bg))`, points: `${sub.x0},${sub.base} ${sub.apex},${sub.ay} ${sub.x1},${sub.base}` }, svg);
   for (const b of lay.base) make("line", { class: "ctg-base", x1: b.x0, x2: b.x1, y1: b.y, y2: b.y }, svg);
+  // tokens that share a group have one staple and label under all of them
+  const grouped = lay.tokens.filter((t) => t.group && opts.staples !== false);
+  for (const name of new Set(grouped.map((t) => t.group))) {
+    const ts = grouped.filter((t) => t.group === name), x0 = Math.min(...ts.map((t) => t.x)), x1 = Math.max(...ts.map((t) => t.x + t.w)), y = ts[0].y + 25;
+    const g = make("g", { class: "ctg-span" }, svg);
+    make("path", { d: `M${x0 + 3},${y - 4} V${y} H${x1 - 3} V${y - 4}` }, g);
+    make("text", { x: (x0 + x1) / 2, y: y + 12, "text-anchor": "middle" }, g, name);
+  }
   for (const t of lay.tokens) {
     if (t.kind) make("rect", { class: "ctg-tok-bg" + kindCls(t.kind), x: t.x + 2, y: t.y + 3, width: t.w - 4, height: 20, rx: 3 }, svg);
     const label = make("text", { class: "ctg-tok" + (t.cls ? " " + t.cls : "") + (t.eps ? " is-eps" : ""), x: t.x + t.w / 2, y: t.y + 17, "text-anchor": "middle" }, svg);

@@ -117,7 +117,7 @@ const ctgNextLeaf = (lay, id) => lay.byId[id].last + 1;
 //     marked hidden, since the triangles of its children cover all of it (free layout only)
 //     flank: { text, id?, head?, label?, cls?, part?, kind?, mark? } or null (an empty column); text is ε for an empty string
 //       head: the leading part of the text that is emphasised; id: what a test or a caller looks the token up by
-//       label: the staple under the token (the symbols that derive it); kind: first | follow | focus highlights the token;
+//       label: the staple under the token (the symbols that derive it); group: a name that tokens next to each other share: one staple under all of them; kind: first | follow | focus highlights the token;
 //       mark: { kind, label } is a pointer under the token
 //     colour is a CSS colour for the triangle of the node, tone how much of it (default: a grey in two shades that alternate down
 //     the spine; colour "" is the page's own grey)
@@ -147,7 +147,7 @@ function ctgSpineTiled(spec, opts = {}) {
   // grey in the page's background): enough to tell the nested ones apart without a gradient that would draw the eye to the depth
   const tris = spec.nodes.map((n, k) => ({ x0: cx - half(k), x1: cx + half(k), apex: cx, ay: apexY(k), y: B, cls: n.cls || "", colour: n.colour !== undefined ? n.colour : "var(--text-lo)", tone: n.tone !== undefined ? n.tone : 0, share: n.colour !== undefined ? undefined : k % 2 ? 21 : 10 }));
   const tokens = [];
-  const tok = (f, centre) => { tokens.push({ text: f.text, tip: f.tip || "", id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
+  const tok = (f, centre) => { tokens.push({ text: f.text, tip: f.tip || "", id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", group: f.group || "", kind: f.kind || "", mark: f.mark || null, x: centre - c / 2, w: c, y: B, eps: f.text === CTG_EPS }); };
   for (let k = 0; k < m; k++) {
     // the cells stand next to the spine: on the left the last one is the nearest, on the right the first
     const left = cells(spec.levels[k].left), right = cells(spec.levels[k].right);
@@ -217,7 +217,7 @@ function ctgSpineFree(spec, opts = {}) {
   if (o.minWidth && o.minWidth > width) { cx += (o.minWidth - width) / 2; width = o.minWidth; }
   const nodes = spec.nodes.map((n, k) => ({ sym: n.sym, x: cx, y: apexAt(k) + 6, cls: n.cls || "", kind: n.kind || "", footL: cx + footL[k], footR: cx + footR[k] }));
   const tris = spec.nodes.map((n, k) => ({ x0: cx + footL[k], x1: cx + footR[k], apex: cx, ay: apexAt(k), y: B, cls: n.cls || "", colour: n.colour !== undefined ? n.colour : "var(--text-lo)", tone: n.tone !== undefined ? n.tone : 0, share: n.colour !== undefined ? undefined : k % 2 ? 21 : 10 }));
-  const tokens = put.map(([f, x0]) => ({ text: f.text, tip: f.tip || "", id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", kind: f.kind || "", mark: f.mark || null, x: cx + x0, w: wOf(f), y: B, eps: f.text === CTG_EPS })).sort((a, b) => a.x - b.x);
+  const tokens = put.map(([f, x0]) => ({ text: f.text, tip: f.tip || "", id: f.id, head: f.head || "", part: f.part || "", cls: f.cls || "", label: f.label || "", group: f.group || "", kind: f.kind || "", mark: f.mark || null, x: cx + x0, w: wOf(f), y: B, eps: f.text === CTG_EPS })).sort((a, b) => a.x - b.x);
   const base = tokens.length ? [{ x0: tokens[0].x, x1: tokens[tokens.length - 1].x + tokens[tokens.length - 1].w, y: B }] : [];
   const jags = [];
   for (let k = 1; k <= m; k++) jags.push({ from: k - 1, to: k, jag: !!spec.nodes[k].jag });
