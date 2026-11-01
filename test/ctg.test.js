@@ -76,7 +76,7 @@ test("ctgSpineTree: the spine as nested nodes, the string in order, the anchor t
   assert.equal(lay.byId.s2.src.jag, false);
 });
 
-test("split layout: the frame for i = 1, copies poke down one step each, no copy is an inverted V with the lowest triangle raised", () => {
+test("split layout: the frame for i = 1, copies poke down one step each, no copy blanks out the first copy and raises the lowest triangle", () => {
   const part = (p, text) => ({ text: text || p, label: p, cls: "pp-" + p });
   const fig = (i) => ({ root: "S", up: "A", rootIsUp: false, i, parts: { u: part("u"), v: part("v"), x: part("x"), y: part("y"), z: part("z") } });
   const one = A.ctgSplitLayout(fig(1)), two = A.ctgSplitLayout(fig(2)), none = A.ctgSplitLayout(fig(0)), three = A.ctgSplitLayout(fig(3));
@@ -93,8 +93,11 @@ test("split layout: the frame for i = 1, copies poke down one step each, no copy
   // no copy: no v and y at all, the lowest triangle one step higher as in the frame, the root triangle an inverted V
   assert.deepEqual(js(none.tokens.map((t) => t.part).sort()), ["u", "x", "z"]);
   assert.deepEqual(js(lv(none, "x")), [L0 - 60]);
-  assert.equal(none.tris[0].open, true);
-  assert.equal(none.tris[0].base.length, 0, "the root triangle has no base");
-  assert.equal(none.tris[1].base.length, 1, "the lowest triangle has its own");
+  assert.equal(none.tris[0].x0, one.tris[0].x0, "the root triangle is the same");
+  assert.equal(none.tris[0].x1, one.tris[0].x1);
+  assert.equal(none.tris[0].base.length, 2, "u and z keep their feet");
+  const blank = none.tris.find((t) => t.blank);
+  assert.equal(blank.ay, one.tris[1].ay, "the blank triangle is where the first copy is in the frame");
+  assert.equal(none.tris[none.tris.length - 1].base.length, 1, "the lowest triangle has its own base");
   assert.equal(none.nodes.length, 2, "the root and the lowest node");
 });

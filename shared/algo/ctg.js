@@ -127,12 +127,13 @@ function ctgSpineTree(spec) {
 // The pumping figure with separate base lines. The figure for one copy of the middle part (i = 1) is the frame: nested
 // triangles over u v x y z on one base line. Further copies of v … y are inlaid in it and poke down through the base line,
 // each on a base line one step lower, in the same columns, so the frame keeps its shape. With no copy, v and y are gone, x is
-// drawn as in the frame but anchored one step higher, at the place of the first copy, and the root triangle is an inverted V.
+// drawn as in the frame but anchored one step higher, at the place of the first copy; the root triangle is as in the frame
+// with the place of the first copy blanked out of it (a blank triangle over it), so only the parts by u and z are left.
 // A triangle's base is drawn only where tokens stand on it.
 //   fig: { root, up, rootIsUp, i, parts: { u, v, x, y, z: { text, label?, cls? } } }       text is ε for an empty string
 //   -> { width, height, cx, nodes: [{ sym, x, y, cls }], tris: [{ x0, x1, apex, ay, y, cls, base: [{ x0, x1 }] }],
 //        tokens: [{ text, part, cls, x, w, y, label, eps }], jags: [{ from, to }] }
-//   with no copy the root triangle is open: legs only, no base and no fill
+//   with no copy there is a { blank: true } triangle over the place of the first copy, to be drawn in the background colour
 function ctgSplitLayout(fig, opts = {}) {
   const o = { charW: 9, tokPad: 8, tokGap: 6, step: 60, baseH: 46, topPad: 26, marginX: 22, padRoot: 18, padUp: 9, padLow: 5, ...opts };
   const i = fig.i;
@@ -164,12 +165,15 @@ function ctgSplitLayout(fig, opts = {}) {
     tok("v", base);
     tok("y", base);
   }
+  // no copy: the place of the first copy is blanked out of the root triangle, which is otherwise as in the frame
+  if (i === 0 && !fig.rootIsUp) tris.push({ blank: true, x0: x0.v - o.padUp, x1: x0.y + w.y + o.padUp, apex: cx, ay: apexY(first), y: L0 });
   nodes.push({ sym: fig.up, x: cx, y: apexY(lowJ) + 6, cls: "pp-low" });
   tris.push({ x0: x0.x - o.padLow, x1: x0.x + w.x + o.padLow, apex: cx, ay: apexY(lowJ), y: lowBase, cls: "pp-low" });
   tok("x", lowBase);
   for (let k = 1; k < nodes.length; k++) jags.push({ from: k - 1, to: k });
   // the base of each triangle: the stretches of its base line that have tokens on them, the outer ones reaching to its corners
   for (const t of tris) {
+    if (t.blank) continue;
     const here = tokens.filter((k) => k.y === t.y && k.x >= t.x0 && k.x + k.w <= t.x1).sort((a, b) => a.x - b.x);
     t.base = [];
     for (const k of here) {
@@ -183,8 +187,6 @@ function ctgSplitLayout(fig, opts = {}) {
       if (t.x1 - e.x1 <= o.padRoot) e.x1 = t.x1;
     }
   }
-  // no copy: the root triangle is an inverted V, its legs only
-  if (i === 0 && !fig.rootIsUp) { tris[0].open = true; tris[0].base = []; }
   const lowest = Math.max(...tokens.map((t) => t.y));
   return { width: right, height: lowest + 50, cx, nodes, tris, tokens, jags };
 }

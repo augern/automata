@@ -143,8 +143,9 @@ function drawCTGSplit(host, fig, opts = {}) {
   hostEl.innerHTML = "";
   const svg = make("svg", { class: "ctg", width: lay.width * sc, height: lay.height * sc, viewBox: `0 0 ${lay.width} ${lay.height}`, role: "img" }, hostEl);
   for (const t of lay.tris) {
+    if (t.blank) { make("polygon", { class: "ctg-blank", points: `${t.x0},${t.y + 2} ${t.apex},${t.ay} ${t.x1},${t.y + 2}` }, svg); continue; }
     const g = make("g", { class: "ctg-node" + (t.cls ? " " + t.cls : "") }, svg);
-    if (!t.open) make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
+    make("polygon", { class: "ctg-tri-fill", points: `${t.x0},${t.y} ${t.apex},${t.ay} ${t.x1},${t.y}` }, g);
     make("path", { class: "ctg-legs", d: `M${t.x0},${t.y} L${t.apex},${t.ay} L${t.x1},${t.y}` }, g);
     for (const b of t.base) make("line", { class: "ctg-legs", x1: b.x0, x2: b.x1, y1: t.y, y2: t.y }, g);
   }
