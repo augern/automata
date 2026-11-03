@@ -8,7 +8,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../../shared/mobile.css?v=2a0663da" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=09cc026c" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -199,6 +199,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=f27c44e6"></script>
+    <script src="../../shared/sheet.js?v=dd0e85ce"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=06e330d7"></script>
@@ -376,8 +377,9 @@ else: ${kw("reject")}`
           const r = pdaRules[i];
           const fromValid = pdaStates.includes(r.from) || r.from === "";
           const toValid   = pdaStates.includes(r.to)   || r.to   === "";
-          const stateAttrs = ` data-trans-type="states" oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"`;
-          const plainAttrs = ` oninput="onRuleFieldInput(this)"`;
+          const tap = phoneRules() ? ` readonly inputmode="none"` : ""; // on a phone a cell is chosen in a sheet, not typed
+          const stateAttrs = ` data-trans-type="states" oninput="onRuleFieldInput(this)" onkeydown="transInputKeydown(event)"` + tap;
+          const plainAttrs = ` oninput="onRuleFieldInput(this)"` + tap;
           h += `<tr data-rule="${i}">`;
           h += T.rm(`removeRule(${i})`, "Remove rule");
           h += field(i, "from",  r.from,  stateAttrs, { invalid: !fromValid });
@@ -391,6 +393,55 @@ else: ${kw("reject")}`
         h += "</tbody></table>";
         wrap.innerHTML = h;
       }
+
+      // ── A rule cell on a phone: a sheet of chips (shared/sheet.js) ──
+      const phoneRules = () => document.body.classList.contains("is-mobile");
+      let ruleSheet = null, sheetCell = null;
+      const stackSymbols = () => [...new Set([...pdaInitStack, ...pdaRules.flatMap((r) => [...r.pop, ...r.push])])].filter((c) => c.trim());
+      const inputSymbols = () => [...new Set(pdaRules.flatMap((r) => [...r.input]))].filter((c) => c.trim());
+      function setRuleField(i, field, value) {
+        pdaRules[i][field] = value;
+        const inp = document.querySelector(`#rules-table-wrap input[data-ri="${i}"][data-field="${field}"]`);
+        if (inp) { inp.value = value; inp.classList.remove("invalid"); }
+        onPDAChange();
+      }
+      function openRuleSheet(inp) {
+        if (!ruleSheet) ruleSheet = createSheet({ onClose: () => { sheetCell = null; document.querySelectorAll(".ui-td--input.is-editing").forEach((td) => td.classList.remove("is-editing")); } });
+        const i = +inp.dataset.ri, field = inp.dataset.field;
+        sheetCell = { i, field };
+        inp.closest("td").classList.add("is-editing");
+        paintRuleSheet();
+      }
+      function paintRuleSheet() {
+        const { i, field } = sheetCell, r = pdaRules[i];
+        const done = (v) => () => { setRuleField(i, field, v); ruleSheet.close(); document.querySelectorAll(".ui-td--input.is-editing").forEach((td) => td.classList.remove("is-editing")); sheetCell = null; };
+        if (field === "from" || field === "to") {
+          ruleSheet.open({ title: field === "from" ? "from state" : "to state" });
+          ruleSheet.set(pdaStates.map((n) => ({ label: n, on: r[field] === n, pick: done(n) })));
+          ruleSheet.entry(null);
+        } else if (field === "push") { // a string of stack symbols, the leftmost on top: chips add to it
+          ruleSheet.open({ title: "push: " + (r.push || "ε") + "  (leftmost on top)" });
+          ruleSheet.set([
+            ...stackSymbols().map((c) => ({ label: c, pick: () => { setRuleField(i, "push", r.push + c); paintRuleSheet(); } })),
+            { label: "⌫", title: "Remove the last symbol", pick: () => { setRuleField(i, "push", [...r.push].slice(0, -1).join("")); paintRuleSheet(); } },
+            { label: "clear", pick: () => { setRuleField(i, "push", ""); paintRuleSheet(); } },
+          ]);
+          ruleSheet.entry({ placeholder: "a new stack symbol", add: (t) => { setRuleField(i, "push", r.push + t); paintRuleSheet(); } });
+        } else { // input or pop: one symbol, or none
+          const symbols = field === "input" ? inputSymbols() : stackSymbols();
+          ruleSheet.open({ title: field === "input" ? "reads (input)" : "pops (stack top)" });
+          ruleSheet.set([
+            { label: field === "input" ? "ε" : "none", on: r[field] === "", pick: done("") },
+            ...symbols.map((c) => ({ label: c, on: r[field] === c, pick: done(c) })),
+          ]);
+          ruleSheet.entry({ placeholder: "a new symbol", add: (t) => done([...t][0])() });
+        }
+      }
+      document.addEventListener("mobilechange", () => { if (ruleSheet) ruleSheet.close(); sheetCell = null; renderRulesTable(); });
+      document.getElementById("rules-table-wrap").addEventListener("click", (e) => {
+        const inp = phoneRules() && e.target.closest && e.target.closest("input[data-field]");
+        if (inp) openRuleSheet(inp);
+      });
 
       function onRuleFieldInput(input) {
         const i     = parseInt(input.dataset.ri, 10);

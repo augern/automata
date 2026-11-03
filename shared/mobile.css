@@ -107,3 +107,6 @@ body.is-mobile .kp-key { min-width: 48px; height: 48px; font-size: var(--fs-lg);
 /* the ⋯ menu of a row is always there on a phone, and big enough to hit (the grammar editor sets its own in grammar-editor.css) */
 body.is-mobile .se-rows { grid-template-columns: 24px fit-content(36%) minmax(0, 1fr) 40px; }
 body.is-mobile .se-menu { opacity: 1; font-size: 22px; min-height: 40px; padding: 0 var(--sp-4); }
+.sheet__entry { display: flex; gap: var(--sp-3); margin-top: var(--sp-4); }
+.sheet__input { flex: 1; min-width: 0; height: 40px; padding: 0 var(--sp-4); background: var(--bg-input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font-mono); font-size: 16px; }
+.sheet__entry[hidden] { display: none; }

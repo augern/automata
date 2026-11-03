@@ -2,18 +2,29 @@
 //   const sheet = createSheet({ onClose });
 //   sheet.open({ title | titleHtml });        show it (and keep what is set)
 //   sheet.set(chips, emptyText);              chips: [{ label | html, on?, title?, pick }]; pick() runs when a chip is tapped
+//   sheet.entry({ placeholder, add } | null); a small text field with an Add button under the chips, for what the chips lack; add(text)
 //   sheet.close();                            hide it from code (onClose is not called)
 // Done, or a tap outside the sheet, hides it and calls onClose, so the page can drop what the sheet was for.
 function createSheet(spec = {}) {
   const el = document.createElement("div");
   el.className = "sheet";
   el.hidden = true;
-  el.innerHTML = '<div class="sheet__back"></div><div class="sheet__panel"><div class="sheet__head"><span class="sheet__title"></span><button type="button" class="btn sheet__done">Done</button></div><div class="sheet__chips"></div></div>';
+  el.innerHTML = '<div class="sheet__back"></div><div class="sheet__panel"><div class="sheet__head"><span class="sheet__title"></span><button type="button" class="btn sheet__done">Done</button></div><div class="sheet__chips"></div><div class="sheet__entry" hidden><input type="text" class="sheet__input" autocomplete="off" autocapitalize="none" spellcheck="false"><button type="button" class="btn sheet__add">Add</button></div></div>';
   document.body.appendChild(el);
   const dismiss = () => { el.hidden = true; if (spec.onClose) spec.onClose(); };
   el.querySelector(".sheet__back").addEventListener("click", dismiss);
   el.querySelector(".sheet__done").addEventListener("click", dismiss);
+  let adder = null;
+  const input = el.querySelector(".sheet__input");
+  const add = () => { const v = input.value.trim(); if (v && adder) { input.value = ""; adder(v); } };
+  el.querySelector(".sheet__add").addEventListener("click", add);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
   return {
+    entry(spec) {
+      adder = spec ? spec.add : null;
+      el.querySelector(".sheet__entry").hidden = !spec;
+      if (spec) { input.placeholder = spec.placeholder || ""; input.value = ""; }
+    },
     open({ title = "", titleHtml = null } = {}) {
       const t = el.querySelector(".sheet__title");
       if (titleHtml !== null) t.innerHTML = titleHtml; else t.textContent = title;
