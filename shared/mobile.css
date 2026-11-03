@@ -34,10 +34,12 @@ body.is-mobile #panels > .panel.is-tab { display: flex; }
 body.is-mobile .panel.collapsed .panel-body { display: flex; }
 body.is-mobile .panel.collapsed .panel-header { flex-direction: row; width: auto; height: 28px; padding: 0 var(--sp-3) 0 var(--sp-5); border: none; border-bottom: 1px solid var(--border); }
 body.is-mobile .panel.collapsed .panel-title { writing-mode: horizontal-tb; transform: none; flex: 1; }
-/* the tab names the panel: the header stays only for a panel with actions of its own (its ⋯ menu), and then without the title */
-body.is-mobile #panels > .panel > .panel-header:not(:has(.panel-menu-source)) { display: none; }
-body.is-mobile #panels > .panel > .panel-header { justify-content: flex-end; height: 36px; background: var(--bg-cell); box-shadow: none; }
-body.is-mobile .panel-title { display: none; }
+/* the tab names the panel, so its header goes. The ⋯ menu button, if the active panel has anything of its own in the menu, is placed in the top
+   bar (it stays in the header in the DOM; fixed positioning moves it, and the menu opens below it) */
+body.is-mobile #panels > .panel > .panel-header { display: contents; }
+body.is-mobile #panels > .panel > .panel-header > * { display: none; }
+body.is-mobile.has-panel-menu #panels > .panel.is-tab > .panel-header > .panel-menu { display: inline-flex; position: fixed; top: 5px; right: var(--sp-4); z-index: 11; min-width: 36px; min-height: 32px; align-items: center; justify-content: center; }
+body.is-mobile.has-panel-menu #topbar { padding-right: 56px; }
 body.is-mobile .resize-handle, body.is-mobile .collapse-btn, body.is-mobile .qr-btn { display: none; }
 
 body.is-mobile .panel.has-key-focus:not(.collapsed) > .panel-header .panel-title::after { content: none; } /* no arrow keys */

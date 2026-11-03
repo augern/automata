@@ -9,6 +9,9 @@
   function show(id) {
     active = id;
     panels().forEach((p) => p.classList.toggle("is-tab", p.id === id));
+    // the active panel's ⋯ menu moves up to the top bar, if the panel has anything of its own in it (see mobile.css)
+    const own = !!document.querySelector("#" + id + " > .panel-header .panel-menu-source") || (typeof panelMenuExtras !== "undefined" && !!panelMenuExtras[id]);
+    document.body.classList.toggle("has-panel-menu", own);
     bar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.panel === id)));
     try { sessionStorage.setItem(key, id); } catch (e) { /* private mode */ }
     window.dispatchEvent(new Event("resize")); // a graph fits its canvas once the canvas is shown
