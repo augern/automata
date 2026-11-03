@@ -57,6 +57,7 @@ body.is-mobile #topbar .guide-btn, body.is-mobile #topbar .view-btn, body.is-mob
 body.is-mobile input[type="radio"], body.is-mobile input[type="checkbox"] { width: 24px; height: 24px; }
 body.is-mobile label { min-height: 40px; display: inline-flex; align-items: center; gap: var(--sp-3); }
 body.is-mobile .btn.icon-restart, body.is-mobile .btn.icon-run-all, body.is-mobile .ui-strin__btn, body.is-mobile .ui-menu-btn { min-width: 40px; min-height: 40px; }
+body.is-mobile .ui-strin__btn { display: flex; align-items: center; justify-content: center; padding: 0; } /* the dice icon and the ▾ in the middle of the wider button */
 body.is-mobile .ui-td--rm, body.is-mobile .ui-td--marker { width: 40px; }
 body.is-mobile .ui-rm { min-width: 32px; min-height: 32px; }
 
