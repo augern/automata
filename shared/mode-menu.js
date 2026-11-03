@@ -19,7 +19,8 @@ function createModeMenu(spec) {
   bar.insertBefore(btn, h1 ? h1.nextSibling : bar.firstChild);
   const refresh = () => {
     const now = spec.modes.find((m) => m.id === spec.current());
-    btn.innerHTML = (now ? now.label : "") + ' <span aria-hidden="true">▾</span>';
+    btn.innerHTML = '<span class="mode-menu-label"></span> <span aria-hidden="true">▾</span>';
+    btn.firstChild.textContent = now ? now.label : "";
   };
   UI.menu(btn, () => {
     const opts = spec.options ? spec.options() : [];

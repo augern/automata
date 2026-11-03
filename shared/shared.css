@@ -204,6 +204,9 @@ body {
 }
 .mode-menu-btn:hover,
 .mode-menu-btn[aria-expanded="true"] { opacity: 0.85; }
+/* a long mode name is cut, not the bar: the button shrinks, its label ends in … */
+.mode-menu-btn { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; flex-shrink: 1; }
+.mode-menu-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── General buttons ────────────────────────────────────── */
 .btn {

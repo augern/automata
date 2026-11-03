@@ -42,15 +42,15 @@ body.is-mobile .panel.collapsed .panel-title { writing-mode: horizontal-tb; tran
 body.is-mobile #panels > .panel > .panel-header { display: contents; }
 body.is-mobile #panels > .panel > .panel-header > * { display: none; }
 body.is-mobile #panels > .panel.is-tab > .panel-header > .panel-menu { display: inline-flex; position: fixed; top: 5px; right: var(--sp-4); z-index: 11; min-width: 36px; min-height: 32px; align-items: center; justify-content: center; }
-body.is-mobile #topbar { padding-right: 56px; }
 body.is-mobile #btn-view { display: none; }
 body.is-mobile .resize-handle, body.is-mobile .collapse-btn, body.is-mobile .qr-btn { display: none; }
 
 body.is-mobile .panel.has-key-focus:not(.collapsed) > .panel-header .panel-title::after { content: none; } /* no arrow keys */
 
 /* the top bar */
-body.is-mobile #topbar { padding: var(--sp-2) var(--sp-4); }
+body.is-mobile #topbar { padding: var(--sp-2) 56px var(--sp-2) var(--sp-4); } /* the right is the ⋯ button's place */
 body.is-mobile #topbar { gap: var(--sp-2); }
+body.is-mobile #topbar .mode-menu-btn { flex: 1 1 0; min-width: 64px; justify-content: space-between; } /* takes what Index, Definitions, Guide and ⋯ leave, and cuts its label to it */
 body.is-mobile #topbar h1 { display: none; } /* the buttons need the row; the panel headers name the tool's parts */
 
 /* targets: 16px text in fields (iOS zooms into anything smaller) and room for a finger */
