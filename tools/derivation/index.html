@@ -48,7 +48,7 @@
       #deriv-scroll {
         flex: 1;
         overflow-y: auto;
-        padding: var(--sp-6) 20px var(--sp-6);
+        padding: var(--sp-5) var(--sp-5);
         background: var(--bg);
       }
 
@@ -56,17 +56,17 @@
       .deriv-row {
         display: flex;
         align-items: baseline;
-        padding: var(--sp-1) 0;
+        padding: 1px 0;
         font-family: var(--font-mono);
         font-size: var(--fs-md);
         line-height: 1.6;
       }
       .deriv-gutter {
-        width: 4.6em;
+        width: 3.4em;
         flex-shrink: 0;
         display: flex;
         justify-content: flex-end;
-        padding-right: 0.7em;
+        padding-right: 0.5em;
         align-items: center;
       }
       .deriv-rule { font-size: var(--fs-2xs); color: var(--text-lo); margin-right: var(--sp-1); }
@@ -220,10 +220,13 @@
       body.is-mobile #deriv-toolbar { order: 99; border-top: 1.5px solid var(--border-hi); border-bottom: none; }
       body.is-mobile #rule-picker { display: none; } /* the sheet of rules replaces it */
       body.is-mobile .sheet-chip { font-size: var(--fs-md); }
-      body.is-mobile button.sf-chip, body.is-mobile .sf-static { min-width: 40px; min-height: 40px; font-size: var(--fs-lg); }
+      body.is-mobile button.sf-chip, body.is-mobile .sf-static { min-width: 30px; min-height: 38px; font-size: var(--fs-md); }
+      body.is-mobile #deriv-scroll { padding: var(--sp-4) var(--sp-3); }
+      body.is-mobile .deriv-gutter { width: 2.8em; padding-right: 0.3em; }
+      body.is-mobile .deriv-form { gap: var(--sp-2); }
+      body.is-mobile #deriv-status, body.is-mobile #step-count { display: none; } /* the rows are numbered, and the start symbol is the first row */
       body.is-mobile button.sf-chip { touch-action: none; }
       body.is-mobile .sf-static { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
-      body.is-mobile .deriv-form { gap: var(--sp-3); }
     </style>
   </head>
   <body data-mobile>
