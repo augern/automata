@@ -83,7 +83,7 @@ body.is-mobile .ui-sim__row .input-group input { flex: 1; min-width: 0; }
 body.is-mobile .ui-sim__row .step-group .btn { flex: 1; }
 
 /* the controls at the bottom, where a thumb is: the row leaves its container so that it can go last in the panel */
-body.is-mobile #sim-input-row { flex-direction: column; align-items: stretch; gap: var(--sp-2); }
+body.is-mobile #sim-input-row { flex-direction: column; align-items: stretch; gap: var(--sp-2); padding: var(--sp-3); } /* the padding #sim-header has on a desktop; it is display: contents here */
 body.is-mobile #sim-input-row .input-group, body.is-mobile #sim-input-row .step-group { display: flex; width: 100%; }
 body.is-mobile #sim-input-row .input-group input { flex: 1; min-width: 0; }
 body.is-mobile #sim-input-row .step-group .btn { flex: 1; }
