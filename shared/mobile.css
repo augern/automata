@@ -74,22 +74,22 @@ body.is-mobile .ui-sim__row .step-group .btn { flex: 1; }
 body.is-mobile .ui-sim, body.is-mobile #sim-header { display: contents; } /* #sim-header: a tool's own rule in shared.css */
 body.is-mobile .ui-sim__row { order: 99; padding: var(--sp-3); background: var(--bg-panel); border-top: 1.5px solid var(--border-hi); }
 
-/* the sheet of states for a transition cell (shared/automaton-table.js) */
-.at-sheet[hidden] { display: none; }
-.at-sheet__back { position: fixed; inset: 0; z-index: 20; }
-.at-sheet__panel {
+/* the sheet (shared/sheet.js): chips for a choice, above the tab bar */
+.sheet[hidden] { display: none; }
+.sheet__back { position: fixed; inset: 0; z-index: 20; }
+.sheet__panel {
   position: fixed; left: 0; right: 0; bottom: calc(52px + env(safe-area-inset-bottom)); z-index: 21;
   background: var(--bg-panel); border-top: 1.5px solid var(--border-hi); box-shadow: 0 -8px 24px var(--shadow);
   padding: var(--sp-4) var(--sp-4) var(--sp-5);
 }
-.at-sheet__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4); }
-.at-sheet__title { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--text); }
-.at-sheet__chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
-.at-chip {
+.sheet__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4); }
+.sheet__title { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--text); }
+.sheet__chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.sheet-chip {
   min-width: 56px; height: 44px; padding: 0 var(--sp-5); border: 1.5px solid var(--border); border-radius: 22px;
   background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: var(--fs-md);
 }
-.at-chip.is-on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.sheet-chip.is-on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .ui-td--input.is-editing { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* a transition cell on a phone: the target states as tags that wrap */
@@ -101,3 +101,5 @@ body.is-mobile .ui-cell--tap span { padding: 0 5px; border: 1px solid var(--bord
 /* the keypad is the keyboard of a notation: big keys */
 body.is-mobile .kp { gap: var(--sp-3); }
 body.is-mobile .kp-key { min-width: 48px; height: 48px; font-size: var(--fs-lg); }
+
+.sheet__empty { color: var(--text-dim); font-style: italic; }

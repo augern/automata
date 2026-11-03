@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grammar Derivations</title>
     <link rel="stylesheet" href="../../shared/shared.css?v=f569cdd7" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=d6dbdf62" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=e0148ec7" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -212,6 +212,13 @@
       button.rp-rule:hover .rp-sym-nt,
       button.rp-rule:hover .rp-sym-t,
       button.rp-rule:hover .rp-sym-eps { color: inherit; }
+
+      /* Phone: the controls at the bottom with the rules that fit the selection just above them; chips big enough to hit and to drag across */
+      body.is-mobile #deriv-toolbar { order: 99; border-top: 1.5px solid var(--border-hi); border-bottom: none; }
+      body.is-mobile #rule-picker { display: none; } /* the sheet of rules replaces it */
+      body.is-mobile .sheet-chip { font-size: var(--fs-md); }
+      body.is-mobile button.sf-chip { min-width: 40px; min-height: 40px; font-size: var(--fs-lg); touch-action: none; }
+      body.is-mobile .deriv-form { gap: var(--sp-3); }
     </style>
   </head>
   <body data-mobile>
@@ -244,7 +251,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Productions -->
-      <div class="panel" id="p-productions" data-priority="1" data-tab="Rules">
+      <div class="panel" id="p-productions" data-priority="1" data-tab="Rules" data-mobile-skip>
         <div class="panel-header">
           <span class="panel-title">Productions</span>
           <button class="collapse-btn"
@@ -305,7 +312,8 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=b3791c40"></script>
-    <script src="../../shared/mobile.js?v=8ccd1475"></script>
+    <script src="../../shared/sheet.js?v=60e77be3"></script>
+    <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=ba37925f"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>
@@ -470,19 +478,22 @@
         updateChipHighlight();
       }
 
-      document.addEventListener("mouseup", () => {
+      document.addEventListener("mouseup", () => commitDrag());
+
+      function commitDrag(extend = null) {
         if (!_dragging) return;
         _dragging = false;
         // Commit selection
-        const lo = Math.min(_selStart, _dragCur);
-        const hi = Math.max(_selStart, _dragCur);
+        let lo = Math.min(_selStart, _dragCur);
+        let hi = Math.max(_selStart, _dragCur);
+        if (extend) { lo = Math.min(lo, extend[0]); hi = Math.max(hi, extend[1]); }
         _selStart = lo;
         _selEnd   = hi;
         _dragCur  = null;
         updateChipHighlight();
         updateRulePicker();
         renderProductions();
-      });
+      }
 
       // Efficiently update chip CSS classes without re-rendering the whole form.
       function updateChipHighlight() {
@@ -503,6 +514,31 @@
         });
       }
 
+      // Touch: a finger drags across the chips as the mouse does (the chip under it is found by position); a tap on a chip outside the
+      // selection extends the selection to it, so a range is also made by tapping its two ends. The touch is not passed on as mouse events.
+      const chipAt = (t) => { const el = document.elementFromPoint(t.clientX, t.clientY); return el && el.closest ? el.closest("button.sf-chip") : null; };
+      let _touchPrev = null;
+      document.addEventListener("touchstart", (e) => {
+        const chip = chipAt(e.touches[0]);
+        if (!chip) return;
+        e.preventDefault();
+        _touchPrev = hasCommittedRange() ? [selLo(), selHi()] : null;
+        chipDown(+chip.dataset.pos, e);
+      }, { passive: false });
+      document.addEventListener("touchmove", (e) => {
+        if (!_dragging) return;
+        e.preventDefault();
+        const chip = chipAt(e.touches[0]);
+        if (chip) chipEnter(+chip.dataset.pos);
+      }, { passive: false });
+      document.addEventListener("touchend", (e) => {
+        if (!_dragging) return;
+        e.preventDefault();
+        const tap = _dragCur === _selStart && _touchPrev && (_selStart < _touchPrev[0] || _selStart > _touchPrev[1]);
+        commitDrag(tap ? _touchPrev : null);
+        _touchPrev = null;
+      }, { passive: false });
+
       function clearSelection() {
         _selStart = null;
         _selEnd   = null;
@@ -511,6 +547,7 @@
         updateChipHighlight();
         document.getElementById("rule-picker").classList.remove("visible");
         document.getElementById("rule-picker").innerHTML = "";
+        if (typeof ruleSheet !== "undefined" && ruleSheet) ruleSheet.close();
         renderProductions();
       }
 
@@ -698,11 +735,24 @@
       // RULE PICKER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // On a phone the rules that fit the selection are chips in a sheet (shared/sheet.js), in place of the bar below the derivation
+      let ruleSheet = null;
+      function ruleSheetShow(sel, matching) {
+        if (!ruleSheet) ruleSheet = createSheet({ onClose: () => clearSelection() });
+        const nts = _grammar.nonterminals;
+        ruleSheet.open({ titleHtml: fmtSyms(sel, nts, "rp-sym-nt", "rp-sym-t", "rp-sym-eps") + " →" });
+        ruleSheet.set(matching.map(({ r, i }) => ({
+          html: `<span style="color:var(--text-lo);font-size:var(--fs-2xs)">${i}: </span>` + fmtSyms(r.rhs, nts, "rp-sym-nt", "rp-sym-t", "rp-sym-eps"),
+          pick: () => applyRule(i),
+        })), "no matching rule");
+      }
+
       function updateRulePicker() {
         const picker = document.getElementById("rule-picker");
         if (!_grammar || !hasCommittedRange() || _steps.length === 0) {
           picker.classList.remove("visible");
           picker.innerHTML = "";
+          if (ruleSheet) ruleSheet.close();
           return;
         }
 
@@ -716,6 +766,7 @@
                               .filter(({ r }) => matchesRange(r.lhs));
 
         picker.classList.add("visible");
+        if (document.body.classList.contains("is-mobile")) { ruleSheetShow(sel, matching); return; }
 
         // Show what's selected as the LHS label
         let h = `<span class="rp-lhs">`;

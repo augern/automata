@@ -1,5 +1,5 @@
 // Phone layout for a tool that opts in with <body data-mobile>: at narrow widths one panel is shown at a time, chosen with a tab bar at
-// the bottom, and the panel's ⋯ menu (with the View menu's basics) in the top bar. A panel's tab label is its data-tab, else its title. Needs shared.js; the styles are in mobile.css.
+// the bottom (a panel with data-mobile-skip has no tab: the tool offers its content some other way on a phone), and the panel's ⋯ menu (with the View menu's basics) in the top bar. A panel's tab label is its data-tab, else its title. Needs shared.js; the styles are in mobile.css.
 (function () {
   const mq = window.matchMedia("(max-width: 720px)");
   const key = "parser-tools-tab:" + location.pathname;
@@ -25,7 +25,7 @@
     bar = document.createElement("nav");
     bar.id = "mobile-tabs";
     bar.setAttribute("role", "tablist");
-    for (const p of panels()) {
+    for (const p of panels().filter((x) => !x.hasAttribute("data-mobile-skip"))) {
       const b = document.createElement("button");
       b.type = "button";
       b.setAttribute("role", "tab");
@@ -37,7 +37,8 @@
     document.body.appendChild(bar);
     let saved = null;
     try { saved = sessionStorage.getItem(key); } catch (e) { /* private mode */ }
-    active = panels().some((p) => p.id === saved) ? saved : panels()[0].id;
+    const tabbed = panels().filter((p) => !p.hasAttribute("data-mobile-skip"));
+    active = tabbed.some((p) => p.id === saved) ? saved : tabbed[0].id;
     mq.addEventListener("change", apply);
     apply();
   }

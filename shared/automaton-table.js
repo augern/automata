@@ -130,39 +130,28 @@ function createAutomatonTable(id, opts) {
     },
   };
   // light the cells, the state row or both; what is not given is left as it is
-  // the sheet of states for one cell
+  // the sheet of states for one cell (shared/sheet.js)
   const sheet = {
-    el: null,
+    ui: null,
     cell: null,
     open(input) {
-      if (!this.el) this.build();
+      if (!this.ui) this.ui = createSheet({ onClose: () => this.end() });
+      this.end();
       this.cell = { state: input.dataset.state, sym: input.dataset.sym, input };
-      this.el.querySelector(".at-sheet__title").textContent = `δ(${this.cell.state}, ${this.cell.sym})`;
+      this.ui.open({ title: `δ(${this.cell.state}, ${this.cell.sym})` });
       this.chips();
-      this.el.hidden = false;
       input.closest("td").classList.add("is-editing");
     },
-    close() {
-      if (!this.el || this.el.hidden) return;
-      this.el.hidden = true;
+    end() {
       document.querySelectorAll(".ui-td--input.is-editing").forEach((td) => td.classList.remove("is-editing"));
       this.cell = null;
     },
+    close() { if (this.ui) { this.ui.close(); this.end(); } },
     chips() {
       const M = m(), row = M.trans[this.cell.state], on = new Set((row && row[this.cell.sym]) || []);
-      const box = this.el.querySelector(".at-sheet__chips");
-      box.innerHTML = "";
-      const chip = (label, isOn, pick) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "at-chip" + (isOn ? " is-on" : "");
-        b.textContent = label;
-        b.setAttribute("aria-pressed", String(isOn));
-        b.addEventListener("click", pick);
-        box.appendChild(b);
-      };
-      M.states.forEach((name) => chip(name, on.has(name), () => this.pick(name, !on.has(name))));
-      if (det) chip("none", on.size === 0, () => this.pick(null, false));
+      const chips = M.states.map((name) => ({ label: name, on: on.has(name), pick: () => this.pick(name, !on.has(name)) }));
+      if (det) chips.push({ label: "none", on: on.size === 0, pick: () => this.pick(null, false) });
+      this.ui.set(chips);
     },
     // set the cell: a chip toggled (several for an NFA, one for a deterministic table), or none
     pick(name, make) {
@@ -177,15 +166,6 @@ function createAutomatonTable(id, opts) {
       else { input.innerHTML = tagHtml(M.trans[state][sym]); input.dataset.n = M.trans[state][sym].length; }
       this.chips();
       changed();
-    },
-    build() {
-      this.el = document.createElement("div");
-      this.el.className = "at-sheet";
-      this.el.hidden = true;
-      this.el.innerHTML = '<div class="at-sheet__back"></div><div class="at-sheet__panel"><div class="at-sheet__head"><span class="at-sheet__title"></span><button type="button" class="btn at-sheet__done">Done</button></div><div class="at-sheet__chips"></div></div>';
-      this.el.querySelector(".at-sheet__back").addEventListener("click", () => this.close());
-      this.el.querySelector(".at-sheet__done").addEventListener("click", () => this.close());
-      document.body.appendChild(this.el);
     },
   };
   document.getElementById(id).addEventListener("click", (e) => {
