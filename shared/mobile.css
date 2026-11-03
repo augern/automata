@@ -53,7 +53,7 @@ body.is-mobile #topbar h1 { display: none; } /* the buttons need the row; the pa
 /* targets: 16px text in fields (iOS zooms into anything smaller) and room for a finger */
 body.is-mobile input, body.is-mobile select, body.is-mobile textarea { font-size: 16px; }
 body.is-mobile .btn { min-height: 40px; font-size: var(--fs-sm); }
-body.is-mobile #topbar .guide-btn, body.is-mobile #topbar .view-btn, body.is-mobile #topbar .home-btn { min-height: 32px; padding: 0 var(--sp-3); font-size: 11px; }
+body.is-mobile #topbar .guide-btn, body.is-mobile #topbar .view-btn, body.is-mobile #topbar .home-btn, body.is-mobile #topbar .mode-menu-btn { min-height: 32px; padding: 0 var(--sp-3); font-size: 11px; }
 body.is-mobile input[type="radio"], body.is-mobile input[type="checkbox"] { width: 24px; height: 24px; }
 body.is-mobile label { min-height: 40px; display: inline-flex; align-items: center; gap: var(--sp-3); }
 body.is-mobile .btn.icon-restart, body.is-mobile .btn.icon-run-all, body.is-mobile .ui-strin__btn, body.is-mobile .ui-menu-btn { min-width: 40px; min-height: 40px; }

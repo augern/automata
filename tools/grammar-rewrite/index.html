@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Interactive grammar transformation tool — ε-elimination, unit production elimination, Chomsky Normal Form, and left-recursion elimination with step-by-step visualisation.">
 <title>Grammar Transformations | Parser Tools</title>
-<link rel="stylesheet" href="../../shared/shared.css?v=c919c24f">
-<link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
+<link rel="stylesheet" href="../../shared/shared.css?v=f569cdd7">
+<link rel="stylesheet" href="../../shared/mobile.css?v=6b952627" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41">
 <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6">
 <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -83,13 +83,6 @@
 
 <div id="topbar">
   <h1>Grammar Rewriting</h1>
-  <div style="width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0"></div>
-  <button class="mode-btn active" id="btn-mode-clean" onclick="setMode('clean')">Cleanup</button>
-  <button class="mode-btn"        id="btn-mode-eps"   onclick="setMode('eps')">ε-Elimination</button>
-  <button class="mode-btn"        id="btn-mode-unit"  onclick="setMode('unit')">Unit Elim</button>
-  <button class="mode-btn"        id="btn-mode-cnf"   onclick="setMode('cnf')">CNF</button>
-  <button class="mode-btn"        id="btn-mode-lre"   onclick="setMode('lre')">Left Recursion</button>
-  <button class="mode-btn"        id="btn-mode-gnf"   onclick="setMode('gnf')">GNF</button>
 </div>
 
 <div id="panels">
@@ -173,6 +166,7 @@
 <script src="../../shared/shared.js?v=0d29ebd1"></script>
 <script src="../../shared/share-link.js?v=0d17f714"></script>
 <script src="../../shared/ui.js?v=b7fb54c9"></script>
+<script src="../../shared/mode-menu.js?v=8ce3a701"></script>
 <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
 <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
 <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
@@ -184,7 +178,7 @@
 <script src="definitions.js?v=c7672ca5"></script>
 <script src="../../shared/mobile.js?v=8ccd1475"></script>
 <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-<script src="guide.js?v=4d40ad57"></script>
+<script src="guide.js?v=59c91e82"></script>
 <script src="../../shared/guide.js?v=689637a6"></script>
 <script>
 'use strict';
@@ -250,12 +244,20 @@ const MODE_INTRO = {
   gnf:   'Converts to Greibach normal form, where every rule is A → a B₁ … Bₖ (a terminal, then nonterminals): cleanup, ε-elimination and unit elimination, then the nonterminals are ordered, earlier ones are substituted into later rules while left recursion is removed, and the substitution is carried back up. S → ε is kept if the language contains ε. The result can be much larger than the input.',
 };
 
+const modeMenu = createModeMenu({
+  label: 'Transformation',
+  modes: [
+    { id: 'clean', label: 'Cleanup' }, { id: 'eps', label: 'ε-Elimination' }, { id: 'unit', label: 'Unit Elimination' },
+    { id: 'cnf', label: 'Chomsky normal form' }, { id: 'lre', label: 'Left Recursion' }, { id: 'gnf', label: 'Greibach normal form' },
+  ],
+  current: () => currentMode,
+  select: (id) => setMode(id),
+});
+
 function setMode(m) {
   currentMode = m;
   document.getElementById('step-empty').textContent = MODE_INTRO[m];
-  ['clean','eps','unit','cnf','lre','gnf'].forEach(mm => {
-    document.getElementById('btn-mode-' + mm).classList.toggle('active', mm === m);
-  });
+  modeMenu.refresh();
   document.getElementById('main-title').textContent = MODE_TITLES[m];
   if (inputGrammar) resetSim();
   try { localStorage.setItem(MODE_KEY, m); } catch(e) {}

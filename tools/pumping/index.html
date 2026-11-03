@@ -7,9 +7,9 @@
     <title>Pumping | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=f569cdd7" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=6b952627" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -90,10 +90,7 @@
   <body data-mobile>
     <div id="topbar">
       <h1>Pumping</h1>
-      <div style="width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex-shrink: 0"></div>
-      <button class="mode-btn active" id="btn-mode-regular" onclick="swapMode('regular')">Regular: DFA</button>
-      <button class="mode-btn" id="btn-mode-cf" onclick="swapMode('cf')">Context-free: parse tree</button>
-    </div>
+</div>
 
     <div id="panels">
       <!-- 1. The machine or grammar -->
@@ -200,6 +197,7 @@
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/mode-menu.js?v=8ce3a701"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -241,10 +239,15 @@
       const ppSep = () => (ppG && [...ppG.terminals].some((t) => [...t].length > 1) ? " " : "");
 
       // ── Mode ──────────────────────────────────────────────────
+      const modeMenu = createModeMenu({
+        label: "Language class",
+        modes: [{ id: "regular", label: "Regular: DFA" }, { id: "cf", label: "Context-free: parse tree" }],
+        current: () => ppMode,
+        select: (id) => swapMode(id),
+      });
       function setMode(m) {
         ppMode = m;
-        $("btn-mode-regular").classList.toggle("active", m === "regular");
-        $("btn-mode-cf").classList.toggle("active", m === "cf");
+        modeMenu.refresh();
         $("def-title").textContent = m === "regular" ? "DFA" : "Grammar";
         $("regex-row").hidden = $("dfa-wrap").hidden = m !== "regular";
         $("grammar-wrap").hidden = m === "regular";

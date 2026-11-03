@@ -189,31 +189,21 @@ body {
   letter-spacing: 0.01em;
 }
 
-/* ── Mode buttons (LR(0) / LALR(1) / LR(1)) ────────────── */
-.mode-btn {
-  background: transparent;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
+/* ── Mode button (shared/mode-menu.js): the current mode, a menu of the others ── */
+.mode-menu-btn {
+  background: var(--text);
+  color: var(--bg);
+  border: 1px solid var(--text);
   padding: var(--sp-1) var(--sp-5);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
-.mode-btn.active {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
-}
-.mode-btn:hover:not(.active) {
-  border-color: var(--text-dim);
-  color: var(--text);
-  background: var(--bg-hover);
-}
-.mode-btn:active:not(.active) {
-  background: var(--bg-cell);
-}
+.mode-menu-btn:hover,
+.mode-menu-btn[aria-expanded="true"] { opacity: 0.85; }
 
 /* ── General buttons ────────────────────────────────────── */
 .btn {

@@ -7,8 +7,8 @@
     <title>LR Parser | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=f569cdd7" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=6b952627" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -343,14 +343,6 @@
   <body data-mobile>
     <div id="topbar">
       <h1>LR Parser Tool</h1>
-      <button class="mode-btn active" id="btn-lr0" onclick="setMode('LR0')">LR(0)</button>
-      <button class="mode-btn" id="btn-slr1" onclick="setMode('SLR1')">SLR(1)</button>
-      <button class="mode-btn" id="btn-lalr1" onclick="setMode('LALR1')">LALR(1)</button>
-      <button class="mode-btn" id="btn-lr1" onclick="setMode('LR1')">LR(1)</button>
-      <label id="merge-la-label" style="display: none; align-items: center; gap: 4px; font-size: var(--fs-2xs); color: var(--text-dim); cursor: pointer; margin-left: 6px">
-        <input type="checkbox" id="merge-la-cb" onchange="setMergeLA(this.checked)" style="cursor: pointer; accent-color: var(--accent)" />
-        Merge lookahead sets
-      </label>
       <label style="display: none" title="Prepend a fresh start production S′ → S to the grammar">
         <input type="checkbox" id="augment-cb" checked onchange="if (currentGrammar) { build(); grammarEditor.render(); }" />
         Augment grammar
@@ -533,6 +525,7 @@
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/mode-menu.js?v=8ce3a701"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
     <script src="../../shared/grammar-editor.js?v=db52bee1"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
@@ -1984,14 +1977,21 @@
         });
       }
 
+      const modeMenu = createModeMenu({
+        label: "Lookahead",
+        modes: [
+          { id: "LR0", label: "LR(0)", title: "No lookahead: reduce in every terminal column" },
+          { id: "SLR1", label: "SLR(1)", title: "Reduce on the FOLLOW set of the left side" },
+          { id: "LALR1", label: "LALR(1)", title: "LR(1) item sets with the same core merged" },
+          { id: "LR1", label: "LR(1)", title: "Item sets with their own lookaheads" },
+        ],
+        current: () => currentMode,
+        select: (id) => setMode(id),
+        options: () => (currentMode === "LR1" || currentMode === "LALR1" ? [{ label: "Merge lookahead sets", checked: mergeLA, title: "Show the lookaheads of an item as one set", onSelect: () => setMergeLA(!mergeLA) }] : []),
+      });
       function setMode(m) {
         currentMode = m;
-        ["LR0", "SLR1", "LALR1", "LR1"].forEach((id) => {
-          const el = document.getElementById("btn-" + id.toLowerCase());
-          if (el) el.classList.toggle("active", id === m);
-        });
-        const showMerge = m === "LR1" || m === "LALR1";
-        document.getElementById("merge-la-label").style.display = showMerge ? "flex" : "none";
+        modeMenu.refresh();
         try { localStorage.setItem("lr-tool-mode", m); } catch (e) {}
         if (currentGrammar) build();
       }
