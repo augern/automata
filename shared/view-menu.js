@@ -5,8 +5,9 @@
 (function () {
   const here = document.currentScript && document.currentScript.src;
 
-  function items() {
-    const list = [
+  // The two items that matter on a phone, where they sit in the ⋯ menu (shared.js) instead of this one
+  function basics() {
+    return [
       {
         label: "Copy link to this view",
         hint: "share",
@@ -17,6 +18,11 @@
       },
       { label: themeIsDark() ? "Switch to light theme" : "Switch to dark theme", onSelect: themeToggle },
     ];
+  }
+  window.viewMenuBasics = basics;
+
+  function items() {
+    const list = basics();
     if (typeof fitViewUsed !== "undefined" && fitViewUsed) {
       list.push(
         { separator: true },

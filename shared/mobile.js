@@ -1,5 +1,5 @@
 // Phone layout for a tool that opts in with <body data-mobile>: at narrow widths one panel is shown at a time, chosen with a tab bar at
-// the bottom. A panel's tab label is its data-tab, else its title. Needs shared.js; the styles are in mobile.css.
+// the bottom, and the panel's ⋯ menu (with the View menu's basics) in the top bar. A panel's tab label is its data-tab, else its title. Needs shared.js; the styles are in mobile.css.
 (function () {
   const mq = window.matchMedia("(max-width: 720px)");
   const key = "parser-tools-tab:" + location.pathname;
@@ -9,9 +9,6 @@
   function show(id) {
     active = id;
     panels().forEach((p) => p.classList.toggle("is-tab", p.id === id));
-    // the active panel's ⋯ menu moves up to the top bar, if the panel has anything of its own in it (see mobile.css)
-    const own = !!document.querySelector("#" + id + " > .panel-header .panel-menu-source") || (typeof panelMenuExtras !== "undefined" && !!panelMenuExtras[id]);
-    document.body.classList.toggle("has-panel-menu", own);
     bar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.panel === id)));
     try { sessionStorage.setItem(key, id); } catch (e) { /* private mode */ }
     window.dispatchEvent(new Event("resize")); // a graph fits its canvas once the canvas is shown

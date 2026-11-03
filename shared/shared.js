@@ -302,7 +302,10 @@ function installPanelMenus() {
       // items a tool or shared code adds to one panel's menu: panelMenuExtras[panelId] = () => [menu items]
       const extra = panelMenuExtras[el.id] ? panelMenuExtras[el.id]() : [];
       if (extra.length) items.push(...(items.length ? [{ separator: true }] : []), ...extra);
-      if (document.body.classList.contains("is-mobile")) return items; // one panel at a time: nothing to focus or collapse
+      if (document.body.classList.contains("is-mobile")) { // one panel at a time: nothing to focus or collapse; the View menu's basics come first
+        const top = typeof viewMenuBasics === "function" ? viewMenuBasics() : [];
+        return top.length && items.length ? [...top, { separator: true }, ...items] : [...top, ...items];
+      }
       if (items.length) items.push({ separator: true });
       if (panelFocusedId() === el.id) {
         items.push({ label: "Restore layout", hint: "F", title: "Undo \"Focus on this panel\": bring back the panels as they were", onSelect: panelRestoreFocus });
