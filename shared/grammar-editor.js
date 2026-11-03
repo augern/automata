@@ -9,11 +9,14 @@
 // A row: [on/off] [production number] [left side →] [symbols as chips] [menu]. Adjacent productions with the same
 // left side show it faded: written with |, but separate productions to the parser. Typing in the end field of a row
 // makes chips (Space or Enter), a | starts the next production, Enter on an empty field starts the next production
-// with the same left side, Backspace on an empty field removes the last chip. Needs algo/grammar-model.js and ui.js.
+// with the same left side, Backspace on an empty field removes the last chip. A virtual keyboard reports Space, Enter and Backspace as
+// input rather than as key presses: the same actions are taken from beforeinput. On a phone (body.is-mobile) a keypad docks above the
+// keyboard while an entry field has the focus: the symbols of the grammar, |, ε and ⌫. Needs algo/grammar-model.js and ui.js.
 const GrammarEditor = (() => {
   const nativeValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
+    if (tag === "input") { e.autocomplete = "off"; e.setAttribute("autocorrect", "off"); e.setAttribute("autocapitalize", "none"); } // a notation: no suggestions or capitals
     if (cls) e.className = cls;
     if (text !== undefined) e.textContent = text;
     return e;
@@ -220,6 +223,8 @@ const GrammarEditor = (() => {
       inp.size = 4;
       inp.addEventListener("input", () => { inp.size = Math.max(4, inp.value.length + 1); });
       inp.addEventListener("keydown", (e) => endKey(e, inp, i));
+      inp.addEventListener("beforeinput", (e) => endInput(e, inp, i));
+      inp.addEventListener("focus", () => padFor(rowTarget(i, inp)));
       inp.addEventListener("blur", () => { const v = inp.value.trim(); inp.value = ""; if (v) commitTyped(i, v, false); });
       rhs.appendChild(inp);
       const menu = el("button", "ge-menu", "⋯");
@@ -490,6 +495,81 @@ const GrammarEditor = (() => {
       return true;
     }
 
+    // Backspace in an empty entry field: the last chip goes, and with none left the production
+    function removeLast(i) {
+      const row = model.rows[i];
+      if (row.rhs.length) { const m = gmClone(model); m.rows[i].rhs.pop(); changed(m, { row: i, part: "end" }); return true; }
+      if (ruleRows().length > 1) {
+        const prev = ruleRows().filter((j) => j < i).pop();
+        changed(gmRemove(model, i), { row: prev === undefined ? 0 : prev, part: "end" });
+        return true;
+      }
+      return false;
+    }
+
+    // Space, Enter and Backspace as a virtual keyboard sends them (see endKey for a physical one)
+    const isSpace = (e) => e.inputType === "insertText" && e.data === " ";
+    const isEnter = (e) => e.inputType === "insertLineBreak" || e.inputType === "insertParagraph";
+    function endInput(e, inp, i) {
+      if (isSpace(e) || isEnter(e)) {
+        e.preventDefault();
+        const v = inp.value.trim();
+        if (v) { inp.value = ""; commitTyped(i, v, true); }
+        else if (isEnter(e)) changed(gmInsert(model, i + 1, gmNewRule(model.rows[i].lhs)), { row: i + 1, part: "end" });
+      } else if (e.inputType === "deleteContentBackward" && inp.value === "" && removeLast(i)) e.preventDefault();
+    }
+
+    // ── The keypad (phones) ──
+    // The symbols of the grammar as keys, then |, ε and ⌫, for the entry field that has the focus. A key acts through the target
+    // that the field registered: what is typed in the field so far goes first.
+    const tokText = (t) => (t.quoted ? "'" + t.sym.replace(/'/g, "''") + "'" : t.sym);
+    const pad = el("div", "ge-pad");
+    pad.hidden = true;
+    document.body.appendChild(pad);
+    let padTarget = null;
+    const pk = (label, cls, title, act) => {
+      const b = el("button", "ge-pk " + cls, label);
+      b.type = "button";
+      b.title = title;
+      b.addEventListener("mousedown", (e) => e.preventDefault()); // the field keeps the focus, and with it the keyboard
+      b.addEventListener("click", () => { if (padTarget) act(padTarget); });
+      pad.appendChild(b);
+    };
+    function renderPad() {
+      pad.innerHTML = "";
+      const nts = gmNonterminals(model), seen = new Map();
+      for (const r of model.rows) {
+        if (r.kind !== "rule" && !r.rhs) continue;
+        for (const x of (r.lhs || []).map((sym) => ({ sym, quoted: false })).concat(r.rhs || [])) if (!seen.has(tokText(x))) seen.set(tokText(x), x);
+      }
+      const toks = [...seen.values()];
+      for (const t of [...toks.filter((x) => nts.has(x.sym)), ...toks.filter((x) => !nts.has(x.sym))]) pk(t.sym, nts.has(t.sym) ? "ge-pk-nt" : "ge-pk-t", "Add " + t.sym, (g) => g.insert(tokText(t)));
+      pk("|", "ge-pk-op", "Another production for the same left side", (g) => g.insert("|"));
+      pk("ε", "ge-pk-op", "The empty string", (g) => g.eps());
+      pk("⌫", "ge-pk-del", "Delete", (g) => g.back());
+    }
+    function placePad() { // above the on-screen keyboard: the visual viewport is what the keyboard leaves
+      const vv = window.visualViewport;
+      pad.style.bottom = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) + "px" : "0";
+    }
+    function padFor(target) {
+      if (!document.body.classList.contains("is-mobile")) return;
+      padTarget = target;
+      renderPad();
+      pad.hidden = false;
+      placePad();
+    }
+    function padOff() { padTarget = null; pad.hidden = true; }
+    if (window.visualViewport) { window.visualViewport.addEventListener("resize", placePad); window.visualViewport.addEventListener("scroll", placePad); }
+    host.addEventListener("focusout", () => setTimeout(() => { if (!host.contains(document.activeElement)) padOff(); }, 0));
+    // the keys of a field: what was typed goes first, with the key's own text
+    const typedWith = (inp, text) => { const v = inp.value.trim(); inp.value = ""; return (v ? v + " " : "") + text; };
+    const rowTarget = (i, inp) => ({
+      insert: (text) => commitTyped(i, typedWith(inp, text), true),
+      eps: () => { if (!inp.value.trim() && !model.rows[i].rhs.length) commitTyped(i, "ε", true); },
+      back: () => { if (inp.value) { inp.value = inp.value.slice(0, -1); inp.dispatchEvent(new Event("input")); } else removeLast(i); },
+    });
+
     function endKey(e, inp, i) {
       const row = model.rows[i];
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -589,6 +669,17 @@ const GrammarEditor = (() => {
           if (v) { inp.value = ""; start(v); } else if (e.key === "Enter") start("");
         }
       });
+      inp.addEventListener("beforeinput", (e) => {
+        if (!isSpace(e) && !isEnter(e)) return;
+        e.preventDefault();
+        const v = inp.value.trim();
+        if (v) { inp.value = ""; start(v); } else if (isEnter(e)) start("");
+      });
+      inp.addEventListener("focus", () => padFor({
+        insert: (text) => start(typedWith(inp, text)),
+        eps: () => { if (!inp.value.trim()) start("ε"); },
+        back: () => { if (inp.value) { inp.value = inp.value.slice(0, -1); inp.dispatchEvent(new Event("input")); } },
+      }));
       inp.addEventListener("blur", () => { const v = inp.value.trim(); if (v) { inp.value = ""; start(v); } });
       rhs.appendChild(inp);
       d.append(el("span", "ge-num"), lhs, arrow, rhs, el("span", "ge-menu-gap"));

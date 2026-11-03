@@ -14,7 +14,7 @@
     ["F", "focus the current panel; again to restore the layout"],
   ];
   // tools with the grammar table set grammarEditor: true
-  const GRAMMAR_USE = "Grammar: click a symbol to edit it. The field ending a row takes new symbols (Space or Enter closes a chip); `|` starts another production for the same left side; a quoted symbol such as `'|'` is a literal terminal (`''''` is `'`); an empty production is ε. The ⋯ menu of a row disables, duplicates, moves or deletes it; the panel menu switches to the text view. The first left side is the start symbol.";
+  const GRAMMAR_USE = "Grammar: click a symbol to edit it. The field ending a row takes new symbols (Space or Enter closes a chip); `|` starts another production for the same left side; a quoted symbol such as `'|'` is a literal terminal (`''''` is `'`); an empty production is ε. The ⋯ menu of a row disables, duplicates, moves or deletes it; the panel menu switches to the text view. The first left side is the start symbol. On a phone, keys above the keyboard add the symbols of the grammar, `|` and ε.";
   const COMMON_USE = "The View menu (top right) copies a link to the current state, switches theme and rearranges the panels. Hovering an item in one panel marks the same item in the others, in orange.";
 
 

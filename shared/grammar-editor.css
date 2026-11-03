@@ -94,3 +94,12 @@
 .ge-row.is-running { background: var(--accent-bg); }
 .ge-vals { flex: 0 0 100%; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-dim); padding: 2px 0 0 0; overflow-wrap: anywhere; }
 .ge-val-name { color: var(--accent); }
+
+/* The keypad of a phone: above the on-screen keyboard while an entry field has the focus (placed by the editor) */
+.ge-pad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); overflow-x: auto; background: var(--bg-panel); border-top: 1.5px solid var(--border-hi); }
+.ge-pad[hidden] { display: none; }
+.ge-pk { flex-shrink: 0; min-width: 44px; height: 44px; padding: 0 var(--sp-4); background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font-mono); font-size: var(--fs-lg); }
+.ge-pk-nt { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); font-family: var(--font-serif); font-style: italic; }
+.ge-pk-op { color: var(--amber); }
+.ge-pk-del { color: var(--text-dim); }
+body.is-mobile .ge-rows { padding-bottom: 72px; } /* room to scroll the last rows above the keypad */
