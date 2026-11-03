@@ -27,6 +27,10 @@ const ScannerEditor = (() => {
     let view = "rules";
     try { if (localStorage.getItem("parser-tools-scanner-view") === "text") view = "text"; } catch (e) { /* storage blocked */ }
     let undo = [], redo = [], parseError = "", flags = [];
+    const numsKey = "parser-tools-scanner-nums";
+    let numsChoice = null;
+    const showNums = () => (numsChoice !== null ? numsChoice : !document.body.classList.contains("is-mobile"));
+    try { const v = localStorage.getItem(numsKey); if (v !== null) numsChoice = v === "1"; } catch (e) { /* storage blocked */ }
 
     const host = el("div", "se");
     textarea.parentNode.insertBefore(host, textarea);
@@ -73,7 +77,14 @@ const ScannerEditor = (() => {
       { heading: "Rules view" },
       { label: "Rules", checked: view === "rules", title: "The token rules as a table", onSelect: () => setView("rules") },
       { label: "Text", checked: view === "text", title: "The token rules as plain text", onSelect: () => setView("text") },
+      { separator: true },
+      { label: "Priority numbers", checked: showNums(), title: "The position of a rule is its priority: on a tie, a lower number wins", onSelect: () => {
+        numsChoice = !showNums();
+        try { localStorage.setItem(numsKey, numsChoice ? "1" : "0"); } catch (e) { /* storage blocked */ }
+        render();
+      } },
     ];
+    document.addEventListener("mobilechange", () => render());
     textEl.addEventListener("input", () => {
       nativeValue.set.call(textarea, textEl.value);
       readText(textEl.value);
@@ -105,6 +116,7 @@ const ScannerEditor = (() => {
     }
 
     function render(focus) {
+      host.classList.toggle("no-nums", !showNums());
       rowsEl.style.display = view === "rules" ? "" : "none";
       textEl.style.display = view === "text" ? "" : "none";
       bar.textContent = parseError;

@@ -6,16 +6,19 @@
 
 /* One grid for all rows (each row is a subgrid, so its background and border span the whole row): number, left side, arrow, symbols, menu. The columns, and with
    them the arrows, line up between rows. */
-.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: 22px fit-content(38%) 18px minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
-.ge.no-nums .ge-rows { grid-template-columns: 0 fit-content(38%) 18px minmax(0, 1fr) 18px; }
+/* The first symbol of every row (a left side, the new-rule field, a comment) starts 12px after the number column, whether the column shows or not. */
+.ge { --ge-num-w: 22px; }
+.ge.no-nums { --ge-num-w: 0px; }
+.ge-rows { flex: 1; overflow: auto; padding: var(--sp-3) 0; display: grid; grid-template-columns: var(--ge-num-w) fit-content(38%) 18px minmax(0, 1fr) 18px; align-content: start; align-items: baseline; }
 .ge.no-nums .ge-num { visibility: hidden; padding: 0; overflow: hidden; }
 .ge.no-nums .ge-row > :first-child { padding-left: var(--sp-2); }
 .ge-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; }
 .ge-row > * { padding: 2px 2px; }
 .ge-row > :first-child { padding-left: var(--sp-3); }
 .ge-row > .ge-menu, .ge-row > .ge-menu-gap { padding-right: var(--sp-4); }
-.ge-row > .ge-lhs { margin-left: 4px; }
-.ge-row > .ge-lhsq { margin-left: 4px; }
+.ge-row > .ge-lhs { margin-left: 8px; }
+.ge-row > .ge-lhsq { margin-left: 6px; }
+.ge-lhsq > .ge-lhs-in:first-child { padding-left: 6px; }
 .ge-row.is-odd { background: color-mix(in srgb, var(--text) 3%, transparent); }
 .ge-row.is-last { border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent); }
 .ge-row:hover { background: var(--bg-hover); }
@@ -61,7 +64,7 @@
 .ge-in { flex: 1 1 3ch; width: auto; border-bottom-color: transparent; }
 .ge-chip-edit { border-bottom-color: var(--accent); }
 .ge-in::placeholder { color: var(--text-lo); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); }
-.ge-comment { grid-column: 1 / -1; padding: 2px var(--sp-3) 2px calc(var(--sp-3) + 22px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
+.ge-comment { grid-column: 1 / -1; padding: 2px var(--sp-3) 2px calc(var(--ge-num-w) + 12px); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-lo); }
 /* the entry row for a new production */
 .ge-new { opacity: 0.75; }
 .ge-new:focus-within { opacity: 1; }
@@ -102,8 +105,11 @@
 body.is-mobile .ge-rows { padding-bottom: 72px; } /* room to scroll the last rows above the keypad */
 
 /* Targets for a finger: rows about 40px, bigger symbols, a menu button that can be hit, 16px in the fields (iOS zooms into smaller) */
-body.is-mobile .ge-rows { grid-template-columns: 24px fit-content(38%) 22px minmax(0, 1fr) 40px; }
-body.is-mobile .ge.no-nums .ge-rows { grid-template-columns: 0 fit-content(38%) 22px minmax(0, 1fr) 40px; }
+body.is-mobile .ge { --ge-num-w: 24px; }
+body.is-mobile .ge.no-nums { --ge-num-w: 0px; }
+body.is-mobile .ge-rows { grid-template-columns: var(--ge-num-w) fit-content(38%) 22px minmax(0, 1fr) 40px; }
+body.is-mobile .ge-row > .ge-lhsq { margin-left: 3px; }
+body.is-mobile .ge-lhsq > .ge-lhs-in:first-child { padding-left: 9px; }
 body.is-mobile .ge-row > * { padding-top: 8px; padding-bottom: 8px; }
 body.is-mobile .ge-chip, body.is-mobile .ge-t { font-size: var(--fs-lg); padding: 2px 8px; }
 body.is-mobile .ge-lhs, body.is-mobile .ge-lhs-in { font-size: var(--fs-lg); }
