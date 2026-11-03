@@ -47,7 +47,12 @@ function createAutomatonTable(id, opts) {
         for (const sym of syms()) {
           const val = M.trans[sn] && M.trans[sn][sym] ? M.trans[sn][sym].join(", ") : "";
           const bad = parts(val).some((p) => !M.states.includes(p)) || (det && parts(val).length > 1);
-          h += T.input(val, `${phone() ? "readonly inputmode=\"none\" " : ""}placeholder="${errSyms.includes(sym) ? esc(errName) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
+          if (phone()) { // a button that shows the targets as wrapping tags: a long list grows the row instead of clipping
+            const tags = (M.trans[sn] && M.trans[sn][sym] ? M.trans[sn][sym] : []).map((t) => `<span>${esc(t)}</span>`).join("");
+            h += `<td class="ui-td--input${sym === "ε" ? " is-muted" : ""}"><div class="ui-cell ui-cell--tap" role="button" tabindex="0" data-state="${esc(sn)}" data-sym="${esc(sym)}">${tags}</div></td>`;
+            continue;
+          }
+          h += T.input(val, `placeholder="${errSyms.includes(sym) ? esc(errName) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
             ` onchange="${call("onInput", "this")}" oninput="${call("validate", "this")}" onkeydown="transInputKeydown(event)"`, { muted: sym === "ε", invalid: bad });
         }
         if (err) h += T.cell(esc(errName), "is-error").replace("<td", `<td data-state="${esc(sn)}" data-sym="${opts.error.wild}"`);
@@ -167,8 +172,8 @@ function createAutomatonTable(id, opts) {
       else if (make) list.add(name); else list.delete(name);
       if (!M.trans[state]) M.trans[state] = {};
       M.trans[state][sym] = M.states.filter((x) => list.has(x));
-      input.value = M.trans[state][sym].join(", ");
-      self.validate(input);
+      if (input.tagName === "INPUT") { input.value = M.trans[state][sym].join(", "); self.validate(input); }
+      else input.innerHTML = M.trans[state][sym].map((t) => `<span>${esc(t)}</span>`).join("");
       this.chips();
       changed();
     },
@@ -183,8 +188,12 @@ function createAutomatonTable(id, opts) {
     },
   };
   document.getElementById(id).addEventListener("click", (e) => {
-    const input = phone() && e.target.closest && e.target.closest("input[data-sym]");
-    if (input) { e.preventDefault(); sheet.open(input); }
+    const cell = phone() && e.target.closest && e.target.closest(".ui-cell--tap");
+    if (cell) sheet.open(cell);
+  });
+  document.getElementById(id).addEventListener("keydown", (e) => {
+    const cell = phone() && (e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest(".ui-cell--tap");
+    if (cell) { e.preventDefault(); sheet.open(cell); }
   });
   document.addEventListener("mobilechange", () => { sheet.close(); self.render(); });
 
