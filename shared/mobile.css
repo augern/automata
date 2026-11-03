@@ -38,7 +38,8 @@ body.is-mobile #mobile-tabs {
   font-style: italic;
   font-size: var(--fs-md);
 }
-#mobile-tabs button + button { box-shadow: inset 1px 0 0 var(--border-hi); } /* not a border: it would meet the top border in a mitred corner */
+#mobile-tabs button { position: relative; }
+#mobile-tabs button + button::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--border-hi); } /* over the top border too, which a border or inset shadow would not reach */
 #mobile-tabs button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); background: var(--accent-bg); }
 
 /* the row of panels becomes a single page */
