@@ -32,6 +32,7 @@ const GrammarEditor = (() => {
     try { const v = localStorage.getItem(numsKey); if (v !== null) showNums = v === "1"; } catch (e) { /* storage blocked */ }
     try { if (localStorage.getItem("parser-tools-grammar-view") === "text") view = "text"; } catch (e) { /* storage blocked */ }
     let undo = [], redo = [];
+    const phone = () => document.body.classList.contains("is-mobile");
     let parseError = "";
 
     const host = el("div", "ge");
@@ -91,6 +92,9 @@ const GrammarEditor = (() => {
     // the panel's menu switches between the table and the text
     const panel = textarea.closest(".panel");
     if (panel) panelMenuExtras[panel.id] = () => [
+      { label: "Undo", hint: phone() ? undefined : "Ctrl+Z", disabled: !undo.length, onSelect: doUndo },
+      { label: "Redo", hint: phone() ? undefined : "Ctrl+Shift+Z", disabled: !redo.length, onSelect: doRedo },
+      { separator: true },
       { heading: "Grammar view" },
       { label: "Rules", checked: view === "rules", title: "The grammar as a table of productions", onSelect: () => setView("rules") },
       { label: "Text", checked: view === "text", title: "The grammar as plain text", onSelect: () => setView("text") },

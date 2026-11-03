@@ -103,3 +103,12 @@
 .ge-pk-op { color: var(--amber); }
 .ge-pk-del { color: var(--text-dim); }
 body.is-mobile .ge-rows { padding-bottom: 72px; } /* room to scroll the last rows above the keypad */
+
+/* Targets for a finger: rows about 40px, bigger symbols, a menu button that can be hit, 16px in the fields (iOS zooms into smaller) */
+body.is-mobile .ge-rows { grid-template-columns: 24px fit-content(38%) 22px minmax(0, 1fr) 40px; }
+body.is-mobile .ge.no-nums .ge-rows { grid-template-columns: 0 fit-content(38%) 22px minmax(0, 1fr) 40px; }
+body.is-mobile .ge-row > * { padding-top: 8px; padding-bottom: 8px; }
+body.is-mobile .ge-chip, body.is-mobile .ge-t { font-size: var(--fs-lg); padding: 2px 8px; }
+body.is-mobile .ge-lhs, body.is-mobile .ge-lhs-in { font-size: var(--fs-lg); }
+body.is-mobile .ge-in, body.is-mobile .ge-chip-edit { font-size: 16px; min-height: 28px; }
+body.is-mobile .ge-menu { opacity: 1; font-size: 22px; min-height: 40px; padding: 0 var(--sp-4); }
