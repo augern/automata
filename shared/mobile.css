@@ -34,6 +34,10 @@ body.is-mobile #panels > .panel.is-tab { display: flex; }
 body.is-mobile .panel.collapsed .panel-body { display: flex; }
 body.is-mobile .panel.collapsed .panel-header { flex-direction: row; width: auto; height: 28px; padding: 0 var(--sp-3) 0 var(--sp-5); border: none; border-bottom: 1px solid var(--border); }
 body.is-mobile .panel.collapsed .panel-title { writing-mode: horizontal-tb; transform: none; flex: 1; }
+/* the tab names the panel: the header stays only for a panel with actions of its own (its ⋯ menu), and then without the title */
+body.is-mobile #panels > .panel > .panel-header:not(:has(.panel-menu-source)) { display: none; }
+body.is-mobile #panels > .panel > .panel-header { justify-content: flex-end; height: 36px; background: var(--bg-cell); box-shadow: none; }
+body.is-mobile .panel-title { display: none; }
 body.is-mobile .resize-handle, body.is-mobile .collapse-btn, body.is-mobile .qr-btn { display: none; }
 
 body.is-mobile .panel.has-key-focus:not(.collapsed) > .panel-header .panel-title::after { content: none; } /* no arrow keys */
