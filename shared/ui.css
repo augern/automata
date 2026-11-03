@@ -210,6 +210,7 @@
   line-height: 1.5;
   color: var(--text-dim);
 }
+.ui-logbar:empty { display: none; } /* no band, with its border, until there is a line to show */
 
 /* Accept / reject verdict banner; show with UI.banner(el).show(kind, text) */
 .ui-result {
