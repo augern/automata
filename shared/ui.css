@@ -843,6 +843,15 @@ tr.is-muted .ui-td--input { opacity: 0.35; }
 .ctg-base { stroke: var(--text-lo); stroke-width: 1.5; }
 .ctg-tok.is-eps { font-style: italic; opacity: 0.7; }
 .ctg-blank { fill: var(--bg); stroke: none; }
+/* Keypad (shared/keypad.js) */
+.kp { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.kp-key { min-width: 30px; height: var(--ctl-h); padding: 0 var(--sp-3); background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font-mono); font-size: var(--fs-md); cursor: pointer; }
+.kp-key:hover { background: var(--bg-hover); border-color: var(--border-hi); }
+.kp-key:active { background: var(--bg-cell); }
+.kp-sym { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+.kp-op { color: var(--amber); }
+.kp-del { color: var(--text-dim); }
+
 /* Run figure (shared/ctg.js drawRunFigInto): the states of a DFA run over the string */
 .run-seg { fill: transparent; }
 .run-line { fill: none; stroke: var(--text-dim); stroke-width: 1.4; }

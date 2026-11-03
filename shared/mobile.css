@@ -68,7 +68,7 @@ body.is-mobile .ui-sim__row .input-group input { flex: 1; min-width: 0; }
 body.is-mobile .ui-sim__row .step-group .btn { flex: 1; }
 
 /* the controls at the bottom, where a thumb is: the row leaves its container so that it can go last in the panel */
-body.is-mobile .ui-sim { display: contents; }
+body.is-mobile .ui-sim, body.is-mobile #sim-header { display: contents; } /* #sim-header: a tool's own rule in shared.css */
 body.is-mobile .ui-sim__row { order: 99; padding: var(--sp-3); background: var(--bg-panel); border-top: 1.5px solid var(--border-hi); }
 
 /* the sheet of states for a transition cell (shared/automaton-table.js) */
@@ -94,3 +94,7 @@ body.is-mobile .ui-cell--tap { height: auto; min-height: var(--cell-h); display:
 body.is-mobile .ui-cell--tap[data-n="1"] span { padding: 1px 12px; font-size: 16px; }
 body.is-mobile .ui-cell--tap[data-n="2"] span { padding: 0 8px; font-size: 14px; }
 body.is-mobile .ui-cell--tap span { padding: 0 5px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-cell); font-size: 12px; line-height: 1.6; }
+
+/* the keypad is the keyboard of a notation: big keys */
+body.is-mobile .kp { gap: var(--sp-3); }
+body.is-mobile .kp-key { min-width: 48px; height: 48px; font-size: var(--fs-lg); }

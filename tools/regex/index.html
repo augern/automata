@@ -7,8 +7,8 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=f569cdd7" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=6b952627" />
-    <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=43b8649f" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=5cdc0ee1" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -70,6 +70,8 @@
         outline: 1px solid var(--accent);
       }
 
+      #regex-label { margin-top: var(--sp-4); }
+      #regex-keys { margin: var(--sp-3) 0; }
       #regex-footer {
         padding: var(--sp-3) var(--sp-4) var(--sp-4);
         border-top: 1px solid var(--border-lo);
@@ -252,6 +254,9 @@
       }/* ── Simulation panel ── */
 /* String input row */
       /* Tape */
+      .sim-options { border-bottom: none; border-top: 1px solid var(--border-lo); justify-content: space-between; }
+      .sim-options #sim-which { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .sim-opt { white-space: nowrap; }
       #sim-tape-wrap {
         flex-shrink: 0;
         padding: var(--sp-5) var(--sp-5) var(--sp-5);
@@ -399,11 +404,14 @@
             </select>
           </div>
           <div id="regex-input-wrap">
-            <div class="input-sublabel">Regular expression <button type="button" class="btn" id="btn-eps" title="Insert ε, the empty string" onclick="insertEpsilon()">ε</button></div>
+            <div class="input-sublabel" title="The symbols that get a key; a symbol that the expression uses is added to it">Alphabet</div>
+            <input id="alphabet-input" class="ui-input" type="text" spellcheck="false" placeholder="e.g. ab" />
+            <div class="input-sublabel" id="regex-label">Regular expression</div>
             <div id="regex-field">
               <div id="regex-hl" aria-hidden="true"></div>
               <input id="regex-input" type="text" spellcheck="false" placeholder="e.g. (a|b)*abb" />
             </div>
+            <div id="regex-keys"></div>
           </div>
           <div id="regex-footer">
             <div id="error-msg"></div>
@@ -520,17 +528,6 @@
         <div class="panel-body">
           <div id="sim-empty" class="ui-empty">Build the NFA first.</div>
           <div id="sim-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden">
-            <div class="ui-bar">
-              <label title="Add an explicit error state (also called the dead or trap state): a state with no transition on a symbol goes to it, and it stays there"><input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state</label>
-              <span id="sim-which" class="ui-label" title="Apply and Skip in the stage panels choose the automaton that is drawn and run"></span>
-            </div>
-            <!-- DFA graph -->
-            <div class="dfa-graph-wrap">
-              <svg id="dfa-svg">
-                <g id="dfa-graph-root"></g>
-              </svg>
-              <div id="dfa-graph-empty">The DFA appears when subset construction is complete.</div>
-            </div>
             <!-- String input + step controls -->
             <div id="sim-header" class="ui-sim">
               <div id="sim-input-row" class="ui-sim__row">
@@ -556,6 +553,18 @@
             </div>
             <!-- Accept / Reject banner -->
             <div id="sim-result" class="ui-result"></div>
+            <!-- DFA graph -->
+            <div class="dfa-graph-wrap">
+              <svg id="dfa-svg">
+                <g id="dfa-graph-root"></g>
+              </svg>
+              <div id="dfa-graph-empty">The DFA appears when subset construction is complete.</div>
+            </div>
+            <!-- Which automaton is drawn, and the error state option -->
+            <div class="ui-bar sim-options">
+              <label class="sim-opt" title="Add an explicit error state (also called the dead or trap state): a state with no transition on a symbol goes to it, and it stays there"><input type="checkbox" id="opt-err" onchange="setErrorState(this.checked)" /> Error state</label>
+              <span id="sim-which" class="ui-label" title="Apply and Skip in the stage panels choose the automaton that is drawn and run"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -578,11 +587,12 @@
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
-    <script src="../../shared/algo/regex.js?v=d838253b"></script>
+    <script src="../../shared/algo/regex.js?v=3abc83d6"></script>
     <script src="../../shared/algo/nfa.js?v=840395be"></script>
     <script src="../../shared/shared.js?v=0d29ebd1"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/keypad.js?v=c1faef44"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
@@ -593,7 +603,7 @@
     <script src="definitions.js?v=06f70924"></script>
     <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=6bb8e482"></script>
+    <script src="guide.js?v=d6c0c308"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>
@@ -612,12 +622,38 @@
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       const EXAMPLES = {};
 
+      // ── The keypad: the symbols of the alphabet, the operators and ε, typing into the expression ──
+      const alphabetInput = document.getElementById("alphabet-input");
+      const KEY_OPS = [["(", "Open a group"], [")", "Close a group"], ["|", "Union"], ["*", "Kleene star"], ["+", "One or more"], ["?", "Optional"]];
+      const alphabetChars = () => [...new Set([...alphabetInput.value].filter((c) => !/\s/.test(c)))];
+      const regexKeys = createKeypad("regex-keys", {
+        input: "regex-input",
+        keys: () => [
+          ...alphabetChars().map((c) => ({ label: c, insert: "|*+?()\\".includes(c) ? "\\" + c : c, kind: "sym", title: "The symbol " + c })),
+          ...KEY_OPS.map(([c, title]) => ({ label: c, insert: c, kind: "op", title })),
+          { label: "ε", insert: "ε", kind: "op", title: "The empty string" },
+          { label: "⌫", action: "backspace", kind: "del", title: "Delete before the caret" },
+        ],
+      });
+      function setAlphabet(text) { alphabetInput.value = text; regexKeys.render(); }
+      // a symbol that the expression starts to use gets its key
+      function addToAlphabet(symbols) {
+        const missing = symbols.filter((c) => !alphabetChars().includes(c));
+        if (missing.length) setAlphabet(alphabetInput.value + missing.join(""));
+      }
+      alphabetInput.addEventListener("input", () => regexKeys.render());
+      // on a phone the keypad is the keyboard: the expression does not raise the system one
+      const phoneInput = () => { document.getElementById("regex-input").inputMode = document.body.classList.contains("is-mobile") ? "none" : "text"; };
+      document.addEventListener("mobilechange", phoneInput);
+      phoneInput();
+
       function loadExample(k) {
         if (!k) return;
         document.getElementById("examples-select").value = "";
         const ex = EXAMPLES[k];
         if (!ex) return;
         document.getElementById("regex-input").value = ex.text;
+        setAlphabet(regexSymbols(ex.text).join(""));
         setError("");
         if (ex.errorState && !_errOn) { _errOn = true; document.getElementById("opt-err").checked = true; }
         build();
@@ -1440,14 +1476,6 @@
         setError(msg);
       }
 
-      function insertEpsilon() {
-        const input = document.getElementById("regex-input");
-        const a = input.selectionStart, b = input.selectionEnd;
-        input.value = input.value.slice(0, a) + "ε" + input.value.slice(b);
-        input.setSelectionRange(a + 1, a + 1);
-        input.focus();
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      }
 
       function build() {
         setError("");
@@ -2210,10 +2238,12 @@ ${kw("return")} D′`,
         loadExamplesInto("examples.json", "examples-select", EXAMPLES);
         document.getElementById("regex-input").value = "(a|b)*abb";
         applyShareState();
+        setAlphabet(regexSymbols(document.getElementById("regex-input").value).join(""));
         build();
         // Auto-rebuild while editing (debounced so partial input doesn't spam errors)
         let _rebuildTimer = null;
         document.getElementById("regex-input").addEventListener("input", () => {
+          addToAlphabet(regexSymbols(document.getElementById("regex-input").value));
           clearTimeout(_rebuildTimer);
           _rebuildTimer = setTimeout(build, 400);
         });

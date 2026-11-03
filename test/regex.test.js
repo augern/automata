@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const { EPSILON, regexToNFA, subsetConstruct, minimizeDFA, dfaRun, generateExamples } = load("grammar.js", "regex.js");
+const { EPSILON, regexToNFA, subsetConstruct, minimizeDFA, dfaRun, generateExamples, regexSymbols } = load("grammar.js", "regex.js");
 
 // Reference matcher: the NFA by set simulation, independent of the DFA code.
 function nfaAccepts(nfa, input) {
@@ -262,4 +262,11 @@ test("a DFA of a thousand states is minimised at once", () => {
   const min = minimizeDFA(dfa);
   assert.equal(min.dfaStates.length, 1024);
   assert.equal(Date.now() - t < 5000, true);
+});
+
+test("regexSymbols: the symbols of an expression in order of appearance, without operators, ε and white space; \\x is x", () => {
+  assert.deepEqual(Array.from(regexSymbols("(a|b)*abb")), ["a", "b"]);
+  assert.deepEqual(Array.from(regexSymbols("c(ε|d+)?c")), ["c", "d"]);
+  assert.deepEqual(Array.from(regexSymbols("\\*a\\|")), ["*", "a", "|"]);
+  assert.deepEqual(Array.from(regexSymbols("")), []);
 });

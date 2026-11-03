@@ -4,7 +4,7 @@ window.TOOL_GUIDE = {
   title: "Regular expressions",
   intro: "Converts a regular expression to an NFA (Thompson), a DFA (subset construction) and a minimal DFA (table filling), one panel per stage, and runs strings on the result.",
   use: [
-    "Operators: `|` `*` `+` `?` `( )`. `ε` is the empty string, `\\x` the literal symbol x. Every other character is a symbol; there is no wildcard or character class.",
+    "The keys under the field type the symbols of the alphabet, the operators and ε; a symbol that the expression uses is added to the alphabet. Operators: `|` `*` `+` `?` `( )`. `ε` is the empty string, `\\x` the literal symbol x. Every other character is a symbol; there is no wildcard or character class.",
     "Step › advances a stage by one step; ▶| completes it.",
     "Thompson stage: the expression marks the step being built; the transitions it adds are amber and boxed in the table.",
     "Simulation: enter a string, or use the dice (random accepted string) or ▾ (shortest accepted strings).",

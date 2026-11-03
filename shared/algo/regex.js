@@ -490,3 +490,16 @@ function generateExamples(dfa, maxLen = 7, maxCount = 12) {
   }
   return results;
 }
+
+// The symbols that an expression uses, in order of first appearance: what is not an operator, ε or white space; \x is the symbol x.
+function regexSymbols(src) {
+  const out = [];
+  const chars = [...src];
+  for (let i = 0; i < chars.length; i++) {
+    let c = chars[i];
+    if (c === "\\") { if (++i >= chars.length) break; c = chars[i]; }
+    else if ("|*+?()ε".includes(c) || /\s/.test(c)) continue;
+    if (!out.includes(c)) out.push(c);
+  }
+  return out;
+}
