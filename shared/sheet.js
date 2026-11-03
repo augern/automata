@@ -1,7 +1,8 @@
 // A sheet that slides up above the tab bar on a phone (mobile.css): a title, a row of chips and a Done button.
 //   const sheet = createSheet({ onClose });
 //   sheet.open({ title | titleHtml });        show it (and keep what is set)
-//   sheet.set(chips, emptyText);              chips: [{ label | html, on?, title?, pick }]; pick() runs when a chip is tapped
+//   sheet.set(chips, emptyText);              chips: [{ label | html, on?, title?, pick }]; pick() runs when a chip is tapped;
+//                                             { heading } starts a labelled group on a line of its own
 //   sheet.entry({ placeholder, add } | null); a small text field with an Add button under the chips, for what the chips lack; add(text)
 //   sheet.close();                            hide it from code (onClose is not called)
 // Done, or a tap outside the sheet, hides it and calls onClose, so the page can drop what the sheet was for.
@@ -35,6 +36,7 @@ function createSheet(spec = {}) {
       box.innerHTML = "";
       if (!chips.length && emptyText) { const e = document.createElement("span"); e.className = "sheet__empty"; e.textContent = emptyText; box.appendChild(e); }
       for (const c of chips) {
+        if (c.heading !== undefined) { const h = document.createElement("span"); h.className = "sheet__group"; h.textContent = c.heading; box.appendChild(h); continue; }
         const b = document.createElement("button");
         b.type = "button";
         b.className = "sheet-chip" + (c.on ? " is-on" : "");

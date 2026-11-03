@@ -110,6 +110,8 @@ body.is-mobile .ui-cell--tap span { padding: 0 5px; border: 1px solid var(--bord
 body.is-mobile .kp { gap: var(--sp-3); }
 body.is-mobile .kp-key { min-width: 48px; height: 48px; font-size: var(--fs-lg); }
 
+.sheet__group { flex: 0 0 100%; margin-top: var(--sp-2); font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+.sheet__group:first-child { margin-top: 0; }
 .sheet__empty { color: var(--text-dim); font-style: italic; }
 
 /* the ⋯ menu of a row is always there on a phone, and big enough to hit (the grammar editor sets its own in grammar-editor.css) */

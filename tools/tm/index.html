@@ -8,7 +8,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../../shared/mobile.css?v=0e424550" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=430bc1cd" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -243,6 +243,14 @@
       .tape-marker-cell.hm-active { color: var(--amber); }
       .tape-marker-cell.hm-accept { color: var(--green); }
       .tape-marker-cell.hm-reject { color: var(--red); }
+
+      /* Phone: a history table that fills the width, with cells a finger can see */
+      body.is-mobile .trace-table { font-size: var(--fs-sm); }
+      body.is-mobile .trace-table th, body.is-mobile .trace-table td { height: 34px; }
+      body.is-mobile .tc-cell, body.is-mobile .tc-pos-hdr:not(.tc-step):not(.tc-sticky-left) { width: 34px; min-width: 34px; max-width: 34px; }
+      body.is-mobile .tc-step { width: 32px; min-width: 32px; max-width: 32px; font-size: var(--fs-xs); }
+      body.is-mobile .tc-sticky-left { left: 32px; width: 56px; min-width: 56px; max-width: 56px; }
+      body.is-mobile .tc-state { font-size: var(--fs-sm); }
     </style>
   </head>
   <body data-mobile>
@@ -370,6 +378,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=912dfa43"></script>
+    <script src="../../shared/sheet.js?v=0a29a21c"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=61b803cf"></script>
@@ -478,13 +487,16 @@ ${kw("loop")}:
       }
 
       function addSymbol() {
-        let name = prompt("New tape symbol (single character):", "");
-        if (name === null) return;
-        name = name.trim();
+        const name = prompt("New tape symbol (single character):", "");
+        if (name !== null) addTapeSymbol(name);
+      }
+      function addTapeSymbol(text) {
+        const name = [...text.trim()][0];
         if (!name || name === BLANK || name === "_") return;
         if (tmAlphabet.includes(name)) return;
         tmAlphabet.push(name);
         renderDefTable();
+        if (sheetCell) { const inp = cellInput(sheetCell); if (inp) inp.closest("td").classList.add("is-editing"); paintCellSheet(); }
         onTMChange();
       }
 
@@ -572,7 +584,7 @@ ${kw("loop")}:
             const isBlankCol = sym === BLANK;
             h += T.input(t ? transToString(t) : "",
               `placeholder="" data-state="${esc(sn)}" data-sym="${isBlankCol ? "_blank_" : esc(sym)}"` +
-              ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"`,
+              ` onchange="onTransInput(this)" oninput="validateTransInput(this)" onkeydown="transInputKeydown(event)"` + (phoneCells() ? ` readonly inputmode="none"` : ""),
               { muted: isBlankCol, size: "wide" });
           }
           h += "</tr>";
@@ -580,6 +592,56 @@ ${kw("loop")}:
         h += "</tbody></table>";
         document.getElementById("def-table-scroll").innerHTML = h;
       }
+
+      // ── A transition cell on a phone: a sheet of chips (shared/sheet.js) for the next state, the symbol written and the move ──
+      const phoneCells = () => document.body.classList.contains("is-mobile");
+      let cellSheet = null, sheetCell = null;
+      const cellInput = (c) => document.querySelector(`#def-table-scroll input[data-state="${CSS.escape(c.state)}"][data-sym="${CSS.escape(c.sym === BLANK ? "_blank_" : c.sym)}"]`);
+      function endCellSheet() {
+        document.querySelectorAll(".ui-td--input.is-editing").forEach((td) => td.classList.remove("is-editing"));
+        sheetCell = null;
+      }
+      function openCellSheet(inp) {
+        if (!cellSheet) cellSheet = createSheet({ onClose: endCellSheet });
+        endCellSheet();
+        const sym = inp.dataset.sym === "_blank_" ? BLANK : inp.dataset.sym, state = inp.dataset.state;
+        const t = tmTrans[state]?.[sym];
+        // an empty cell starts as "write what was read, move right", so one tap on a state completes it
+        sheetCell = { state, sym, draft: t ? { ...t } : { next: "", write: sym, dir: "R" } };
+        inp.closest("td").classList.add("is-editing");
+        paintCellSheet();
+      }
+      function setCell(next) {
+        const c = sheetCell;
+        c.draft = next;
+        if (!tmTrans[c.state]) tmTrans[c.state] = {};
+        if (next.next) tmTrans[c.state][c.sym] = { ...next }; else delete tmTrans[c.state][c.sym];
+        const inp = cellInput(c);
+        if (inp) { inp.value = next.next ? transToString(next) : ""; inp.classList.remove("invalid"); }
+        paintCellSheet();
+        onTMChange();
+      }
+      function paintCellSheet() {
+        const c = sheetCell, d = c.draft;
+        const show = (x) => (x === BLANK ? "□" : x);
+        cellSheet.open({ title: `δ(${c.state}, ${show(c.sym)}) = ${d.next ? `${d.next}, ${show(d.write)}, ${d.dir}` : "halt-reject"}` });
+        cellSheet.set([
+          { heading: "next state" },
+          ...tmStates.map((n) => ({ label: n, on: d.next === n, pick: () => setCell({ ...d, next: n }) })),
+          { heading: "write" },
+          ...[...tmAlphabet, BLANK].map((w) => ({ label: show(w), on: d.write === w, pick: () => setCell({ ...d, write: w }) })),
+          { heading: "move" },
+          ...["L", "R"].map((m) => ({ label: m, on: d.dir === m, pick: () => setCell({ ...d, dir: m }) })),
+          { heading: "clear" },
+          { label: "halt-reject", title: "Clear the cell: the machine rejects here", on: !d.next, pick: () => setCell({ ...d, next: "" }) },
+        ]);
+        cellSheet.entry({ placeholder: "a new tape symbol", add: (t) => addTapeSymbol(t) });
+      }
+      document.addEventListener("mobilechange", () => { if (cellSheet) cellSheet.close(); endCellSheet(); renderDefTable(); });
+      document.getElementById("def-table-scroll").addEventListener("click", (e) => {
+        const inp = phoneCells() && e.target.closest && e.target.closest("input[data-sym]");
+        if (inp) openCellSheet(inp);
+      });
 
       function onTransInput(input) {
         const stateName = input.dataset.state;
@@ -701,7 +763,7 @@ ${kw("loop")}:
         const totalH = TRACE_HDR_H  + _configs.length * TRACE_CELL_H;
 
         // Table HTML
-        let html = `<div id="trace-table-wrap" style="position:relative;width:${totalW}px;">`;
+        let html = `<div id="trace-table-wrap" style="position:relative;width:max-content;">`;
         html += `<table class="trace-table"><thead><tr>`;
         html += `<th class="tc-step tc-pos-hdr">#</th>`;
         html += `<th class="tc-sticky-left tc-pos-hdr"></th>`;
@@ -797,7 +859,7 @@ ${kw("loop")}:
 
         polyline.setAttribute("points", pts);
         const svg = section.querySelector("#trace-svg");
-        if (svg) svg.setAttribute("height", wrap.getBoundingClientRect().height);
+        if (svg) { svg.setAttribute("width", wrap.getBoundingClientRect().width); svg.setAttribute("height", wrap.getBoundingClientRect().height); }
       }
 
       function updateTraceHighlight() {
