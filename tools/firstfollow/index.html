@@ -7,7 +7,7 @@
     <title>FIRST &amp; FOLLOW | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=09cc026c" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=4323bf25" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=57c2ccc4" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -99,6 +99,9 @@
       #ff-seq { margin-top: var(--sp-5); }
       #ff-seq-out { margin-top: var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-sm); }
       #ff-seq-out .ff-line { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+    
+      /* Phone: the stepper at the bottom of its panel, above the tab bar */
+      body.is-mobile #ff-controls { order: 99; border-top: 1.5px solid var(--border-hi); border-bottom: none; }
     </style>
   </head>
   <body data-mobile>

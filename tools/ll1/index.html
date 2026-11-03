@@ -7,7 +7,7 @@
     <title>LL(1) Parser | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=09cc026c" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=4323bf25" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=57c2ccc4" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -98,6 +98,10 @@
       #tstep-log-bar .lg-op   { color: var(--accent); }
       #tstep-log-bar .lg-seen { color: var(--text-lo); font-style: italic; }
       #tstep-log-bar .lg-conf { color: var(--red); }
+    
+      /* Phone: the stepper at the bottom of its panel, above the tab bar */
+      body.is-mobile #tstep-controls { order: 99; border-top: 1.5px solid var(--border-hi); border-bottom: none; }
+      body.is-mobile #tstep-log-bar { order: 98; }
     </style>
   </head>
   <body data-mobile>

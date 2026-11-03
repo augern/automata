@@ -8,7 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
-    <link rel="stylesheet" href="../../shared/mobile.css?v=09cc026c" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=4323bf25" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=57c2ccc4" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -338,6 +338,11 @@
         padding: 0 1px;
       }
 
+    
+      /* Phone: the stepper at the bottom of its panel, above the tab bar */
+      body.is-mobile #tstep-controls { order: 99; border-top: 1.5px solid var(--border-hi); border-bottom: none; }
+      body.is-mobile #tstep-log-bar { order: 98; }
+      body.is-mobile #build-row { order: 99; }
     </style>
   </head>
   <body data-mobile>
