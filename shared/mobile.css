@@ -59,3 +59,9 @@ body.is-mobile label { min-height: 40px; display: inline-flex; align-items: cent
 body.is-mobile .btn.icon-restart, body.is-mobile .btn.icon-run-all, body.is-mobile .ui-strin__btn, body.is-mobile .ui-menu-btn { min-width: 40px; min-height: 40px; }
 body.is-mobile .ui-td--rm, body.is-mobile .ui-td--marker { width: 40px; }
 body.is-mobile .ui-rm { min-width: 32px; min-height: 32px; }
+
+/* a control row (an input, its dice, a stepper): each control on a row of its own, across the full width */
+body.is-mobile .ui-sim__row { flex-direction: column; align-items: stretch; }
+body.is-mobile .ui-sim__row .input-group, body.is-mobile .ui-sim__row .step-group { display: flex; width: 100%; }
+body.is-mobile .ui-sim__row .input-group input { flex: 1; min-width: 0; }
+body.is-mobile .ui-sim__row .step-group .btn { flex: 1; }
