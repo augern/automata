@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Turing Machine Simulator</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -243,14 +245,14 @@
       .tape-marker-cell.hm-reject { color: var(--red); }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>Turing Machine Simulator</h1>
     </div>
 
     <div id="panels">
       <!-- 1. TM Definition -->
-      <div class="panel" id="p-def" data-priority="2">
+      <div class="panel" id="p-def" data-priority="2" data-tab="Define">
         <div class="panel-header">
           <span class="panel-title">TM Definition</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
@@ -273,7 +275,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. TM Graph -->
-      <div class="panel" id="p-tm" data-priority="1">
+      <div class="panel" id="p-tm" data-priority="1" data-tab="Graph">
         <div class="panel-header">
           <span class="panel-title">Automaton</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-tm');">&#8249;</button>
@@ -291,7 +293,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Simulation -->
-      <div class="panel" id="p-sim" data-priority="3">
+      <div class="panel" id="p-sim" data-priority="3" data-tab="Run">
         <div class="panel-header">
           <span class="panel-title">Simulation</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('tm-sim');" title="TM algorithm">Algorithm</button>
@@ -368,6 +370,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=912dfa43"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=61b803cf"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

@@ -8,6 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <link rel="stylesheet" href="../../shared/compiler.css?v=0bf16970" />
     <link rel="stylesheet" href="../../shared/scanner-editor.css?v=d7a839ae" />
@@ -21,14 +22,14 @@
       #p-run { --pw: 340; --pmin: 260px; }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>Scanner</h1>
     </div>
 
     <div id="panels">
       <!-- 1. The token rules -->
-      <div class="panel" id="p-rules" data-priority="3">
+      <div class="panel" id="p-rules" data-priority="3" data-tab="Rules">
         <div class="panel-header">
           <span class="panel-title">Token rules</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-rules');">&#8249;</button>
@@ -49,7 +50,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. The NFA of all rules and the character classes -->
-      <div class="panel" id="p-nfa" data-priority="2">
+      <div class="panel" id="p-nfa" data-priority="2" data-tab="NFA">
         <div class="panel-header">
           <span class="panel-title">Scanner NFA</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8249;</button>
@@ -70,7 +71,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. The DFA and its table -->
-      <div class="panel" id="p-dfa" data-priority="1">
+      <div class="panel" id="p-dfa" data-priority="1" data-tab="DFA">
         <div class="panel-header">
           <span class="panel-title">Scanner DFA</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-dfa');">&#8249;</button>
@@ -91,7 +92,7 @@
       <div class="resize-handle" id="rh-3"></div>
 
       <!-- 4. Scanning -->
-      <div class="panel" id="p-run" data-priority="4">
+      <div class="panel" id="p-run" data-priority="4" data-tab="Run">
         <div class="panel-header">
           <span class="panel-title">Scanning</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run');">&#8250;</button>
@@ -149,6 +150,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=87bbc4e6"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=b4a44f4c"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

@@ -9,6 +9,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -86,7 +87,7 @@
       #explain p { margin: 0 0 var(--sp-4); }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>Pumping</h1>
       <div style="width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex-shrink: 0"></div>
@@ -96,7 +97,7 @@
 
     <div id="panels">
       <!-- 1. The machine or grammar -->
-      <div class="panel" id="p-def" data-priority="2">
+      <div class="panel" id="p-def" data-priority="2" data-tab="Define">
         <div class="panel-header">
           <span class="panel-title" id="def-title">DFA</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
@@ -127,7 +128,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Pump: the controls, the drawing and the reading in one panel -->
-      <div class="panel" id="p-main" data-priority="4">
+      <div class="panel" id="p-main" data-priority="4" data-tab="Figure">
         <div class="panel-header">
           <span class="panel-title" id="view-title">Why a long string can be pumped</span>
         </div>
@@ -206,6 +207,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=b3a54ab2"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=b9752f36"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grammar Derivations</title>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -213,14 +214,14 @@
       button.rp-rule:hover .rp-sym-eps { color: inherit; }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>Grammar Derivations</h1>
     </div>
 
     <div id="panels">
       <!-- 1. Grammar -->
-      <div class="panel" id="p-grammar" data-priority="2" data-collapse="left">
+      <div class="panel" id="p-grammar" data-priority="2" data-tab="Grammar" data-collapse="left">
         <div class="panel-header">
           <span class="panel-title">Grammar</span>
           <button class="collapse-btn"
@@ -243,7 +244,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Productions -->
-      <div class="panel" id="p-productions" data-priority="1">
+      <div class="panel" id="p-productions" data-priority="1" data-tab="Rules">
         <div class="panel-header">
           <span class="panel-title">Productions</span>
           <button class="collapse-btn"
@@ -261,7 +262,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Derivation workspace -->
-      <div class="panel" id="p-deriv" data-priority="3">
+      <div class="panel" id="p-deriv" data-priority="3" data-tab="Derivation">
         <div class="panel-header">
           <span class="panel-title">Derivation</span>
           <button class="collapse-btn"
@@ -304,6 +305,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=b3791c40"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=ba37925f"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

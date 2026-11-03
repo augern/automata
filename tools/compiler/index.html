@@ -8,6 +8,7 @@
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <link rel="stylesheet" href="../../shared/compiler.css?v=0bf16970" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
@@ -22,14 +23,14 @@
       #p-out { --pw: 300; --pmin: 200px; }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>Compiler Front End</h1>
     </div>
 
     <div id="panels">
       <!-- 1. The definition: token rules and grammar -->
-      <div class="panel" id="p-def" data-priority="2">
+      <div class="panel" id="p-def" data-priority="2" data-tab="Define">
         <div class="panel-header">
           <span class="panel-title">Definition</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
@@ -53,7 +54,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. The run: the input and what the scanner has consumed, the tokens, the parser -->
-      <div class="panel" id="p-run" data-priority="4">
+      <div class="panel" id="p-run" data-priority="4" data-tab="Run">
         <div class="panel-header">
           <span class="panel-title">Scanner and parser</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run');">&#8250;</button>
@@ -98,7 +99,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. The parse tree -->
-      <div class="panel" id="p-tree" data-priority="3">
+      <div class="panel" id="p-tree" data-priority="3" data-tab="Tree">
         <div class="panel-header">
           <span class="panel-title">Parse tree</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-tree');">&#8250;</button>
@@ -114,7 +115,7 @@
       <div class="resize-handle" id="rh-3"></div>
 
       <!-- 4. Results -->
-      <div class="panel" id="p-out" data-priority="1">
+      <div class="panel" id="p-out" data-priority="1" data-tab="Results">
         <div class="panel-header">
           <span class="panel-title">Results</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-out');">&#8250;</button>
@@ -166,6 +167,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=f6db81b1"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=37e836a4"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

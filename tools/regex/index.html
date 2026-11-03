@@ -2,10 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Regular Expression Tool</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
@@ -378,14 +380,14 @@
       }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>Regular Expression Tool</h1>
     </div>
 
     <div id="panels">
       <!-- 1. Regex input -->
-      <div class="panel" id="p-regex" data-priority="5">
+      <div class="panel" id="p-regex" data-priority="5" data-tab="Expression">
         <div class="panel-header">
           <span class="panel-title">Expression</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-regex');"> &#8249;</button>
@@ -418,7 +420,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. NFA — Thompson's construction -->
-      <div class="panel" id="p-nfa" data-priority="3">
+      <div class="panel" id="p-nfa" data-priority="3" data-tab="NFA">
         <div class="panel-header">
           <span class="panel-title">NFA — Thompson-style Construction</span>
           <button class="algo-btn" onclick="openAlgoModal('thompson')" title="The construction algorithm (Thompson-style)">Algorithm</button>
@@ -447,7 +449,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. DFA via subset construction -->
-      <div class="panel" id="p-dfa" data-priority="2">
+      <div class="panel" id="p-dfa" data-priority="2" data-tab="DFA">
         <div class="panel-header">
           <span class="panel-title">DFA — Subset Construction</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('subset');" title="Subset construction algorithm"> Algorithm</button>
@@ -474,7 +476,7 @@
       <div class="resize-handle" id="rh-3"></div>
 
       <!-- 4. DFA Minimisation — table-filling algorithm -->
-      <div class="panel" id="p-min" data-priority="1">
+      <div class="panel" id="p-min" data-priority="1" data-tab="Minimise">
         <div class="panel-header">
           <span class="panel-title">DFA — Minimisation</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('minimize');" title="Table-filling minimisation algorithm">Algorithm</button>
@@ -501,7 +503,7 @@
       <div class="resize-handle" id="rh-4"></div>
 
       <!-- 5. DFA Simulation -->
-      <div class="panel" id="p-sim" data-priority="4">
+      <div class="panel" id="p-sim" data-priority="4" data-tab="Run">
         <div class="panel-header">
           <span class="panel-title">Simulation</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('sim')" title="DFA simulation algorithm">Algorithm</button>
@@ -589,6 +591,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=06f70924"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=6bb8e482"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

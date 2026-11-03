@@ -7,6 +7,7 @@
     <title>FIRST &amp; FOLLOW | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=696d87a6" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
@@ -100,14 +101,14 @@
       #ff-seq-out .ff-line { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>FIRST &amp; FOLLOW</h1>
     </div>
 
     <div id="panels">
       <!-- 1. Grammar -->
-      <div class="panel" id="p-grammar" data-priority="2" data-collapse="left">
+      <div class="panel" id="p-grammar" data-priority="2" data-tab="Grammar" data-collapse="left">
         <div class="panel-header">
           <span class="panel-title">Grammar</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-grammar')">&#8249;</button>
@@ -128,7 +129,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Construction: how the sets are found -->
-      <div class="panel" id="p-run" data-priority="1" data-collapse="left">
+      <div class="panel" id="p-run" data-priority="1" data-tab="Build" data-collapse="left">
         <div class="panel-header">
           <span class="panel-title">Construction</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal();" title="The algorithms: nullable symbols, First and Follow">Algorithm</button>
@@ -158,7 +159,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Witness -->
-      <div class="panel" id="p-wit" data-priority="4">
+      <div class="panel" id="p-wit" data-priority="4" data-tab="Witness">
         <div class="panel-header">
           <span class="panel-title">Witness</span>
         </div>
@@ -189,7 +190,7 @@
       <div class="resize-handle" id="rh-3"></div>
 
       <!-- 4. Results -->
-      <div class="panel" id="p-sets" data-priority="3">
+      <div class="panel" id="p-sets" data-priority="3" data-tab="Results">
         <div class="panel-header">
           <span class="panel-title">Results</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-sets')">&#8250;</button>
@@ -236,6 +237,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=d6d3d0e4"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=d23b4b87"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>

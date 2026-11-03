@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>PDA Simulator</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/mobile.css?v=337666aa" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -36,14 +38,14 @@
       }/* ── Configuration tree ── *//* Tree nodes *//* Tree edges */
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>PDA Simulator</h1>
     </div>
 
     <div id="panels">
       <!-- 1. PDA Definition -->
-      <div class="panel" id="p-def" data-priority="2">
+      <div class="panel" id="p-def" data-priority="2" data-tab="Define">
         <div class="panel-header">
           <span class="panel-title">PDA Definition</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
@@ -105,7 +107,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. Simulation + Graph -->
-      <div class="panel" id="p-sim" data-priority="3">
+      <div class="panel" id="p-sim" data-priority="3" data-tab="Run">
         <div class="panel-header">
           <span class="panel-title">Simulation</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('pda-sim');" title="PDA simulation algorithm">Algorithm</button>
@@ -143,7 +145,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Configuration tree -->
-      <div class="panel" id="p-tree" data-priority="1">
+      <div class="panel" id="p-tree" data-priority="1" data-tab="Tree">
         <div class="panel-header">
           <span class="panel-title">Configuration Tree</span>
           <button class="collapse-btn"
@@ -197,6 +199,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=f27c44e6"></script>
+    <script src="../../shared/mobile.js?v=8ccd1475"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=06e330d7"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>
