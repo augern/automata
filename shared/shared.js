@@ -420,7 +420,7 @@ function _panelsChanged() {
 // its minimum width (see fitPanels in algo/panels.js).
 function fitPanelLayout() {
   const row = document.getElementById("panels");
-  if (!row) return false;
+  if (!row || document.body.classList.contains("is-mobile")) return false; // one panel at a time on a phone: nothing to fit
   const panels = _panels();
   const handles = Array.from(row.querySelectorAll(".resize-handle")).reduce((n, h) => n + h.offsetWidth, 0);
   const info = panels.map((el) => ({

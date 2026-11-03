@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>NFA Simulator</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=c919c24f" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/mobile.css?v=0ccc3623" />
     <link rel="stylesheet" href="../../shared/ui.css?v=f1c41d41" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -59,14 +61,14 @@
       /* ε-closure chip shown at depth-0 nodes when ε-closure > {start}
     </style>
   </head>
-  <body>
+  <body data-mobile>
     <div id="topbar">
       <h1>NFA Simulator</h1>
     </div>
 
     <div id="panels">
       <!-- 1. NFA Definition -->
-      <div class="panel" id="p-def" data-priority="2">
+      <div class="panel" id="p-def" data-priority="2" data-tab="Define">
         <div class="panel-header">
           <span class="panel-title">NFA Definition</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-def');">&#8249;</button>
@@ -96,7 +98,7 @@
       <div class="resize-handle" id="rh-1"></div>
 
       <!-- 2. NFA Graph -->
-      <div class="panel" id="p-nfa" data-priority="1">
+      <div class="panel" id="p-nfa" data-priority="1" data-tab="Graph">
         <div class="panel-header">
           <span class="panel-title">NFA</span>
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-nfa');">&#8249;</button>
@@ -114,7 +116,7 @@
       <div class="resize-handle" id="rh-2"></div>
 
       <!-- 3. Simulation -->
-      <div class="panel" id="p-sim" data-priority="3">
+      <div class="panel" id="p-sim" data-priority="3" data-tab="Run">
         <div class="panel-header">
           <span class="panel-title">Simulation</span>
           <button class="algo-btn" onclick="event.stopPropagation(); openAlgoModal('nfa-sim');" title="NFA simulation algorithm">Algorithm</button>
@@ -180,7 +182,7 @@
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/states.js?v=107884d8"></script>
     <script src="../../shared/algo/nfa.js?v=840395be"></script>
-    <script src="../../shared/shared.js?v=2ab85b1b"></script>
+    <script src="../../shared/shared.js?v=cd5e52b4"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -194,6 +196,7 @@
     <script src="definitions.js?v=8a1e1a27"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=a37d3f54"></script>
+    <script src="../../shared/mobile.js?v=925008de"></script>
     <script src="../../shared/guide.js?v=689637a6"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script src="../../shared/automaton-graph.js?v=f2f7c58b"></script>

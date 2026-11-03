@@ -90,6 +90,7 @@ parser-tools/
 │   ├── grammar-editor.js, .css         ← the grammar editor: a table of productions with chips (LL(1), LR, derivation, recursive-descent grammar-transformation and compiler tools); model in algo/grammar-model.js
 │   ├── ctg.js                          ← the Christmas-tree graph: an abstract parse tree as nested triangles on a base line (layout in algo/ctg.js), for FIRST/FOLLOW and pumping figures
 │   ├── fit-view.js                     ← pan/zoom and automatic fit-to-view, shared by every graph and tree view
+│   ├── mobile.js, .css                 ← phone layout for a tool with <body data-mobile>: one panel at a time with a tab bar, touch-sized controls (so far the NFA tool)
 │   ├── automaton-table.js              ← the editable transition table of a finite automaton (NFA and pumping tools; a flag makes it deterministic)
 │   ├── automaton-graph.js              ← dagre/d3 state diagrams for NFA/PDA/TM, with linked hover (edges, states <-> definition tables)
 │   ├── share-link.js                   ← URL-fragment state and the copy-link action
