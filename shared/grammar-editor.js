@@ -152,6 +152,8 @@ const GrammarEditor = (() => {
       ruler.textContent = inp.value || inp.placeholder;
       inp.style.width = Math.ceil(ruler.getBoundingClientRect().width) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2 + "px";
     }
+    // a panel that is not shown (another tab on a phone) measures 0: fit again when it appears
+    new ResizeObserver(() => { if (host.offsetParent) rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs); }).observe(host);
 
     // Marks from the tool: [{ rule, part: "lhs" | "rhs" | "sym", k, cls }], rule counting the enabled productions from 0.
     // The class is added to the left side, the right side or the k-th symbol of that production (a repeated left side
