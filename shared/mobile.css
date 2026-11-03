@@ -1,5 +1,15 @@
 /* Phone layout (shared/mobile.js sets body.is-mobile below 720px for a tool with <body data-mobile>): one panel at a time, a tab bar,
    and targets a finger can hit. */
+/* Hidden until mobile.js has chosen the layout, so the desktop one never shows; the animation reveals it if the script fails. */
+@media (max-width: 720px) {
+  body[data-mobile]:not(.is-mobile) { visibility: hidden; animation: mobile-reveal 0s 2s forwards; }
+}
+@keyframes mobile-reveal { to { visibility: visible; } }
+/* Two quick taps on a control must not zoom the page; pinching still does. */
+@media (max-width: 720px) {
+  html { touch-action: manipulation; }
+}
+body.is-mobile button, body.is-mobile input, body.is-mobile label, body.is-mobile [role="button"], body.is-mobile [role="tab"] { touch-action: manipulation; }
 #mobile-tabs { display: none; }
 body.is-mobile {
   height: 100vh;
