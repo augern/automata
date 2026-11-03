@@ -25,6 +25,9 @@ body.is-mobile #mobile-tabs {
   font-style: italic;
   font-size: var(--fs-md);
 }
+/* neighbouring tabs alternate in darkness, as the triangles of a figure do */
+#mobile-tabs button:nth-child(odd) { background: color-mix(in srgb, var(--text) 3%, var(--bg-panel)); }
+#mobile-tabs button:nth-child(even) { background: color-mix(in srgb, var(--text) 9%, var(--bg-panel)); }
 #mobile-tabs button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); background: var(--accent-bg); }
 
 /* the row of panels becomes a single page */
