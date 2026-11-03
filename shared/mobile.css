@@ -39,7 +39,7 @@ body.is-mobile #mobile-tabs {
   font-size: var(--fs-md);
 }
 #mobile-tabs button { position: relative; }
-#mobile-tabs button + button::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--border-hi); } /* over the top border too, which a border or inset shadow would not reach */
+#mobile-tabs button + button::before { content: ""; position: absolute; left: 0; top: -3px; bottom: 0; width: 1px; background: var(--border-hi); } /* top: -3px reaches over the button's top border (the indicator's), which an absolute box otherwise stays below */
 #mobile-tabs button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); background: var(--accent-bg); }
 
 /* the row of panels becomes a single page */
