@@ -41,7 +41,6 @@
       #grammar-note:empty { display: none; }
 
       /* ── Procedures ── */
-      #mode-bar { flex-wrap: wrap; }
       #mode-hint { flex-shrink: 0; border-top: 1px solid var(--border-lo); border-bottom: 0; }
       #code { padding: var(--sp-4) 0 var(--sp-6); font-family: var(--font-serif); font-size: var(--fs-sm); color: var(--text); }
       .rdp-proc { margin: 0 var(--sp-5) var(--sp-5); border-top: 1.5px solid var(--text); border-bottom: 1.5px solid var(--text); padding: var(--sp-2) 0; }
@@ -151,23 +150,6 @@
           <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-code');">&#8249;</button>
         </div>
         <div class="panel-body">
-          <div id="mode-bar" class="ui-bar">
-            <div class="ui-field">
-              <label title="Each procedure looks at the next token and picks the one alternative it predicts (LL(1)); nothing is tried and undone">
-                <input type="radio" name="rdp-mode" value="predictive" checked /> predictive (no backtracking)
-              </label>
-              <span>Backtracking:</span>
-              <label title="Every procedure yields all the positions where it can end, and is asked again when the rest of the parse fails">
-                <input type="radio" name="rdp-mode" value="full" /> complete
-              </label>
-              <label title="The first alternative that matches is final; it is never revisited (as in PEG parsers)">
-                <input type="radio" name="rdp-mode" value="ordered" /> ordered choice
-              </label>
-              <label title="Ordered choice that remembers the result of each nonterminal at each position and reuses it instead of parsing it again">
-                <input type="radio" name="rdp-mode" value="packrat" /> packrat
-              </label>
-            </div>
-          </div>
           <div id="gen-bar" class="ui-bar">
             <span class="ui-label" title="Build the procedures one line at a time, as the algorithm generates them from the grammar">Build</span>
             <div class="step-group">
@@ -264,7 +246,7 @@
     <script src="definitions.js?v=0f510d9f"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=389073d5"></script>
+    <script src="guide.js?v=70589357"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script src="../../shared/stepper.js?v=b99ccf2b"></script>
     <script>
@@ -340,7 +322,7 @@
         rdLineInfo = [];
         rdGenTouched = false;
         const box = $("code");
-        $("mode-hint-text").textContent = MODE_HINT[rdMode];
+        $("mode-hint-text").textContent = MODES.find((m) => m[0] === rdMode)[1] + ": " + MODE_HINT[rdMode];
         if (!rdG) { box.innerHTML = '<div class="ui-empty">Enter a grammar.</div>'; gen.pos = 0; renderGen(); gen.refresh(); return; }
         box.innerHTML = rdpProcedures(rdG, rdMode).map((p) =>
           '<div class="rdp-proc">' + p.lines.map((l) =>
@@ -711,15 +693,25 @@
       let rdBuildTimer = null;
       $("sim-input").addEventListener("input", () => { run(); saveShare(); });
       $("show-dead").addEventListener("change", () => { drawSearchTree(); applyHot(); });
-      document.querySelectorAll('input[name="rdp-mode"]').forEach((r) => r.addEventListener("change", () => setMode(r.value)));
       function setMode(m) {
         rdMode = m;
         renderNote();
-        document.querySelector('input[name="rdp-mode"][value="' + m + '"]').checked = true;
         renderCode();
         run();
         saveShare();
       }
+
+      // the parsing mode is chosen in the Procedures panel's menu
+      const MODES = [
+        ["predictive", "Predictive (no backtracking)", "Each procedure looks at the next token and picks the one alternative it predicts (LL(1)); nothing is tried and undone"],
+        ["full", "Complete search", "Every procedure yields all the positions where it can end, and is asked again when the rest of the parse fails"],
+        ["ordered", "Ordered choice", "The first alternative that matches is final; it is never revisited (as in PEG parsers)"],
+        ["packrat", "Packrat", "Ordered choice that remembers the result of each nonterminal at each position and reuses it instead of parsing it again"],
+      ];
+      panelMenuExtras["p-code"] = () => [
+        { heading: "Parsing mode" },
+        ...MODES.map(([id, label, title], k) => [...(k === 1 ? [{ heading: "Backtracking" }] : []), { label, title, checked: rdMode === id, onSelect: () => setMode(id) }]).flat(),
+      ];
 
       UI.stringInput("sim-input", {
         examples: () => rdStrings,
@@ -756,7 +748,7 @@
         $("grammar-input").value = st.g;
         exampleRestoreLater(st.x);
         $("sim-input").value = st.s;
-        if (st.m) { rdMode = st.m; document.querySelector('input[name="rdp-mode"][value="' + st.m + '"]').checked = true; }
+        if (st.m) rdMode = st.m;
       }
 
       // ── Algorithm box ─────────────────────────────────────────

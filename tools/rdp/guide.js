@@ -10,7 +10,7 @@ window.TOOL_GUIDE = {
     "The grammar marks the production being tried and the symbol matched or called: matched symbols are green, abandoned alternatives grey. Hovering a code line or tree node marks its production.",
     "The tree shows every call and alternative tried; abandoned ones are greyed, and the checkbox hides them. Click a node to explain it.",
     "The curve under the input is the read position over time; each drop is a backtrack. Click or drag it to move through the run.",
-    "Predictive: the next token chooses the alternative (FIRST, or FOLLOW for an empty alternative; the procedure lists them). A token that predicts nothing, or a terminal that does not match, is a syntax error. If one token predicts two alternatives the grammar is not LL(1): the first is taken (a note says where), and a string of the language may be rejected.",
+    "The parsing mode is in the Procedures panel's ⋯ menu. Predictive: the next token chooses the alternative (FIRST, or FOLLOW for an empty alternative; the procedure lists them). A token that predicts nothing, or a terminal that does not match, is a syntax error. If one token predicts two alternatives the grammar is not LL(1): the first is taken (a note says where), and a string of the language may be rejected.",
     "Complete search finds a parse whenever one exists. Ordered choice commits to the first matching alternative and can reject strings of the language. Packrat is ordered choice with a memo table; ↺ marks an answer from it.",
     "A left-recursive nonterminal calls itself without reading: the run stops at the first repeat. Grammar Transformations removes left recursion.",
   ],
