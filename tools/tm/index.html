@@ -8,7 +8,7 @@
     <script src="../../vendor/dagre.min.js?v=15b1e755"></script>
     <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
-    <link rel="stylesheet" href="../../shared/mobile.css?v=430bc1cd" />
+    <link rel="stylesheet" href="../../shared/mobile.css?v=267f6139" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -378,7 +378,7 @@
     <script src="../../shared/algo/tex.js?v=d7c299e8"></script>
     <script src="../../shared/def-library.js?v=112d938e"></script>
     <script src="definitions.js?v=912dfa43"></script>
-    <script src="../../shared/sheet.js?v=0a29a21c"></script>
+    <script src="../../shared/sheet.js?v=bc9dc640"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
     <script src="guide.js?v=61b803cf"></script>
@@ -628,9 +628,9 @@ ${kw("loop")}:
         cellSheet.set([
           { heading: "next state" },
           ...tmStates.map((n) => ({ label: n, on: d.next === n, pick: () => setCell({ ...d, next: n }) })),
-          { heading: "write" },
+          { heading: "write, move" },
           ...[...tmAlphabet, BLANK].map((w) => ({ label: show(w), on: d.write === w, pick: () => setCell({ ...d, write: w }) })),
-          { heading: "move" },
+          { divider: true },
           ...["L", "R"].map((m) => ({ label: m, on: d.dir === m, pick: () => setCell({ ...d, dir: m }) })),
           { heading: "clear" },
           { label: "halt-reject", title: "Clear the cell: the machine rejects here", on: !d.next, pick: () => setCell({ ...d, next: "" }) },
