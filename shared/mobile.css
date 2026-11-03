@@ -1,15 +1,16 @@
 /* Phone layout (shared/mobile.js sets body.is-mobile below 720px for a tool with <body data-mobile>): one panel at a time, a tab bar,
    and targets a finger can hit. */
-/* Hidden until mobile.js has chosen the layout, so the desktop one never shows; the animation reveals it if the script fails. */
+/* Hidden until mobile.js has chosen the layout, so the desktop one never shows. */
 @media (max-width: 720px) {
-  body[data-mobile]:not(.is-mobile) { visibility: hidden; animation: mobile-reveal 0s 2s forwards; }
+  body[data-mobile]:not(.is-mobile) { visibility: hidden; }
 }
-@keyframes mobile-reveal { to { visibility: visible; } }
-/* Two quick taps on a control must not zoom the page; pinching still does. */
+/* A double tap never zooms. Pinching zooms the page, except where it starts on the UI chrome (a pinch needs every touch to allow it). */
 @media (max-width: 720px) {
   html { touch-action: manipulation; }
 }
-body.is-mobile button, body.is-mobile input, body.is-mobile label, body.is-mobile [role="button"], body.is-mobile [role="tab"] { touch-action: manipulation; }
+body.is-mobile #topbar, body.is-mobile #mobile-tabs, body.is-mobile .sheet__panel, body.is-mobile .ge-pad,
+body.is-mobile .ui-sim__row, body.is-mobile #sim-input-row, body.is-mobile #tstep-controls, body.is-mobile #build-row,
+body.is-mobile #ff-controls, body.is-mobile #pump-bar, body.is-mobile #walk-bar, body.is-mobile #gen-bar { touch-action: pan-x pan-y; }
 #mobile-tabs { display: none; }
 body.is-mobile {
   height: 100vh;
