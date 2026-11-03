@@ -31,12 +31,14 @@ body.is-mobile #mobile-tabs {
   background: none;
   border: none;
   border-top: 3px solid transparent;
+  border-radius: 0;
+  -webkit-appearance: none;
   color: var(--text-dim);
   font-family: var(--font-serif);
   font-style: italic;
   font-size: var(--fs-md);
 }
-#mobile-tabs button + button { border-left: 1px solid var(--border-hi); }
+#mobile-tabs button + button { box-shadow: inset 1px 0 0 var(--border-hi); } /* not a border: it would meet the top border in a mitred corner */
 #mobile-tabs button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); background: var(--accent-bg); }
 
 /* the row of panels becomes a single page */
