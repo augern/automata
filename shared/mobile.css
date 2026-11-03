@@ -91,4 +91,6 @@ body.is-mobile .ui-sim__row { order: 99; padding: var(--sp-3); background: var(-
 
 /* a transition cell on a phone: the target states as tags that wrap */
 body.is-mobile .ui-cell--tap { height: auto; min-height: var(--cell-h); display: flex; flex-wrap: wrap; gap: 3px; align-items: center; justify-content: center; padding: 4px; cursor: pointer; user-select: none; }
+body.is-mobile .ui-cell--tap[data-n="1"] span { padding: 1px 12px; font-size: 16px; }
+body.is-mobile .ui-cell--tap[data-n="2"] span { padding: 0 8px; font-size: 14px; }
 body.is-mobile .ui-cell--tap span { padding: 0 5px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-cell); font-size: 12px; line-height: 1.6; }

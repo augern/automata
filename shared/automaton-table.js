@@ -24,6 +24,7 @@ function createAutomatonTable(id, opts) {
   const call = (f, ...a) => `AUTOMATON_TABLES['${id}'].${f}(${a.join(", ")})`;
   const changed = () => { if (opts.onChange) opts.onChange(); };
   const kindOf = (i) => T.kind(i === m().start, m().accepts.has(i));
+  const tagHtml = (list) => list.map((t) => `<span>${esc(t)}</span>`).join(""); // the size of a tag follows the number of tags (data-n, see mobile.css)
   const phone = () => document.body.classList.contains("is-mobile");
   const parts = (value) => value.split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -48,8 +49,8 @@ function createAutomatonTable(id, opts) {
           const val = M.trans[sn] && M.trans[sn][sym] ? M.trans[sn][sym].join(", ") : "";
           const bad = parts(val).some((p) => !M.states.includes(p)) || (det && parts(val).length > 1);
           if (phone()) { // a button that shows the targets as wrapping tags: a long list grows the row instead of clipping
-            const tags = (M.trans[sn] && M.trans[sn][sym] ? M.trans[sn][sym] : []).map((t) => `<span>${esc(t)}</span>`).join("");
-            h += `<td class="ui-td--input${sym === "ε" ? " is-muted" : ""}"><div class="ui-cell ui-cell--tap" role="button" tabindex="0" data-state="${esc(sn)}" data-sym="${esc(sym)}">${tags}</div></td>`;
+            const list = M.trans[sn] && M.trans[sn][sym] ? M.trans[sn][sym] : [];
+            h += `<td class="ui-td--input${sym === "ε" ? " is-muted" : ""}"><div class="ui-cell ui-cell--tap" role="button" tabindex="0" data-n="${list.length}" data-state="${esc(sn)}" data-sym="${esc(sym)}">${tagHtml(list)}</div></td>`;
             continue;
           }
           h += T.input(val, `placeholder="${errSyms.includes(sym) ? esc(errName) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
@@ -173,7 +174,7 @@ function createAutomatonTable(id, opts) {
       if (!M.trans[state]) M.trans[state] = {};
       M.trans[state][sym] = M.states.filter((x) => list.has(x));
       if (input.tagName === "INPUT") { input.value = M.trans[state][sym].join(", "); self.validate(input); }
-      else input.innerHTML = M.trans[state][sym].map((t) => `<span>${esc(t)}</span>`).join("");
+      else { input.innerHTML = tagHtml(M.trans[state][sym]); input.dataset.n = M.trans[state][sym].length; }
       this.chips();
       changed();
     },
