@@ -11,6 +11,8 @@
 //     onHoverState: (index | null) => {}, the same for a state name
 //   })
 // The model is the caller's: the table edits it in place and reads it again on every render().
+// On a phone (body.is-mobile, see mobile.js) a cell is not typed into: tapping it opens a sheet of the states as chips (several for an NFA, one
+// or none for a deterministic table).
 // Highlighting goes both ways: the table reports what is pointed at, and mark() lights what another view is pointing at.
 //   -> { render, addState, removeState, addSymbol, removeSymbol, mark }
 const AUTOMATON_TABLES = {};
@@ -22,6 +24,7 @@ function createAutomatonTable(id, opts) {
   const call = (f, ...a) => `AUTOMATON_TABLES['${id}'].${f}(${a.join(", ")})`;
   const changed = () => { if (opts.onChange) opts.onChange(); };
   const kindOf = (i) => T.kind(i === m().start, m().accepts.has(i));
+  const phone = () => document.body.classList.contains("is-mobile");
   const parts = (value) => value.split(",").map((s) => s.trim()).filter(Boolean);
 
   const self = {
@@ -44,7 +47,7 @@ function createAutomatonTable(id, opts) {
         for (const sym of syms()) {
           const val = M.trans[sn] && M.trans[sn][sym] ? M.trans[sn][sym].join(", ") : "";
           const bad = parts(val).some((p) => !M.states.includes(p)) || (det && parts(val).length > 1);
-          h += T.input(val, `placeholder="${errSyms.includes(sym) ? esc(errName) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
+          h += T.input(val, `${phone() ? "readonly inputmode=\"none\" " : ""}placeholder="${errSyms.includes(sym) ? esc(errName) : ""}" data-state="${esc(sn)}" data-sym="${esc(sym)}" data-trans-type="states"` +
             ` onchange="${call("onInput", "this")}" oninput="${call("validate", "this")}" onkeydown="transInputKeydown(event)"`, { muted: sym === "ε", invalid: bad });
         }
         if (err) h += T.cell(esc(errName), "is-error").replace("<td", `<td data-state="${esc(sn)}" data-sym="${opts.error.wild}"`);
@@ -121,6 +124,70 @@ function createAutomatonTable(id, opts) {
     },
   };
   // light the cells, the state row or both; what is not given is left as it is
+  // the sheet of states for one cell
+  const sheet = {
+    el: null,
+    cell: null,
+    open(input) {
+      if (!this.el) this.build();
+      this.cell = { state: input.dataset.state, sym: input.dataset.sym, input };
+      this.el.querySelector(".at-sheet__title").textContent = `δ(${this.cell.state}, ${this.cell.sym})`;
+      this.chips();
+      this.el.hidden = false;
+      input.closest("td").classList.add("is-editing");
+    },
+    close() {
+      if (!this.el || this.el.hidden) return;
+      this.el.hidden = true;
+      document.querySelectorAll(".ui-td--input.is-editing").forEach((td) => td.classList.remove("is-editing"));
+      this.cell = null;
+    },
+    chips() {
+      const M = m(), row = M.trans[this.cell.state], on = new Set((row && row[this.cell.sym]) || []);
+      const box = this.el.querySelector(".at-sheet__chips");
+      box.innerHTML = "";
+      const chip = (label, isOn, pick) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "at-chip" + (isOn ? " is-on" : "");
+        b.textContent = label;
+        b.setAttribute("aria-pressed", String(isOn));
+        b.addEventListener("click", pick);
+        box.appendChild(b);
+      };
+      M.states.forEach((name) => chip(name, on.has(name), () => this.pick(name, !on.has(name))));
+      if (det) chip("none", on.size === 0, () => this.pick(null, false));
+    },
+    // set the cell: a chip toggled (several for an NFA, one for a deterministic table), or none
+    pick(name, make) {
+      const M = m(), { state, sym, input } = this.cell;
+      let list = new Set((M.trans[state] && M.trans[state][sym]) || []);
+      if (name === null) list = new Set();
+      else if (det) list = make ? new Set([name]) : new Set();
+      else if (make) list.add(name); else list.delete(name);
+      if (!M.trans[state]) M.trans[state] = {};
+      M.trans[state][sym] = M.states.filter((x) => list.has(x));
+      input.value = M.trans[state][sym].join(", ");
+      self.validate(input);
+      this.chips();
+      changed();
+    },
+    build() {
+      this.el = document.createElement("div");
+      this.el.className = "at-sheet";
+      this.el.hidden = true;
+      this.el.innerHTML = '<div class="at-sheet__back"></div><div class="at-sheet__panel"><div class="at-sheet__head"><span class="at-sheet__title"></span><button type="button" class="btn at-sheet__done">Done</button></div><div class="at-sheet__chips"></div></div>';
+      this.el.querySelector(".at-sheet__back").addEventListener("click", () => this.close());
+      this.el.querySelector(".at-sheet__done").addEventListener("click", () => this.close());
+      document.body.appendChild(this.el);
+    },
+  };
+  document.getElementById(id).addEventListener("click", (e) => {
+    const input = phone() && e.target.closest && e.target.closest("input[data-sym]");
+    if (input) { e.preventDefault(); sheet.open(input); }
+  });
+  document.addEventListener("mobilechange", () => { sheet.close(); self.render(); });
+
   self.mark = (what) => {
     const box = document.getElementById(id);
     if ("cells" in what) {

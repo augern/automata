@@ -17,6 +17,7 @@
   function apply() {
     document.body.classList.toggle("is-mobile", mq.matches);
     if (mq.matches) show(active);
+    document.dispatchEvent(new Event("mobilechange")); // what is drawn differently on a phone (the table's cells) redraws
   }
 
   function install() {
