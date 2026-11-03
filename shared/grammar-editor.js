@@ -28,8 +28,10 @@ const GrammarEditor = (() => {
     let model = { arrow: "->", rows: [] };
     // production numbers: shown by default where the tool says so (opts.numbers); the panel menu changes it, per tool
     const numsKey = "parser-tools-grammar-nums:" + location.pathname;
-    let view = "rules", showNums = !!opts.numbers;
-    try { const v = localStorage.getItem(numsKey); if (v !== null) showNums = v === "1"; } catch (e) { /* storage blocked */ }
+    // the user's choice, else the tool's (opts.numbers); on a phone the default is no numbers, for the room
+    let view = "rules", numsChoice = null;
+    const showNums = () => (numsChoice !== null ? numsChoice : document.body.classList.contains("is-mobile") ? false : !!opts.numbers);
+    try { const v = localStorage.getItem(numsKey); if (v !== null) numsChoice = v === "1"; } catch (e) { /* storage blocked */ }
     try { if (localStorage.getItem("parser-tools-grammar-view") === "text") view = "text"; } catch (e) { /* storage blocked */ }
     let undo = [], redo = [];
     const phone = () => document.body.classList.contains("is-mobile");
@@ -99,9 +101,9 @@ const GrammarEditor = (() => {
       { label: "Rules", checked: view === "rules", title: "The grammar as a table of productions", onSelect: () => setView("rules") },
       { label: "Text", checked: view === "text", title: "The grammar as plain text", onSelect: () => setView("text") },
       { separator: true },
-      { label: "Production numbers", checked: showNums, title: "The numbers used in the tables", onSelect: () => {
-        showNums = !showNums;
-        try { localStorage.setItem(numsKey, showNums ? "1" : "0"); } catch (e) { /* storage blocked */ }
+      { label: "Production numbers", checked: showNums(), title: "The numbers used in the tables", onSelect: () => {
+        numsChoice = !showNums();
+        try { localStorage.setItem(numsKey, numsChoice ? "1" : "0"); } catch (e) { /* storage blocked */ }
         render();
       } },
     ];
@@ -116,7 +118,7 @@ const GrammarEditor = (() => {
 
     // ── Rendering ──
     function render(focus) {
-      host.classList.toggle("no-nums", !showNums);
+      host.classList.toggle("no-nums", !showNums());
       rowsEl.style.display = view === "rules" ? "" : "none";
       textEl.style.display = view === "text" ? "" : "none";
       status.textContent = parseError;
@@ -564,6 +566,7 @@ const GrammarEditor = (() => {
       placePad();
     }
     function padOff() { padTarget = null; pad.hidden = true; }
+    document.addEventListener("mobilechange", () => render());
     if (window.visualViewport) { window.visualViewport.addEventListener("resize", placePad); window.visualViewport.addEventListener("scroll", placePad); }
     host.addEventListener("focusout", () => setTimeout(() => { if (!host.contains(document.activeElement)) padOff(); }, 0));
     // the keys of a field: what was typed goes first, with the key's own text
