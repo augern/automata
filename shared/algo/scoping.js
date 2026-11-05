@@ -18,6 +18,7 @@
 // uses it under dynamic scoping; assigning to such a parameter assigns to the argument, which must be a variable or an element.
 const SCO_MAX_STEPS = 500;
 const SCO_MAX_EVENTS = 5000;
+const SCO_MAX_NEST = 120;
 const SCO_KEYWORDS = new Set(["var", "array", "proc", "func", "call", "print", "return", "if", "else", "while"]);
 const SCO_PASSING = ["value", "reference", "valueresult", "name"];
 
@@ -180,7 +181,7 @@ function scoRun(src, opts = {}) {
   }
 
   const store = [], arrays = [], active = [], events = [], output = [];
-  let steps = 0, nextFrame = 0, curLine = 1, error = null;
+  let steps = 0, nextFrame = 0, curLine = 1, error = null, nest = 0;
   const STOP = { stop: true };
   class Return { constructor(value) { this.value = value; } }
 
@@ -221,6 +222,11 @@ function scoRun(src, opts = {}) {
     }
     throw STOP;
   }
+  // Calls and thunks that are being evaluated; a by-name argument that depends on itself (dynamic scoping) never ends
+  function nested(f) {
+    if (++nest > SCO_MAX_NEST) fail("Stopped: nested more than " + SCO_MAX_NEST + " levels deep (an argument that depends on itself?)");
+    try { return f(); } finally { nest--; }
+  }
   function step() {
     if (++steps > maxSteps) fail("Stopped after " + maxSteps + " steps: a loop that does not end?");
   }
@@ -246,7 +252,7 @@ function scoRun(src, opts = {}) {
     if (b.kind === "loc") return store[b.loc];
     if (b.kind === "thunk") {
       b.evals++;
-      const v = evalX(b.expr, thunkEnv(b, env));
+      const v = nested(() => evalX(b.expr, thunkEnv(b, env)));
       emit("thunk", name + " is evaluated: " + scoExprText(b.expr) + " = " + show(v), { name }, true);
       return v;
     }
@@ -338,7 +344,7 @@ function scoRun(src, opts = {}) {
     emit("call", "call " + name + "(" + argNodes.map(scoExprText).join(", ") + ")", { bindings });
     let result;
     try {
-      execStatements(d.body.body, F);
+      nested(() => execStatements(d.body.body, F));
     } catch (e) {
       if (!(e instanceof Return)) throw e;
       result = e.value;

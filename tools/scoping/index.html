@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Scoping and Environments</title>
+    <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
+    <script src="../../shared/theme.js?v=9222f18e"></script>
+    <link rel="stylesheet" href="../../shared/mobile.css?v=3085da6d" />
+    <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
+    <style>
+      #p-prog { --pw: 420; --pmin: 260px; }
+      #p-run { --pw: 560; --pmin: 320px; }
+      #p-trace { --pw: 300; --pmin: 200px; }
+      #p-compare { --pw: 300; --pmin: 220px; }
+
+      /* Program: the editor with a gutter and the line being run marked */
+      #prog-box { flex: 1; min-height: 0; display: flex; position: relative; background: var(--bg-input); }
+      #prog-gutter, #prog, #prog-mark { font: var(--fs-sm) / 20px var(--font-mono); }
+      #prog-gutter { margin: 0; padding: 8px 6px 8px 8px; text-align: right; color: var(--text-lo); background: var(--bg-cell); overflow: hidden; user-select: none; flex-shrink: 0; }
+      #prog-wrap { position: relative; flex: 1; min-width: 0; }
+      #prog-mark { position: absolute; left: 0; right: 0; height: 20px; background: var(--accent-bg); border-left: 3px solid var(--accent); pointer-events: none; display: none; }
+      #prog-mark.is-error { background: color-mix(in srgb, var(--st-reject) 18%, transparent); border-left-color: var(--st-reject); }
+      #prog { position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 8px 8px 8px 8px; background: transparent; color: var(--text); border: none; outline: none; resize: none; white-space: pre; overflow: auto; tab-size: 2; }
+      #prog-error { flex-shrink: 0; padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--border-lo); color: var(--st-reject); font-size: var(--fs-xs); font-family: var(--font-mono); }
+      #prog-error:empty { display: none; }
+
+      /* Run */
+      #now { flex-shrink: 0; padding: var(--sp-3) var(--sp-5); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-sm); min-height: 2.6em; }
+      #now.is-error { color: var(--st-reject); }
+      #now .sc-detail { display: block; color: var(--text-dim); font-size: var(--fs-xs); margin-top: 2px; }
+      #out-strip { flex-shrink: 0; display: flex; gap: var(--sp-3); align-items: baseline; padding: var(--sp-2) var(--sp-5); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-xs); color: var(--text-dim); }
+      #out-strip .sc-out { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text); word-spacing: 0.4em; }
+      #memory { flex: 1; min-height: 0; overflow: auto; display: flex; gap: var(--sp-5); padding: var(--sp-4) var(--sp-5); align-items: flex-start; align-content: flex-start; flex-wrap: wrap; }
+      .sc-col { min-width: 0; }
+      #frames-col { flex: 3 1 220px; }
+      #store-col { flex: 2 1 160px; }
+      .sc-h { font-family: var(--font-serif); font-style: italic; font-size: var(--fs-xs); color: var(--text-lo); margin: 0 0 var(--sp-2); }
+      .sc-frame { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); margin-bottom: var(--sp-3); }
+      .sc-frame.in-chain { border-color: var(--accent); }
+      .sc-frame.is-hit { border-width: 2px; background: var(--accent-bg); }
+      .sc-frame.is-miss { border-color: var(--st-reject); }
+      .sc-fhead { display: flex; align-items: baseline; gap: var(--sp-3); padding: 3px var(--sp-3); border-bottom: 1px solid var(--border-lo); font-family: var(--font-mono); font-size: var(--fs-sm); }
+      .sc-flabel { color: var(--text); font-weight: 600; }
+      .sc-links { margin-left: auto; font-size: var(--fs-2xs); color: var(--text-lo); white-space: nowrap; }
+      .sc-links .is-used { color: var(--accent); }
+      .sc-order { background: var(--accent); color: var(--bg); border-radius: 8px; padding: 0 5px; font-size: var(--fs-2xs); }
+      .is-miss .sc-order { background: var(--st-reject); }
+      .sc-bind { display: flex; align-items: baseline; gap: var(--sp-3); padding: 2px var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-sm); }
+      .sc-bind.is-found { background: var(--accent-bg); }
+      .sc-name { min-width: 3ch; color: var(--accent); }
+      .sc-muted { color: var(--text-dim); }
+      .sc-empty { padding: 3px var(--sp-3); color: var(--text-lo); font-style: italic; font-size: var(--fs-xs); }
+      .sc-loc { padding: 0 5px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-cell); font-size: var(--fs-xs); }
+      .sc-loc.is-hot, tr.is-hot, .sc-array.is-hot { background: var(--hot-bg); border-color: var(--hot); }
+      .sc-store { border-collapse: collapse; font-family: var(--font-mono); font-size: var(--fs-sm); }
+      .sc-store td { padding: 2px var(--sp-3); border: 1px solid var(--border-lo); }
+      .sc-store tr.is-changed td { background: color-mix(in srgb, var(--st-accept) 20%, transparent); }
+      .sc-ref { color: var(--purple, var(--accent)); }
+      .sc-array { margin-top: var(--sp-4); border: 1px solid var(--border-lo); border-radius: var(--radius); font-family: var(--font-mono); font-size: var(--fs-xs); }
+      .sc-array > b { display: block; padding: 2px var(--sp-3); border-bottom: 1px solid var(--border-lo); font-weight: 600; }
+      .sc-array div { padding: 1px var(--sp-3); }
+
+      /* Trace */
+      #trace { flex: 1; min-height: 0; overflow: auto; font-family: var(--font-mono); font-size: var(--fs-xs); }
+      .sc-ev { display: flex; gap: var(--sp-3); padding: 2px var(--sp-4); cursor: pointer; border-bottom: 1px solid var(--border-lo); }
+      .sc-ev:hover { background: var(--bg-hover); }
+      .sc-ev.is-fine { color: var(--text-lo); }
+      .sc-ev.is-now { background: var(--accent-bg); color: var(--accent); }
+      .sc-ev.is-error { color: var(--st-reject); }
+      .sc-ev .sc-n { width: 3ch; text-align: right; color: var(--text-lo); flex-shrink: 0; }
+      .sc-ev .sc-ln { width: 4ch; color: var(--text-lo); flex-shrink: 0; }
+
+      /* Compare */
+      #compare { flex: 1; min-height: 0; overflow: auto; padding: var(--sp-4); }
+      #compare table { border-collapse: collapse; width: 100%; font-family: var(--font-mono); font-size: var(--fs-sm); }
+      #compare th, #compare td { border: 1px solid var(--border-lo); padding: var(--sp-2) var(--sp-3); text-align: left; vertical-align: top; }
+      #compare th { font-family: var(--font-serif); font-style: italic; font-weight: normal; color: var(--text-dim); }
+      #compare td { cursor: pointer; word-spacing: 0.3em; }
+      #compare td:hover { background: var(--bg-hover); }
+      #compare td.is-current { background: var(--accent-bg); outline: 1.5px solid var(--accent); outline-offset: -1.5px; }
+      #compare td.is-error .sc-msg { display: block; color: var(--st-reject); font-size: var(--fs-2xs); word-spacing: 0; }
+
+      /* Phone */
+      body.is-mobile #prog, body.is-mobile #prog-gutter, body.is-mobile #prog-mark { font-size: 16px; line-height: 24px; }
+      body.is-mobile #prog-mark { height: 24px; }
+      body.is-mobile #prog-box { min-height: 200px; }
+      body.is-mobile #memory { flex-direction: column; flex-wrap: nowrap; }
+      body.is-mobile #frames-col, body.is-mobile #store-col { width: 100%; flex: 0 0 auto; }
+      body.is-mobile .ui-sim__row .ui-field { order: -1; }
+      body.is-mobile .sc-ev { padding: 8px var(--sp-4); font-size: var(--fs-sm); }
+      body.is-mobile #compare td { padding: var(--sp-4); font-size: var(--fs-md); }
+    </style>
+  </head>
+  <body data-mobile>
+    <div id="topbar">
+      <h1>Scoping and Environments</h1>
+    </div>
+
+    <div id="panels">
+      <div class="panel" id="p-prog" data-priority="2" data-tab="Program">
+        <div class="panel-header">
+          <span class="panel-title">Program</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-prog');">&#8249;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-bar">
+            <select id="examples-select" class="ui-select ui-select--grow" onchange="loadExampleScoping(this.value)">
+              <option value="">Example…</option>
+            </select>
+          </div>
+          <div id="prog-box">
+            <pre id="prog-gutter" aria-hidden="true"></pre>
+            <div id="prog-wrap">
+              <div id="prog-mark"></div>
+              <textarea id="prog" spellcheck="false" autocapitalize="none" autocorrect="off" wrap="off" aria-label="Program"></textarea>
+            </div>
+          </div>
+          <div id="prog-error"></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-1"></div>
+
+      <div class="panel" id="p-run" data-priority="3" data-tab="Run">
+        <div class="panel-header">
+          <span class="panel-title">Run</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-run');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div class="ui-sim">
+            <div class="ui-sim__row">
+              <div class="step-group">
+                <button class="btn icon-restart" id="btn-reset" onclick="sim.reset()" title="Restart" disabled></button>
+                <button class="btn" id="btn-back" onclick="sim.prev()" disabled>&#8249; Back</button>
+                <button class="btn primary" id="btn-step" onclick="sim.next()" disabled>Step &#8250;</button>
+                <button class="btn icon-run-all" id="btn-all" onclick="sim.end()" title="Run to the end" disabled></button>
+              </div>
+              <label class="ui-field" title="Also stop at each lookup of a name and each evaluation of a by-name argument"><input type="checkbox" id="fine" onchange="setFine(this.checked)" /> Fine steps</label>
+            </div>
+          </div>
+          <div id="now"></div>
+          <div id="out-strip"><span>Output</span><span class="sc-out" id="out"></span></div>
+          <div id="memory">
+            <div class="sc-col" id="frames-col"></div>
+            <div class="sc-col" id="store-col"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-2"></div>
+
+      <div class="panel" id="p-trace" data-priority="1" data-tab="Trace">
+        <div class="panel-header">
+          <span class="panel-title">Trace</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-trace');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="trace"></div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="rh-3"></div>
+
+      <div class="panel" id="p-compare" data-priority="1" data-tab="Compare">
+        <div class="panel-header">
+          <span class="panel-title">Compare</span>
+          <button class="collapse-btn" onclick="event.stopPropagation(); toggleCollapse('p-compare');">&#8250;</button>
+        </div>
+        <div class="panel-body">
+          <div id="compare"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../shared/algo/panels.js?v=92261e45"></script>
+    <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
+    <script src="../../shared/algo/scoping.js?v=4b939170"></script>
+    <script src="../../shared/shared.js?v=0d29ebd1"></script>
+    <script src="../../shared/share-link.js?v=0d17f714"></script>
+    <script src="../../shared/ui.js?v=b7fb54c9"></script>
+    <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
+    <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
+    <script src="../../shared/quick-link.js?v=fca552e1"></script>
+    <script src="../../shared/view-menu.js?v=f1064557"></script>
+    <script src="../../shared/mobile.js?v=0f33fae8"></script>
+    <script src="guide.js?v=e265b081"></script>
+    <script src="../../shared/guide.js?v=ba07a3aa"></script>
+    <script src="../../shared/stepper.js?v=b99ccf2b"></script>
+    <script src="../../shared/mode-menu.js?v=deae477d"></script>
+    <script>
+      function renderTree() {}
+
+      initResize("rh-1");
+      initResize("rh-2");
+      initResize("rh-3");
+
+      const SCOPINGS = [
+        { id: "static", label: "Static", title: "A name is looked up through the frames of the enclosing definitions" },
+        { id: "dynamic", label: "Dynamic", title: "A name is looked up through the callers" },
+      ];
+      const PASSINGS = [
+        { id: "value", label: "Value", title: "The parameter is a new location holding a copy of the argument" },
+        { id: "reference", label: "Reference", title: "The parameter is another name for the argument's location" },
+        { id: "valueresult", label: "Value-result", title: "A copy of the argument, copied back to it when the call returns" },
+        { id: "name", label: "Name", title: "The parameter stands for the argument expression, evaluated at each use" },
+      ];
+      const $ = (id) => document.getElementById(id);
+      const INITIAL = { frames: [{ id: 0, label: "global", kind: "global", staticId: null, dynId: null, binds: [] }], store: [], arrays: [] };
+      const EXAMPLES = {};
+      let scoping = "static", passing = "value", fine = false;
+      let run = { events: [], output: [], error: null }, shown = [];
+
+      const sim = createStepper({
+        buttons: { reset: "btn-reset", back: "btn-back", step: "btn-step", all: "btn-all" },
+        min: -1,
+        last: () => (shown.length ? shown.length - 1 : null),
+        onChange: () => render(),
+      });
+      registerStepper("p-run", { step: () => sim.next(), back: () => sim.prev(), reset: () => sim.reset(), end: () => sim.end() });
+
+      const passingMenu = createModeMenu({
+        label: "Parameter passing", modes: PASSINGS, current: () => passing,
+        select: (m) => { passing = m; passingMenu.refresh(); execute(); },
+      });
+      const scopingMenu = createModeMenu({
+        label: "Scoping", modes: SCOPINGS, current: () => scoping,
+        select: (m) => { scoping = m; scopingMenu.refresh(); execute(); },
+      });
+
+      function setFine(on) {
+        fine = on;
+        execute(true);
+      }
+
+      // ── Running ──
+      let timer = null;
+      function execute(keepPosition) {
+        const was = sim.pos >= 0 && shown[sim.pos] ? shown[sim.pos] : null;
+        run = scoRun($("prog").value, { scoping, passing });
+        shown = fine ? run.events : run.events.filter((e) => !e.fine);
+        sim.pos = -1;
+        if (keepPosition && was) {
+          const at = shown.findIndex((e) => e.steps >= was.steps && e.line === was.line && e.kind === was.kind);
+          if (at >= 0) sim.pos = at;
+        }
+        render();
+        sim.refresh();
+        renderCompare();
+        saveShare();
+      }
+      $("prog").addEventListener("input", () => {
+        paintGutter();
+        clearTimeout(timer);
+        timer = setTimeout(() => execute(), 250);
+      });
+      $("prog").addEventListener("scroll", () => { syncScroll(); markLine(); });
+
+      // ── The program view ──
+      const lineHeight = () => parseFloat(getComputedStyle($("prog")).lineHeight) || 20;
+      function paintGutter() {
+        const n = $("prog").value.split("\n").length;
+        $("prog-gutter").textContent = Array.from({ length: n }, (_, i) => i + 1).join("\n");
+      }
+      function syncScroll() { $("prog-gutter").scrollTop = $("prog").scrollTop; }
+      let markedLine = null, markError = false;
+      function markLine(line, isError) {
+        if (line !== undefined) { markedLine = line; markError = !!isError; }
+        const m = $("prog-mark");
+        if (!markedLine) { m.style.display = "none"; return; }
+        m.style.display = "block";
+        m.classList.toggle("is-error", markError);
+        m.style.top = 8 + (markedLine - 1) * lineHeight() - $("prog").scrollTop + "px";
+        if (line !== undefined) {
+          const ta = $("prog"), top = 8 + (markedLine - 1) * lineHeight();
+          if (top < ta.scrollTop || top + lineHeight() > ta.scrollTop + ta.clientHeight) ta.scrollTop = Math.max(0, top - ta.clientHeight / 3);
+        }
+      }
+
+      // ── The run view ──
+      const esc2 = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const showValue = (v) => (typeof v === "number" ? String(v) : '<span class="sc-ref" data-arr="' + v.ref + '">array ' + v.ref + "</span>");
+      const HOW = {
+        alias: (b) => b.param + " is another name for " + b.text,
+        temp: (b) => b.param + " gets a temporary holding " + b.text,
+        copy: (b) => b.param + " gets a copy of " + b.text,
+        "copy-in": (b) => b.param + " gets a copy of " + b.text + ", copied back at return",
+        thunk: (b) => b.param + " stands for " + b.text + ", evaluated at each use",
+      };
+
+      function render() {
+        const e = sim.pos >= 0 ? shown[sim.pos] : null;
+        const state = e ? e.state : INITIAL;
+        const now = $("now");
+        now.classList.toggle("is-error", !!e && e.kind === "error");
+        if (run.error && !run.events.length) now.textContent = "The program has an error";
+        else if (!e) now.textContent = shown.length ? "Press Step to start" : "";
+        else now.innerHTML = esc2(e.text) + (e.bindings && e.bindings.length ? e.bindings.map((b) => '<span class="sc-detail">' + esc2(HOW[b.how](b)) + "</span>").join("") : "");
+        $("out").textContent = e ? run.output.slice(0, e.out).join(" ") : "";
+        const err = run.error && (!shown.length || (e && e.kind === "error")) ? run.error : null;
+        $("prog-error").textContent = run.error && !run.events.length ? "line " + run.error.line + ": " + run.error.message : "";
+        if (run.error && !run.events.length) markLine(run.error.line, true);
+        else markLine(e ? e.line : null, e && e.kind === "error");
+        renderMemory(state, e);
+        renderTrace();
+      }
+
+      function renderMemory(state, e) {
+        const byId = new Map(state.frames.map((f) => [f.id, f]));
+        const look = e && e.kind === "lookup" ? e : null;
+        const changed = new Set();
+        if (e && e.loc !== undefined) changed.add(e.loc);
+        if (e && e.bindings) e.bindings.forEach((b) => { if (b.loc !== undefined) changed.add(b.loc); });
+        let h = '<p class="sc-h">Environment: frames, innermost first</p>';
+        for (const f of [...state.frames].reverse()) {
+          const at = look ? look.chain.indexOf(f.id) : -1;
+          const cls = "sc-frame" + (at >= 0 ? " in-chain" : "") + (look && look.hit === f.id ? " is-hit" : "") + (look && look.hit === null && at >= 0 ? " is-miss" : "");
+          const link = (kind, id) => {
+            if (id === null) return "";
+            const to = byId.get(id);
+            return '<span class="' + (scoping === kind ? "is-used" : "") + '">' + kind + " → " + esc2(to ? to.label : "?") + "</span>";
+          };
+          const links = [link("static", f.staticId), link("dynamic", f.dynId)].filter(Boolean).join(" · ");
+          h += '<div class="' + cls + '"><div class="sc-fhead">' + (at >= 0 ? '<span class="sc-order">' + (at + 1) + "</span>" : "") + '<span class="sc-flabel">' + esc2(f.label) + '</span><span class="sc-links">' + links + "</span></div>";
+          if (!f.binds.length) h += '<div class="sc-empty">no names</div>';
+          for (const b of f.binds) {
+            const found = look && look.hit === f.id && look.name === b.name;
+            h += '<div class="sc-bind' + (found ? " is-found" : "") + '"><span class="sc-name">' + esc2(b.name) + "</span>";
+            if (b.kind === "loc") h += '<span class="sc-muted">→</span><span class="sc-loc" data-loc="' + b.loc + '">L' + b.loc + "</span>";
+            else if (b.kind === "thunk") h += '<span class="sc-muted">≡ ' + esc2(b.text) + " ×" + b.evals + "</span>";
+            else h += '<span class="sc-muted">' + b.kind + "(" + esc2(b.params.join(", ")) + ")</span>";
+            h += "</div>";
+          }
+          h += "</div>";
+        }
+        $("frames-col").innerHTML = h;
+        let s = '<p class="sc-h">Store: locations</p>';
+        if (!state.store.length) s += '<div class="sc-empty">empty</div>';
+        else {
+          s += '<table class="sc-store">';
+          for (const c of state.store) s += '<tr data-loc="' + c.loc + '"' + (changed.has(c.loc) ? ' class="is-changed"' : "") + '><td class="sc-muted">L' + c.loc + "</td><td>" + showValue(c.value) + "</td></tr>";
+          s += "</table>";
+        }
+        for (const a of state.arrays) {
+          s += '<div class="sc-array" data-arr="' + a.id + '"><b>array ' + a.id + " [" + a.lo + ".." + a.hi + "]</b>";
+          a.cells.forEach((loc, i) => {
+            const c = state.store.find((x) => x.loc === loc);
+            s += '<div data-loc="' + loc + '"' + (changed.has(loc) ? ' class="sc-changed"' : "") + ">" + (a.lo + i) + ": L" + loc + " = " + (c ? showValue(c.value) : "") + "</div>";
+          });
+          s += "</div>";
+        }
+        $("store-col").innerHTML = s;
+      }
+
+      // hovering a location or an array marks it everywhere
+      $("memory").addEventListener("mouseover", (ev) => {
+        const t = ev.target.closest("[data-loc], [data-arr]");
+        for (const x of $("memory").querySelectorAll(".is-hot")) x.classList.remove("is-hot");
+        if (!t) return;
+        const sel = t.dataset.loc !== undefined ? '[data-loc="' + t.dataset.loc + '"]' : '[data-arr="' + t.dataset.arr + '"]';
+        for (const x of $("memory").querySelectorAll(sel)) x.classList.add("is-hot");
+      });
+      $("memory").addEventListener("mouseleave", () => { for (const x of $("memory").querySelectorAll(".is-hot")) x.classList.remove("is-hot"); });
+
+      function renderTrace() {
+        const box = $("trace");
+        if (box.dataset.stamp !== String(run.events.length) + fine + scoping + passing + $("prog").value.length || box.childElementCount !== shown.length) {
+          box.innerHTML = shown.map((e, i) => '<div class="sc-ev' + (e.fine ? " is-fine" : "") + (e.kind === "error" ? " is-error" : "") + '" data-i="' + i + '"><span class="sc-n">' + (i + 1) + '</span><span class="sc-ln">l.' + e.line + "</span><span>" + esc2(e.text) + "</span></div>").join("");
+          box.dataset.stamp = String(run.events.length) + fine + scoping + passing + $("prog").value.length;
+        }
+        const was = box.querySelector(".is-now");
+        if (was) was.classList.remove("is-now");
+        const now = sim.pos >= 0 ? box.children[sim.pos] : null;
+        if (now) { now.classList.add("is-now"); now.scrollIntoView({ block: "nearest" }); }
+      }
+      $("trace").addEventListener("click", (ev) => {
+        const row = ev.target.closest(".sc-ev");
+        if (row) sim.go(+row.dataset.i);
+      });
+
+      // ── Compare ──
+      function renderCompare() {
+        const src = $("prog").value;
+        let h = "<table><tr><th></th>" + SCOPINGS.map((s) => "<th>" + s.label + "</th>").join("") + "</tr>";
+        for (const p of PASSINGS) {
+          h += "<tr><th>" + p.label + "</th>";
+          for (const s of SCOPINGS) {
+            const r = scoRun(src, { scoping: s.id, passing: p.id });
+            const cur = s.id === scoping && p.id === passing;
+            h += '<td data-s="' + s.id + '" data-p="' + p.id + '" class="' + (cur ? "is-current " : "") + (r.error ? "is-error" : "") + '">' + esc2(r.output.join(" ")) + (r.error ? '<span class="sc-msg">' + esc2(r.error.message.replace(/^(Stopped after \d+ steps).*/, "$1")) + "</span>" : "") + "</td>";
+          }
+          h += "</tr>";
+        }
+        $("compare").innerHTML = h + "</table>";
+      }
+      $("compare").addEventListener("click", (ev) => {
+        const td = ev.target.closest("td[data-s]");
+        if (!td) return;
+        scoping = td.dataset.s;
+        passing = td.dataset.p;
+        scopingMenu.refresh();
+        passingMenu.refresh();
+        execute();
+      });
+
+      // ── Examples and the shareable link ──
+      function loadExampleScoping(k) {
+        const ex = EXAMPLES[k];
+        if (!k || !ex) return;
+        $("examples-select").value = k;
+        $("prog").value = ex.text.join("\n");
+        scoping = ex.scoping;
+        passing = ex.passing;
+        scopingMenu.refresh();
+        passingMenu.refresh();
+        paintGutter();
+        execute();
+      }
+      const SHARE_MODES = SCOPINGS.flatMap((s) => PASSINGS.map((p) => s.id + ":" + p.id));
+      const saveShare = createShareSaver(() => ({ p: $("prog").value, s: "", m: scoping + ":" + passing, x: exampleShareKey() }));
+      let sharedStateApplied = false;
+      function applyShareState() {
+        const st = shareValidateTextState(readShareState(), "p", SHARE_MODES);
+        if (!st) return;
+        sharedStateApplied = true;
+        $("prog").value = st.p;
+        exampleRestoreLater(st.x);
+        if (st.m) [scoping, passing] = st.m.split(":");
+        scopingMenu.refresh();
+        passingMenu.refresh();
+      }
+
+      initPanelStorage("scoping-tool-v1", ["p-prog", "p-run", "p-trace", "p-compare"]);
+      loadPanelState();
+      applyShareState();
+      paintGutter();
+      loadAutomataExamples("examples.json", "examples-select", EXAMPLES, loadExampleScoping, () => !sharedStateApplied);
+      execute();
+      document.addEventListener("mobilechange", () => markLine());
+    </script>
+  </body>
+</html>

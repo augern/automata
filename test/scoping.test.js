@@ -171,6 +171,13 @@ test("assigning to a reference parameter with a value as argument uses a tempora
   assert.equal(out(r), "5");
 });
 
+test("a by-name argument that depends on itself ends the run with an error", () => {
+  const src = "proc f(n) { var x = n; if (n > 0) { call f(n - 1); } print x; } call f(2);";
+  assert.equal(out(run(src, "static", "name")), "0 1 2");
+  const r = run(src, "dynamic", "name");
+  assert.ok(r.error && r.error.message.startsWith("Stopped: nested"), r.error && r.error.message);
+});
+
 test("the parser: comments, precedence, printing an array and the messages", () => {
   assert.equal(out(run("print 2 + 3 * 4; // a comment\nprint (2 + 3) * 4; print -3 + 5; print 7 / 2;", "static", "value")), "14 20 2 3");
   assert.equal(out(run("array a[1..3] = {4, 5}; print a;", "static", "value")), "[4, 5, 0]");
