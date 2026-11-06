@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="../../shared/shared.css?v=02eaac42" />
     <link rel="stylesheet" href="../../shared/mobile.css?v=3085da6d" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
-    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=66a08dc6" />
+    <link rel="stylesheet" href="../../shared/grammar-editor.css?v=907890fa" />
     <script src="../../shared/theme.js?v=9222f18e"></script>
     <style>
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
@@ -258,7 +258,7 @@
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
-    <script src="../../shared/grammar-editor.js?v=0999ef41"></script>
+    <script src="../../shared/grammar-editor.js?v=09eff099"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -269,7 +269,7 @@
     <script src="../../shared/sheet.js?v=bc9dc640"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=f6dcaf1a"></script>
+    <script src="guide.js?v=1529fb91"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
@@ -344,19 +344,16 @@
       // PRODUCTIONS PANEL
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      // The grammar panel is the chooser of the production: locked during a derivation (or while part of the form is selected), with
-      // the productions that fit the selection marked.
+      // The grammar panel is the chooser of the production: locked while part of the form is selected, with the productions that fit
+      // marked. Editing the grammar restarts the derivation, so it is only locked for the choice.
       let _ge = null;
       function updateGrammarLock() {
         if (!_ge) return;
-        const ended = !!_grammar && _steps.length > 0 && derivOutcome(_grammar, _steps[_steps.length - 1].form) !== null; // derived, or a dead end
-        const midway = !!_grammar && _steps.length > 1 && !ended, picking = !!_grammar && _steps.length > 0 && hasCommittedRange();
-        if (!midway && !picking) { _ge.lock(null); return; }
+        if (!_grammar || _steps.length === 0 || !hasCommittedRange()) { _ge.lock(null); return; }
         _ge.lock({
-          rules: picking ? _grammar.rules.map((r, i) => i).filter(isApplicableRule) : null,
+          rules: _grammar.rules.map((r, i) => i).filter(isApplicableRule),
           pick: (i) => applyRule(i),
-          note: midway ? "Locked during the derivation" : "",
-          unlock: midway ? () => derivNew() : null,
+          cancel: () => clearSelection(),
         });
       }
 

@@ -60,8 +60,6 @@
 .ge-nt { color: var(--accent); font-family: var(--font-serif); font-style: italic; }
 .ge-t { color: var(--text); font-family: var(--font-mono); font-size: var(--fs-sm); }
 .ge-open { text-decoration: underline dashed var(--text-lo); text-underline-offset: 3px; }
-.ge-lock { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); flex-shrink: 0; padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border-lo); font-size: var(--fs-2xs); color: var(--text-dim); }
-.ge-lock[hidden] { display: none; }
 .ge.is-locked .ge-new { display: none; }
 .ge.is-locked .ge-row input, .ge.is-locked .ge-chip, .ge.is-locked .ge-menu { pointer-events: none; }
 .ge.is-locked .ge-menu { visibility: hidden; }

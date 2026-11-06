@@ -13,10 +13,9 @@
 // input rather than as key presses: the same actions are taken from beforeinput. On a phone (body.is-mobile) a keypad docks above the
 // keyboard while an entry field has the focus: the symbols of the grammar, |, ε and ⌫. Needs algo/grammar-model.js and ui.js.
 //
-// lock({ rules, pick, note, unlock }) | lock(null): the table cannot be edited; a tool that makes a choice among the productions
-// (the derivation tool) uses it as the chooser. rules: the productions (numbers from 0, as in mark) that can be chosen, null for none
-// chosen yet; the rows of these are marked and pick(rule) runs when one is clicked, the others fade. note: a line above the table, with a
-// button (unlock(), for example to start over) when unlock is given.
+// lock({ rules, pick, cancel }) | lock(null): the table cannot be edited; a tool that makes a choice among the productions
+// (the derivation tool) uses it as the chooser. rules: the productions (numbers from 0, as in mark) that can be chosen; their rows are
+// marked and pick(rule) runs when one is clicked, the other rows fade and a click on one runs cancel().
 const GrammarEditor = (() => {
   const nativeValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   const el = (tag, cls, text) => {
@@ -49,12 +48,10 @@ const GrammarEditor = (() => {
     const bar = el("div", "ge-bar");
     const status = el("span", "ge-status");
     bar.append(status);
-    const lockBar = el("div", "ge-lock");
-    lockBar.hidden = true;
     const rowsEl = el("div", "ge-rows");
     const textEl = el("textarea", "ge-text");
     textEl.spellcheck = false;
-    host.append(bar, lockBar, rowsEl, textEl);
+    host.append(bar, rowsEl, textEl);
 
     // ── State and text ──
     const text = () => gmToText(model, opts);
@@ -209,21 +206,10 @@ const GrammarEditor = (() => {
     let lockSpec = null;
     function applyLock() {
       host.classList.toggle("is-locked", !!lockSpec);
-      lockBar.hidden = !(lockSpec && lockSpec.note);
-      lockBar.textContent = "";
-      if (lockSpec && lockSpec.note) {
-        lockBar.appendChild(el("span", "", lockSpec.note));
-        if (lockSpec.unlock) {
-          const b = el("button", "btn", "Start over to edit");
-          b.type = "button";
-          b.addEventListener("click", () => lockSpec && lockSpec.unlock());
-          lockBar.appendChild(b);
-        }
-      }
       for (const row of rowsEl.querySelectorAll(".ge-row[data-live]")) {
-        const on = !!lockSpec && !!lockSpec.rules && lockSpec.rules.includes(+row.dataset.live);
+        const on = !!lockSpec && lockSpec.rules.includes(+row.dataset.live);
         row.classList.toggle("is-pick", on);
-        row.classList.toggle("is-skipped", !!lockSpec && !!lockSpec.rules && !on);
+        row.classList.toggle("is-skipped", !!lockSpec && !on);
         if (on) { row.tabIndex = 0; row.setAttribute("role", "button"); } else { row.removeAttribute("tabindex"); row.removeAttribute("role"); }
       }
       for (const inp of rowsEl.querySelectorAll("input")) inp.readOnly = !!lockSpec;
@@ -234,8 +220,9 @@ const GrammarEditor = (() => {
       render();
     }
     rowsEl.addEventListener("click", (e) => {
-      const row = lockSpec && e.target.closest(".ge-row.is-pick");
-      if (row) lockSpec.pick(+row.dataset.live);
+      if (!lockSpec) return;
+      const row = e.target.closest(".ge-row.is-pick");
+      if (row) lockSpec.pick(+row.dataset.live); else if (lockSpec.cancel) lockSpec.cancel();
     });
     rowsEl.addEventListener("keydown", (e) => {
       if (lockSpec && (e.key === "Enter" || e.key === " ") && e.target.classList.contains("is-pick")) { e.preventDefault(); lockSpec.pick(+e.target.dataset.live); }

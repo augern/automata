@@ -7,7 +7,7 @@ window.TOOL_GUIDE = {
   use: [
     "A left side of several symbols makes a production context-sensitive.",
     "Select part of the last line (click a symbol or drag), then click a production whose left side matches: in the grammar panel, where the fitting productions are marked. Esc clears the selection; `z` undoes the last step.",
-    "The grammar is locked from the first step, so that a derivation is not lost by an edit. It unlocks when the derivation ends, or with Start over to edit.",
+    "While a symbol is selected the grammar is locked, to choose the production; a click on a faded row cancels the selection. Editing the grammar restarts the derivation.",
     "The tree shows the derivation as a parse tree. A node is numbered with the step that expanded it and labelled with the production (rN), so derivations in different orders give the same tree with different numbers. It stops at the first step whose production has more than one symbol on its left side.",
     "Random choice applies a random production at a random place; ▶| continues to the end; Reseed restarts the random sequence.",
   ],
