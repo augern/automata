@@ -6,7 +6,7 @@
     <meta name="description" content="Interactive LL(1) parser — compute FIRST/FOLLOW sets, build predictive tables, and step through string simulation with a live parse tree." />
     <title>LL(1) Parser | Parser Tools</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=716b2e88" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=02eaac42" />
     <link rel="stylesheet" href="../../shared/mobile.css?v=3085da6d" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=d9783153" />
@@ -277,7 +277,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/ll1.js?v=6147c105"></script>
-    <script src="../../shared/shared.js?v=0dc1114d"></script>
+    <script src="../../shared/shared.js?v=0b5de1de"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -292,7 +292,7 @@
     <script src="definitions.js?v=d6052b3f"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=2f260eef"></script>
+    <script src="guide.js?v=36afe90a"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
@@ -768,7 +768,7 @@
         if (act.type === "match") {
           simStack.pop();
           const leaf = simFront.shift(); // consumed leaf
-          if (leaf) leaf.badge = String(derivSteps.length + 1); // the number of its row in the steps
+          if (leaf) { leaf.badge = String(derivSteps.length + 1); leaf.tone = "match"; } // the number of its row in the steps
           simPos++;
           renderSimTokens();
           renderSimStack();

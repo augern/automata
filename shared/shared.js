@@ -680,6 +680,7 @@ function treeSnapshot() {
       ruleIdx: n.ruleIdx,
       _placeholder: n._placeholder,
       badge: n.badge,
+      tone: n.tone,
       children: n.children.map(cl),
     };
   }
@@ -959,10 +960,12 @@ function renderTree() {
   if (typeof fitTree === "function") fitTree();
 }
 
-// A small number on a node's corner: the step that made it (node.badge, a string). nw: the node's width.
+// A small number on a node's corner: the step that made it (node.badge, a string; node.tone "reduce" or "match" for another
+// colour than the default blue). nw: the node's width.
 function treeNodeBadge(ng, node, nw) {
   if (!node.badge) return;
-  const b = ng.append("g").attr("class", "tree-badge").attr("transform", "translate(" + (nw / 2 - 2) + "," + (2 - TR) + ")");
+  const TONES = { reduce: "tone-reduce", match: "tone-match" };
+  const b = ng.append("g").attr("class", "tree-badge" + (TONES[node.tone] ? " " + TONES[node.tone] : "")).attr("transform", "translate(" + (nw / 2 - 2) + "," + (2 - TR) + ")");
   b.append("circle").attr("r", 6 + 2 * (String(node.badge).length - 1));
   b.append("text").text(node.badge);
 }
