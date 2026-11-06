@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grammar Derivations</title>
-    <link rel="stylesheet" href="../../shared/shared.css?v=0889eb4a" />
+    <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
+    <link rel="stylesheet" href="../../shared/shared.css?v=716b2e88" />
     <link rel="stylesheet" href="../../shared/mobile.css?v=3085da6d" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=d9783153" />
@@ -13,7 +14,7 @@
       /* Panel weights (--pw: pixels at a ~1400px window) and minimum widths; see shared.css */
       #p-grammar { --pw: 240; --pmin: 180px; }
       #p-productions { --pw: 200; --pmin: 160px; }
-      #p-deriv { --pw: 960; --pmin: 320px; }
+      #p-deriv { --pw: 640; --pmin: 320px; }
 
       /* ── Productions list ── */
       #productions-wrap {
@@ -227,6 +228,10 @@
       body.is-mobile #deriv-status, body.is-mobile #step-count { display: none; } /* the rows are numbered, and the start symbol is the first row */
       body.is-mobile button.sf-chip { touch-action: none; }
       body.is-mobile .sf-static { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+
+      /* The tree panel: a note when a step is not context-free */
+      #tree-note { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--sp-3) var(--sp-5); background: var(--bg-panel); border-top: 1px solid var(--border-lo); color: var(--text-dim); font-size: var(--fs-xs); }
+      #tree-note:empty { display: none; }
     </style>
   </head>
   <body data-mobile>
@@ -302,13 +307,32 @@
           <div id="rule-picker" class="ui-controlbar"></div>
         </div>
       </div>
+
+      <div class="resize-handle" id="rh-3"></div>
+
+      <!-- 4. Derivation tree -->
+      <div class="panel" id="p-tree" data-priority="1" data-tab="Tree">
+        <div class="panel-header">
+          <span class="panel-title">Derivation tree</span>
+          <button class="collapse-btn"
+                  onclick="event.stopPropagation(); toggleCollapse('p-tree');">&#8250;</button>
+        </div>
+        <div class="panel-body tree-panel-body">
+          <div class="tree-area">
+            <svg id="tree-svg" width="100%" height="100%"><g id="tree-root"></g></svg>
+            <div id="tree-empty">The tree grows with the derivation.</div>
+            <div id="tree-note"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
-    <script src="../../shared/algo/derivation.js?v=d56aad3d"></script>
-    <script src="../../shared/shared.js?v=0d29ebd1"></script>
+    <script src="../../shared/algo/derivation.js?v=f3c5070c"></script>
+    <script src="../../shared/shared.js?v=e42c1b1a"></script>
+    <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
@@ -323,11 +347,12 @@
     <script src="../../shared/sheet.js?v=bc9dc640"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=ba37925f"></script>
+    <script src="guide.js?v=69b8a41b"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
       initResize("rh-2", "p-productions", +1);
+      initResize("rh-3", "p-deriv", +1);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // GRAMMAR PARSING
@@ -639,6 +664,28 @@
       // DERIVATION RENDERING
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+      // ── The derivation tree: rebuilt from the steps (shared/shared.js draws it). A step that rewrites one nonterminal
+      // expands its node, numbered with the step; the first step with a longer left side ends the tree.
+      let currentGrammar = null;
+      let _treeInfo = { stepNode: [], forms: [], stopped: null }; // node of each step, nodes of each form's symbols
+      function buildDerivTree() {
+        _treeInfo = derivTree(_grammar, _steps);
+        treeRoot = _treeInfo.root;
+        treeLastNew = _treeInfo.lastNew;
+      }
+      const nodeAttr = (id) => (id === undefined ? "" : ` data-node="${id}"`);
+      function drawDerivTree() {
+        const note = document.getElementById("tree-note"), st = _treeInfo.stopped;
+        if (!_grammar || _steps.length === 0) {
+          treeReset();
+          note.textContent = "";
+          return;
+        }
+        currentGrammar = _grammar;
+        renderTree();
+        note.textContent = st ? `No tree from step ${st.step} on: ${st.rule.lhs.join(" ")} → ${st.rule.rhs.length ? st.rule.rhs.join(" ") : "ε"} has more than one symbol on its left side.` : "";
+      }
+
       function renderDeriv() {
         const emptyEl  = document.getElementById("deriv-empty");
         const stepsEl  = document.getElementById("deriv-steps");
@@ -651,6 +698,7 @@
           statusEl.innerHTML = "";
           countEl.textContent = "";
           for (const id of ["btn-reset", "btn-back", "btn-step", "btn-run"]) document.getElementById(id).disabled = true;
+          drawDerivTree();
           return;
         }
 
@@ -665,6 +713,7 @@
         document.getElementById("btn-step").disabled = outcome !== null;
         document.getElementById("btn-run").disabled = outcome !== null;
 
+        buildDerivTree();
         let h = "";
         for (let i = 0; i < _steps.length; i++) {
           const isCurrent = i === _steps.length - 1;
@@ -689,6 +738,7 @@
 
         // Re-apply chip highlight state (chips were just re-rendered)
         updateChipHighlight();
+        drawDerivTree();
       }
 
       function buildRow(step, idx, isCurrent, usedStart, usedEnd) {
@@ -700,12 +750,12 @@
           const lhsStr = rule.lhs.join(" ");
           const rhsStr = rule.rhs.length > 0 ? rule.rhs.join(" ") : "ε";
           const tip    = `production ${step.ruleIdx + 1}: ${lhsStr} → ${rhsStr}`;
-          gutterHTML   = `<span class="deriv-arrow" data-prod="${step.ruleIdx + 1}" data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx + 1}</span>⇒</span>`;
+          gutterHTML   = `<span class="deriv-arrow" data-prod="${step.ruleIdx + 1}"${nodeAttr(_treeInfo.stepNode[idx])} data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx + 1}</span>⇒</span>`;
         }
 
         const formHTML = isCurrent
-          ? buildCurrentFormHTML(step.form)
-          : buildPastFormHTML(step.form, usedStart, usedEnd);
+          ? buildCurrentFormHTML(step.form, _treeInfo.forms[idx])
+          : buildPastFormHTML(step.form, usedStart, usedEnd, _treeInfo.forms[idx]);
 
         return `<div class="deriv-row">` +
                `<div class="deriv-gutter">${gutterHTML}</div>` +
@@ -714,7 +764,7 @@
       }
 
       // Past form: all symbols static; the rewritten range underlined
-      function buildPastFormHTML(form, usedStart, usedEnd) {
+      function buildPastFormHTML(form, usedStart, usedEnd, ids = []) {
         if (form.length === 0) return `<span class="sf-eps">ε</span>`;
         const { nonterminals: nts } = _grammar;
         return form.map((sym, i) => {
@@ -722,21 +772,21 @@
           const isUsed = usedStart !== null && i >= usedStart && i <= usedEnd;
           const baseCls = isNT ? "sf-nt" : "sf-t";
           const usedCls = isUsed ? " sf-used" + (isNT ? "" : " sf-t") : "";
-          return `<span class="${baseCls}${usedCls}">${esc(sym)}</span>`;
+          return `<span class="${baseCls}${usedCls}"${nodeAttr(ids[i])}>${esc(sym)}</span>`;
         }).join("");
       }
 
       // Current form: the symbols that a rule can rewrite are interactive chips. A terminal is one only where a rule has it on its left
       // side (the context of a context-sensitive rule); any other terminal is final, and drawn as text.
-      function buildCurrentFormHTML(form) {
+      function buildCurrentFormHTML(form, ids = []) {
         if (form.length === 0) return `<span class="sf-eps">ε</span>`;
         const { nonterminals: nts, rules } = _grammar;
         const onLeft = new Set(rules.flatMap((r) => r.lhs));
         return form.map((sym, i) => {
           const isNT  = nts.has(sym);
-          if (!isNT && !onLeft.has(sym)) return `<span class="sf-t sf-static">${esc(sym)}</span>`;
+          if (!isNT && !onLeft.has(sym)) return `<span class="sf-t sf-static"${nodeAttr(ids[i])}>${esc(sym)}</span>`;
           const cls   = `sf-chip ${isNT ? "chip-nt" : "chip-t"}`;
-          return `<button class="${cls}" data-pos="${i}"` +
+          return `<button class="${cls}" data-pos="${i}"${nodeAttr(ids[i])}` +
                  ` onmousedown="chipDown(${i},event)" onmouseenter="chipEnter(${i})"` +
                  `>${esc(sym)}</button>`;
         }).join("");
@@ -820,8 +870,9 @@
       // EXAMPLES + INIT
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      initPanelStorage("derivation-tool-v1", ["p-grammar", "p-productions", "p-deriv"]);
+      initPanelStorage("derivation-tool-v1", ["p-grammar", "p-productions", "p-deriv", "p-tree"]);
       loadPanelState();
+      initTreeZoom();
       applyShareState();
 
       const EXAMPLES = {};

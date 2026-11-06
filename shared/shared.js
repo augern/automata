@@ -952,6 +952,12 @@ function renderTree() {
         .attr("data-prod", node.ruleIdx)
         .attr("dy", "9")
         .text("r" + node.ruleIdx);
+    if (node.badge) { // a small number on the node's corner (the step of a derivation that expanded it)
+      const r = 6 + 2 * (String(node.badge).length - 1);
+      const b = ng.append("g").attr("class", "tree-badge").attr("transform", "translate(" + (nw / 2 - 2) + "," + (2 - TR) + ")");
+      b.append("circle").attr("r", r);
+      b.append("text").text(node.badge);
+    }
   });
 
   if (typeof fitTree === "function") fitTree();

@@ -145,3 +145,28 @@ function derivOutcome(grammar, form) {
   if (derivMoves(grammar, form).length) return null;
   return form.some((s) => grammar.nonterminals.has(s)) ? "stuck" : "terminal";
 }
+
+// The derivation tree of the steps so far: { root, stepNode, forms, stopped, lastNew }. A node is { id, symbol, ruleIdx, children,
+// badge }; ruleIdx is the number (from 1) of the production that expanded it, badge the number of the step. stepNode[i] is the id of the
+// node that step i expanded; forms[i] holds the ids of the symbols of the i-th form; lastNew the ids the last step made. A step whose
+// rule has more than one symbol on its left side has no place in a tree: the tree ends before it and `stopped` is { step, rule }.
+function derivTree(grammar, steps) {
+  let id = 0;
+  const mk = (symbol, ruleIdx) => ({ id: id++, symbol, ruleIdx, children: [] });
+  const root = mk(grammar.start, null);
+  const info = { root, stepNode: [], forms: [[root.id]], stopped: null, lastNew: [] };
+  let leaves = [root];
+  for (let i = 1; i < steps.length; i++) {
+    const st = steps[i], rule = grammar.rules[st.ruleIdx];
+    if (rule.lhs.length !== 1) { info.stopped = { step: i, rule }; info.lastNew = []; break; }
+    const node = leaves[st.matchStart];
+    node.ruleIdx = st.ruleIdx + 1;
+    node.badge = String(i);
+    node.children = rule.rhs.length ? rule.rhs.map((sym) => mk(sym, null)) : [mk(EPSILON, null)];
+    info.stepNode[i] = node.id;
+    info.lastNew = node.children.map((c) => c.id);
+    leaves.splice(st.matchStart, 1, ...(rule.rhs.length ? node.children : []));
+    info.forms[i] = leaves.map((n) => n.id);
+  }
+  return info;
+}

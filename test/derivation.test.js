@@ -2,7 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const { parseDerivationGrammar, derivMatchesRange, derivApply, derivIsDone } = load("grammar.js", "derivation.js");
+const { parseDerivationGrammar, derivMatchesRange, derivApply, derivIsDone, derivTree } = load("grammar.js", "derivation.js");
+const plain = (x) => JSON.parse(JSON.stringify(x));
 const arr = (x) => [...x];
 
 // The classic context-sensitive grammar for aⁿbⁿcⁿ (n ≥ 1).
@@ -231,4 +232,59 @@ test("derivation grammar: quoted terminals and <name> nonterminals", () => {
   assert.deepEqual([...g.nonterminals].sort(), ["<a>", "<s>"]);
   // an <name> that only appears on a right-hand side is still a nonterminal
   assert.ok(parseDerivationGrammar("S -> <t> a").nonterminals.has("<t>"));
+});
+
+// ── The derivation tree ──
+// steps as the tool records them: the form, the rule applied and the range it rewrote
+const stepsOf = (g, picks) => {
+  const steps = [{ form: [g.start], ruleIdx: null, matchStart: null, matchEnd: null }];
+  for (const [ruleIdx, pos] of picks) {
+    const form = steps[steps.length - 1].form;
+    steps.push({ form: derivApply(form, pos, pos + g.rules[ruleIdx].lhs.length - 1, g.rules[ruleIdx]), ruleIdx, matchStart: pos, matchEnd: pos + g.rules[ruleIdx].lhs.length - 1 });
+  }
+  return steps;
+};
+const frontier = (n) => (n.children.length ? n.children.flatMap(frontier) : [n.symbol]);
+const frontierOf = (t) => plain(frontier(t.root));
+
+test("tree: the start symbol alone is a single node", () => {
+  const g = parseDerivationGrammar("S -> a S b | ε");
+  const t = derivTree(g, stepsOf(g, []));
+  assert.equal(t.root.symbol, "S");
+  assert.equal(t.root.children.length, 0);
+  assert.deepEqual(plain(t.forms), [[0]]);
+  assert.equal(t.stopped, null);
+});
+
+test("tree: each step expands one node, numbered with the step and the production", () => {
+  const g = parseDerivationGrammar("S -> a S b | ε");
+  const t = derivTree(g, stepsOf(g, [[0, 0], [0, 1], [1, 2]]));
+  assert.deepEqual(frontierOf(t), ["a", "a", "ε", "b", "b"]);
+  const s1 = t.root, s2 = s1.children[1], s3 = s2.children[1];
+  assert.deepEqual([s1.badge, s2.badge, s3.badge], ["1", "2", "3"]);
+  assert.deepEqual([s1.ruleIdx, s2.ruleIdx, s3.ruleIdx], [1, 1, 2]);
+  assert.deepEqual(plain(t.stepNode.slice(1)), [s1.id, s2.id, s3.id]);
+  assert.deepEqual(plain(t.lastNew), [s3.children[0].id]);
+  // the forms' ids follow the symbols: the last form is a a b b, without the ε node
+  assert.deepEqual(plain(t.forms[3]), plain([s1.children[0], s2.children[0], s2.children[2], s1.children[2]].map((n) => n.id)));
+});
+
+test("tree: the same tree whatever the order of the steps, but the numbers differ", () => {
+  const g = parseDerivationGrammar("E -> T + T | T\nT -> x");
+  const left = derivTree(g, stepsOf(g, [[0, 0], [2, 0], [2, 2]]));
+  const right = derivTree(g, stepsOf(g, [[0, 0], [2, 2], [2, 0]]));
+  assert.deepEqual(frontierOf(left), frontierOf(right));
+  assert.equal(left.root.children[0].badge, "2");
+  assert.equal(left.root.children[2].badge, "3");
+  assert.equal(right.root.children[0].badge, "3");
+  assert.equal(right.root.children[2].badge, "2");
+});
+
+test("tree: a rule with a longer left side ends the tree", () => {
+  const g = parseDerivationGrammar(ANBNCN);
+  const t = derivTree(g, stepsOf(g, [[0, 0], [1, 1], [2, 2]]));
+  assert.equal(t.stopped.step, 3);
+  assert.deepEqual(plain(t.stopped.rule.lhs), ["C", "B"]);
+  assert.deepEqual(plain(t.lastNew), []);
+  assert.equal(frontierOf(t).length, 6);
 });

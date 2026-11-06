@@ -1112,6 +1112,8 @@ body {
 .tree-node.new-node text {
   fill: var(--accent);
 }
+.tree-node .tree-badge circle { fill: var(--accent); }
+.tree-node .tree-badge text { font-size: 8px; fill: var(--bg); font-weight: bold; }
 .tree-node .rule-label {
   font-size: 8px;
   fill: var(--text-lo);
