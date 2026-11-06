@@ -1116,8 +1116,6 @@ body {
 .tree-node .tree-badge.tone-reduce circle { fill: var(--purple); }
 .tree-node .tree-badge.tone-match circle { fill: var(--green); }
 .dag-baseline { stroke: var(--border-hi); stroke-width: 1; stroke-dasharray: 4 4; }
-.dag-final { font-family: var(--font-mono); font-size: 11px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; }
-.dag-final.is-hot { fill: var(--hot); font-weight: bold; }
 .dag-box rect { fill: var(--bg-panel); stroke: var(--border-hi); stroke-width: 1; }
 .dag-box > text { font-family: var(--font-mono); font-size: 9px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .dag-box[data-node].is-hot rect { fill: var(--hot-bg); stroke: var(--hot); }

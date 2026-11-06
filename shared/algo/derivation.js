@@ -171,14 +171,13 @@ function derivTree(grammar, steps) {
 }
 
 // The derivation graph of the steps so far, for any grammar: a DAG of symbol occurrences and rule applications. A symbol is one
-// occurrence from the step that made it (step 0 the start symbol) until a step rewrites it. A step is a box: the occurrences it
-// rewrites go in, the ones it makes come out. The symbols of a longer left side that the rule leaves as they are (its context, the
-// common beginning and end of left and right side, at least one symbol is always rewritten) are neither consumed nor made, and
-// stay as they were. { nodes: [{ id, symbol, born, died, lane }], boxes: [{ step, ruleIdx, lo, hi, inputs, context, outputs }],
-// rows: [[ids of the form after step i]], lanes }. An occurrence has a lane, so that it can be drawn once, as a long line from the
-// step that made it to the step that rewrites it. What a step makes takes the lanes of what it rewrote (the symbols that are more
-// than those get new lanes right after them), so the lanes keep the order of every form and a lane is shared only by occurrences
-// that live one after the other. For a context-free grammar the graph is the derivation tree, with one input for each box.
+// occurrence from the step that made it (step 0 the start symbol) until a step rewrites it. A step is a box: the occurrences of the
+// left side of its rule go in, the ones of the right side come out. A symbol on both sides of a rule (its context) is rewritten like
+// the rest: it ends in the box and is made again below it. { nodes: [{ id, symbol, born, died, lane }], boxes: [{ step, ruleIdx, lo,
+// hi, inputs, outputs }], rows: [[ids of the form after step i]], lanes }. An occurrence has a lane, so that it can be drawn as a
+// line from the step that made it to the step that rewrites it. What a step makes takes the lanes of what it rewrote (the symbols
+// that are more than those get new lanes right after them), so the lanes keep the order of every form and a lane is shared only
+// by occurrences that live one after the other. For a context-free grammar the graph is the derivation tree.
 function derivGraph(grammar, steps) {
   let id = 0;
   const nodes = [], boxes = [];
@@ -188,28 +187,17 @@ function derivGraph(grammar, steps) {
   cur[0].cell = cells[0];
   const rows = [cur.map((n) => n.id)];
   for (let i = 1; i < steps.length; i++) {
-    const st = steps[i], rule = grammar.rules[st.ruleIdx], lo = st.matchStart, hi = st.matchEnd, L = hi - lo + 1;
-    const a = rule.lhs, b = rule.rhs;
-    let p = 0, q = 0; // symbols of context before and after
-    if (L > 1) {
-      while (p < L - 1 && p < b.length && a[p] === b[p]) p++;
-      while (p + q < L - 1 && p + q < b.length && a[L - 1 - q] === b[b.length - 1 - q]) q++;
-    }
-    const consumed = cur.slice(lo + p, hi + 1 - q);
+    const st = steps[i], rule = grammar.rules[st.ruleIdx], lo = st.matchStart, hi = st.matchEnd;
+    const consumed = cur.slice(lo, hi + 1);
     consumed.forEach((n) => { n.died = i; });
-    const made = b.slice(p, b.length - q).map((sym) => mk(sym, i));
+    const made = rule.rhs.map((sym) => mk(sym, i));
     made.forEach((n, k) => { if (k < consumed.length) n.cell = consumed[k].cell; });
     if (made.length > consumed.length) {
       const extra = made.slice(consumed.length).map((n) => { n.cell = {}; return n.cell; });
       cells.splice(cells.indexOf(consumed[consumed.length - 1].cell) + 1, 0, ...extra);
     }
-    boxes.push({
-      step: i, ruleIdx: st.ruleIdx, lo, hi,
-      inputs: consumed.map((n) => n.id),
-      context: [...cur.slice(lo, lo + p), ...cur.slice(hi + 1 - q, hi + 1)].map((n) => n.id),
-      outputs: made.map((n) => n.id),
-    });
-    cur = [...cur.slice(0, lo + p), ...made, ...cur.slice(hi + 1 - q)];
+    boxes.push({ step: i, ruleIdx: st.ruleIdx, lo, hi, inputs: consumed.map((n) => n.id), outputs: made.map((n) => n.id) });
+    cur = [...cur.slice(0, lo), ...made, ...cur.slice(hi + 1)];
     rows.push(cur.map((n) => n.id));
   }
   for (const n of nodes) { n.lane = cells.indexOf(n.cell); delete n.cell; }

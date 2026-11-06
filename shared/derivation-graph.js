@@ -1,8 +1,8 @@
-// The derivation graph view (see derivGraph in algo/derivation.js): for the grammars whose derivations are not trees. A symbol is drawn
-// once, in its lane and in the row of the step that made it; a long edge runs down from it to the box of the step that rewrites it, or,
-// while it is still in the form, to the strip at the bottom that reads the current form. A step is a box between two rows: the symbols
-// it rewrites end there, the ones it makes start under it. A symbol the rule leaves as it is (its context) runs through the box.
-// Needs d3, shared.js (TR, treeNodeW), fit-view.js and shared.css (.dag-*).
+// The derivation graph view (see derivGraph in algo/derivation.js): for the grammars whose derivations are not trees. A step is a box
+// between two rows: the symbols of the left side of its rule end there, the ones of the right side start under it (a symbol on both
+// sides is made again). A symbol is drawn once, in its lane and in the row of the step that made it, with a long line down to the box of
+// the step that rewrites it. The symbols still in the form are the leaves: they are on the bottom line, with a long line from the box
+// that made them. Needs d3, shared.js (TR, treeNodeW), fit-view.js and shared.css (.dag-*).
 //
 //   const view = createDerivGraph({ svg: "graph-svg", root: "graph-root" });
 //   view.draw(model, grammar);   model: derivGraph(grammar, steps)
@@ -22,7 +22,7 @@ function createDerivGraph(spec) {
       const svg = d3.select("#" + spec.svg), root = d3.select("#" + spec.root);
       root.selectAll("*").remove();
       has = true;
-      if (svg.select("#graph-read-arrow").empty()) { // the reading order of the strip, as the tree's baseline has
+      if (svg.select("#graph-read-arrow").empty()) { // the reading order of the leaves, as the tree's baseline has
         (svg.select("defs").empty() ? svg.insert("defs", ":first-child") : svg.select("defs")).append("marker")
           .attr("id", "graph-read-arrow").attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 10).attr("markerHeight", 8)
           .attr("refX", 8).attr("refY", 4).attr("orient", "auto")
@@ -30,30 +30,26 @@ function createDerivGraph(spec) {
       }
       const nodes = new Map(model.nodes.map((n) => [n.id, n]));
       const pitch = Math.max(36, ...model.nodes.map((n) => treeNodeW(n.symbol))) + 8;
-      const last = model.rows.length - 1;
-      const X = (n) => n.lane * pitch, Y = (n) => n.born * ROW;
+      const last = model.rows.length - 1, bottom = last * ROW;
+      const X = (n) => n.lane * pitch;
+      const Y = (n) => (n.died === null ? bottom : n.born * ROW); // a leaf is on the bottom line
       const boxTop = (step) => (step - 1) * ROW + ROW / 2 - BOX_H / 2;
-      const stripY = last * ROW + TR + 34;
       const g = root.append("g");
 
-      // the lines first, then the boxes (which hide the lines of the context) and the nodes
+      // the lines first, then the boxes and the nodes over them
       for (const n of model.nodes) {
-        g.append("line").attr("class", "tree-edge").attr("x1", X(n)).attr("y1", Y(n) + TR).attr("x2", X(n)).attr("y2", n.died === null ? stripY - 14 : boxTop(n.died));
+        if (n.died !== null) g.append("line").attr("class", "tree-edge").attr("x1", X(n)).attr("y1", Y(n) + TR).attr("x2", X(n)).attr("y2", boxTop(n.died));
       }
-      const span = (box) => {
-        const xs = [...box.inputs, ...box.context].map((id) => X(nodes.get(id)));
-        return [Math.min(...xs) - pitch / 2 + 4, Math.max(...xs) + pitch / 2 - 4];
-      };
       for (const box of model.boxes) {
-        const ins = box.inputs.map((id) => X(nodes.get(id)));
-        const lo = Math.min(...ins), hi = Math.max(...ins);
-        for (const id of box.outputs) { // from the box to what it made, kept inside what it rewrote
-          const o = nodes.get(id);
-          g.append("path").attr("class", "tree-edge").attr("d", `M ${Math.max(lo, Math.min(hi, X(o)))},${boxTop(box.step) + BOX_H} L ${X(o)},${Y(o) - TR}`);
+        const ins = box.inputs.map((id) => X(nodes.get(id))), lo = Math.min(...ins), hi = Math.max(...ins), from = boxTop(box.step) + BOX_H;
+        for (const id of box.outputs) { // from the box to what it made, kept inside what it rewrote; to a leaf the line is long
+          const o = nodes.get(id), ax = Math.max(lo, Math.min(hi, X(o)));
+          g.append("path").attr("class", "tree-edge").attr("d", `M ${ax},${from} L ${X(o)},${Math.min(from + 14, Y(o) - TR)} L ${X(o)},${Y(o) - TR}`);
         }
       }
       for (const box of model.boxes) {
-        const r = box.step, [x1, x2] = span(box), top = boxTop(r);
+        const r = box.step, xs = box.inputs.map((id) => X(nodes.get(id)));
+        const x1 = Math.min(...xs) - pitch / 2 + 4, x2 = Math.max(...xs) + pitch / 2 - 4, top = boxTop(r);
         const bg = g.append("g").attr("class", "dag-box").attr("data-node", "s" + r).attr("data-prod", box.ruleIdx + 1).attr("transform", `translate(${x1},${top})`);
         bg.append("rect").attr("width", x2 - x1).attr("height", BOX_H).attr("rx", 5);
         bg.append("text").attr("x", (x2 - x1) / 2).attr("y", BOX_H / 2).text("r" + (box.ruleIdx + 1));
@@ -71,11 +67,10 @@ function createDerivGraph(spec) {
         ng.append("text").text(n.symbol);
       }
 
-      // the current form, read off the strip
-      const alive = model.nodes.filter((n) => n.died === null);
-      for (const n of alive) g.append("text").attr("class", "dag-final").attr("data-node", n.id).attr("x", X(n)).attr("y", stripY).text(n.symbol);
-      g.append("line").attr("class", "dag-baseline").attr("x1", Math.min(...alive.map(X)) - 16).attr("x2", Math.max(...alive.map(X)) + 30)
-        .attr("y1", stripY + 14).attr("y2", stripY + 14).attr("marker-end", "url(#graph-read-arrow)");
+      // the dashed line under the leaves, with the reading order
+      const leaves = model.nodes.filter((n) => n.died === null);
+      g.append("line").attr("class", "dag-baseline").attr("x1", Math.min(...leaves.map(X)) - pitch / 2).attr("x2", Math.max(...leaves.map(X)) + pitch / 2 + 14)
+        .attr("y1", bottom + TR + 6).attr("y2", bottom + TR + 6).attr("marker-end", "url(#graph-read-arrow)");
       view.refit();
     },
   };
