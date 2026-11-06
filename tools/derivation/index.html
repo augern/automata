@@ -258,7 +258,7 @@
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
-    <script src="../../shared/grammar-editor.js?v=09eff099"></script>
+    <script src="../../shared/grammar-editor.js?v=ad2a7e7e"></script>
     <script src="../../shared/algo/qr.js?v=bbd7ba7a"></script>
     <script src="../../shared/qr-modal.js?v=4dcb4b2f"></script>
     <script src="../../shared/quick-link.js?v=fca552e1"></script>
@@ -269,7 +269,7 @@
     <script src="../../shared/sheet.js?v=bc9dc640"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=1529fb91"></script>
+    <script src="guide.js?v=26e8c780"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
@@ -347,6 +347,13 @@
       // The grammar panel is the chooser of the production: locked while part of the form is selected, with the productions that fit
       // marked. Editing the grammar restarts the derivation, so it is only locked for the choice.
       let _ge = null;
+      // An edit of the grammar restarts the derivation (also one that has ended): ask once, then restart it before the edit begins
+      function confirmGrammarEdit() {
+        if (!_grammar || _steps.length <= 1) return true;
+        if (!confirm("Editing the grammar restarts the derivation. Edit anyway?")) return false;
+        derivNew();
+        return true;
+      }
       function updateGrammarLock() {
         if (!_ge) return;
         if (!_grammar || _steps.length === 0 || !hasCommittedRange()) { _ge.lock(null); return; }
@@ -746,7 +753,7 @@
       // ←/→ (or ,/.) step, Home restarts, End runs; the Derivation panel has key focus.
       registerStepper("p-deriv", { step: derivRandomStep, back: derivUndo, reset: derivNew, end: derivRunRandom }, { primary: true });
 
-      _ge = GrammarEditor.attach(document.getElementById("grammar-input"), { sequences: true });
+      _ge = GrammarEditor.attach(document.getElementById("grammar-input"), { sequences: true, guard: confirmGrammarEdit });
       document.getElementById("grammar-input").addEventListener("input", () => build());
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

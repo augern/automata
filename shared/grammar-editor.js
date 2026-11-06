@@ -1,7 +1,10 @@
 // The grammar editor: the grammar as a table of productions, one row per production, in place of a text area.
 //
-//   GrammarEditor.attach(textarea)
+//   GrammarEditor.attach(textarea, { guard })
 //
+// guard(): optional, asked when an edit starts (a field gets the focus, a menu item or Undo changes the grammar); false stops it.
+// A tool whose work an edit would discard asks the user there.
+
 // The text area stays the interface to the tool: it is hidden, and it holds the grammar text. The editor writes the
 // text into it (and dispatches an "input" event) when a production changes; setting textarea.value from the tool
 // (an example, a shared link) redraws the editor. A Rules | Text switch shows the same grammar as plain text.
@@ -58,7 +61,10 @@ const GrammarEditor = (() => {
     function readText(t) {
       try { model = gmParse(t, opts); parseError = ""; } catch (e) { parseError = e.message; }
     }
+    // may an edit start? (opts.guard may ask the user, and discard what the edit would)
+    const allowed = () => !opts.guard || opts.guard();
     function changed(newModel, focus) {
+      if (!allowed()) return;
       undo.push(JSON.stringify(model));
       if (undo.length > 100) undo.shift();
       redo = [];
@@ -74,8 +80,8 @@ const GrammarEditor = (() => {
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
       render();
     }
-    function doUndo() { if (!undo.length) return; redo.push(JSON.stringify(model)); restore(undo.pop()); }
-    function doRedo() { if (!redo.length) return; undo.push(JSON.stringify(model)); restore(redo.pop()); }
+    function doUndo() { if (!undo.length || !allowed()) return; redo.push(JSON.stringify(model)); restore(undo.pop()); }
+    function doRedo() { if (!redo.length || !allowed()) return; undo.push(JSON.stringify(model)); restore(redo.pop()); }
 
     // The tool sets textarea.value (examples, shared links): follow it.
     Object.defineProperty(textarea, "value", {
@@ -216,8 +222,7 @@ const GrammarEditor = (() => {
     }
     function lock(spec) {
       lockSpec = spec || null;
-      if (lockSpec && view === "text") view = "rules";
-      render();
+      if (lockSpec && view === "text") { view = "rules"; render(); } else applyLock(); // not a redraw: a field being edited keeps its focus
     }
     rowsEl.addEventListener("click", (e) => {
       if (!lockSpec) return;
@@ -729,6 +734,9 @@ const GrammarEditor = (() => {
       d.append(el("span", "ge-num"), lhs, arrow, rhs, el("span", "ge-menu-gap"));
       return d;
     }
+    host.addEventListener("focusin", (e) => {
+      if (!lockSpec && e.target.matches("input, textarea") && !allowed()) e.target.blur();
+    });
     host.addEventListener("keydown", (e) => {
       if (e.target === textEl) return;
       if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
