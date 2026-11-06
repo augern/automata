@@ -6,7 +6,8 @@ window.TOOL_GUIDE = {
   grammarEditor: true,
   use: [
     "A left side of several symbols makes a production context-sensitive.",
-    "Select part of the last line (click a symbol or drag), then click a production whose left side matches. Esc clears the selection; `z` undoes the last step.",
+    "Select part of the last line (click a symbol or drag), then click a production whose left side matches: in the grammar panel, where the fitting productions are marked, or in the bar below. Esc clears the selection; `z` undoes the last step.",
+    "The grammar is locked once a step has been made, so a derivation is not lost by an edit; Start over to edit unlocks it.",
     "The tree shows the derivation as a parse tree. A node is numbered with the step that expanded it and labelled with the production (rN), so derivations in different orders give the same tree with different numbers. It stops at the first step whose production has more than one symbol on its left side.",
     "Random choice applies a random production at a random place; ▶| continues to the end; Reseed restarts the random sequence.",
   ],

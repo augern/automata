@@ -12,6 +12,11 @@
 // with the same left side, Backspace on an empty field removes the last chip. A virtual keyboard reports Space, Enter and Backspace as
 // input rather than as key presses: the same actions are taken from beforeinput. On a phone (body.is-mobile) a keypad docks above the
 // keyboard while an entry field has the focus: the symbols of the grammar, |, ε and ⌫. Needs algo/grammar-model.js and ui.js.
+//
+// lock({ rules, pick, note, unlock }) | lock(null): the table cannot be edited; a tool that makes a choice among the productions
+// (the derivation tool) uses it as the chooser. rules: the productions (numbers from 0, as in mark) that can be chosen, null for none
+// chosen yet; the rows of these are marked and pick(rule) runs when one is clicked, the others fade. note: a line above the table, with a
+// button (unlock(), for example to start over) when unlock is given.
 const GrammarEditor = (() => {
   const nativeValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   const el = (tag, cls, text) => {
@@ -44,10 +49,12 @@ const GrammarEditor = (() => {
     const bar = el("div", "ge-bar");
     const status = el("span", "ge-status");
     bar.append(status);
+    const lockBar = el("div", "ge-lock");
+    lockBar.hidden = true;
     const rowsEl = el("div", "ge-rows");
     const textEl = el("textarea", "ge-text");
     textEl.spellcheck = false;
-    host.append(bar, rowsEl, textEl);
+    host.append(bar, lockBar, rowsEl, textEl);
 
     // ── State and text ──
     const text = () => gmToText(model, opts);
@@ -86,6 +93,7 @@ const GrammarEditor = (() => {
     });
 
     function setView(v) {
+      if (lockSpec) return;
       view = v;
       try { localStorage.setItem("parser-tools-grammar-view", v); } catch (e) { /* storage blocked */ }
       render();
@@ -93,7 +101,7 @@ const GrammarEditor = (() => {
 
     // the panel's menu switches between the table and the text
     const panel = textarea.closest(".panel");
-    if (panel) panelMenuExtras[panel.id] = () => [
+    if (panel) panelMenuExtras[panel.id] = () => lockSpec ? [numbersItem()] : [
       { label: "Undo", hint: phone() ? undefined : "Ctrl+Z", disabled: !undo.length, onSelect: doUndo },
       { label: "Redo", hint: phone() ? undefined : "Ctrl+Shift+Z", disabled: !redo.length, onSelect: doRedo },
       { separator: true },
@@ -101,12 +109,15 @@ const GrammarEditor = (() => {
       { label: "Rules", checked: view === "rules", title: "The grammar as a table of productions", onSelect: () => setView("rules") },
       { label: "Text", checked: view === "text", title: "The grammar as plain text", onSelect: () => setView("text") },
       { separator: true },
-      { label: "Production numbers", checked: showNums(), title: "The numbers used in the tables", onSelect: () => {
+      numbersItem(),
+    ];
+    function numbersItem() {
+      return { label: "Production numbers", checked: showNums(), title: "The numbers used in the tables", onSelect: () => {
         numsChoice = !showNums();
         try { localStorage.setItem(numsKey, numsChoice ? "1" : "0"); } catch (e) { /* storage blocked */ }
         render();
-      } },
-    ];
+      } };
+    }
 
     // Text view
     textEl.addEventListener("input", () => {
@@ -136,6 +147,7 @@ const GrammarEditor = (() => {
       rowsEl.querySelectorAll(".ge-lhs").forEach(fitLhs);
       applyMarks();
       applyRun();
+      applyLock();
       if (focus) {
         const target = rowsEl.querySelector('[data-i="' + focus.row + '"] ' + (focus.part === "lhs" ? ".ge-lhs, .ge-lhs-in" : focus.part === "action" ? ".ge-action-in" : ".ge-in"));
         if (target) target.focus();
@@ -192,6 +204,42 @@ const GrammarEditor = (() => {
       }
     }
     function run(info) { runInfo = info || null; if (view === "rules") applyRun(); }
+
+    // ── Locked: the productions as a chooser ──
+    let lockSpec = null;
+    function applyLock() {
+      host.classList.toggle("is-locked", !!lockSpec);
+      lockBar.hidden = !(lockSpec && lockSpec.note);
+      lockBar.textContent = "";
+      if (lockSpec && lockSpec.note) {
+        lockBar.appendChild(el("span", "", lockSpec.note));
+        if (lockSpec.unlock) {
+          const b = el("button", "btn", "Start over to edit");
+          b.type = "button";
+          b.addEventListener("click", () => lockSpec && lockSpec.unlock());
+          lockBar.appendChild(b);
+        }
+      }
+      for (const row of rowsEl.querySelectorAll(".ge-row[data-live]")) {
+        const on = !!lockSpec && !!lockSpec.rules && lockSpec.rules.includes(+row.dataset.live);
+        row.classList.toggle("is-pick", on);
+        row.classList.toggle("is-skipped", !!lockSpec && !!lockSpec.rules && !on);
+        if (on) { row.tabIndex = 0; row.setAttribute("role", "button"); } else { row.removeAttribute("tabindex"); row.removeAttribute("role"); }
+      }
+      for (const inp of rowsEl.querySelectorAll("input")) inp.readOnly = !!lockSpec;
+    }
+    function lock(spec) {
+      lockSpec = spec || null;
+      if (lockSpec && view === "text") view = "rules";
+      render();
+    }
+    rowsEl.addEventListener("click", (e) => {
+      const row = lockSpec && e.target.closest(".ge-row.is-pick");
+      if (row) lockSpec.pick(+row.dataset.live);
+    });
+    rowsEl.addEventListener("keydown", (e) => {
+      if (lockSpec && (e.key === "Enter" || e.key === " ") && e.target.classList.contains("is-pick")) { e.preventDefault(); lockSpec.pick(+e.target.dataset.live); }
+    });
     function mark(list) { marks = list || []; if (view === "rules") applyMarks(); }
 
     // A terminal whose name is that of a token rule is linked with it (opts.tokenOf(name): the rule's number, from 1, or
@@ -701,7 +749,7 @@ const GrammarEditor = (() => {
 
     readText(nativeValue.get.call(textarea));
     render();
-    return { setView, render, mark, run, refreshLinks, undo: doUndo, redo: doRedo, model: () => model };
+    return { setView, render, mark, run, lock, refreshLinks, undo: doUndo, redo: doRedo, model: () => model };
   }
 
   return { attach };
