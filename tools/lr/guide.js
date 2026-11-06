@@ -15,6 +15,7 @@ window.TOOL_GUIDE = {
     ["I0, I1, …", "states of the automaton, each a set of items"],
     ["sN, rN, acc", "shift to state N, reduce by production N, accept"],
     ["s5/r1", "two actions in one cell: a conflict"],
+    ["number on a tree node", "the shift or reduce that made the node, counted from 1 (a GOTO belongs to its reduce)"],
   ],
   legend: [
     ["blue", "the current state or table entry"],

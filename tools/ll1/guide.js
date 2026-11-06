@@ -14,6 +14,7 @@ window.TOOL_GUIDE = {
   notation: [
     ["sentential form", "in the derivation panel: the input read (grey), then the stack, top at the left"],
     ["(n)", "after an action: the number of the production used"],
+    ["number on a tree node", "the row of the derivation panel that expanded the node or matched the terminal"],
   ],
   legend: [
     ["blue", "the symbol or table cell in use"],

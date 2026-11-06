@@ -531,7 +531,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/lr.js?v=a528fab7"></script>
-    <script src="../../shared/shared.js?v=e42c1b1a"></script>
+    <script src="../../shared/shared.js?v=0dc1114d"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -547,7 +547,7 @@
     <script src="definitions.js?v=e7cf6ce1"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=56e6dc85"></script>
+    <script src="guide.js?v=ecaae181"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       // Global error catcher — shows errors visibly on mobile
@@ -891,12 +891,13 @@
 
       function tSnap() {
         function cl(n) {
-          return { id: n.id, symbol: n.symbol, ruleIdx: n.ruleIdx, parent: n.parent, children: n.children.map(cl) };
+          return { id: n.id, symbol: n.symbol, ruleIdx: n.ruleIdx, badge: n.badge, parent: n.parent, children: n.children.map(cl) };
         }
-        return { nid: tNid, forest: tForest.map(cl), roots: tRoots.map(cl), last: [...tLast] };
+        return { nid: tNid, step: tNumber, forest: tForest.map(cl), roots: tRoots.map(cl), last: [...tLast] };
       }
       function tRestore(s) {
         tNid = s.nid;
+        tNumber = s.step;
         tForest = s.forest;
         tRoots = s.roots;
         tLast = s.last;
@@ -904,11 +905,13 @@
 
       // ── LR parse tree state ───────────────────────────────────────────────
       let tNid = 0,
+        tNumber = 0, // the shifts and reduces so far: the numbers on the nodes (a GOTO belongs to its reduce)
         tForest = [],
         tRoots = [],
         tLast = [];
       function treeReset() {
         tNid = 0;
+        tNumber = 0;
         tForest = [];
         tRoots = [];
         tLast = [];
@@ -916,13 +919,13 @@
         document.getElementById("tree-empty").style.display = "";
       }
       function treeShift(tok) {
-        const n = { id: tNid++, symbol: tok, ruleIdx: null, parent: null, children: [] };
+        const n = { id: tNid++, symbol: tok, ruleIdx: null, badge: String(++tNumber), parent: null, children: [] };
         tForest.push(n);
         tLast = [n.id];
       }
       function treeReduce(lhs, pc, ri) {
         const ch = pc > 0 ? tForest.splice(tForest.length - pc, pc) : [];
-        const n = { id: tNid++, symbol: lhs, ruleIdx: ri, parent: null, children: ch };
+        const n = { id: tNid++, symbol: lhs, ruleIdx: ri, badge: String(++tNumber), parent: null, children: ch };
         // a reduction by an ε-production has an ε leaf, as in the LL(1) tree
         if (pc === 0) ch.push({ id: tNid++, symbol: EPSILON, ruleIdx: null, parent: n, children: [] });
         ch.forEach((c) => {
@@ -992,6 +995,7 @@
               .attr("class", "rule-label")
               .attr("dy", "9")
               .text("r" + node.ruleIdx);
+          treeNodeBadge(ng, node, nw);
         });
 
         // Fit to view on every render (preserves user zoom if they've panned manually)

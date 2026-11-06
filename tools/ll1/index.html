@@ -277,7 +277,7 @@
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
     <script src="../../shared/algo/strings.js?v=23796ffe"></script>
     <script src="../../shared/algo/ll1.js?v=6147c105"></script>
-    <script src="../../shared/shared.js?v=e42c1b1a"></script>
+    <script src="../../shared/shared.js?v=0dc1114d"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
@@ -292,7 +292,7 @@
     <script src="definitions.js?v=d6052b3f"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=b3676e59"></script>
+    <script src="guide.js?v=2f260eef"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       // rh-1: grammar LEFT of handle   — drag right widens grammar
@@ -768,6 +768,7 @@
         if (act.type === "match") {
           simStack.pop();
           const leaf = simFront.shift(); // consumed leaf
+          if (leaf) leaf.badge = String(derivSteps.length + 1); // the number of its row in the steps
           simPos++;
           renderSimTokens();
           renderSimStack();
@@ -804,6 +805,7 @@
 
         // Expand in tree
         treeExpand(nodeRef, rule.rhs, ri + 1);
+        nodeRef.badge = String(derivSteps.length + 1); // the number of its row in the steps
 
         // Push rhs symbols and their tree nodes onto stack/frontier
         // ε is never pushed — an ε-production pops the NT and adds nothing
