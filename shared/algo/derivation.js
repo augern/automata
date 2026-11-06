@@ -174,13 +174,18 @@ function derivTree(grammar, steps) {
 // occurrence from the step that made it (step 0 the start symbol) until a step rewrites it. A step is a box: the occurrences it
 // rewrites go in, the ones it makes come out. The symbols of a longer left side that the rule leaves as they are (its context, the
 // common beginning and end of left and right side, at least one symbol is always rewritten) are neither consumed nor made, and
-// stay as they were. { nodes: [{ id, symbol, born, died }], boxes: [{ step, ruleIdx, lo, hi, inputs, context, outputs }],
-// rows: [[ids of the form after step i]] }. For a context-free grammar the graph is the derivation tree, with one input for each box.
+// stay as they were. { nodes: [{ id, symbol, born, died, lane }], boxes: [{ step, ruleIdx, lo, hi, inputs, context, outputs }],
+// rows: [[ids of the form after step i]], lanes }. An occurrence has a lane, so that it can be drawn once, as a long line from the
+// step that made it to the step that rewrites it. What a step makes takes the lanes of what it rewrote (the symbols that are more
+// than those get new lanes right after them), so the lanes keep the order of every form and a lane is shared only by occurrences
+// that live one after the other. For a context-free grammar the graph is the derivation tree, with one input for each box.
 function derivGraph(grammar, steps) {
   let id = 0;
   const nodes = [], boxes = [];
   const mk = (symbol, born) => { const n = { id: id++, symbol, born, died: null }; nodes.push(n); return n; };
   let cur = [mk(grammar.start, 0)];
+  const cells = [{}]; // the lanes, in order; a node's cell is where it is drawn
+  cur[0].cell = cells[0];
   const rows = [cur.map((n) => n.id)];
   for (let i = 1; i < steps.length; i++) {
     const st = steps[i], rule = grammar.rules[st.ruleIdx], lo = st.matchStart, hi = st.matchEnd, L = hi - lo + 1;
@@ -193,6 +198,11 @@ function derivGraph(grammar, steps) {
     const consumed = cur.slice(lo + p, hi + 1 - q);
     consumed.forEach((n) => { n.died = i; });
     const made = b.slice(p, b.length - q).map((sym) => mk(sym, i));
+    made.forEach((n, k) => { if (k < consumed.length) n.cell = consumed[k].cell; });
+    if (made.length > consumed.length) {
+      const extra = made.slice(consumed.length).map((n) => { n.cell = {}; return n.cell; });
+      cells.splice(cells.indexOf(consumed[consumed.length - 1].cell) + 1, 0, ...extra);
+    }
     boxes.push({
       step: i, ruleIdx: st.ruleIdx, lo, hi,
       inputs: consumed.map((n) => n.id),
@@ -202,5 +212,6 @@ function derivGraph(grammar, steps) {
     cur = [...cur.slice(0, lo + p), ...made, ...cur.slice(hi + 1 - q)];
     rows.push(cur.map((n) => n.id));
   }
-  return { nodes, boxes, rows };
+  for (const n of nodes) { n.lane = cells.indexOf(n.cell); delete n.cell; }
+  return { nodes, boxes, rows, lanes: cells.length };
 }

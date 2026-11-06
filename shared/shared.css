@@ -1115,13 +1115,20 @@ body {
 .tree-node .tree-badge circle, .dag-box .tree-badge circle { fill: var(--accent); }
 .tree-node .tree-badge.tone-reduce circle { fill: var(--purple); }
 .tree-node .tree-badge.tone-match circle { fill: var(--green); }
-.dag-carry { stroke: var(--border-hi); stroke-width: 1; stroke-dasharray: 3 3; }
-.tree-node.dag-carried { opacity: 0.55; }
+.dag-baseline { stroke: var(--border-hi); stroke-width: 1; stroke-dasharray: 4 4; }
+.dag-final { font-family: var(--font-mono); font-size: 11px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; }
+.dag-final.is-hot { fill: var(--hot); font-weight: bold; }
 .dag-box rect { fill: var(--bg-panel); stroke: var(--border-hi); stroke-width: 1; }
 .dag-box > text { font-family: var(--font-mono); font-size: 9px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .dag-box[data-node].is-hot rect { fill: var(--hot-bg); stroke: var(--hot); }
 .dag-eps { font-family: var(--font-serif); font-style: italic; font-size: 12px; fill: var(--text-lo); text-anchor: middle; }
-.tree-node .tree-badge text, .dag-box .tree-badge text { font-size: 8px; fill: var(--bg); font-weight: bold; }
+.tree-node .tree-badge text, .dag-box .tree-badge text {
+  text-anchor: middle;
+  dominant-baseline: auto; /* centred by the dy of the text: dominant-baseline: central differs between browsers */
+  font-size: 8px;
+  fill: var(--bg);
+  font-weight: bold;
+}
 .tree-node .rule-label {
   font-size: 8px;
   fill: var(--text-lo);

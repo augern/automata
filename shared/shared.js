@@ -967,7 +967,7 @@ function treeNodeBadge(ng, node, nw) {
   const TONES = { reduce: "tone-reduce", match: "tone-match" };
   const b = ng.append("g").attr("class", "tree-badge" + (TONES[node.tone] ? " " + TONES[node.tone] : "")).attr("transform", "translate(" + (nw / 2 - 2) + "," + (2 - TR) + ")");
   b.append("circle").attr("r", 6 + 2 * (String(node.badge).length - 1));
-  b.append("text").text(node.badge);
+  b.append("text").attr("dy", "0.35em").text(node.badge);
 }
 
 // ── Tree view (call initTreeZoom once from each tool's init) ─────────────────

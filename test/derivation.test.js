@@ -329,6 +329,34 @@ test("graph: every occurrence is rewritten once or is in the last form; the last
   assert.equal(d.nodes.length, 1 + d.boxes.reduce((n, b) => n + b.outputs.length, 0));
 });
 
+test("graph: the lanes keep the order of every form and are shared only one after the other", () => {
+  const g = parseDerivationGrammar(ANBNCN);
+  const d = derivGraph(g, stepsOf(g, ABC_PICKS));
+  for (const row of d.rows) {
+    const lanes = row.map((id) => d.nodes[id].lane);
+    assert.deepEqual(plain(lanes), plain([...lanes].sort((a, b) => a - b)));
+    assert.equal(new Set(lanes).size, lanes.length);
+  }
+  for (const a of d.nodes) for (const b of d.nodes) {
+    if (a.id < b.id && a.lane === b.lane) assert.ok((a.died !== null && a.died <= b.born) || (b.died !== null && b.died <= a.born), `lane ${a.lane}: ${a.id} and ${b.id}`);
+  }
+  // aabbcc needs the width of the widest form, not a lane for each of the 14 symbols
+  assert.equal(d.lanes, 6);
+  assert.equal(d.nodes.length, 14);
+});
+
+test("graph: what a step makes takes the lanes of what it rewrote", () => {
+  const g = parseDerivationGrammar(ANBNCN);
+  const d = derivGraph(g, stepsOf(g, ABC_PICKS));
+  const perm = d.boxes[2]; // C B -> B C
+  assert.deepEqual(plain(perm.outputs.map((id) => d.nodes[id].lane)), plain(perm.inputs.map((id) => d.nodes[id].lane)));
+  const grow = d.boxes[0]; // S -> a S B C: the lane of S, then three more, in order
+  const lanes = grow.outputs.map((id) => d.nodes[id].lane);
+  assert.equal(lanes[0], d.nodes[grow.inputs[0]].lane);
+  assert.deepEqual(plain(lanes), plain([...lanes].sort((a, b) => a - b)));
+  assert.equal(new Set(lanes).size, 4);
+});
+
 test("graph: at least one symbol is rewritten even when the right side repeats the left", () => {
   const g = parseDerivationGrammar("S -> a b\na b -> a b b");
   const d = derivGraph(g, stepsOf(g, [[0, 0], [1, 0]]));
