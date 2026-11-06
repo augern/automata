@@ -880,7 +880,7 @@ body {
   overflow: hidden;
 }
 /* touch-action:none lets D3 capture trackpad pinch/pan gestures */
-#tree-svg {
+#tree-svg, #graph-svg {
   width: 100%;
   height: 100%;
   touch-action: none;
@@ -1112,10 +1112,16 @@ body {
 .tree-node.new-node text {
   fill: var(--accent);
 }
-.tree-node .tree-badge circle { fill: var(--accent); }
+.tree-node .tree-badge circle, .dag-box .tree-badge circle { fill: var(--accent); }
 .tree-node .tree-badge.tone-reduce circle { fill: var(--purple); }
 .tree-node .tree-badge.tone-match circle { fill: var(--green); }
-.tree-node .tree-badge text { font-size: 8px; fill: var(--bg); font-weight: bold; }
+.dag-carry { stroke: var(--border-hi); stroke-width: 1; stroke-dasharray: 3 3; }
+.tree-node.dag-carried { opacity: 0.55; }
+.dag-box rect { fill: var(--bg-panel); stroke: var(--border-hi); stroke-width: 1; }
+.dag-box > text { font-family: var(--font-mono); font-size: 9px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.dag-box[data-node].is-hot rect { fill: var(--hot-bg); stroke: var(--hot); }
+.dag-eps { font-family: var(--font-serif); font-style: italic; font-size: 12px; fill: var(--text-lo); text-anchor: middle; }
+.tree-node .tree-badge text, .dag-box .tree-badge text { font-size: 8px; fill: var(--bg); font-weight: bold; }
 .tree-node .rule-label {
   font-size: 8px;
   fill: var(--text-lo);

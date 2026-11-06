@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grammar Derivations</title>
     <script src="../../vendor/d3.min.js?v=6d64bd2f"></script>
-    <link rel="stylesheet" href="../../shared/shared.css?v=02eaac42" />
+    <link rel="stylesheet" href="../../shared/shared.css?v=c26e55ae" />
     <link rel="stylesheet" href="../../shared/mobile.css?v=3085da6d" />
     <link rel="stylesheet" href="../../shared/ui.css?v=c9d603f2" />
     <link rel="stylesheet" href="../../shared/grammar-editor.css?v=907890fa" />
@@ -169,10 +169,6 @@
       body.is-mobile #deriv-status, body.is-mobile #step-count { display: none; } /* the rows are numbered, and the start symbol is the first row */
       body.is-mobile button.sf-chip { touch-action: none; }
       body.is-mobile .sf-static { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
-
-      /* The tree panel: a note when a step is not context-free */
-      #tree-note { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--sp-3) var(--sp-5); background: var(--bg-panel); border-top: 1px solid var(--border-lo); color: var(--text-dim); font-size: var(--fs-xs); }
-      #tree-note:empty { display: none; }
     </style>
   </head>
   <body data-mobile>
@@ -242,8 +238,8 @@
         <div class="panel-body tree-panel-body">
           <div class="tree-area">
             <svg id="tree-svg" width="100%" height="100%"><g id="tree-root"></g></svg>
+            <svg id="graph-svg" width="100%" height="100%" style="display: none"><g id="graph-root"></g></svg>
             <div id="tree-empty">The tree grows with the derivation.</div>
-            <div id="tree-note"></div>
           </div>
         </div>
       </div>
@@ -252,9 +248,10 @@
     <script src="../../shared/algo/grammar.js?v=14930600"></script>
     <script src="../../shared/algo/panels.js?v=92261e45"></script>
     <script src="../../shared/algo/share.js?v=47d2ba1e"></script>
-    <script src="../../shared/algo/derivation.js?v=f3c5070c"></script>
+    <script src="../../shared/algo/derivation.js?v=ed84accb"></script>
     <script src="../../shared/shared.js?v=0b5de1de"></script>
     <script src="../../shared/fit-view.js?v=9af2be16"></script>
+    <script src="../../shared/derivation-graph.js?v=741d4430"></script>
     <script src="../../shared/share-link.js?v=0d17f714"></script>
     <script src="../../shared/ui.js?v=b7fb54c9"></script>
     <script src="../../shared/algo/grammar-model.js?v=5bd211a1"></script>
@@ -269,7 +266,7 @@
     <script src="../../shared/sheet.js?v=bc9dc640"></script>
     <script src="../../shared/mobile.js?v=0f33fae8"></script>
     <script src="../../shared/definitions.js?v=aa7fb5cb"></script>
-    <script src="guide.js?v=26e8c780"></script>
+    <script src="guide.js?v=ed8433b7"></script>
     <script src="../../shared/guide.js?v=ba07a3aa"></script>
     <script>
       initResize("rh-1", "p-grammar",     +1);
@@ -581,26 +578,49 @@
       // DERIVATION RENDERING
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      // ── The derivation tree: rebuilt from the steps (shared/shared.js draws it). A step that rewrites one nonterminal
-      // expands its node, numbered with the step; the first step with a longer left side ends the tree.
+      // ── The derivation tree (a context-free grammar; shared/shared.js draws it) or the derivation graph (any other; shared/derivation-graph.js),
+      // in the same panel and rebuilt from the steps. A step that rewrites one nonterminal expands its node, numbered with the step.
       let currentGrammar = null;
-      let _treeInfo = { stepNode: [], forms: [], stopped: null }; // node of each step, nodes of each form's symbols
-      function buildDerivTree() {
-        _treeInfo = derivTree(_grammar, _steps);
-        treeRoot = _treeInfo.root;
-        treeLastNew = _treeInfo.lastNew;
+      let _viewInfo = { stepNode: [], forms: [] }; // what to link with the derivation: the node or box of each step, the nodes of each form's symbols
+      let _graphModel = null, _graphView = null;
+      const isContextFree = (g) => g.rules.every((r) => r.lhs.length === 1);
+      function buildDerivView() {
+        if (isContextFree(_grammar)) {
+          _viewInfo = derivTree(_grammar, _steps);
+          treeRoot = _viewInfo.root;
+          treeLastNew = _viewInfo.lastNew;
+          _graphModel = null;
+        } else {
+          _graphModel = derivGraph(_grammar, _steps);
+          _viewInfo = { stepNode: [], forms: _graphModel.rows };
+          for (const b of _graphModel.boxes) _viewInfo.stepNode[b.step] = "s" + b.step;
+        }
       }
       const nodeAttr = (id) => (id === undefined ? "" : ` data-node="${id}"`);
-      function drawDerivTree() {
-        const note = document.getElementById("tree-note"), st = _treeInfo.stopped;
+      function drawDerivView() {
+        const graph = !!_grammar && !isContextFree(_grammar);
+        document.getElementById("tree-svg").style.display = graph ? "none" : "";
+        document.getElementById("graph-svg").style.display = graph ? "" : "none";
+        const name = graph ? "graph" : "tree";
+        document.querySelector("#p-tree .panel-title").textContent = "Derivation " + name;
+        const tab = document.querySelector('#mobile-tabs button[data-panel="p-tree"]');
+        if (tab) tab.textContent = name === "graph" ? "Graph" : "Tree";
         if (!_grammar || _steps.length === 0) {
           treeReset();
-          note.textContent = "";
+          if (_graphView) _graphView.clear();
           return;
         }
-        currentGrammar = _grammar;
-        renderTree();
-        note.textContent = st ? `No tree from step ${st.step} on: ${st.rule.lhs.join(" ")} → ${st.rule.rhs.length ? st.rule.rhs.join(" ") : "ε"} has more than one symbol on its left side.` : "";
+        if (graph) {
+          treeRoot = null;
+          d3.select("#tree-root").selectAll("*").remove();
+          document.getElementById("tree-empty").style.display = "none";
+          if (!_graphView) _graphView = createDerivGraph({ svg: "graph-svg", root: "graph-root" });
+          _graphView.draw(_graphModel, _grammar);
+        } else {
+          if (_graphView) _graphView.clear();
+          currentGrammar = _grammar;
+          renderTree();
+        }
       }
 
       function renderDeriv() {
@@ -615,7 +635,7 @@
           statusEl.innerHTML = "";
           countEl.textContent = "";
           for (const id of ["btn-reset", "btn-back", "btn-step", "btn-run"]) document.getElementById(id).disabled = true;
-          drawDerivTree();
+          drawDerivView();
           return;
         }
 
@@ -630,7 +650,7 @@
         document.getElementById("btn-step").disabled = outcome !== null;
         document.getElementById("btn-run").disabled = outcome !== null;
 
-        buildDerivTree();
+        buildDerivView();
         let h = "";
         for (let i = 0; i < _steps.length; i++) {
           const isCurrent = i === _steps.length - 1;
@@ -655,7 +675,7 @@
 
         // Re-apply chip highlight state (chips were just re-rendered)
         updateChipHighlight();
-        drawDerivTree();
+        drawDerivView();
         updateGrammarLock();
       }
 
@@ -668,12 +688,12 @@
           const lhsStr = rule.lhs.join(" ");
           const rhsStr = rule.rhs.length > 0 ? rule.rhs.join(" ") : "ε";
           const tip    = `production ${step.ruleIdx + 1}: ${lhsStr} → ${rhsStr}`;
-          gutterHTML   = `<span class="deriv-arrow" data-prod="${step.ruleIdx + 1}"${nodeAttr(_treeInfo.stepNode[idx])} data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx + 1}</span>⇒</span>`;
+          gutterHTML   = `<span class="deriv-arrow" data-prod="${step.ruleIdx + 1}"${nodeAttr(_viewInfo.stepNode[idx])} data-tip="${esc(tip)}"><span class="deriv-rule">${step.ruleIdx + 1}</span>⇒</span>`;
         }
 
         const formHTML = isCurrent
-          ? buildCurrentFormHTML(step.form, _treeInfo.forms[idx])
-          : buildPastFormHTML(step.form, usedStart, usedEnd, _treeInfo.forms[idx]);
+          ? buildCurrentFormHTML(step.form, _viewInfo.forms[idx])
+          : buildPastFormHTML(step.form, usedStart, usedEnd, _viewInfo.forms[idx]);
 
         return `<div class="deriv-row">` +
                `<div class="deriv-gutter">${gutterHTML}</div>` +
@@ -763,6 +783,8 @@
       initPanelStorage("derivation-tool-v1", ["p-grammar", "p-deriv", "p-tree"]);
       loadPanelState();
       initTreeZoom();
+      const _treeMenu = panelMenuExtras["p-tree"]; // the direction is a choice of the tree only
+      panelMenuExtras["p-tree"] = () => (_grammar && !isContextFree(_grammar) ? [] : _treeMenu());
       applyShareState();
 
       const EXAMPLES = {};

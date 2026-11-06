@@ -146,19 +146,18 @@ function derivOutcome(grammar, form) {
   return form.some((s) => grammar.nonterminals.has(s)) ? "stuck" : "terminal";
 }
 
-// The derivation tree of the steps so far: { root, stepNode, forms, stopped, lastNew }. A node is { id, symbol, ruleIdx, children,
-// badge }; ruleIdx is the number (from 1) of the production that expanded it, badge the number of the step. stepNode[i] is the id of the
-// node that step i expanded; forms[i] holds the ids of the symbols of the i-th form; lastNew the ids the last step made. A step whose
-// rule has more than one symbol on its left side has no place in a tree: the tree ends before it and `stopped` is { step, rule }.
+// The derivation tree of the steps so far, for a context-free grammar (every left side one symbol): { root, stepNode, forms, lastNew }.
+// A node is { id, symbol, ruleIdx, children, badge }; ruleIdx is the number (from 1) of the production that expanded it, badge the
+// number of the step. stepNode[i] is the id of the node that step i expanded; forms[i] holds the ids of the symbols of the i-th
+// form; lastNew the ids the last step made. For other grammars see derivGraph.
 function derivTree(grammar, steps) {
   let id = 0;
   const mk = (symbol, ruleIdx) => ({ id: id++, symbol, ruleIdx, children: [] });
   const root = mk(grammar.start, null);
-  const info = { root, stepNode: [], forms: [[root.id]], stopped: null, lastNew: [] };
+  const info = { root, stepNode: [], forms: [[root.id]], lastNew: [] };
   let leaves = [root];
   for (let i = 1; i < steps.length; i++) {
     const st = steps[i], rule = grammar.rules[st.ruleIdx];
-    if (rule.lhs.length !== 1) { info.stopped = { step: i, rule }; info.lastNew = []; break; }
     const node = leaves[st.matchStart];
     node.ruleIdx = st.ruleIdx + 1;
     node.badge = String(i);
@@ -169,4 +168,39 @@ function derivTree(grammar, steps) {
     info.forms[i] = leaves.map((n) => n.id);
   }
   return info;
+}
+
+// The derivation graph of the steps so far, for any grammar: a DAG of symbol occurrences and rule applications. A symbol is one
+// occurrence from the step that made it (step 0 the start symbol) until a step rewrites it. A step is a box: the occurrences it
+// rewrites go in, the ones it makes come out. The symbols of a longer left side that the rule leaves as they are (its context, the
+// common beginning and end of left and right side, at least one symbol is always rewritten) are neither consumed nor made, and
+// stay as they were. { nodes: [{ id, symbol, born, died }], boxes: [{ step, ruleIdx, lo, hi, inputs, context, outputs }],
+// rows: [[ids of the form after step i]] }. For a context-free grammar the graph is the derivation tree, with one input for each box.
+function derivGraph(grammar, steps) {
+  let id = 0;
+  const nodes = [], boxes = [];
+  const mk = (symbol, born) => { const n = { id: id++, symbol, born, died: null }; nodes.push(n); return n; };
+  let cur = [mk(grammar.start, 0)];
+  const rows = [cur.map((n) => n.id)];
+  for (let i = 1; i < steps.length; i++) {
+    const st = steps[i], rule = grammar.rules[st.ruleIdx], lo = st.matchStart, hi = st.matchEnd, L = hi - lo + 1;
+    const a = rule.lhs, b = rule.rhs;
+    let p = 0, q = 0; // symbols of context before and after
+    if (L > 1) {
+      while (p < L - 1 && p < b.length && a[p] === b[p]) p++;
+      while (p + q < L - 1 && p + q < b.length && a[L - 1 - q] === b[b.length - 1 - q]) q++;
+    }
+    const consumed = cur.slice(lo + p, hi + 1 - q);
+    consumed.forEach((n) => { n.died = i; });
+    const made = b.slice(p, b.length - q).map((sym) => mk(sym, i));
+    boxes.push({
+      step: i, ruleIdx: st.ruleIdx, lo, hi,
+      inputs: consumed.map((n) => n.id),
+      context: [...cur.slice(lo, lo + p), ...cur.slice(hi + 1 - q, hi + 1)].map((n) => n.id),
+      outputs: made.map((n) => n.id),
+    });
+    cur = [...cur.slice(0, lo + p), ...made, ...cur.slice(hi + 1 - q)];
+    rows.push(cur.map((n) => n.id));
+  }
+  return { nodes, boxes, rows };
 }

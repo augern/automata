@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./load.js");
 
-const { parseDerivationGrammar, derivMatchesRange, derivApply, derivIsDone, derivTree } = load("grammar.js", "derivation.js");
+const { parseDerivationGrammar, derivMatchesRange, derivApply, derivIsDone, derivTree, derivGraph } = load("grammar.js", "derivation.js");
 const plain = (x) => JSON.parse(JSON.stringify(x));
 const arr = (x) => [...x];
 
@@ -253,7 +253,6 @@ test("tree: the start symbol alone is a single node", () => {
   assert.equal(t.root.symbol, "S");
   assert.equal(t.root.children.length, 0);
   assert.deepEqual(plain(t.forms), [[0]]);
-  assert.equal(t.stopped, null);
 });
 
 test("tree: each step expands one node, numbered with the step and the production", () => {
@@ -280,11 +279,68 @@ test("tree: the same tree whatever the order of the steps, but the numbers diffe
   assert.equal(right.root.children[2].badge, "2");
 });
 
-test("tree: a rule with a longer left side ends the tree", () => {
+// ── The derivation graph ──
+const symbolsOf = (d, ids) => plain(ids.map((id) => d.nodes[id].symbol));
+// S => aSBC => aaBCBC => aaBBCC (C B -> B C) => aabBCC => aabbCC => aabbcC => aabbcc
+const ABC_PICKS = [[0, 0], [1, 1], [2, 3], [3, 1], [4, 2], [5, 3], [6, 4]];
+
+test("graph: for a context-free grammar every box has one input and the rows are the forms", () => {
+  const g = parseDerivationGrammar("S -> a S b | ε");
+  const d = derivGraph(g, stepsOf(g, [[0, 0], [0, 1], [1, 2]]));
+  assert.deepEqual(plain(d.boxes.map((b) => b.inputs.length)), [1, 1, 1]);
+  assert.deepEqual(plain(d.boxes.map((b) => b.context.length)), [0, 0, 0]);
+  assert.deepEqual(plain(d.boxes.map((b) => b.outputs.length)), [3, 3, 0]);
+  assert.deepEqual(plain(d.rows.map((r) => symbolsOf(d, r))), [["S"], ["a", "S", "b"], ["a", "a", "S", "b", "b"], ["a", "a", "b", "b"]]);
+  // the occurrences carry over from row to row
+  assert.deepEqual(plain(d.rows[3]), plain([d.rows[2][0], d.rows[2][1], d.rows[2][3], d.rows[2][4]]));
+});
+
+test("graph: the context of a rule stays, only the rest is rewritten", () => {
   const g = parseDerivationGrammar(ANBNCN);
-  const t = derivTree(g, stepsOf(g, [[0, 0], [1, 1], [2, 2]]));
-  assert.equal(t.stopped.step, 3);
-  assert.deepEqual(plain(t.stopped.rule.lhs), ["C", "B"]);
-  assert.deepEqual(plain(t.lastNew), []);
-  assert.equal(frontierOf(t).length, 6);
+  const d = derivGraph(g, stepsOf(g, ABC_PICKS));
+  const box = d.boxes[3]; // a B -> a b
+  assert.equal(g.rules[box.ruleIdx].lhs.join(" "), "a B");
+  assert.deepEqual(symbolsOf(d, box.inputs), ["B"]);
+  assert.deepEqual(symbolsOf(d, box.context), ["a"]);
+  assert.deepEqual(symbolsOf(d, box.outputs), ["b"]);
+  // the context occurrence is in the form before and after, and is never rewritten
+  assert.ok(d.rows[3].includes(box.context[0]) && d.rows[4].includes(box.context[0]));
+  assert.equal(d.nodes[box.context[0]].died, null);
+  assert.equal(d.nodes[box.inputs[0]].died, 4);
+});
+
+test("graph: a rule that permutes has two inputs, two outputs and no context", () => {
+  const g = parseDerivationGrammar(ANBNCN);
+  const d = derivGraph(g, stepsOf(g, ABC_PICKS));
+  const box = d.boxes[2]; // C B -> B C
+  assert.deepEqual(symbolsOf(d, box.inputs), ["C", "B"]);
+  assert.deepEqual(symbolsOf(d, box.outputs), ["B", "C"]);
+  assert.equal(box.context.length, 0);
+  assert.deepEqual(plain(box.inputs.map((id) => d.nodes[id].died)), [3, 3]);
+  assert.deepEqual(plain(box.outputs.map((id) => d.nodes[id].born)), [3, 3]);
+});
+
+test("graph: every occurrence is rewritten once or is in the last form; the last form is the word", () => {
+  const g = parseDerivationGrammar(ANBNCN);
+  const d = derivGraph(g, stepsOf(g, ABC_PICKS));
+  const last = d.rows[d.rows.length - 1];
+  assert.deepEqual(symbolsOf(d, last), ["a", "a", "b", "b", "c", "c"]);
+  for (const n of d.nodes) assert.ok((n.died === null) === last.includes(n.id), `node ${n.id}`);
+  assert.equal(d.nodes.length, 1 + d.boxes.reduce((n, b) => n + b.outputs.length, 0));
+});
+
+test("graph: at least one symbol is rewritten even when the right side repeats the left", () => {
+  const g = parseDerivationGrammar("S -> a b\na b -> a b b");
+  const d = derivGraph(g, stepsOf(g, [[0, 0], [1, 0]]));
+  const box = d.boxes[1];
+  assert.equal(box.inputs.length, 1);
+  assert.deepEqual(symbolsOf(d, box.context), ["a"]);
+  assert.deepEqual(symbolsOf(d, box.outputs), ["b", "b"]);
+});
+
+test("graph: an erasing rule has no outputs", () => {
+  const g = parseDerivationGrammar("S -> a B\na B -> a");
+  const d = derivGraph(g, stepsOf(g, [[0, 0], [1, 0]]));
+  assert.deepEqual(plain(d.boxes[1].outputs), []);
+  assert.deepEqual(symbolsOf(d, d.rows[2]), ["a"]);
 });

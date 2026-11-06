@@ -8,7 +8,8 @@ window.TOOL_GUIDE = {
     "A left side of several symbols makes a production context-sensitive.",
     "Select part of the last line (click a symbol or drag), then click a production whose left side matches: in the grammar panel, where the fitting productions are marked. Esc clears the selection; `z` undoes the last step.",
     "While a symbol is selected the grammar is locked, to choose the production; a click on a faded row cancels the selection. Editing the grammar restarts the derivation, after a confirmation.",
-    "The tree shows the derivation as a parse tree. A node is numbered with the step that expanded it and labelled with the production (rN), so derivations in different orders give the same tree with different numbers. It stops at the first step whose production has more than one symbol on its left side.",
+    "The tree shows the derivation of a context-free grammar as a parse tree. A node is numbered with the step that expanded it and labelled with the production (rN), so derivations in different orders give the same tree with different numbers.",
+    "With a longer left side the panel shows the derivation graph instead: one row for each form, a box for each step with the symbols it rewrites above and the symbols it makes below. A symbol the rule leaves as it is (its context) passes through the box; carried symbols are dimmed.",
     "Random choice applies a random production at a random place; ▶| continues to the end; Reseed restarts the random sequence.",
   ],
   notation: [
